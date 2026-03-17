@@ -1,11 +1,11 @@
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
-import '../controllers/auth_controller.dart';
+import 'auth/auth_state_controller.dart';
 
 class ProfileController extends GetxController {
   static ProfileController get instance => Get.find();
 
-  final AuthController _authController = AuthController.instance;
+  final AuthStateController _authController = AuthStateController.instance;
 
   // Form controllers
   final TextEditingController fullNameController = TextEditingController();

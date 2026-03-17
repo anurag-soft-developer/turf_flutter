@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/controllers/auth/auth_state_controller.dart';
 import 'package:get/get.dart';
-import '../../controllers/auth_controller.dart';
 import '../../controllers/profile_controller.dart';
-import '../../components/custom_button.dart';
-import '../../components/custom_text_field.dart';
-import '../../components/loading_overlay.dart';
+import '../../components/shared/custom_button.dart';
+import '../../components/shared/custom_text_field.dart';
+import '../../components/shared/loading_overlay.dart';
 import '../../utils/validators.dart';
 import '../../utils/constants.dart';
 
@@ -14,7 +14,7 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ProfileController profileController = Get.put(ProfileController());
-    final AuthController authController = Get.find();
+    final AuthStateController authController = Get.find<AuthStateController>();
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),

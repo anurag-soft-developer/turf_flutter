@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../controllers/auth_controller.dart';
-import '../../components/custom_button.dart';
-import '../../components/custom_text_field.dart';
-import '../../components/loading_overlay.dart';
+import '../../controllers/auth/signup_controller.dart';
+import '../../controllers/auth/auth_state_controller.dart';
+import '../../components/shared/custom_button.dart';
+import '../../components/shared/custom_text_field.dart';
+import '../../components/shared/loading_overlay.dart';
 import '../../utils/validators.dart';
 import '../../utils/constants.dart';
 
@@ -12,18 +13,20 @@ class SignupScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final AuthController authController = Get.find();
+    final SignupController signupController = Get.find();
+    final AuthStateController authStateController = Get.find();
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
       body: Obx(
         () => LoadingOverlay(
-          isLoading: authController.isLoading,
+          isLoading:
+              signupController.isLoading || authStateController.isLoading,
           child: SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24.0),
               child: Form(
-                key: authController.signupFormKey,
+                key: signupController.signupFormKey,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -50,7 +53,7 @@ class SignupScreen extends StatelessWidget {
 
                     // Full Name Field
                     CustomTextField(
-                      controller: authController.fullNameController,
+                      controller: signupController.fullNameController,
                       labelText: 'Full Name',
                       hintText: 'Enter your full name',
                       textCapitalization: TextCapitalization.words,
@@ -64,7 +67,7 @@ class SignupScreen extends StatelessWidget {
 
                     // Email Field
                     CustomTextField(
-                      controller: authController.emailController,
+                      controller: signupController.emailController,
                       labelText: 'Email',
                       hintText: 'Enter your email',
                       keyboardType: TextInputType.emailAddress,
@@ -78,7 +81,7 @@ class SignupScreen extends StatelessWidget {
 
                     // Password Field
                     CustomTextField(
-                      controller: authController.passwordController,
+                      controller: signupController.passwordController,
                       labelText: 'Password',
                       hintText: 'Create a password',
                       obscureText: true,
@@ -92,7 +95,7 @@ class SignupScreen extends StatelessWidget {
 
                     // Confirm Password Field
                     CustomTextField(
-                      controller: authController.confirmPasswordController,
+                      controller: signupController.confirmPasswordController,
                       labelText: 'Confirm Password',
                       hintText: 'Confirm your password',
                       obscureText: true,
@@ -102,14 +105,14 @@ class SignupScreen extends StatelessWidget {
                       ),
                       validator: (value) => Validators.validateConfirmPassword(
                         value,
-                        authController.passwordController.text,
+                        signupController.passwordController.text,
                       ),
                     ),
                     const SizedBox(height: 24),
 
                     // Phone Number Field (Optional)
                     CustomTextField(
-                      controller: authController.phoneController,
+                      controller: signupController.phoneController,
                       labelText: 'Phone Number (Optional)',
                       hintText: 'Enter your phone number',
                       keyboardType: TextInputType.phone,
@@ -155,8 +158,8 @@ class SignupScreen extends StatelessWidget {
                     // Sign Up Button
                     CustomButton(
                       text: 'Create Account',
-                      onPressed: authController.signUp,
-                      isLoading: authController.isLoading,
+                      onPressed: signupController.signUp,
+                      isLoading: signupController.isLoading,
                     ),
                     const SizedBox(height: 24),
 
@@ -182,7 +185,7 @@ class SignupScreen extends StatelessWidget {
                     // Google Sign In Button
                     CustomButton(
                       text: 'Continue with Google',
-                      onPressed: authController.signInWithGoogle,
+                      onPressed: authStateController.signInWithGoogle,
                       isOutlined: true,
                       icon: Container(
                         width: 20,
@@ -211,7 +214,7 @@ class SignupScreen extends StatelessWidget {
                             ),
                           ),
                           TextButton(
-                            onPressed: authController.goToLogin,
+                            onPressed: signupController.goToLogin,
                             style: TextButton.styleFrom(
                               padding: EdgeInsets.zero,
                               minimumSize: Size.zero,

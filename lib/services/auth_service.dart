@@ -15,18 +15,31 @@ class AuthService {
   AuthService._internal();
 
   final ApiService _apiService = ApiService();
-  UserModel? _currentUser;
-  String? _accessToken;
-
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
-
-  UserModel? get currentUser => _currentUser;
-
-  bool get isLoggedIn => _currentUser != null && _accessToken != null;
 
   Future<void> initialize() async {
     _apiService.initialize();
-    await _loadUserFromPreferences();
+  }
+
+  Future<UserModel?> getStoredUser() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userJson = prefs.getString(AppConstants.storageKeys.userData);
+      final isLoggedIn =
+          prefs.getBool(AppConstants.storageKeys.isLoggedIn) ?? false;
+      final token = await _apiService.getStoredToken();
+
+      if (userJson != null && isLoggedIn && token != null) {
+        final userMap = json.decode(userJson);
+        return UserModel.fromJson(userMap);
+      } else {
+        await clearAuthData();
+        return null;
+      }
+    } catch (e) {
+      await clearAuthData();
+      return null;
+    }
   }
 
   Future<UserModel?> signUpWithEmailAndPassword({
@@ -54,7 +67,7 @@ class AuthService {
 
     final authResponse = AuthResponse.fromJson(response!.data!);
 
-    await _handleAuthResponse(authResponse);
+    await _storeAuthData(authResponse);
 
     ExceptionHandler.showSuccessToast(AppConstants.successMessages.signup);
     return authResponse.user;
@@ -78,7 +91,7 @@ class AuthService {
 
     final authResponse = AuthResponse.fromJson(response!.data!);
 
-    await _handleAuthResponse(authResponse);
+    await _storeAuthData(authResponse);
 
     ExceptionHandler.showSuccessToast(AppConstants.successMessages.login);
     return authResponse.user;
@@ -104,7 +117,7 @@ class AuthService {
 
       final authResponse = AuthResponse.fromJson(response!.data!);
 
-      await _handleAuthResponse(authResponse);
+      await _storeAuthData(authResponse);
 
       ExceptionHandler.showSuccessToast('Google Sign-In successful');
       return authResponse.user;
@@ -119,7 +132,7 @@ class AuthService {
     try {
       await _apiService.post(ApiConstants.auth.logout);
     } finally {
-      await _clearAuthData();
+      await clearAuthData();
       ExceptionHandler.showSuccessToast(AppConstants.successMessages.logout);
     }
   }
@@ -196,7 +209,6 @@ class AuthService {
       return null;
     }
     final updatedUser = UserModel.fromJson(response!.data!);
-    _currentUser = updatedUser;
     await _saveUserToPreferences(updatedUser);
 
     ExceptionHandler.showSuccessToast(
@@ -235,18 +247,14 @@ class AuthService {
 
     if (response != null && response.data != null) {
       final user = UserModel.fromJson(response.data!);
-      _currentUser = user;
       await _saveUserToPreferences(user);
       return user;
     }
     return null;
   }
 
-  // Handle authentication response
-  Future<void> _handleAuthResponse(AuthResponse authResponse) async {
-    _currentUser = authResponse.user;
-    _accessToken = authResponse.accessToken;
-
+  // Store authentication data
+  Future<void> _storeAuthData(AuthResponse authResponse) async {
     await _apiService.storeToken(authResponse.accessToken);
 
     final prefs = await SharedPreferences.getInstance();
@@ -269,33 +277,9 @@ class AuthService {
     }
   }
 
-  // Load user from preferences
-  Future<void> _loadUserFromPreferences() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final userJson = prefs.getString(AppConstants.storageKeys.userData);
-      final isLoggedIn =
-          prefs.getBool(AppConstants.storageKeys.isLoggedIn) ?? false;
-      final token = await _apiService.getStoredToken();
-
-      if (userJson != null && isLoggedIn && token != null) {
-        final userMap = json.decode(userJson);
-        _currentUser = UserModel.fromJson(userMap);
-        _accessToken = token;
-      } else {
-        await _clearAuthData();
-      }
-    } catch (e) {
-      await _clearAuthData();
-    }
-  }
-
   // Clear all authentication data
-  Future<void> _clearAuthData() async {
+  Future<void> clearAuthData() async {
     try {
-      _currentUser = null;
-      _accessToken = null;
-
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(AppConstants.storageKeys.userData);
       await prefs.remove('refresh_token');

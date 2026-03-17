@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../controllers/auth_controller.dart';
-import '../../components/custom_button.dart';
-import '../../components/custom_text_field.dart';
-import '../../components/loading_overlay.dart';
+import '../../controllers/auth/login_controller.dart';
+import '../../controllers/auth/auth_state_controller.dart';
+import '../../components/shared/custom_button.dart';
+import '../../components/shared/custom_text_field.dart';
+import '../../components/shared/loading_overlay.dart';
 import '../../utils/validators.dart';
 import '../../utils/constants.dart';
 
@@ -12,18 +13,20 @@ class LoginScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final AuthController authController = Get.find();
+    final LoginController loginController = Get.find<LoginController>();
+    final AuthStateController authStateController =
+        Get.find<AuthStateController>();
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
       body: Obx(
         () => LoadingOverlay(
-          isLoading: authController.isLoading,
+          isLoading: loginController.isLoading || authStateController.isLoading,
           child: SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24.0),
               child: Form(
-                key: authController.loginFormKey,
+                key: loginController.loginFormKey,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -50,7 +53,7 @@ class LoginScreen extends StatelessWidget {
 
                     // Email Field
                     CustomTextField(
-                      controller: authController.emailController,
+                      controller: loginController.emailController,
                       labelText: 'Email',
                       hintText: 'Enter your email',
                       keyboardType: TextInputType.emailAddress,
@@ -64,7 +67,7 @@ class LoginScreen extends StatelessWidget {
 
                     // Password Field
                     CustomTextField(
-                      controller: authController.passwordController,
+                      controller: loginController.passwordController,
                       labelText: 'Password',
                       hintText: 'Enter your password',
                       obscureText: true,
@@ -80,7 +83,7 @@ class LoginScreen extends StatelessWidget {
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
-                        onPressed: authController.goToForgotPassword,
+                        onPressed: loginController.goToForgotPassword,
                         child: const Text(
                           'Forgot Password?',
                           style: TextStyle(
@@ -95,8 +98,8 @@ class LoginScreen extends StatelessWidget {
                     // Login Button
                     CustomButton(
                       text: 'Sign In',
-                      onPressed: authController.signIn,
-                      isLoading: authController.isLoading,
+                      onPressed: loginController.signIn,
+                      isLoading: loginController.isLoading,
                     ),
                     const SizedBox(height: 24),
 
@@ -122,7 +125,7 @@ class LoginScreen extends StatelessWidget {
                     // Google Sign In Button
                     CustomButton(
                       text: 'Continue with Google',
-                      onPressed: authController.signInWithGoogle,
+                      onPressed: authStateController.signInWithGoogle,
                       isOutlined: true,
                       icon: Container(
                         width: 20,
@@ -151,7 +154,7 @@ class LoginScreen extends StatelessWidget {
                             ),
                           ),
                           TextButton(
-                            onPressed: authController.goToSignup,
+                            onPressed: loginController.goToSignup,
                             style: TextButton.styleFrom(
                               padding: EdgeInsets.zero,
                               minimumSize: Size.zero,

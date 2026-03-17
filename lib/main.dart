@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/bindings/initial_binding.dart';
 import 'package:get/get.dart';
 import 'config/env_config.dart';
 import 'routes/app_routes.dart';
@@ -23,6 +24,7 @@ class MyApp extends StatelessWidget {
       darkTheme: _darkTheme,
       themeMode: ThemeMode.system,
       initialRoute: '/',
+      initialBinding: InitialBinding(),
       getPages: AppRoutes.routes,
       debugShowCheckedModeBanner: false,
       defaultTransition: Transition.cupertino,

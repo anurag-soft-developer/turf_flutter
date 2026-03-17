@@ -1,11 +1,17 @@
 import 'package:get/get.dart';
-import '../controllers/auth_controller.dart';
+import '../controllers/auth/login_controller.dart';
+import '../controllers/auth/signup_controller.dart';
 
-class AuthBinding extends Bindings {
+class LoginBinding extends Bindings {
   @override
   void dependencies() {
-    if (!Get.isRegistered<AuthController>()) {
-      Get.put<AuthController>(AuthController(), permanent: true);
-    }
+    Get.lazyPut<LoginController>(() => LoginController());
+  }
+}
+
+class SignupBinding extends Bindings {
+  @override
+  void dependencies() {
+    Get.lazyPut<SignupController>(() => SignupController());
   }
 }

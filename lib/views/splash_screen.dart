@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../controllers/auth_controller.dart';
-import '../views/auth/login_screen.dart';
-import '../views/home/dashboard_screen.dart';
+import '../controllers/auth/auth_state_controller.dart';
 import '../utils/constants.dart';
 
 class SplashScreen extends StatelessWidget {
@@ -69,7 +67,7 @@ class SplashScreen extends StatelessWidget {
   }
 }
 
-class AuthWrapper extends GetWidget<AuthController> {
+class AuthWrapper extends GetWidget<AuthStateController> {
   const AuthWrapper({super.key});
 
   @override
@@ -79,11 +77,17 @@ class AuthWrapper extends GetWidget<AuthController> {
         return const SplashScreen();
       }
 
-      if (controller.isLoggedIn) {
-        return const DashboardScreen();
-      } else {
-        return const LoginScreen();
-      }
+      // Navigate once after build is complete
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Get.offAllNamed(
+          controller.isLoggedIn
+              ? AppConstants.routes.dashboard
+              : AppConstants.routes.login,
+        );
+      });
+
+      // Show SplashScreen while navigating
+      return const SplashScreen();
     });
   }
 }

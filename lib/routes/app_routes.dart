@@ -7,43 +7,34 @@ import '../views/profile/profile_screen.dart';
 import '../views/settings/settings_screen.dart';
 import '../views/splash_screen.dart';
 import '../bindings/auth_binding.dart';
-import '../bindings/dashboard_binding.dart';
 import '../bindings/profile_binding.dart';
-import '../bindings/settings_binding.dart';
-import '../bindings/initial_binding.dart';
 import '../utils/constants.dart';
 
 class AppRoutes {
   static const String splashRoute = '/';
 
   static final routes = [
-    GetPage(
-      name: splashRoute,
-      page: () => const AuthWrapper(),
-      binding: InitialBinding(),
-    ),
+    GetPage(name: splashRoute, page: () => const AuthWrapper()),
     GetPage(
       name: AppConstants.routes.login,
       page: () => const LoginScreen(),
-      binding: AuthBinding(),
+      binding: LoginBinding(),
       transition: Transition.cupertino,
     ),
     GetPage(
       name: AppConstants.routes.signup,
       page: () => const SignupScreen(),
-      binding: AuthBinding(),
+      binding: SignupBinding(),
       transition: Transition.cupertino,
     ),
     GetPage(
       name: AppConstants.routes.forgotPassword,
       page: () => const ForgotPasswordScreen(),
-      binding: AuthBinding(),
       transition: Transition.cupertino,
     ),
     GetPage(
       name: AppConstants.routes.dashboard,
       page: () => const DashboardScreen(),
-      binding: DashboardBinding(),
       transition: Transition.cupertino,
     ),
     GetPage(
@@ -55,7 +46,6 @@ class AppRoutes {
     GetPage(
       name: AppConstants.routes.settings,
       page: () => const SettingsScreen(),
-      binding: SettingsBinding(),
       transition: Transition.cupertino,
     ),
   ];

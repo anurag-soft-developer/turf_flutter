@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../controllers/auth_controller.dart';
-import '../../components/custom_button.dart';
-import '../../components/custom_text_field.dart';
-import '../../components/loading_overlay.dart';
-import '../../utils/validators.dart';
+import '../../controllers/auth/auth_state_controller.dart';
+import '../../components/shared/loading_overlay.dart';
+import '../../components/forgot_password/forgot_password_email_step.dart';
+import '../../components/forgot_password/forgot_password_otp_step.dart';
 import '../../utils/constants.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
@@ -15,7 +14,7 @@ class ForgotPasswordScreen extends StatefulWidget {
 }
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
-  final AuthController authController = Get.find();
+  final AuthStateController authController = Get.find();
   final PageController _pageController = PageController();
   int _currentStep = 0;
 
@@ -64,7 +63,26 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             child: PageView(
               controller: _pageController,
               physics: const NeverScrollableScrollPhysics(),
-              children: [_buildEmailStep(), _buildOtpStep()],
+              children: [
+                ForgotPasswordEmailStep(
+                  emailController: _emailController,
+                  formKey: _emailFormKey,
+                  onSendOtp: _sendOtp,
+                  onBackToLogin: () => Get.back(),
+                  isLoading: authController.isLoading,
+                ),
+                ForgotPasswordOtpStep(
+                  email: _emailController.text,
+                  otpController: _otpController,
+                  newPasswordController: _newPasswordController,
+                  confirmPasswordController: _confirmPasswordController,
+                  formKey: _resetFormKey,
+                  onResetPassword: _resetPassword,
+                  onChangeEmail: _onChangeEmail,
+                  onResendOtp: _resendOtp,
+                  isLoading: authController.isLoading,
+                ),
+              ],
             ),
           ),
         ),
@@ -72,265 +90,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     );
   }
 
-  Widget _buildEmailStep() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24.0),
-      child: Form(
-        key: _emailFormKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 20),
-
-            // Icon
-            Center(
-              child: Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: const Color(AppColors.primaryColor).withAlpha(26),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.lock_reset_outlined,
-                  size: 40,
-                  color: Color(AppColors.primaryColor),
-                ),
-              ),
-            ),
-            const SizedBox(height: 32),
-
-            // Title
-            const Text(
-              'Forgot Password?',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Color(AppColors.textColor),
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            // Subtitle
-            const Text(
-              'Enter your email address and we\'ll send you a 6-digit OTP to reset your password.',
-              style: TextStyle(
-                fontSize: 16,
-                color: Color(AppColors.textSecondaryColor),
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 40),
-
-            // Email Field
-            CustomTextField(
-              controller: _emailController,
-              labelText: 'Email Address',
-              hintText: 'Enter your email',
-              keyboardType: TextInputType.emailAddress,
-              prefixIcon: const Icon(
-                Icons.email_outlined,
-                color: Color(AppColors.textSecondaryColor),
-              ),
-              validator: Validators.validateEmail,
-            ),
-            const SizedBox(height: 32),
-
-            // Send OTP Button
-            CustomButton(
-              text: 'Send OTP',
-              onPressed: _sendOtp,
-              isLoading: authController.isLoading,
-            ),
-            const SizedBox(height: 24),
-
-            // Back to Login
-            Center(
-              child: TextButton(
-                onPressed: () => Get.back(),
-                child: const Text(
-                  'Back to Login',
-                  style: TextStyle(
-                    color: Color(AppColors.primaryColor),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOtpStep() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24.0),
-      child: Form(
-        key: _resetFormKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 20),
-
-            // Icon
-            Center(
-              child: Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: const Color(AppColors.primaryColor).withAlpha(26),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.security_outlined,
-                  size: 40,
-                  color: Color(AppColors.primaryColor),
-                ),
-              ),
-            ),
-            const SizedBox(height: 32),
-
-            // Title
-            const Text(
-              'Enter Verification Code',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Color(AppColors.textColor),
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            // Subtitle
-            RichText(
-              text: TextSpan(
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Color(AppColors.textSecondaryColor),
-                  height: 1.5,
-                ),
-                children: [
-                  const TextSpan(text: 'We sent a 6-digit OTP to '),
-                  TextSpan(
-                    text: _emailController.text,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Color(AppColors.primaryColor),
-                    ),
-                  ),
-                  const TextSpan(
-                    text: '. Enter the code to reset your password.',
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 40),
-
-            // OTP Field
-            CustomTextField(
-              controller: _otpController,
-              labelText: '6-Digit OTP',
-              hintText: 'Enter OTP',
-              keyboardType: TextInputType.number,
-              textAlign: TextAlign.center,
-              maxLength: 6,
-              prefixIcon: const Icon(
-                Icons.security,
-                color: Color(AppColors.textSecondaryColor),
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'OTP is required';
-                }
-                if (value.length != 6) {
-                  return 'OTP must be 6 digits';
-                }
-                if (!RegExp(r'^\d+$').hasMatch(value)) {
-                  return 'OTP must contain only numbers';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 24),
-
-            // New Password Field
-            CustomTextField(
-              controller: _newPasswordController,
-              labelText: 'New Password',
-              hintText: 'Enter new password',
-              obscureText: true,
-              prefixIcon: const Icon(
-                Icons.lock_outline,
-                color: Color(AppColors.textSecondaryColor),
-              ),
-              validator: Validators.validatePassword,
-            ),
-            const SizedBox(height: 24),
-
-            // Confirm Password Field
-            CustomTextField(
-              controller: _confirmPasswordController,
-              labelText: 'Confirm Password',
-              hintText: 'Confirm new password',
-              obscureText: true,
-              prefixIcon: const Icon(
-                Icons.lock_outline,
-                color: Color(AppColors.textSecondaryColor),
-              ),
-              validator: (value) => Validators.validateConfirmPassword(
-                value,
-                _newPasswordController.text,
-              ),
-            ),
-            const SizedBox(height: 32),
-
-            // Reset Password Button
-            CustomButton(
-              text: 'Reset Password',
-              onPressed: _resetPassword,
-              isLoading: authController.isLoading,
-            ),
-            const SizedBox(height: 24),
-
-            // Actions Row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                TextButton(
-                  onPressed: () {
-                    setState(() {
-                      _currentStep = 0;
-                    });
-                    _pageController.animateToPage(
-                      0,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                    );
-                  },
-                  child: const Text(
-                    'Change Email',
-                    style: TextStyle(
-                      color: Color(AppColors.textSecondaryColor),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                TextButton(
-                  onPressed: _resendOtp,
-                  child: const Text(
-                    'Resend OTP',
-                    style: TextStyle(
-                      color: Color(AppColors.primaryColor),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+  void _onChangeEmail() {
+    setState(() {
+      _currentStep = 0;
+    });
+    _pageController.animateToPage(
+      0,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
     );
   }
 

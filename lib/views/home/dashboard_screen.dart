@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../controllers/auth_controller.dart';
+import '../../controllers/auth/auth_state_controller.dart';
+import '../../components/shared/loading_overlay.dart';
 import '../../utils/constants.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -8,7 +9,7 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final AuthController authController = Get.find();
+    final AuthStateController authController = Get.find();
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
@@ -28,11 +29,19 @@ class DashboardScreen extends StatelessWidget {
         ],
       ),
       drawer: _buildDrawer(context, authController),
-      body: Obx(() => _buildBody(context, authController)),
+      body: Obx(
+        () => LoadingOverlay(
+          isLoading: authController.isLoading,
+          child: _buildBody(context, authController),
+        ),
+      ),
     );
   }
 
-  Widget _buildDrawer(BuildContext context, AuthController authController) {
+  Widget _buildDrawer(
+    BuildContext context,
+    AuthStateController authController,
+  ) {
     return Drawer(
       child: Column(
         children: [
@@ -99,7 +108,7 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildBody(BuildContext context, AuthController authController) {
+  Widget _buildBody(BuildContext context, AuthStateController authController) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
       child: Column(
@@ -326,7 +335,10 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  void _showLogoutDialog(BuildContext context, AuthController authController) {
+  void _showLogoutDialog(
+    BuildContext context,
+    AuthStateController authController,
+  ) {
     Get.dialog(
       AlertDialog(
         title: const Text('Logout'),
