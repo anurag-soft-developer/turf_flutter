@@ -1,7 +1,7 @@
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
-import '../utils/constants.dart';
+import '../config/constants.dart';
 
 class ExceptionHandler {
   static void showErrorToast(String message) {

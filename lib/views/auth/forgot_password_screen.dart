@@ -4,7 +4,7 @@ import '../../controllers/auth/auth_state_controller.dart';
 import '../../components/shared/loading_overlay.dart';
 import '../../components/forgot_password/forgot_password_email_step.dart';
 import '../../components/forgot_password/forgot_password_otp_step.dart';
-import '../../utils/constants.dart';
+import '../../config/constants.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});

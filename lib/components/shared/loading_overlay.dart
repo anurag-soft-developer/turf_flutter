@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../utils/constants.dart';
+import '../../config/constants.dart';
 
 class LoadingOverlay extends StatelessWidget {
   final bool isLoading;

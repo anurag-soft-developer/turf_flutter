@@ -1,8 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../utils/api_constants.dart';
-import '../utils/constants.dart';
+import '../config/api_constants.dart';
+import '../config/constants.dart';
 import '../utils/exception_handler.dart';
 
 class ApiService {

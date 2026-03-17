@@ -3,7 +3,7 @@ import 'package:flutter_application_1/components/shared/loading_overlay.dart';
 import 'package:get/get.dart';
 import '../../controllers/auth/auth_state_controller.dart';
 import '../../controllers/settings_controller.dart';
-import '../../utils/constants.dart';
+import '../../config/constants.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});

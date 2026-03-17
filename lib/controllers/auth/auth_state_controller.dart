@@ -1,7 +1,7 @@
 import 'package:get/get.dart';
 import '../../services/auth_service.dart';
 import '../../models/user_model.dart';
-import '../../utils/constants.dart';
+import '../../config/constants.dart';
 
 class AuthStateController extends GetxController {
   static AuthStateController get instance => Get.find();

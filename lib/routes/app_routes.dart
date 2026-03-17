@@ -1,3 +1,4 @@
+import 'package:flutter_application_1/guards/auth_guard.dart';
 import 'package:get/get.dart';
 import '../views/auth/login_screen.dart';
 import '../views/auth/signup_screen.dart';
@@ -6,9 +7,10 @@ import '../views/home/dashboard_screen.dart';
 import '../views/profile/profile_screen.dart';
 import '../views/settings/settings_screen.dart';
 import '../views/splash_screen.dart';
+import '../views/access_denied_screen.dart';
 import '../bindings/auth_binding.dart';
 import '../bindings/profile_binding.dart';
-import '../utils/constants.dart';
+import '../config/constants.dart';
 
 class AppRoutes {
   static const String splashRoute = '/';
@@ -16,16 +18,23 @@ class AppRoutes {
   static final routes = [
     GetPage(name: splashRoute, page: () => const AuthWrapper()),
     GetPage(
+      name: AppConstants.routes.accessDenied,
+      page: () => const AccessDeniedScreen(),
+      transition: Transition.cupertino,
+    ),
+    GetPage(
       name: AppConstants.routes.login,
       page: () => const LoginScreen(),
       binding: LoginBinding(),
       transition: Transition.cupertino,
+      middlewares: [PublicGuard()],
     ),
     GetPage(
       name: AppConstants.routes.signup,
       page: () => const SignupScreen(),
       binding: SignupBinding(),
       transition: Transition.cupertino,
+      middlewares: [PublicGuard()],
     ),
     GetPage(
       name: AppConstants.routes.forgotPassword,
@@ -36,17 +45,20 @@ class AppRoutes {
       name: AppConstants.routes.dashboard,
       page: () => const DashboardScreen(),
       transition: Transition.cupertino,
+      middlewares: [AuthGuard()],
     ),
     GetPage(
       name: AppConstants.routes.profile,
       page: () => const ProfileScreen(),
       binding: ProfileBinding(),
       transition: Transition.cupertino,
+      middlewares: [AuthGuard()],
     ),
     GetPage(
       name: AppConstants.routes.settings,
       page: () => const SettingsScreen(),
       transition: Transition.cupertino,
+      middlewares: [AuthGuard()],
     ),
   ];
 }

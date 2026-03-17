@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../controllers/auth/auth_state_controller.dart';
 import '../../components/shared/loading_overlay.dart';
-import '../../utils/constants.dart';
+import '../../config/constants.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});

@@ -6,7 +6,7 @@ import '../../components/shared/custom_button.dart';
 import '../../components/shared/custom_text_field.dart';
 import '../../components/shared/loading_overlay.dart';
 import '../../utils/validators.dart';
-import '../../utils/constants.dart';
+import '../../config/constants.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});

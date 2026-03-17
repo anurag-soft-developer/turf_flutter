@@ -3,7 +3,7 @@ import 'package:flutter_application_1/bindings/initial_binding.dart';
 import 'package:get/get.dart';
 import 'config/env_config.dart';
 import 'routes/app_routes.dart';
-import 'utils/constants.dart';
+import 'config/constants.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

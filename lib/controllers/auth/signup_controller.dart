@@ -1,7 +1,7 @@
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
-import '../../utils/constants.dart';
+import '../../config/constants.dart';
 import 'auth_state_controller.dart';
 
 class SignupController extends GetxController {
