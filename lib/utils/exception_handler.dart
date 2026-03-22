@@ -67,6 +67,7 @@ class ExceptionHandler {
   }
 
   static void handleException(dynamic e) {
+    debugPrint('\x1B[31m[Exception occurred]: $e\x1B[0m');
     final errorMessage = handleGenericException(e);
     showErrorToast(errorMessage);
   }

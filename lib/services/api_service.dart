@@ -1,19 +1,21 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_application_1/utils/exception_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_constants.dart';
 import '../config/constants.dart';
-import '../utils/exception_handler.dart';
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
   factory ApiService() => _instance;
   ApiService._internal();
 
-  late Dio _dio;
+  // The 'late' keyword with an assignment acts lazily.
+  // It won't run this code until someone calls 'ApiService().dio'
+  late final Dio _dio = _setupDio();
 
-  void initialize() {
-    _dio = Dio(
+  Dio _setupDio() {
+    final dioInstance = Dio(
       BaseOptions(
         baseUrl: ApiConstants.baseUrl,
         connectTimeout: ApiConstants.connectTimeout,
@@ -22,7 +24,7 @@ class ApiService {
       ),
     );
 
-    _dio.interceptors.add(
+    dioInstance.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
           final token = await getStoredToken();
@@ -35,7 +37,7 @@ class ApiService {
     );
 
     // Add logging in debug mode
-    _dio.interceptors.add(
+    dioInstance.interceptors.add(
       LogInterceptor(
         requestBody: true,
         responseBody: true,
@@ -44,9 +46,11 @@ class ApiService {
         },
       ),
     );
+
+    return dioInstance;
   }
 
-  Future<Response<T>?> post<T>(
+  Future<T?> post<T>(
     String endpoint, {
     dynamic data,
     Map<String, dynamic>? queryParameters,
@@ -59,14 +63,19 @@ class ApiService {
         queryParameters: queryParameters,
         options: options,
       );
-      return response;
+
+      if (response.data == null) {
+        throw Exception('No data received from the server');
+      }
+
+      return response.data;
     } catch (e) {
       ExceptionHandler.handleException(e);
       return null;
     }
   }
 
-  Future<Response<T>?> get<T>(
+  Future<T?> get<T>(
     String endpoint, {
     Map<String, dynamic>? queryParameters,
     Options? options,
@@ -77,34 +86,42 @@ class ApiService {
         queryParameters: queryParameters,
         options: options,
       );
-      return response;
+
+      if (response.data == null) {
+        throw Exception('No data received from the server');
+      }
+
+      return response.data;
     } catch (e) {
       ExceptionHandler.handleException(e);
       return null;
     }
   }
 
-  Future<Response<T>?> put<T>(
+  Future<T?> patch<T>(
     String endpoint, {
     dynamic data,
     Map<String, dynamic>? queryParameters,
     Options? options,
   }) async {
     try {
-      final response = await _dio.put<T>(
+      final response = await _dio.patch<T>(
         endpoint,
         data: data,
         queryParameters: queryParameters,
         options: options,
       );
-      return response;
+      if (response.data == null) {
+        throw Exception('No data received from the server');
+      }
+      return response.data;
     } catch (e) {
       ExceptionHandler.handleException(e);
       return null;
     }
   }
 
-  Future<Response<T>?> delete<T>(
+  Future<T?> delete<T>(
     String endpoint, {
     dynamic data,
     Map<String, dynamic>? queryParameters,
@@ -117,7 +134,12 @@ class ApiService {
         queryParameters: queryParameters,
         options: options,
       );
-      return response;
+
+      if (response.data == null) {
+        throw Exception('No data received from the server');
+      }
+
+      return response.data;
     } catch (e) {
       ExceptionHandler.handleException(e);
       return null;

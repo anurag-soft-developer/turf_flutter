@@ -17,10 +17,6 @@ class AuthService {
   final ApiService _apiService = ApiService();
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
 
-  Future<void> initialize() async {
-    _apiService.initialize();
-  }
-
   Future<UserModel?> getStoredUser() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -60,12 +56,11 @@ class AuthService {
       data: registerRequest.toJson(),
     );
 
-    if (response?.data == null) {
-      ExceptionHandler.showErrorToast(AppConstants.errorMessages.unknown);
+    if (response == null) {
       return null;
     }
 
-    final authResponse = AuthResponse.fromJson(response!.data!);
+    final authResponse = AuthResponse.fromJson(response);
 
     await _storeAuthData(authResponse);
 
@@ -84,12 +79,11 @@ class AuthService {
       data: loginRequest.toJson(),
     );
 
-    if (response?.data == null) {
-      ExceptionHandler.showErrorToast('Failed to login.');
+    if (response == null) {
       return null;
     }
 
-    final authResponse = AuthResponse.fromJson(response!.data!);
+    final authResponse = AuthResponse.fromJson(response);
 
     await _storeAuthData(authResponse);
 
@@ -110,12 +104,11 @@ class AuthService {
         data: {'idToken': auth.idToken},
       );
 
-      if (response?.data == null) {
-        ExceptionHandler.showErrorToast('Failed to login.');
+      if (response == null) {
         return null;
       }
 
-      final authResponse = AuthResponse.fromJson(response!.data!);
+      final authResponse = AuthResponse.fromJson(response);
 
       await _storeAuthData(authResponse);
 
@@ -129,12 +122,9 @@ class AuthService {
   }
 
   Future<void> signOut() async {
-    try {
-      await _apiService.post(ApiConstants.auth.logout);
-    } finally {
-      await clearAuthData();
-      ExceptionHandler.showSuccessToast(AppConstants.successMessages.logout);
-    }
+    await _apiService.post(ApiConstants.auth.logout);
+    await clearAuthData();
+    ExceptionHandler.showSuccessToast(AppConstants.successMessages.logout);
   }
 
   Future<void> sendPasswordResetEmail(String email) async {
@@ -146,21 +136,12 @@ class AuthService {
   }
 
   Future<bool> sendOtpForPasswordReset(String email) async {
-    try {
-      final response = await _apiService.post(
-        ApiConstants.auth.forgotPassword,
-        data: {'email': email},
-      );
+    final response = await _apiService.post(
+      ApiConstants.auth.forgotPassword,
+      data: {'email': email},
+    );
 
-      if (response?.statusCode == 200) {
-        ExceptionHandler.showSuccessToast(AppConstants.successMessages.otpSent);
-        return true;
-      }
-      return false;
-    } catch (e) {
-      ExceptionHandler.showErrorToast('Failed to send OTP');
-      return false;
-    }
+    return response != null;
   }
 
   Future<bool> resetPasswordWithOtp({
@@ -168,23 +149,12 @@ class AuthService {
     required String otp,
     required String newPassword,
   }) async {
-    try {
-      final response = await _apiService.post(
-        ApiConstants.auth.resetPassword,
-        data: {'email': email, 'otp': otp, 'password': newPassword},
-      );
+    final response = await _apiService.post(
+      ApiConstants.auth.resetPassword,
+      data: {'email': email, 'otp': otp, 'password': newPassword},
+    );
 
-      if (response?.statusCode == 200) {
-        ExceptionHandler.showSuccessToast(
-          AppConstants.successMessages.passwordReset,
-        );
-        return true;
-      }
-      return false;
-    } catch (e) {
-      ExceptionHandler.showErrorToast('Failed to reset password');
-      return false;
-    }
+    return response != null;
   }
 
   Future<UserModel?> updateUserProfile({
@@ -199,16 +169,15 @@ class AuthService {
     if (phone != null) updateData['phone'] = phone;
     if (avatar != null) updateData['avatar'] = avatar;
 
-    final response = await _apiService.put<Map<String, dynamic>>(
+    final response = await _apiService.patch<Map<String, dynamic>>(
       ApiConstants.user.updateProfile,
       data: updateData,
     );
 
-    if (response?.data == null) {
-      ExceptionHandler.showErrorToast('Failed to update profile');
+    if (response == null) {
       return null;
     }
-    final updatedUser = UserModel.fromJson(response!.data!);
+    final updatedUser = UserModel.fromJson(response);
     await _saveUserToPreferences(updatedUser);
 
     ExceptionHandler.showSuccessToast(
@@ -221,23 +190,13 @@ class AuthService {
     required String currentPassword,
     required String newPassword,
   }) async {
-    try {
-      await _apiService.put(
-        ApiConstants.user.changePassword,
-        data: {
-          'current_password': currentPassword,
-          'new_password': newPassword,
-        },
-      );
+    await _apiService.patch(
+      ApiConstants.user.changePassword,
+      data: {'current_password': currentPassword, 'new_password': newPassword},
+    );
 
-      ExceptionHandler.showSuccessToast('Password changed successfully');
-      return true;
-    } catch (e) {
-      if (e is! Exception) {
-        ExceptionHandler.showErrorToast('Failed to change password');
-      }
-      return false;
-    }
+    ExceptionHandler.showSuccessToast('Password changed successfully');
+    return true;
   }
 
   Future<UserModel?> getCurrentUserProfile() async {
@@ -245,8 +204,8 @@ class AuthService {
       ApiConstants.user.profile,
     );
 
-    if (response != null && response.data != null) {
-      final user = UserModel.fromJson(response.data!);
+    if (response != null) {
+      final user = UserModel.fromJson(response);
       await _saveUserToPreferences(user);
       return user;
     }

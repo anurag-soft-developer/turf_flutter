@@ -1,3 +1,4 @@
+import 'package:flutter_application_1/utils/exception_handler.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
@@ -26,22 +27,27 @@ class LoginController extends GetxController {
   }
 
   Future<void> signIn() async {
-    if (!loginFormKey.currentState!.validate()) return;
+    try {
+      if (!loginFormKey.currentState!.validate()) return;
 
-    _isLoading.value = true;
+      _isLoading.value = true;
 
-    final result = await _authService.signInWithEmailAndPassword(
-      email: emailController.text.trim(),
-      password: passwordController.text.trim(),
-    );
+      final result = await _authService.signInWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+      );
 
-    if (result != null) {
-      _authStateController.setUser(result);
-      _clearControllers();
-      Get.offAllNamed(AppConstants.routes.dashboard);
+      if (result != null) {
+        _authStateController.setUser(result);
+        _clearControllers();
+        Get.offAllNamed(AppConstants.routes.dashboard);
+      }
+
+      _isLoading.value = false;
+    } catch (e) {
+      ExceptionHandler.handleException(e);
+      _isLoading.value = false;
     }
-
-    _isLoading.value = false;
   }
 
   void _clearControllers() {

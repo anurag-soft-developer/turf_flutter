@@ -1,3 +1,4 @@
+import 'package:flutter_application_1/utils/exception_handler.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
@@ -34,26 +35,31 @@ class SignupController extends GetxController {
   }
 
   Future<void> signUp() async {
-    if (!signupFormKey.currentState!.validate()) return;
+    try {
+      if (!signupFormKey.currentState!.validate()) return;
 
-    _isLoading.value = true;
+      _isLoading.value = true;
 
-    final result = await _authService.signUpWithEmailAndPassword(
-      email: emailController.text.trim(),
-      password: passwordController.text.trim(),
-      fullName: fullNameController.text.trim(),
-      phone: phoneController.text.trim().isNotEmpty
-          ? phoneController.text.trim()
-          : null,
-    );
+      final result = await _authService.signUpWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+        fullName: fullNameController.text.trim(),
+        phone: phoneController.text.trim().isNotEmpty
+            ? phoneController.text.trim()
+            : null,
+      );
 
-    if (result != null) {
-      _authStateController.setUser(result);
-      _clearControllers();
-      Get.offAllNamed(AppConstants.routes.dashboard);
+      if (result != null) {
+        _authStateController.setUser(result);
+        _clearControllers();
+        Get.offAllNamed(AppConstants.routes.dashboard);
+      }
+
+      _isLoading.value = false;
+    } catch (e) {
+      ExceptionHandler.handleException(e);
+      _isLoading.value = false;
     }
-
-    _isLoading.value = false;
   }
 
   void _clearControllers() {

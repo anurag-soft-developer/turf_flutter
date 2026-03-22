@@ -1,0 +1,154 @@
+import '../models/turf_model.dart';
+import 'api_service.dart';
+
+class TurfService {
+  static final TurfService _instance = TurfService._internal();
+  factory TurfService() => _instance;
+  TurfService._internal();
+
+  final ApiService _apiService = ApiService();
+
+  Future<TurfModel?> createTurf(CreateTurfRequest request) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      '/turf',
+      data: request.toJson(),
+    );
+
+    if (response == null) {
+      return null;
+    }
+
+    final turf = TurfModel.fromJson(response);
+    return turf;
+  }
+
+  Future<List<TurfModel>?> searchTurfs({
+    String? globalSearchText,
+    List<String>? sportTypes,
+    List<String>? amenities,
+    LocationModel? location,
+    double? radius,
+    double? minPrice,
+    double? maxPrice,
+    bool? includeWeekendSurge,
+    bool? isAvailable,
+    double? minRating,
+    String? operatingTime,
+    int page = 1,
+    int limit = 10,
+    String? sort,
+  }) async {
+    final Map<String, dynamic> queryParams = {};
+
+    if (globalSearchText?.isNotEmpty == true) {
+      queryParams['globalSearchText'] = globalSearchText;
+    }
+    if (sportTypes?.isNotEmpty == true) {
+      queryParams['sportTypes'] = sportTypes!.join(',');
+    }
+    if (amenities?.isNotEmpty == true) {
+      queryParams['amenities'] = amenities!.join(',');
+    }
+    if (location != null) {
+      if (location.coordinates.lat != null) {
+        queryParams['location[lat]'] = location.coordinates.lat.toString();
+      }
+      if (location.coordinates.lng != null) {
+        queryParams['location[lng]'] = location.coordinates.lng.toString();
+      }
+      if (radius != null) {
+        queryParams['location[radius]'] = radius.toString();
+      }
+    }
+    if (minPrice != null) {
+      queryParams['pricing[minPrice]'] = minPrice.toString();
+    }
+    if (maxPrice != null) {
+      queryParams['pricing[maxPrice]'] = maxPrice.toString();
+    }
+    if (includeWeekendSurge != null) {
+      queryParams['pricing[includeWeekendSurge]'] = includeWeekendSurge
+          .toString();
+    }
+    if (isAvailable != null) {
+      queryParams['isAvailable'] = isAvailable.toString();
+    }
+    if (minRating != null) {
+      queryParams['minRating'] = minRating.toString();
+    }
+    if (operatingTime?.isNotEmpty == true) {
+      queryParams['operatingTime'] = operatingTime;
+    }
+    if (sort?.isNotEmpty == true) {
+      queryParams['sort'] = sort;
+    }
+
+    queryParams['page'] = page.toString();
+    queryParams['limit'] = limit.toString();
+
+    final response = await _apiService.get<List<dynamic>>(
+      '/turf',
+      queryParameters: queryParams,
+    );
+
+    if (response == null) {
+      return [];
+    }
+
+    final turfs = response
+        .map((turfJson) => TurfModel.fromJson(turfJson as Map<String, dynamic>))
+        .toList();
+
+    return turfs;
+  }
+
+  Future<Map<String, dynamic>?> getTurfStats() async {
+    final response = await _apiService.get<Map<String, dynamic>>('/turf/stats');
+
+    return response;
+  }
+
+  Future<TurfModel?> getTurfById(String turfId) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      '/turf/$turfId',
+    );
+
+    if (response == null) {
+      return null;
+    }
+
+    final turf = TurfModel.fromJson(response);
+    return turf;
+  }
+
+  Future<TurfModel?> updateTurf(
+    String turfId,
+    UpdateTurfRequest request,
+  ) async {
+    final response = await _apiService.patch<Map<String, dynamic>>(
+      '/turf/$turfId',
+      data: request.toJson(),
+    );
+
+    if (response == null) {
+      return null;
+    }
+
+    final updatedTurf = TurfModel.fromJson(response);
+    return updatedTurf;
+  }
+
+  Future<bool> deleteTurf(String turfId) async {
+    final response = await _apiService.delete('/turf/$turfId');
+    return response != null;
+  }
+
+  /// Get featured/recommended turfs
+  Future<List<TurfModel>?> getFeaturedTurfs({int limit = 5}) async {
+    return await searchTurfs(
+      sort: 'averageRating',
+      limit: limit,
+      minRating: 4.0,
+    );
+  }
+}

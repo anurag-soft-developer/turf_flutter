@@ -25,8 +25,6 @@ class AuthStateController extends GetxController {
   Future<void> _initializeAuthService() async {
     _isLoading.value = true;
 
-    await _authService.initialize();
-
     final storedUser = await _authService.getStoredUser();
     if (storedUser != null) {
       _user.value = storedUser;
