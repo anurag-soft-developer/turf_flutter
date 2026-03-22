@@ -76,6 +76,16 @@ class TurfListController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+
+    // Handle navigation arguments for pre-selected sport
+    final arguments = Get.arguments;
+    if (arguments != null && arguments is Map<String, dynamic>) {
+      final String? sportType = arguments['sportType'];
+      if (sportType != null && sportType != 'All') {
+        _selectedSportTypes.add(sportType);
+      }
+    }
+
     loadFeaturedTurfs();
     loadTurfs();
   }
@@ -170,6 +180,15 @@ class TurfListController extends GetxController {
     if (_selectedSportTypes.contains(sportType)) {
       _selectedSportTypes.remove(sportType);
     } else {
+      _selectedSportTypes.add(sportType);
+    }
+    searchTurfs();
+  }
+
+  // Set sport filter directly (used when navigating from dashboard)
+  void setSportFilter(String sportType) {
+    _selectedSportTypes.clear();
+    if (sportType != 'All') {
       _selectedSportTypes.add(sportType);
     }
     searchTurfs();
