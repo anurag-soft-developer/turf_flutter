@@ -6,10 +6,14 @@ import '../views/auth/forgot_password_screen.dart';
 import '../views/home/dashboard_screen.dart';
 import '../views/profile/profile_screen.dart';
 import '../views/settings/settings_screen.dart';
+import '../views/turf/turf_list_screen.dart';
+import '../views/turf/turf_detail_screen.dart';
 import '../views/splash_screen.dart';
 import '../views/access_denied_screen.dart';
 import '../bindings/auth_binding.dart';
 import '../bindings/profile_binding.dart';
+import '../bindings/turf_list_binding.dart';
+import '../bindings/turf_detail_binding.dart';
 import '../config/constants.dart';
 
 class AppRoutes {
@@ -57,6 +61,20 @@ class AppRoutes {
     GetPage(
       name: AppConstants.routes.settings,
       page: () => const SettingsScreen(),
+      transition: Transition.cupertino,
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppConstants.routes.turfList,
+      page: () => const TurfListScreen(),
+      binding: TurfListBinding(),
+      transition: Transition.cupertino,
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppConstants.routes.turfDetail,
+      page: () => const TurfDetailScreen(),
+      binding: TurfDetailBinding(),
       transition: Transition.cupertino,
       middlewares: [AuthGuard()],
     ),

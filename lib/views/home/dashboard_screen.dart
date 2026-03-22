@@ -79,6 +79,14 @@ class DashboardScreen extends StatelessWidget {
             onTap: () => Get.back(),
           ),
           ListTile(
+            leading: const Icon(Icons.sports_soccer),
+            title: const Text('Find Turfs'),
+            onTap: () {
+              Get.back();
+              Get.toNamed(AppConstants.routes.turfList);
+            },
+          ),
+          ListTile(
             leading: const Icon(Icons.person),
             title: const Text('Profile'),
             onTap: () {
@@ -187,6 +195,12 @@ class DashboardScreen extends StatelessWidget {
             childAspectRatio: 1.2,
             children: [
               _buildActionCard(
+                icon: Icons.sports_soccer,
+                title: 'Find Turfs',
+                subtitle: 'Book turfs near you',
+                onTap: () => Get.toNamed(AppConstants.routes.turfList),
+              ),
+              _buildActionCard(
                 icon: Icons.person,
                 title: 'Profile',
                 subtitle: 'View & edit profile',
@@ -206,6 +220,18 @@ class DashboardScreen extends StatelessWidget {
                   Get.snackbar(
                     'Coming Soon',
                     'Security settings will be available soon',
+                    snackPosition: SnackPosition.BOTTOM,
+                  );
+                },
+              ),
+              _buildActionCard(
+                icon: Icons.history,
+                title: 'Bookings',
+                subtitle: 'Your booking history',
+                onTap: () {
+                  Get.snackbar(
+                    'Coming Soon',
+                    'Booking history will be available soon',
                     snackPosition: SnackPosition.BOTTOM,
                   );
                 },

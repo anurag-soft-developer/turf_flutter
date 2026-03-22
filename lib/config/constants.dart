@@ -29,6 +29,8 @@ class Routes {
   final String profile = '/profile';
   final String settings = '/settings';
   final String accessDenied = '/access-denied';
+  final String turfList = '/turf-list';
+  final String turfDetail = '/turf-detail';
 }
 
 class StorageKeys {
