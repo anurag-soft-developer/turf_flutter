@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../controllers/auth/auth_state_controller.dart';
 import '../../components/shared/loading_overlay.dart';
-import '../../components/dashboard/welcome_card.dart';
+import '../../components/turf/featured_section.dart';
 import '../../components/dashboard/sports_section.dart';
 import '../../components/dashboard/quick_actions_section.dart';
 import '../../config/constants.dart';
@@ -113,23 +113,30 @@ class DashboardScreen extends StatelessWidget {
 
   Widget _buildBody(BuildContext context, AuthStateController authController) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Welcome Card
-          WelcomeCard(authController: authController),
-          const SizedBox(height: 32),
+          FeaturedTurfsSection(),
+          const SizedBox(height: 16),
 
-          // Sports Section (Primary - Most Prominent)
-          const SportsSection(),
-          const SizedBox(height: 32),
+          // Rest with padding
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Sports Section (Primary - Most Prominent)
+                const SportsSection(),
+                const SizedBox(height: 32),
 
-          // Quick Actions (Secondary - Below Sports)
-          const QuickActionsSection(),
-          const SizedBox(height: 32),
+                // Quick Actions (Secondary - Below Sports)
+                const QuickActionsSection(),
+                const SizedBox(height: 32),
 
-          // Account Info
+                // Account Info
+              ],
+            ),
+          ),
         ],
       ),
     );

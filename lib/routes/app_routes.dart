@@ -49,6 +49,7 @@ class AppRoutes {
       name: AppConstants.routes.dashboard,
       page: () => const DashboardScreen(),
       transition: Transition.cupertino,
+      binding: TurfListBinding(),
       middlewares: [AuthGuard()],
     ),
     GetPage(

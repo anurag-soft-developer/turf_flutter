@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import '../../controllers/turf_list_controller.dart';
 import '../../components/shared/loading_overlay.dart';
 import '../../components/turf/search_components.dart';
-import '../../components/turf/featured_section.dart';
 import '../../components/turf/turf_cards.dart';
 import '../../components/turf/filter_bottom_sheet.dart';
 import '../../config/constants.dart';
@@ -41,16 +40,6 @@ class TurfListScreen extends StatelessWidget {
               children: [
                 // Search Section
                 TurfSearchSection(controller: controller),
-
-                // Featured Section (only show if no search/filters)
-                Obx(
-                  () =>
-                      controller.searchController.text.isEmpty &&
-                          controller.selectedSportTypes.isEmpty &&
-                          controller.selectedAmenities.isEmpty
-                      ? FeaturedTurfsSection(controller: controller)
-                      : const SizedBox(),
-                ),
 
                 // Turfs List
                 Expanded(child: _buildTurfsList(controller)),

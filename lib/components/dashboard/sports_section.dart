@@ -23,52 +23,97 @@ class SportsSection extends StatelessWidget {
         ),
         const SizedBox(height: 16),
 
-        Wrap(
-          spacing: 16,
-          runSpacing: 16,
-          children: [
-            _buildEnhancedSportCard(
-              sport: 'Football',
-              icon: Icons.sports_soccer,
-              color: Colors.green,
-              gradient: [Colors.green.shade400, Colors.green.shade600],
-              subtitle: 'Most Popular',
-            ),
-            _buildEnhancedSportCard(
-              sport: 'Cricket',
-              icon: Icons.sports_cricket,
-              color: Colors.orange,
-              gradient: [Colors.orange.shade400, Colors.orange.shade600],
-              subtitle: 'Team Sport',
-            ),
-            _buildEnhancedSportCard(
-              sport: 'Basketball',
-              icon: Icons.sports_basketball,
-              color: Colors.deepOrange,
-              gradient: [
-                Colors.deepOrange.shade400,
-                Colors.deepOrange.shade600,
+        // Sports cards with proper spacing
+        LayoutBuilder(
+          builder: (context, constraints) {
+            // Calculate number of cards per row based on screen width
+            const cardWidth = 140.0;
+            const minSpacing = 16.0;
+            final availableWidth = constraints.maxWidth;
+            final cardsPerRow = (availableWidth / (cardWidth + minSpacing))
+                .floor()
+                .clamp(2, 3);
+
+            // Group sports into rows
+            final sports = [
+              {
+                'sport': 'Football',
+                'icon': Icons.sports_soccer,
+                'color': Colors.green,
+                'gradient': [Colors.green.shade400, Colors.green.shade600],
+                'subtitle': 'Most Popular',
+              },
+              {
+                'sport': 'Cricket',
+                'icon': Icons.sports_cricket,
+                'color': Colors.orange,
+                'gradient': [Colors.orange.shade400, Colors.orange.shade600],
+                'subtitle': 'Team Sport',
+              },
+              {
+                'sport': 'Basketball',
+                'icon': Icons.sports_basketball,
+                'color': Colors.deepOrange,
+                'gradient': [
+                  Colors.deepOrange.shade400,
+                  Colors.deepOrange.shade600,
+                ],
+                'subtitle': 'Indoor/Outdoor',
+              },
+              {
+                'sport': 'Badminton',
+                'icon': Icons.sports_tennis,
+                'color': Colors.blue,
+                'gradient': [Colors.blue.shade400, Colors.blue.shade600],
+                'subtitle': 'Singles/Doubles',
+              },
+              {
+                'sport': 'All',
+                'icon': Icons.sports,
+                'color': const Color(AppColors.primaryColor),
+                'gradient': [
+                  const Color(AppColors.primaryColor),
+                  const Color(AppColors.secondaryColor),
+                ],
+                'subtitle': 'View All',
+              },
+            ];
+
+            return Column(
+              children: [
+                for (int i = 0; i < sports.length; i += cardsPerRow)
+                  Padding(
+                    padding: EdgeInsets.only(
+                      bottom: i + cardsPerRow < sports.length ? 16 : 0,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        for (
+                          int j = 0;
+                          j < cardsPerRow && i + j < sports.length;
+                          j++
+                        )
+                          _buildEnhancedSportCard(
+                            sport: sports[i + j]['sport'] as String,
+                            icon: sports[i + j]['icon'] as IconData,
+                            color: sports[i + j]['color'] as Color,
+                            gradient: sports[i + j]['gradient'] as List<Color>,
+                            subtitle: sports[i + j]['subtitle'] as String,
+                          ),
+                        // Add spacers for incomplete rows
+                        for (
+                          int k = i + cardsPerRow;
+                          k < i + cardsPerRow && k >= sports.length;
+                          k++
+                        )
+                          const SizedBox(width: 140),
+                      ],
+                    ),
+                  ),
               ],
-              subtitle: 'Indoor/Outdoor',
-            ),
-            _buildEnhancedSportCard(
-              sport: 'Badminton',
-              icon: Icons.sports_tennis,
-              color: Colors.blue,
-              gradient: [Colors.blue.shade400, Colors.blue.shade600],
-              subtitle: 'Singles/Doubles',
-            ),
-            _buildEnhancedSportCard(
-              sport: 'All',
-              icon: Icons.sports,
-              color: const Color(AppColors.primaryColor),
-              gradient: [
-                const Color(AppColors.primaryColor),
-                const Color(AppColors.secondaryColor),
-              ],
-              subtitle: 'View All',
-            ),
-          ],
+            );
+          },
         ),
       ],
     );
