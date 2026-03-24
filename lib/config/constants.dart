@@ -82,4 +82,5 @@ class AppColors {
   static const int successColor = 0xFF10B981;
   static const int textColor = 0xFF111827;
   static const int textSecondaryColor = 0xFF6B7280;
+  static const int dividerColor = 0xFFD7D8DA;
 }

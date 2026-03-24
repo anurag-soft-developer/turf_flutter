@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../config/constants.dart';
+import '../../utils/app_snackbar.dart';
 
 class QuickActionsSection extends StatelessWidget {
   const QuickActionsSection({super.key});
@@ -44,32 +45,23 @@ class QuickActionsSection extends StatelessWidget {
               icon: Icons.security,
               title: 'Security',
               onTap: () {
-                Get.snackbar(
-                  'Coming Soon',
-                  'Security settings will be available soon',
-                  snackPosition: SnackPosition.BOTTOM,
-                );
+                AppSnackbar.comingSoon(feature: 'Security settings');
               },
             ),
             _buildQuickActionCard(
               icon: Icons.history,
               title: 'Bookings',
               onTap: () {
-                Get.snackbar(
-                  'Coming Soon',
-                  'Booking history will be available soon',
-                  snackPosition: SnackPosition.BOTTOM,
-                );
+                AppSnackbar.comingSoon(feature: 'Booking history');
               },
             ),
             _buildQuickActionCard(
               icon: Icons.help,
               title: 'Help',
               onTap: () {
-                Get.snackbar(
-                  'Help',
-                  'Contact us at support@example.com',
-                  snackPosition: SnackPosition.BOTTOM,
+                AppSnackbar.info(
+                  title: 'Help',
+                  message: 'Contact us at support@example.com',
                 );
               },
             ),
@@ -86,6 +78,7 @@ class QuickActionsSection extends StatelessWidget {
   }) {
     return Card(
       elevation: 1,
+      color: const Color(AppColors.surfaceColor),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: onTap,

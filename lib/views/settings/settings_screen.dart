@@ -4,6 +4,30 @@ import 'package:get/get.dart';
 import '../../controllers/auth/auth_state_controller.dart';
 import '../../controllers/settings_controller.dart';
 import '../../config/constants.dart';
+import '../../utils/app_snackbar.dart';
+
+class SettingItem {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final VoidCallback onTap;
+  final bool isRed;
+
+  SettingItem({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.onTap,
+    this.isRed = false,
+  });
+}
+
+class SettingSection {
+  final String title;
+  final List<SettingItem> items;
+
+  SettingSection({required this.title, required this.items});
+}
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -12,6 +36,103 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final SettingsController settingsController = Get.put(SettingsController());
     final AuthStateController authController = Get.find();
+
+    // Define setting sections data
+    final List<SettingSection> settingSections = [
+      SettingSection(
+        title: 'Privacy & Security',
+        items: [
+          SettingItem(
+            title: 'Change Password',
+            subtitle: 'Update your account password',
+            icon: Icons.lock_outline,
+            onTap: () {
+              Get.snackbar(
+                'Coming Soon',
+                'Password change will be available soon',
+                snackPosition: SnackPosition.BOTTOM,
+              );
+            },
+          ),
+          SettingItem(
+            title: 'Two-Factor Authentication',
+            subtitle: 'Add an extra layer of security',
+            icon: Icons.security,
+            onTap: () {
+              Get.snackbar(
+                'Coming Soon',
+                'Two-factor authentication will be available soon',
+                snackPosition: SnackPosition.BOTTOM,
+              );
+            },
+          ),
+          SettingItem(
+            title: 'Privacy Settings',
+            subtitle: 'Manage your privacy preferences',
+            icon: Icons.privacy_tip_outlined,
+            onTap: () {
+              AppSnackbar.comingSoon(feature: 'Privacy settings');
+            },
+          ),
+        ],
+      ),
+      SettingSection(
+        title: 'Support & Information',
+        items: [
+          SettingItem(
+            title: 'Help Center',
+            subtitle: 'Get help and support',
+            icon: Icons.help_outline,
+            onTap: () {
+              AppSnackbar.info(
+                title: 'Help Center',
+                message: 'Contact us at support@example.com',
+              );
+            },
+          ),
+          SettingItem(
+            title: 'Terms of Service',
+            subtitle: 'Read our terms and conditions',
+            icon: Icons.description_outlined,
+            onTap: () {
+              AppSnackbar.comingSoon(feature: 'Terms of service');
+            },
+          ),
+          SettingItem(
+            title: 'Privacy Policy',
+            subtitle: 'Learn about our privacy practices',
+            icon: Icons.policy_outlined,
+            onTap: () {
+              AppSnackbar.comingSoon(feature: 'Privacy policy');
+            },
+          ),
+          SettingItem(
+            title: 'About',
+            subtitle: 'App version and information',
+            icon: Icons.info_outline,
+            onTap: settingsController.showAbout,
+          ),
+        ],
+      ),
+      SettingSection(
+        title: 'Advanced',
+        items: [
+          SettingItem(
+            title: 'Clear Cache',
+            subtitle: 'Clear app cache and temporary files',
+            icon: Icons.cleaning_services_outlined,
+            onTap: () => _showClearCacheDialog(context, settingsController),
+          ),
+          SettingItem(
+            title: 'Sign Out',
+            subtitle: 'Sign out from your account',
+            icon: Icons.logout,
+            onTap: () => _showSignOutDialog(context, authController),
+            isRed: true,
+          ),
+        ],
+      ),
+    ];
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
@@ -99,326 +220,112 @@ class SettingsScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Preferences Section
-                      const Text(
-                        'Preferences',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Color(AppColors.textColor),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
+                      // const Text(
+                      //   'Preferences',
+                      //   style: TextStyle(
+                      //     fontSize: 20,
+                      //     fontWeight: FontWeight.bold,
+                      //     color: Color(AppColors.textColor),
+                      //   ),
+                      // ),
+                      // const SizedBox(height: 16),
+                      // Card(
+                      //   elevation: 1,
+                      //   color: const Color(AppColors.surfaceColor),
+                      //   shape: RoundedRectangleBorder(
+                      //     borderRadius: BorderRadius.circular(12),
+                      //   ),
+                      //   child: Column(
+                      //     children: [
+                      //       Obx(
+                      //         () => SwitchListTile(
+                      //           title: const Text(
+                      //             'Notifications',
+                      //             style: TextStyle(
+                      //               color: Color(AppColors.textColor),
+                      //             ),
+                      //           ),
+                      //           subtitle: const Text(
+                      //             'Enable push notifications',
+                      //             style: TextStyle(
+                      //               color: Color(AppColors.textSecondaryColor),
+                      //             ),
+                      //           ),
+                      //           value: settingsController.notificationsEnabled,
+                      //           onChanged: (value) =>
+                      //               settingsController.toggleNotifications(),
+                      //           activeThumbColor: const Color(
+                      //             AppColors.primaryColor,
+                      //           ),
+                      //           secondary: const Icon(
+                      //             Icons.notifications_outlined,
+                      //             color: Color(AppColors.primaryColor),
+                      //           ),
+                      //         ),
+                      //       ),
+                      //       const Divider(
+                      //         height: 1,
+                      //         color: Color(AppColors.dividerColor),
+                      //       ),
+                      //       Obx(
+                      //         () => ListTile(
+                      //           title: const Text(
+                      //             'Current Mode',
+                      //             style: TextStyle(
+                      //               color: Color(AppColors.textColor),
+                      //             ),
+                      //           ),
+                      //           subtitle: Text(
+                      //             settingsController.currentModeDisplay,
+                      //             style: const TextStyle(
+                      //               color: Color(AppColors.textSecondaryColor),
+                      //             ),
+                      //           ),
+                      //           leading: Icon(
+                      //             settingsController.currentMode ==
+                      //                     UserMode.player
+                      //                 ? Icons.sports_soccer
+                      //                 : Icons.business,
+                      //             color: const Color(AppColors.primaryColor),
+                      //           ),
+                      //           trailing: IconButton(
+                      //             onPressed: () {
+                      //               settingsController.toggleMode();
+                      //             },
+                      //             icon: const Icon(Icons.swap_horiz),
+                      //           ),
+                      //         ),
+                      //       ),
+                      //     ],
+                      //   ),
+                      // ),
+                      // const SizedBox(height: 32),
 
-                      Card(
-                        elevation: 1,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
+                      // Loop through setting sections
+                      ...settingSections.map(
+                        (section) => Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Obx(
-                              () => SwitchListTile(
-                                title: const Text('Dark Mode'),
-                                subtitle: const Text(
-                                  'Switch between light and dark theme',
-                                ),
-                                value: settingsController.isDarkMode,
-                                onChanged: (value) =>
-                                    settingsController.toggleDarkMode(),
-                                activeThumbColor: const Color(
-                                  AppColors.primaryColor,
-                                ),
-                                secondary: Icon(
-                                  settingsController.isDarkMode
-                                      ? Icons.dark_mode
-                                      : Icons.light_mode,
-                                  color: const Color(AppColors.primaryColor),
-                                ),
+                            Text(
+                              section.title,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Color(AppColors.textColor),
                               ),
                             ),
-                            const Divider(height: 1),
-                            Obx(
-                              () => SwitchListTile(
-                                title: const Text('Notifications'),
-                                subtitle: const Text(
-                                  'Enable push notifications',
-                                ),
-                                value: settingsController.notificationsEnabled,
-                                onChanged: (value) =>
-                                    settingsController.toggleNotifications(),
-                                activeThumbColor: const Color(
-                                  AppColors.primaryColor,
-                                ),
-                                secondary: const Icon(
-                                  Icons.notifications_outlined,
-                                  color: Color(AppColors.primaryColor),
-                                ),
+                            const SizedBox(height: 16),
+                            Card(
+                              elevation: 1,
+                              color: const Color(AppColors.surfaceColor),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Column(
+                                children: _buildSectionItems(section.items),
                               ),
                             ),
-                            const Divider(height: 1),
-                            Obx(
-                              () => SwitchListTile(
-                                title: const Text('Biometric Authentication'),
-                                subtitle: const Text(
-                                  'Use fingerprint or face recognition',
-                                ),
-                                value: settingsController.biometricEnabled,
-                                onChanged: (value) =>
-                                    settingsController.toggleBiometric(),
-                                activeThumbColor: const Color(
-                                  AppColors.primaryColor,
-                                ),
-                                secondary: const Icon(
-                                  Icons.fingerprint,
-                                  color: Color(AppColors.primaryColor),
-                                ),
-                              ),
-                            ),
-                            const Divider(height: 1),
-                            ListTile(
-                              title: const Text('Language'),
-                              subtitle: Obx(
-                                () => Text(
-                                  'Selected: ${settingsController.selectedLanguage}',
-                                ),
-                              ),
-                              leading: const Icon(
-                                Icons.language,
-                                color: Color(AppColors.primaryColor),
-                              ),
-                              trailing: const Icon(Icons.arrow_forward_ios),
-                              onTap: () => _showLanguageDialog(
-                                context,
-                                settingsController,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 32),
-
-                      // Privacy & Security Section
-                      const Text(
-                        'Privacy & Security',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Color(AppColors.textColor),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      Card(
-                        elevation: 1,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          children: [
-                            ListTile(
-                              title: const Text('Change Password'),
-                              subtitle: const Text(
-                                'Update your account password',
-                              ),
-                              leading: const Icon(
-                                Icons.lock_outline,
-                                color: Color(AppColors.primaryColor),
-                              ),
-                              trailing: const Icon(Icons.arrow_forward_ios),
-                              onTap: () {
-                                Get.snackbar(
-                                  'Coming Soon',
-                                  'Password change will be available soon',
-                                  snackPosition: SnackPosition.BOTTOM,
-                                );
-                              },
-                            ),
-                            const Divider(height: 1),
-                            ListTile(
-                              title: const Text('Two-Factor Authentication'),
-                              subtitle: const Text(
-                                'Add an extra layer of security',
-                              ),
-                              leading: const Icon(
-                                Icons.security,
-                                color: Color(AppColors.primaryColor),
-                              ),
-                              trailing: const Icon(Icons.arrow_forward_ios),
-                              onTap: () {
-                                Get.snackbar(
-                                  'Coming Soon',
-                                  'Two-factor authentication will be available soon',
-                                  snackPosition: SnackPosition.BOTTOM,
-                                );
-                              },
-                            ),
-                            const Divider(height: 1),
-                            ListTile(
-                              title: const Text('Privacy Settings'),
-                              subtitle: const Text(
-                                'Manage your privacy preferences',
-                              ),
-                              leading: const Icon(
-                                Icons.privacy_tip_outlined,
-                                color: Color(AppColors.primaryColor),
-                              ),
-                              trailing: const Icon(Icons.arrow_forward_ios),
-                              onTap: () {
-                                Get.snackbar(
-                                  'Coming Soon',
-                                  'Privacy settings will be available soon',
-                                  snackPosition: SnackPosition.BOTTOM,
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 32),
-
-                      // Support & Info Section
-                      const Text(
-                        'Support & Information',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Color(AppColors.textColor),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      Card(
-                        elevation: 1,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          children: [
-                            ListTile(
-                              title: const Text('Help Center'),
-                              subtitle: const Text('Get help and support'),
-                              leading: const Icon(
-                                Icons.help_outline,
-                                color: Color(AppColors.primaryColor),
-                              ),
-                              trailing: const Icon(Icons.arrow_forward_ios),
-                              onTap: () {
-                                Get.snackbar(
-                                  'Help Center',
-                                  'Contact us at support@example.com',
-                                  snackPosition: SnackPosition.BOTTOM,
-                                );
-                              },
-                            ),
-                            const Divider(height: 1),
-                            ListTile(
-                              title: const Text('Terms of Service'),
-                              subtitle: const Text(
-                                'Read our terms and conditions',
-                              ),
-                              leading: const Icon(
-                                Icons.description_outlined,
-                                color: Color(AppColors.primaryColor),
-                              ),
-                              trailing: const Icon(Icons.arrow_forward_ios),
-                              onTap: () {
-                                Get.snackbar(
-                                  'Terms of Service',
-                                  'Terms of service will be available soon',
-                                  snackPosition: SnackPosition.BOTTOM,
-                                );
-                              },
-                            ),
-                            const Divider(height: 1),
-                            ListTile(
-                              title: const Text('Privacy Policy'),
-                              subtitle: const Text(
-                                'Learn about our privacy practices',
-                              ),
-                              leading: const Icon(
-                                Icons.policy_outlined,
-                                color: Color(AppColors.primaryColor),
-                              ),
-                              trailing: const Icon(Icons.arrow_forward_ios),
-                              onTap: () {
-                                Get.snackbar(
-                                  'Privacy Policy',
-                                  'Privacy policy will be available soon',
-                                  snackPosition: SnackPosition.BOTTOM,
-                                );
-                              },
-                            ),
-                            const Divider(height: 1),
-                            ListTile(
-                              title: const Text('About'),
-                              subtitle: const Text(
-                                'App version and information',
-                              ),
-                              leading: const Icon(
-                                Icons.info_outline,
-                                color: Color(AppColors.primaryColor),
-                              ),
-                              trailing: const Icon(Icons.arrow_forward_ios),
-                              onTap: settingsController.showAbout,
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 32),
-
-                      // Advanced Section
-                      const Text(
-                        'Advanced',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Color(AppColors.textColor),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      Card(
-                        elevation: 1,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          children: [
-                            ListTile(
-                              title: const Text('Clear Cache'),
-                              subtitle: const Text(
-                                'Clear app cache and temporary files',
-                              ),
-                              leading: const Icon(
-                                Icons.cleaning_services_outlined,
-                                color: Color(AppColors.primaryColor),
-                              ),
-                              trailing: const Icon(Icons.arrow_forward_ios),
-                              onTap: () => _showClearCacheDialog(
-                                context,
-                                settingsController,
-                              ),
-                            ),
-                            const Divider(height: 1),
-                            ListTile(
-                              title: const Text(
-                                'Sign Out',
-                                style: TextStyle(color: Colors.red),
-                              ),
-                              subtitle: const Text(
-                                'Sign out from your account',
-                              ),
-                              leading: const Icon(
-                                Icons.logout,
-                                color: Colors.red,
-                              ),
-                              trailing: const Icon(Icons.arrow_forward_ios),
-                              onTap: () =>
-                                  _showSignOutDialog(context, authController),
-                            ),
+                            const SizedBox(height: 32),
                           ],
                         ),
                       ),
@@ -433,50 +340,41 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  void _showLanguageDialog(
-    BuildContext context,
-    SettingsController settingsController,
-  ) {
-    final languages = [
-      'English',
-      'Spanish',
-      'French',
-      'German',
-      'Chinese',
-      'Japanese',
-    ];
-
-    Get.dialog(
-      AlertDialog(
-        title: const Text('Select Language'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: languages
-              .map(
-                (language) => Obx(
-                  () => RadioGroup<String>(
-                    groupValue: settingsController.selectedLanguage,
-                    onChanged: (value) {
-                      if (value != null) {
-                        settingsController.changeLanguage(value);
-                        Get.back();
-                      }
-                    },
-                    child: RadioListTile<String>(
-                      title: Text(language),
-                      value: language,
-                      activeColor: const Color(AppColors.primaryColor),
-                    ),
-                  ),
-                ),
-              )
-              .toList(),
+  List<Widget> _buildSectionItems(List<SettingItem> items) {
+    List<Widget> widgets = [];
+    for (int i = 0; i < items.length; i++) {
+      final item = items[i];
+      widgets.add(
+        ListTile(
+          title: Text(
+            item.title,
+            style: TextStyle(
+              color: item.isRed ? Colors.red : const Color(AppColors.textColor),
+            ),
+          ),
+          subtitle: Text(
+            item.subtitle,
+            style: const TextStyle(color: Color(AppColors.textSecondaryColor)),
+          ),
+          leading: Icon(
+            item.icon,
+            color: item.isRed
+                ? Colors.red
+                : const Color(AppColors.primaryColor),
+          ),
+          trailing: const Icon(Icons.arrow_forward_ios),
+          onTap: item.onTap,
         ),
-        actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
-        ],
-      ),
-    );
+      );
+
+      // Add divider between items except for the last item
+      if (i < items.length - 1) {
+        widgets.add(
+          const Divider(height: 1, color: Color(AppColors.dividerColor)),
+        );
+      }
+    }
+    return widgets;
   }
 
   void _showClearCacheDialog(

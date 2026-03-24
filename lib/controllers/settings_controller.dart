@@ -1,27 +1,26 @@
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/app_snackbar.dart';
+
+enum UserMode { player, proprietor }
 
 class SettingsController extends GetxController {
   static SettingsController get instance => Get.find();
 
   // Observable variables
-  final RxBool _isDarkMode = false.obs;
   final RxBool _notificationsEnabled = true.obs;
-  final RxBool _biometricEnabled = false.obs;
-  final RxString _selectedLanguage = 'English'.obs;
+  final Rx<UserMode> _currentMode = UserMode.player.obs;
 
   // Getters
-  bool get isDarkMode => _isDarkMode.value;
   bool get notificationsEnabled => _notificationsEnabled.value;
-  bool get biometricEnabled => _biometricEnabled.value;
-  String get selectedLanguage => _selectedLanguage.value;
+  UserMode get currentMode => _currentMode.value;
+  bool get isPlayerMode => _currentMode.value == UserMode.player;
+  bool get isProprietorMode => _currentMode.value == UserMode.proprietor;
 
   // Settings keys
-  static const String _darkModeKey = 'dark_mode';
   static const String _notificationsKey = 'notifications_enabled';
-  static const String _biometricKey = 'biometric_enabled';
-  static const String _languageKey = 'selected_language';
+  static const String _modeKey = 'user_mode';
 
   @override
   void onInit() {
@@ -33,28 +32,15 @@ class SettingsController extends GetxController {
     try {
       final prefs = await SharedPreferences.getInstance();
 
-      _isDarkMode.value = prefs.getBool(_darkModeKey) ?? false;
       _notificationsEnabled.value = prefs.getBool(_notificationsKey) ?? true;
-      _biometricEnabled.value = prefs.getBool(_biometricKey) ?? false;
-      _selectedLanguage.value = prefs.getString(_languageKey) ?? 'English';
 
-      // Apply theme
-      Get.changeThemeMode(_isDarkMode.value ? ThemeMode.dark : ThemeMode.light);
+      // Load mode
+      final modeString = prefs.getString(_modeKey) ?? 'player';
+      _currentMode.value = modeString == 'proprietor'
+          ? UserMode.proprietor
+          : UserMode.player;
     } catch (e) {
       // Handle loading error
-    }
-  }
-
-  Future<void> toggleDarkMode() async {
-    try {
-      _isDarkMode.value = !_isDarkMode.value;
-
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(_darkModeKey, _isDarkMode.value);
-
-      Get.changeThemeMode(_isDarkMode.value ? ThemeMode.dark : ThemeMode.light);
-    } catch (e) {
-      // Handle toggle error
     }
   }
 
@@ -64,54 +50,79 @@ class SettingsController extends GetxController {
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_notificationsKey, _notificationsEnabled.value);
+
+      AppSnackbar.success(
+        title: 'Settings Updated',
+        message:
+            'Notifications ${_notificationsEnabled.value ? 'enabled' : 'disabled'}',
+      );
     } catch (e) {
-      // Handle toggle error
+      AppSnackbar.error(
+        title: 'Error',
+        message: 'Failed to update notification settings',
+      );
     }
   }
 
-  Future<void> toggleBiometric() async {
-    try {
-      _biometricEnabled.value = !_biometricEnabled.value;
+  // Mode management methods
+  void switchToPlayerMode() {
+    _currentMode.value = UserMode.player;
+    _saveMode();
+  }
 
+  void switchToProprietorMode() {
+    _currentMode.value = UserMode.proprietor;
+    _saveMode();
+  }
+
+  void toggleMode() {
+    if (_currentMode.value == UserMode.player) {
+      _currentMode.value = UserMode.proprietor;
+    } else {
+      _currentMode.value = UserMode.player;
+    }
+    _saveMode();
+  }
+
+  Future<void> _saveMode() async {
+    try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(_biometricKey, _biometricEnabled.value);
+      await prefs.setString(
+        _modeKey,
+        _currentMode.value.toString().split('.').last,
+      );
     } catch (e) {
-      // Handle toggle error
+      // Handle save error
     }
   }
 
-  Future<void> changeLanguage(String language) async {
-    try {
-      _selectedLanguage.value = language;
+  String get currentModeDisplay {
+    switch (_currentMode.value) {
+      case UserMode.player:
+        return 'Player Mode';
+      case UserMode.proprietor:
+        return 'Proprietor Mode';
+    }
+  }
 
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_languageKey, language);
-
-      // Here you can implement actual language change logic
-      // For example: Get.updateLocale(Locale(languageCode));
-    } catch (e) {
-      // Handle language change error
+  String get alternateModeDisplay {
+    switch (_currentMode.value) {
+      case UserMode.player:
+        return 'Proprietor Mode';
+      case UserMode.proprietor:
+        return 'Player Mode';
     }
   }
 
   Future<void> clearCache() async {
     try {
       // Implement cache clearing logic here
-      Get.snackbar(
-        'Cache Cleared',
-        'Application cache has been cleared successfully',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
+      AppSnackbar.success(
+        title: 'Cache Cleared',
+        message: 'Application cache has been cleared successfully',
       );
     } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Failed to clear cache',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      AppSnackbar.error(title: 'Error', message: 'Failed to clear cache');
     }
   }
 
@@ -120,7 +131,7 @@ class SettingsController extends GetxController {
       AlertDialog(
         title: const Text('About'),
         content: const Text(
-          'Flutter Auth App\nVersion 1.0.0\n\nA comprehensive authentication app with Firebase and Google OAuth integration.',
+          'Flutter Turf Booking App\nVersion 1.0.0\n\nA comprehensive turf booking and management application.',
         ),
         actions: [
           TextButton(onPressed: () => Get.back(), child: const Text('OK')),

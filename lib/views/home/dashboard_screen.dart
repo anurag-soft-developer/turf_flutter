@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../controllers/auth/auth_state_controller.dart';
+import '../../controllers/settings_controller.dart';
 import '../../components/shared/loading_overlay.dart';
-import '../../components/turf/featured_section.dart';
-import '../../components/dashboard/sports_section.dart';
-import '../../components/dashboard/quick_actions_section.dart';
+import '../../components/shared/app_drawer.dart';
 import '../../config/constants.dart';
+import 'player_dashboard.dart';
+import 'proprietor_dashboard.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -13,154 +14,49 @@ class DashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AuthStateController authController = Get.find();
+    final SettingsController settingsController = Get.find();
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(
-        title: Text(
-          AppConstants.appName,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: const Color(AppColors.primaryColor),
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            onPressed: () => Get.toNamed(AppConstants.routes.settings),
-            icon: const Icon(Icons.settings),
-          ),
-        ],
-      ),
-      drawer: _buildDrawer(context, authController),
+      appBar: _buildAppBar(settingsController),
+      drawer: const AppDrawer(),
       body: Obx(
         () => LoadingOverlay(
           isLoading: authController.isLoading,
-          child: _buildBody(context, authController),
+          child: settingsController.currentMode == UserMode.player
+              ? const PlayerDashboard()
+              : const ProprietorDashboard(),
         ),
       ),
     );
   }
 
-  Widget _buildDrawer(
-    BuildContext context,
-    AuthStateController authController,
-  ) {
-    return Drawer(
-      child: Column(
-        children: [
-          Obx(
-            () => UserAccountsDrawerHeader(
-              decoration: const BoxDecoration(
-                color: Color(AppColors.primaryColor),
-              ),
-              accountName: Text(
-                authController.user?.fullName ?? 'User',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-              accountEmail: Text(authController.user?.email ?? ''),
-              currentAccountPicture: CircleAvatar(
-                backgroundColor: Colors.white,
-                backgroundImage: authController.user?.avatar != null
-                    ? NetworkImage(authController.user!.avatar!)
-                    : null,
-                child: authController.user?.avatar == null
-                    ? const Icon(
-                        Icons.person,
-                        color: Color(AppColors.primaryColor),
-                        size: 40,
-                      )
-                    : null,
-              ),
+  PreferredSizeWidget _buildAppBar(SettingsController settingsController) {
+    return AppBar(
+      title: Obx(
+        () => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              AppConstants.appName,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.dashboard),
-            title: const Text('Dashboard'),
-            onTap: () => Get.back(),
-          ),
-          ListTile(
-            leading: const Icon(Icons.person),
-            title: const Text('Profile'),
-            onTap: () {
-              Get.back();
-              Get.toNamed(AppConstants.routes.profile);
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.settings),
-            title: const Text('Settings'),
-            onTap: () {
-              Get.back();
-              Get.toNamed(AppConstants.routes.settings);
-            },
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.logout, color: Colors.red),
-            title: const Text('Logout', style: TextStyle(color: Colors.red)),
-            onTap: () {
-              Get.back();
-              _showLogoutDialog(context, authController);
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBody(BuildContext context, AuthStateController authController) {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          FeaturedTurfsSection(),
-          const SizedBox(height: 16),
-
-          // Rest with padding
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Sports Section (Primary - Most Prominent)
-                const SportsSection(),
-                const SizedBox(height: 32),
-
-                // Quick Actions (Secondary - Below Sports)
-                const QuickActionsSection(),
-                const SizedBox(height: 32),
-
-                // Account Info
-              ],
+            Text(
+              settingsController.currentModeDisplay,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w400),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    );
-  }
-
-  void _showLogoutDialog(
-    BuildContext context,
-    AuthStateController authController,
-  ) {
-    Get.dialog(
-      AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () {
-              Get.back();
-              authController.signOut();
-            },
-            child: const Text('Logout', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+      backgroundColor: const Color(AppColors.primaryColor),
+      foregroundColor: Colors.white,
+      elevation: 0,
+      actions: [
+        IconButton(
+          onPressed: () => Get.toNamed(AppConstants.routes.settings),
+          icon: const Icon(Icons.settings),
+        ),
+      ],
     );
   }
 }
