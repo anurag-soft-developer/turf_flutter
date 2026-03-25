@@ -151,4 +151,44 @@ class TurfService {
       minRating: 4.0,
     );
   }
+
+  /// Get turfs owned by the current user
+  Future<List<TurfModel>?> getMyTurfs({
+    int page = 1,
+    int limit = 10,
+    String? sort,
+  }) async {
+    final Map<String, dynamic> queryParams = {};
+
+    queryParams['page'] = page.toString();
+    queryParams['limit'] = limit.toString();
+
+    if (sort?.isNotEmpty == true) {
+      queryParams['sort'] = sort;
+    }
+
+    final response = await _apiService.get<List<dynamic>>(
+      '/turf/owner/me',
+      queryParameters: queryParams,
+    );
+
+    if (response == null) {
+      return [];
+    }
+
+    final turfs = response
+        .map((turfJson) => TurfModel.fromJson(turfJson as Map<String, dynamic>))
+        .toList();
+
+    return turfs;
+  }
+
+  /// Get turf statistics for the current user
+  Future<Map<String, dynamic>?> getMyTurfStats() async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      '/turf/owner/me/stats',
+    );
+
+    return response;
+  }
 }

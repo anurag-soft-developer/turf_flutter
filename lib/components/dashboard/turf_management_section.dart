@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../../config/constants.dart';
-import '../../utils/app_snackbar.dart';
 
 class TurfManagementSection extends StatelessWidget {
   const TurfManagementSection({super.key});
@@ -28,7 +28,7 @@ class TurfManagementSection extends StatelessWidget {
                 icon: Icons.add_business,
                 color: const Color(AppColors.primaryColor),
                 onTap: () {
-                  AppSnackbar.comingSoon(feature: 'Add New Turf');
+                  Get.toNamed(AppConstants.routes.createTurf);
                 },
               ),
             ),
@@ -40,7 +40,7 @@ class TurfManagementSection extends StatelessWidget {
                 icon: Icons.grass,
                 color: Colors.green,
                 onTap: () {
-                  AppSnackbar.comingSoon(feature: 'My Turfs management');
+                  Get.toNamed(AppConstants.routes.myTurfs);
                 },
               ),
             ),

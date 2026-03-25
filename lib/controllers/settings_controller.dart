@@ -6,15 +6,13 @@ import '../utils/app_snackbar.dart';
 enum UserMode { player, proprietor }
 
 class SettingsController extends GetxController {
-  static SettingsController get instance => Get.find();
-
   // Observable variables
   final RxBool _notificationsEnabled = true.obs;
   final Rx<UserMode> _currentMode = UserMode.player.obs;
 
   // Getters
   bool get notificationsEnabled => _notificationsEnabled.value;
-  UserMode get currentMode => _currentMode.value;
+  Rx<UserMode> get currentMode => _currentMode;
   bool get isPlayerMode => _currentMode.value == UserMode.player;
   bool get isProprietorMode => _currentMode.value == UserMode.proprietor;
 
@@ -76,11 +74,17 @@ class SettingsController extends GetxController {
   }
 
   void toggleMode() {
+    debugPrint(
+      'SettingsController: Before toggle - currentMode = ${_currentMode.value}',
+    );
     if (_currentMode.value == UserMode.player) {
       _currentMode.value = UserMode.proprietor;
     } else {
       _currentMode.value = UserMode.player;
     }
+    debugPrint(
+      'SettingsController: After toggle - currentMode = ${_currentMode.value}',
+    );
     _saveMode();
   }
 

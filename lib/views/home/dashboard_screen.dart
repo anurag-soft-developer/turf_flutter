@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../controllers/auth/auth_state_controller.dart';
 import '../../controllers/settings_controller.dart';
-import '../../components/shared/loading_overlay.dart';
 import '../../components/shared/app_drawer.dart';
 import '../../config/constants.dart';
 import 'player_dashboard.dart';
@@ -13,21 +11,17 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final AuthStateController authController = Get.find();
     final SettingsController settingsController = Get.find();
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
       appBar: _buildAppBar(settingsController),
       drawer: const AppDrawer(),
-      body: Obx(
-        () => LoadingOverlay(
-          isLoading: authController.isLoading,
-          child: settingsController.currentMode == UserMode.player
-              ? const PlayerDashboard()
-              : const ProprietorDashboard(),
-        ),
-      ),
+      body: Obx(() {
+        return settingsController.isPlayerMode
+            ? const PlayerDashboard()
+            : const ProprietorDashboard();
+      }),
     );
   }
 

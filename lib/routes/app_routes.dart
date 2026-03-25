@@ -8,12 +8,16 @@ import '../views/profile/profile_screen.dart';
 import '../views/settings/settings_screen.dart';
 import '../views/turf/turf_list_screen.dart';
 import '../views/turf/turf_detail_screen.dart';
+import '../views/turf/my_turfs_screen.dart';
+import '../views/turf/create_turf_screen.dart';
 import '../views/splash_screen.dart';
 import '../views/access_denied_screen.dart';
 import '../bindings/auth_binding.dart';
 import '../bindings/profile_binding.dart';
 import '../bindings/turf_list_binding.dart';
 import '../bindings/turf_detail_binding.dart';
+import '../bindings/turf_management_binding.dart';
+import '../bindings/create_turf_binding.dart';
 import '../config/constants.dart';
 
 class AppRoutes {
@@ -76,6 +80,27 @@ class AppRoutes {
       name: AppConstants.routes.turfDetail,
       page: () => const TurfDetailScreen(),
       binding: TurfDetailBinding(),
+      transition: Transition.cupertino,
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppConstants.routes.myTurfs,
+      page: () => const MyTurfsScreen(),
+      binding: TurfManagementBinding(),
+      transition: Transition.cupertino,
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppConstants.routes.createTurf,
+      page: () => const CreateTurfScreen(),
+      binding: CreateTurfBinding(),
+      transition: Transition.cupertino,
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppConstants.routes.editTurf,
+      page: () => const CreateTurfScreen(),
+      binding: CreateTurfBinding(),
       transition: Transition.cupertino,
       middlewares: [AuthGuard()],
     ),

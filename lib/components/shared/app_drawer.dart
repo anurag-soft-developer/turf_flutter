@@ -12,7 +12,7 @@ class AppDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
     final AuthStateController authController = Get.find();
     final SettingsController settingsController = Get.find();
-
+    final String? avatar = authController.user?.avatar;
     return Drawer(
       backgroundColor: const Color(AppColors.surfaceColor),
       child: Column(
@@ -56,10 +56,8 @@ class AppDrawer extends StatelessWidget {
               ),
               currentAccountPicture: CircleAvatar(
                 backgroundColor: Colors.white,
-                backgroundImage: authController.user?.avatar != null
-                    ? NetworkImage(authController.user!.avatar!)
-                    : null,
-                child: authController.user?.avatar == null
+                backgroundImage: avatar != null ? NetworkImage(avatar) : null,
+                child: avatar == null
                     ? const Icon(
                         Icons.person,
                         color: Color(AppColors.primaryColor),
@@ -80,7 +78,7 @@ class AppDrawer extends StatelessWidget {
                   Get.back(); // Close drawer
                 },
                 icon: Icon(
-                  settingsController.currentMode == UserMode.player
+                  settingsController.isPlayerMode
                       ? Icons.business
                       : Icons.sports_soccer,
                   size: 20,
@@ -121,7 +119,7 @@ class AppDrawer extends StatelessWidget {
 
           // Player Mode Specific Items
           Obx(() {
-            if (settingsController.currentMode == UserMode.player) {
+            if (settingsController.currentMode.value == UserMode.player) {
               return Column(
                 children: [
                   ListTile(

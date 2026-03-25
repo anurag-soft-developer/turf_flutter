@@ -6,6 +6,6 @@ class InitialBinding extends Bindings {
   @override
   void dependencies() {
     Get.put<AuthStateController>(AuthStateController(), permanent: true);
-    Get.lazyPut(() => SettingsController(), fenix: true);
+    Get.put<SettingsController>(SettingsController(), permanent: true);
   }
 }
