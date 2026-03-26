@@ -22,7 +22,7 @@ class ImagesSection extends StatelessWidget {
                 _buildImagePreviewGrid(controller),
                 const SizedBox(height: 16),
               ],
-              _buildImageUrlInput(controller),
+              _buildImageAddButtons(controller),
               if (controller.imageUrls.isEmpty) _buildImageRequiredWarning(),
             ],
           );
@@ -88,7 +88,58 @@ class ImagesSection extends StatelessWidget {
     );
   }
 
-  Widget _buildImageUrlInput(CreateTurfController controller) {
+  Widget _buildImageAddButtons(CreateTurfController controller) {
+    return Column(
+      children: [
+        // Primary Add Button
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: controller.showImagePickerOptions,
+            icon: const Icon(Icons.add_photo_alternate),
+            label: const Text('Add Images'),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        // Quick Access Buttons
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: controller.pickImageFromCamera,
+                icon: const Icon(Icons.camera_alt),
+                label: const Text('Camera'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: controller.pickImageFromGallery,
+                icon: const Icon(Icons.photo_library),
+                label: const Text('Gallery'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildImageUrlInputLegacy(CreateTurfController controller) {
     final textController = TextEditingController();
 
     return Row(
@@ -100,6 +151,7 @@ class ImagesSection extends StatelessWidget {
             hintText: 'Paste image URL and press Enter',
             suffixIcon: Icons.add_photo_alternate,
             onFieldSubmitted: (value) {
+              debugPrint('Submitted image URL: $value');
               if (value.trim().isNotEmpty) {
                 controller.addImageUrl(value.trim());
                 // Clear the input field after adding
