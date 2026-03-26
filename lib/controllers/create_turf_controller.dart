@@ -200,7 +200,7 @@ class CreateTurfController extends GetxController {
 
   /// Reset form
   void resetForm() {
-    formKey.currentState?.reset();
+    // Clear text controllers without triggering form reset which can cause rebuild loops
     nameController.clear();
     descriptionController.clear();
     addressController.clear();
@@ -217,6 +217,9 @@ class CreateTurfController extends GetxController {
     _selectedAmenities.clear();
     _imageUrls.clear();
     _selectedDimensionUnit.value = 'meters';
+
+    // Show success message
+    ExceptionHandler.showSuccessToast('Form reset successfully');
   }
 
   /// Validators

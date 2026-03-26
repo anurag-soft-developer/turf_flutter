@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../controllers/create_turf_controller.dart';
 import 'section_container.dart';
+import 'styled_text_field.dart';
 
 class ImagesSection extends StatelessWidget {
   const ImagesSection({super.key});
@@ -93,16 +94,11 @@ class ImagesSection extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: TextFormField(
+          child: TurfFormField(
             controller: textController,
-            decoration: const InputDecoration(
-              labelText: 'Image URL',
-              hintText: 'Paste image URL and press Enter',
-              border: OutlineInputBorder(),
-              filled: true,
-              fillColor: Colors.white,
-              suffixIcon: Icon(Icons.add_photo_alternate),
-            ),
+            labelText: 'Image URL',
+            hintText: 'Paste image URL and press Enter',
+            suffixIcon: Icons.add_photo_alternate,
             onFieldSubmitted: (value) {
               if (value.trim().isNotEmpty) {
                 controller.addImageUrl(value.trim());

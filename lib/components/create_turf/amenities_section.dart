@@ -24,7 +24,7 @@ class AmenitiesSection extends StatelessWidget {
                 label: Text(amenity),
                 selected: isSelected,
                 onSelected: (selected) => controller.toggleAmenity(amenity),
-                selectedColor: Colors.green.withOpacity(0.2),
+                selectedColor: Colors.green.withValues(alpha: .2),
                 backgroundColor: Colors.grey[100],
                 checkmarkColor: Colors.green,
                 labelStyle: TextStyle(

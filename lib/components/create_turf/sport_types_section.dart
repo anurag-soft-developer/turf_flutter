@@ -27,7 +27,7 @@ class SportTypesSection extends StatelessWidget {
                 onSelected: (selected) => controller.toggleSportType(sport),
                 selectedColor: const Color(
                   AppColors.primaryColor,
-                ).withOpacity(0.2),
+                ).withValues(alpha: .2),
                 backgroundColor: Colors.grey[100],
                 checkmarkColor: const Color(AppColors.primaryColor),
                 labelStyle: TextStyle(
