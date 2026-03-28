@@ -378,34 +378,34 @@ class MyTurfsScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () =>
-                            controller.toggleTurfAvailability(turf),
-                        icon: Icon(
-                          (turf.isAvailable == true)
-                              ? Icons.pause
-                              : Icons.play_arrow,
-                          size: 16,
-                        ),
-                        label: Text(
-                          (turf.isAvailable == true)
-                              ? 'Deactivate'
-                              : 'Activate',
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: (turf.isAvailable == true)
-                              ? Colors.orange
-                              : Colors.green,
-                          side: BorderSide(
-                            color: (turf.isAvailable == true)
-                                ? Colors.orange
-                                : Colors.green,
-                          ),
-                        ),
-                      ),
-                    ),
+                    // const SizedBox(width: 8),
+                    // Expanded(
+                    //   child: OutlinedButton.icon(
+                    //     onPressed: () =>
+                    //         controller.toggleTurfAvailability(turf),
+                    //     icon: Icon(
+                    //       (turf.isAvailable == true)
+                    //           ? Icons.pause
+                    //           : Icons.play_arrow,
+                    //       size: 16,
+                    //     ),
+                    //     label: Text(
+                    //       (turf.isAvailable == true)
+                    //           ? 'Deactivate'
+                    //           : 'Activate',
+                    //     ),
+                    //     style: OutlinedButton.styleFrom(
+                    //       foregroundColor: (turf.isAvailable == true)
+                    //           ? Colors.orange
+                    //           : Colors.green,
+                    //       side: BorderSide(
+                    //         color: (turf.isAvailable == true)
+                    //             ? Colors.orange
+                    //             : Colors.green,
+                    //       ),
+                    //     ),
+                    //   ),
+                    // ),
                     const SizedBox(width: 8),
                     IconButton(
                       onPressed: () => controller.deleteTurf(turf),

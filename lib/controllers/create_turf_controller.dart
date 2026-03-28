@@ -35,6 +35,8 @@ class CreateTurfController extends GetxController {
   final RxList<String> _selectedAmenities = <String>[].obs;
   final RxList<String> _imageUrls = <String>[].obs;
   final RxString _selectedDimensionUnit = 'meters'.obs;
+  final Rxn<TurfModel> _editingTurf = Rxn<TurfModel>();
+  final RxBool _isEditMode = false.obs;
 
   // Getters
   RxBool get isLoading => _isLoading;
@@ -42,6 +44,8 @@ class CreateTurfController extends GetxController {
   RxList<String> get selectedAmenities => _selectedAmenities;
   RxList<String> get imageUrls => _imageUrls;
   RxString get selectedDimensionUnit => _selectedDimensionUnit;
+  Rxn<TurfModel> get editingTurf => _editingTurf;
+  RxBool get isEditMode => _isEditMode;
 
   // Available options
   final List<String> availableSportTypes = [
@@ -74,11 +78,18 @@ class CreateTurfController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    // Initialize default values
-    // weekendSurgeController.text = '0.2'; // 20% default surge
-    // slotBufferController.text = '15'; // 15 minutes default buffer
-    openTimeController.text = '06:00';
-    closeTimeController.text = '22:00';
+
+    // Check if we're in edit mode (arguments passed from navigation)
+    final arguments = Get.arguments;
+    if (arguments != null && arguments is TurfModel) {
+      _isEditMode.value = true;
+      _editingTurf.value = arguments;
+      _populateFormFromTurf(arguments);
+    } else {
+      // Initialize default values for create mode
+      openTimeController.text = '06:00';
+      closeTimeController.text = '22:00';
+    }
   }
 
   /// Toggle sport type selection
@@ -332,55 +343,128 @@ class CreateTurfController extends GetxController {
     return true;
   }
 
-  /// Create turf
-  Future<void> createTurf() async {
+  /// Submit turf (create or update)
+  Future<void> submitTurf() async {
     if (!validateForm()) return;
 
     try {
       _isLoading.value = true;
 
-      final request = CreateTurfRequest(
-        name: nameController.text.trim(),
-        description: descriptionController.text.trim(),
-        location: LocationModel(
-          address: addressController.text.trim(),
-          coordinates: CoordinatesModel(
-            lat: double.tryParse(latController.text.trim()),
-            lng: double.tryParse(lngController.text.trim()),
-          ),
-        ),
-        images: _imageUrls.toList(),
-        amenities: _selectedAmenities.toList(),
-        dimensions: DimensionsModel(
-          length: double.tryParse(lengthController.text.trim()),
-          width: double.tryParse(widthController.text.trim()),
-          unit: _selectedDimensionUnit.value,
-        ),
-        sportType: _selectedSportTypes.toList(),
-        pricing: PricingModel(
-          basePricePerHour: double.parse(basePriceController.text.trim()),
-          weekendSurge: 0,
-        ),
-        operatingHours: OperatingHoursModel(
-          open: openTimeController.text.trim(),
-          close: closeTimeController.text.trim(),
-        ),
-        slotBufferMins: 0,
-      );
-
-      final createdTurf = await _turfService.createTurf(request);
-
-      if (createdTurf != null) {
-        ExceptionHandler.showSuccessToast('Turf created successfully!');
-        Get.back(result: true); // Return to previous screen
+      if (_isEditMode.value) {
+        await _updateTurf();
       } else {
-        ExceptionHandler.showErrorToast('Failed to create turf');
+        await _createTurf();
       }
     } catch (e) {
-      debugPrint('Error creating turf: $e');
-      ExceptionHandler.showErrorToast('Failed to create turf');
+      final action = _isEditMode.value ? 'update' : 'create';
+      debugPrint('Error ${action}ing turf: $e');
+      ExceptionHandler.showErrorToast('Failed to $action turf');
     } finally {
       _isLoading.value = false;
+    }
+  }
+
+  /// Create new turf
+  Future<void> _createTurf() async {
+    final request = CreateTurfRequest(
+      name: _getTrimmedText(nameController),
+      description: _getTrimmedText(descriptionController),
+      location: _buildLocationModel(),
+      dimensions: _buildDimensionsModel(),
+      sportType: _selectedSportTypes.toList(),
+      pricing: _buildPricingModel(isUpdate: false),
+      operatingHours: _buildOperatingHoursModel(),
+      images: _getImagesList(),
+      amenities: _getAmenitiesList(),
+      slotBufferMins: 15, // Default 15 minutes buffer
+    );
+
+    final result = await _turfService.createTurf(request);
+    _handleTurfOperationResult(result, isUpdate: false);
+  }
+
+  /// Update existing turf
+  Future<void> _updateTurf() async {
+    if (_editingTurf.value?.id == null) return;
+
+    final request = UpdateTurfRequest(
+      name: _getTrimmedText(nameController),
+      description: _getTrimmedText(descriptionController),
+      location: _buildLocationModel(),
+      dimensions: _buildDimensionsModel(),
+      sportType: _selectedSportTypes.toList(),
+      pricing: _buildPricingModel(isUpdate: true),
+      operatingHours: _buildOperatingHoursModel(),
+      images: _getImagesList(),
+      amenities: _getAmenitiesList(),
+      slotBufferMins: _editingTurf.value?.slotBufferMins ?? 15,
+      isAvailable: _editingTurf.value?.isAvailable ?? false,
+    );
+
+    final result = await _turfService.updateTurf(
+      _editingTurf.value!.id!,
+      request,
+    );
+    _handleTurfOperationResult(result, isUpdate: true);
+  }
+
+  /// Helper methods for building request objects
+
+  String _getTrimmedText(TextEditingController controller) {
+    return controller.text.trim();
+  }
+
+  LocationModel _buildLocationModel() {
+    return LocationModel(
+      address: _getTrimmedText(addressController),
+      coordinates: CoordinatesModel(
+        lat: double.tryParse(_getTrimmedText(latController)),
+        lng: double.tryParse(_getTrimmedText(lngController)),
+      ),
+    );
+  }
+
+  DimensionsModel _buildDimensionsModel() {
+    return DimensionsModel(
+      length: double.tryParse(_getTrimmedText(lengthController)),
+      width: double.tryParse(_getTrimmedText(widthController)),
+      unit: _selectedDimensionUnit.value,
+    );
+  }
+
+  PricingModel _buildPricingModel({required bool isUpdate}) {
+    return PricingModel(
+      basePricePerHour:
+          double.tryParse(_getTrimmedText(basePriceController)) ?? 0,
+      weekendSurge: isUpdate
+          ? (_editingTurf.value?.pricing?.weekendSurge ?? 0.2)
+          : 0.2, // Default 20% surge
+    );
+  }
+
+  OperatingHoursModel _buildOperatingHoursModel() {
+    return OperatingHoursModel(
+      open: _getTrimmedText(openTimeController),
+      close: _getTrimmedText(closeTimeController),
+    );
+  }
+
+  List<String>? _getImagesList() {
+    return _imageUrls.isEmpty ? null : _imageUrls.toList();
+  }
+
+  List<String>? _getAmenitiesList() {
+    return _selectedAmenities.isEmpty ? null : _selectedAmenities.toList();
+  }
+
+  void _handleTurfOperationResult(TurfModel? result, {required bool isUpdate}) {
+    if (result != null) {
+      final action = isUpdate ? 'updated' : 'created';
+      ExceptionHandler.showSuccessToast('Turf $action successfully!');
+      Get.back(result: true);
+    } else {
+      final action = isUpdate ? 'update' : 'create';
+      ExceptionHandler.showErrorToast('Failed to $action turf');
     }
   }
 
@@ -404,9 +488,72 @@ class CreateTurfController extends GetxController {
     _imageUrls.clear();
     _selectedDimensionUnit.value = 'meters';
 
+    // Reset edit mode
+    _isEditMode.value = false;
+    _editingTurf.value = null;
+
     // Show success message
     ExceptionHandler.showSuccessToast('Form reset successfully');
   }
+
+  /// Populate form fields from existing turf data (for edit mode)
+  void _populateFormFromTurf(TurfModel turf) {
+    // Basic info
+    nameController.text = turf.name ?? '';
+    descriptionController.text = turf.description ?? '';
+
+    // Location
+    addressController.text = turf.location?.address ?? '';
+    if (turf.location?.coordinates?.lat != null) {
+      latController.text = turf.location!.coordinates!.lat!.toString();
+    }
+    if (turf.location?.coordinates?.lng != null) {
+      lngController.text = turf.location!.coordinates!.lng!.toString();
+    }
+
+    // Dimensions
+    if (turf.dimensions?.length != null) {
+      lengthController.text = turf.dimensions!.length!.toString();
+    }
+    if (turf.dimensions?.width != null) {
+      widthController.text = turf.dimensions!.width!.toString();
+    }
+    _selectedDimensionUnit.value = turf.dimensions?.unit ?? 'meters';
+
+    // Pricing
+    if (turf.pricing?.basePricePerHour != null) {
+      basePriceController.text = turf.pricing!.basePricePerHour.toString();
+    }
+
+    // Operating hours
+    openTimeController.text = turf.operatingHours?.open ?? '06:00';
+    closeTimeController.text = turf.operatingHours?.close ?? '22:00';
+
+    // Sport types
+    if (turf.sportType != null) {
+      _selectedSportTypes.clear();
+      _selectedSportTypes.addAll(turf.sportType!);
+    }
+
+    // Amenities
+    if (turf.amenities != null) {
+      _selectedAmenities.clear();
+      _selectedAmenities.addAll(turf.amenities!);
+    }
+
+    // Images
+    if (turf.images != null) {
+      _imageUrls.clear();
+      _imageUrls.addAll(turf.images!);
+    }
+  }
+
+  /// Get form title based on mode
+  String get formTitle => _isEditMode.value ? 'Edit Turf' : 'Create New Turf';
+
+  /// Get submit button text based on mode
+  String get submitButtonText =>
+      _isEditMode.value ? 'Update Turf' : 'Create Turf';
 
   /// Validators
   String? validateRequired(String? value, String fieldName) {

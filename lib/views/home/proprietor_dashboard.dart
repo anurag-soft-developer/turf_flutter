@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../components/dashboard/booking_analytics_section.dart';
 import '../../components/dashboard/turf_management_section.dart';
-import '../../components/dashboard/quick_actions_section.dart';
+// import '../../components/dashboard/quick_actions_section.dart';
 
 class ProprietorDashboard extends StatelessWidget {
   const ProprietorDashboard({super.key});
@@ -27,11 +27,11 @@ class ProprietorDashboard extends StatelessWidget {
           const SizedBox(height: 32),
 
           // Quick Actions Section
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 24.0),
-            child: QuickActionsSection(),
-          ),
-          const SizedBox(height: 32),
+          // const Padding(
+          //   padding: EdgeInsets.symmetric(horizontal: 24.0),
+          //   child: QuickActionsSection(),
+          // ),
+          // const SizedBox(height: 32),
         ],
       ),
     );

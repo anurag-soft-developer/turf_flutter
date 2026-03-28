@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../../controllers/create_turf_controller.dart';
 import '../../config/constants.dart';
 import '../../components/create_turf/basic_info_section.dart';
@@ -13,14 +14,18 @@ class CreateTurfScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final controller = CreateTurfController.instance;
+
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
       appBar: AppBar(
-        title: const Text(
-          'Create New Turf',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Color(AppColors.textColor),
+        title: Obx(
+          () => Text(
+            controller.formTitle,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Color(AppColors.textColor),
+            ),
           ),
         ),
         backgroundColor: Colors.white,
@@ -28,7 +33,7 @@ class CreateTurfScreen extends StatelessWidget {
         iconTheme: const IconThemeData(color: Color(AppColors.textColor)),
         actions: [
           TextButton(
-            onPressed: () => CreateTurfController.instance.resetForm(),
+            onPressed: () => controller.resetForm(),
             child: const Text(
               'Reset',
               style: TextStyle(color: Color(AppColors.primaryColor)),

@@ -15,7 +15,7 @@ class SubmitButton extends StatelessWidget {
       height: 56,
       child: Obx(() {
         return ElevatedButton(
-          onPressed: controller.isLoading.value ? null : controller.createTurf,
+          onPressed: controller.isLoading.value ? null : controller.submitTurf,
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(AppColors.primaryColor),
             foregroundColor: Colors.white,
@@ -33,9 +33,12 @@ class SubmitButton extends StatelessWidget {
                     strokeWidth: 2,
                   ),
                 )
-              : const Text(
-                  'Create Turf',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              : Text(
+                  controller.submitButtonText,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
         );
       }),

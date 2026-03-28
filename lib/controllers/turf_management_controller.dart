@@ -180,7 +180,12 @@ class TurfManagementController extends GetxController {
   /// Navigate to edit turf screen
   void navigateToEditTurf(TurfModel turf) {
     if (turf.id != null) {
-      Get.toNamed('/edit-turf', arguments: turf);
+      Get.toNamed('/edit-turf', arguments: turf)?.then((result) {
+        // Refresh list when returning from edit screen
+        if (result == true) {
+          loadMyTurfs(showLoader: false);
+        }
+      });
     }
   }
 
