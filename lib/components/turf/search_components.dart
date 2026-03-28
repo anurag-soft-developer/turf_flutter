@@ -82,12 +82,6 @@ class QuickFiltersRow extends StatelessWidget {
         () => Row(
           children: [
             QuickFilterChip(
-              label: 'Available Now',
-              isSelected: controller.isAvailableOnly.value,
-              onTap: controller.toggleAvailabilityFilter,
-            ),
-            const SizedBox(width: 8),
-            QuickFilterChip(
               label: '4+ Rating',
               isSelected: controller.selectedRating >= 4.0,
               onTap: () => controller.updateRating(

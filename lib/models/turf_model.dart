@@ -1,6 +1,38 @@
 import 'package:json_annotation/json_annotation.dart';
+import 'user_model.dart';
 
 part 'turf_model.g.dart';
+
+// Custom converter for postedBy field to handle populated user data
+class PostedByConverter implements JsonConverter<UserModel?, dynamic> {
+  const PostedByConverter();
+
+  @override
+  UserModel? fromJson(dynamic json) {
+    if (json == null) {
+      return null;
+    }
+
+    // If it's a String, it means the field is not populated - show error
+    if (json is String) {
+      throw FormatException('Got String, in populated field postedBy');
+    }
+
+    // If it's a Map, it should be a populated user object
+    if (json is Map<String, dynamic>) {
+      return UserModel.fromJson(json);
+    }
+
+    throw FormatException(
+      'Invalid type for postedBy field: ${json.runtimeType}',
+    );
+  }
+
+  @override
+  dynamic toJson(UserModel? user) {
+    return user?.toJson();
+  }
+}
 
 @JsonSerializable()
 class CoordinatesModel {
@@ -175,7 +207,8 @@ class TurfModel {
   @JsonKey(name: '_id')
   final String? id;
   @JsonKey(name: 'postedBy')
-  final String? postedBy;
+  @PostedByConverter()
+  final UserModel? postedBy;
   final String? name;
   final String? description;
   final LocationModel? location;
@@ -227,7 +260,7 @@ class TurfModel {
 
   TurfModel copyWith({
     String? id,
-    String? postedBy,
+    UserModel? postedBy,
     String? name,
     String? description,
     LocationModel? location,
@@ -315,6 +348,13 @@ class TurfModel {
   }
 
   // Helper getter for main image
+  // Helper getters for posted by user information
+  String? get posterName =>
+      postedBy?.fullName ?? postedBy?.email?.split('@').first;
+  String? get posterEmail => postedBy?.email;
+  String? get posterAvatar => postedBy?.avatar;
+  String? get posterId => postedBy?.id;
+
   String? get mainImage => images?.isNotEmpty == true ? images!.first : null;
 
   @override

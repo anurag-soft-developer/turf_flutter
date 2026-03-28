@@ -365,7 +365,7 @@ class CreateTurfController extends GetxController {
           open: openTimeController.text.trim(),
           close: closeTimeController.text.trim(),
         ),
-        // slotBufferMins: int.tryParse(slotBufferController.text.trim()),
+        slotBufferMins: 0,
       );
 
       final createdTurf = await _turfService.createTurf(request);

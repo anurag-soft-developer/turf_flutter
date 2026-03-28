@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import '../models/turf_model.dart';
+// import '../models/common/paginated_response.dart';
 import '../services/turf_service.dart';
 
 class TurfListController extends GetxController {
@@ -21,12 +22,13 @@ class TurfListController extends GetxController {
   final RxDouble _minPrice = 0.0.obs;
   final RxDouble _maxPrice = 5000.0.obs;
   final RxDouble _selectedRating = 0.0.obs;
-  final RxBool _isAvailableOnly = true.obs;
+  // final RxBool _isAvailableOnly = true.obs;
   final RxString _sortBy = 'averageRating'.obs;
 
   // Pagination
   final RxInt _currentPage = 1.obs;
   final RxBool _hasMoreData = true.obs;
+  final RxInt _totalItems = 0.obs;
   final int _limitPerPage = 10;
 
   // Getters - Return observables for reactivity
@@ -39,10 +41,11 @@ class TurfListController extends GetxController {
   RxDouble get minPrice => _minPrice;
   RxDouble get maxPrice => _maxPrice;
   RxDouble get selectedRating => _selectedRating;
-  RxBool get isAvailableOnly => _isAvailableOnly;
+  // RxBool get isAvailableOnly => _isAvailableOnly;
   RxString get sortBy => _sortBy;
   RxInt get currentPage => _currentPage;
   RxBool get hasMoreData => _hasMoreData;
+  RxInt get totalItems => _totalItems;
 
   // Filter options
   final List<String> availableSportTypes = [
@@ -121,7 +124,7 @@ class TurfListController extends GetxController {
     _isLoading.value = true;
 
     try {
-      final turfs = await _turfService.searchTurfs(
+      final response = await _turfService.searchTurfs(
         globalSearchText: searchController.text.trim().isNotEmpty
             ? searchController.text.trim()
             : null,
@@ -129,23 +132,23 @@ class TurfListController extends GetxController {
         amenities: _selectedAmenities.isNotEmpty ? _selectedAmenities : null,
         minPrice: _minPrice.value > 0 ? _minPrice.value : null,
         maxPrice: _maxPrice.value < 5000 ? _maxPrice.value : null,
-        isAvailable: _isAvailableOnly.value,
+        // isAvailable: _isAvailableOnly.value,
         minRating: _selectedRating.value > 0 ? _selectedRating.value : null,
         page: _currentPage.value,
         limit: _limitPerPage,
         sort: _sortBy.value,
       );
 
-      if (turfs != null) {
+      if (response != null) {
         if (isRefresh) {
-          _turfs.value = turfs;
+          _turfs.value = response.data;
+          _totalItems.value = response.totalDocuments;
         } else {
-          _turfs.addAll(turfs);
+          _turfs.addAll(response.data);
         }
 
-        if (turfs.length < _limitPerPage) {
-          _hasMoreData.value = false;
-        } else {
+        _hasMoreData.value = response.hasNextPage;
+        if (!isRefresh && response.hasNextPage) {
           _currentPage.value++;
         }
       }
@@ -214,10 +217,10 @@ class TurfListController extends GetxController {
     searchTurfs();
   }
 
-  void toggleAvailabilityFilter() {
-    _isAvailableOnly.value = !_isAvailableOnly.value;
-    searchTurfs();
-  }
+  // void toggleAvailabilityFilter() {
+  //   _isAvailableOnly.value = !_isAvailableOnly.value;
+  //   searchTurfs();
+  // }
 
   void updateSortBy(String sortBy) {
     _sortBy.value = sortBy;
@@ -232,7 +235,7 @@ class TurfListController extends GetxController {
     _minPrice.value = 0.0;
     _maxPrice.value = 5000.0;
     _selectedRating.value = 0.0;
-    _isAvailableOnly.value = true;
+    // _isAvailableOnly.value = true;
     _sortBy.value = 'averageRating';
     searchTurfs();
   }

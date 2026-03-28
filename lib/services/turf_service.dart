@@ -1,4 +1,5 @@
 import '../models/turf_model.dart';
+import '../models/common/paginated_response.dart';
 import 'api_service.dart';
 
 class TurfService {
@@ -22,7 +23,7 @@ class TurfService {
     return turf;
   }
 
-  Future<List<TurfModel>?> searchTurfs({
+  Future<PaginatedResponse<TurfModel>?> searchTurfs({
     String? globalSearchText,
     List<String>? sportTypes,
     List<String>? amenities,
@@ -86,20 +87,19 @@ class TurfService {
     queryParams['page'] = page.toString();
     queryParams['limit'] = limit.toString();
 
-    final response = await _apiService.get<List<dynamic>>(
+    final response = await _apiService.get<Map<String, dynamic>>(
       '/turf',
       queryParameters: queryParams,
     );
 
     if (response == null) {
-      return [];
+      return EmptyPaginatedResponse<TurfModel>();
     }
 
-    final turfs = response
-        .map((turfJson) => TurfModel.fromJson(turfJson as Map<String, dynamic>))
-        .toList();
-
-    return turfs;
+    return PaginatedResponse.fromJson(
+      response,
+      (json) => TurfModel.fromJson(json as Map<String, dynamic>),
+    );
   }
 
   Future<Map<String, dynamic>?> getTurfStats() async {
@@ -145,15 +145,16 @@ class TurfService {
 
   /// Get featured/recommended turfs
   Future<List<TurfModel>?> getFeaturedTurfs({int limit = 5}) async {
-    return await searchTurfs(
+    final result = await searchTurfs(
       sort: 'averageRating',
       limit: limit,
       minRating: 4.0,
     );
+    return result?.data;
   }
 
   /// Get turfs owned by the current user
-  Future<List<TurfModel>?> getMyTurfs({
+  Future<PaginatedResponse<TurfModel>?> getMyTurfs({
     int page = 1,
     int limit = 10,
     String? sort,
@@ -167,27 +168,24 @@ class TurfService {
       queryParams['sort'] = sort;
     }
 
-    final response = await _apiService.get<List<dynamic>>(
-      '/turf/owner/me',
+    final response = await _apiService.get<Map<String, dynamic>>(
+      '/turf/owner/my',
       queryParameters: queryParams,
     );
 
     if (response == null) {
-      return [];
+      return EmptyPaginatedResponse<TurfModel>();
     }
 
-    final turfs = response
-        .map((turfJson) => TurfModel.fromJson(turfJson as Map<String, dynamic>))
-        .toList();
-
-    return turfs;
+    return PaginatedResponse.fromJson(
+      response,
+      (json) => TurfModel.fromJson(json as Map<String, dynamic>),
+    );
   }
 
   /// Get turf statistics for the current user
   Future<Map<String, dynamic>?> getMyTurfStats() async {
-    final response = await _apiService.get<Map<String, dynamic>>(
-      '/turf/owner/me/stats',
-    );
+    final response = await _apiService.get<Map<String, dynamic>>('/turf/stats');
 
     return response;
   }

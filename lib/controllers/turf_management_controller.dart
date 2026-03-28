@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import '../models/turf_model.dart';
+import '../models/common/paginated_response.dart';
 import '../services/turf_service.dart';
 import '../utils/exception_handler.dart';
 
@@ -18,6 +19,7 @@ class TurfManagementController extends GetxController {
   // Pagination
   final RxInt _currentPage = 1.obs;
   final RxBool _hasMoreData = true.obs;
+  final RxInt _totalTurfsCount = 0.obs;
   final int _limitPerPage = 10;
 
   // Getters - Return observables for reactivity
@@ -27,6 +29,7 @@ class TurfManagementController extends GetxController {
   Rxn<Map<String, dynamic>> get stats => _stats;
   RxInt get currentPage => _currentPage;
   RxBool get hasMoreData => _hasMoreData;
+  RxInt get totalTurfsCount => _totalTurfsCount;
 
   @override
   void onInit() {
@@ -43,17 +46,19 @@ class TurfManagementController extends GetxController {
       }
 
       _currentPage.value = 1;
-      final turfs = await _turfService.getMyTurfs(
+      final response = await _turfService.getMyTurfs(
         page: _currentPage.value,
         limit: _limitPerPage,
         sort: '-createdAt',
       );
 
-      if (turfs != null) {
-        _myTurfs.value = turfs;
-        _hasMoreData.value = turfs.length >= _limitPerPage;
+      if (response != null) {
+        _myTurfs.value = response.data;
+        _hasMoreData.value = response.hasNextPage;
+        _totalTurfsCount.value = response.totalDocuments;
       } else {
         _myTurfs.clear();
+        _totalTurfsCount.value = 0;
       }
     } catch (e) {
       debugPrint('Error loading my turfs: $e');
@@ -80,15 +85,16 @@ class TurfManagementController extends GetxController {
 
     try {
       _currentPage.value++;
-      final turfs = await _turfService.getMyTurfs(
+      final response = await _turfService.getMyTurfs(
         page: _currentPage.value,
         limit: _limitPerPage,
         sort: '-createdAt',
       );
 
-      if (turfs != null) {
-        _myTurfs.addAll(turfs);
-        _hasMoreData.value = turfs.length >= _limitPerPage;
+      if (response != null) {
+        _myTurfs.addAll(response.data);
+        _hasMoreData.value = response.hasNextPage;
+        _totalTurfsCount.value = response.totalDocuments;
       }
     } catch (e) {
       debugPrint('Error loading more turfs: $e');
