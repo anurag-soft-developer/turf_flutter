@@ -1,6 +1,72 @@
 import 'package:json_annotation/json_annotation.dart';
+import 'turf_model.dart';
+import 'user_model.dart';
 
 part 'turf_booking_model.g.dart';
+
+// Custom converter for turf field to handle both ID and populated data
+class TurfConverter implements JsonConverter<dynamic, dynamic> {
+  const TurfConverter();
+
+  @override
+  dynamic fromJson(dynamic json) {
+    if (json == null) {
+      return null;
+    }
+
+    // If it's a String, it's just the turf ID
+    if (json is String) {
+      return json;
+    }
+
+    // If it's a Map, it's a populated turf object
+    if (json is Map<String, dynamic>) {
+      return TurfModel.fromJson(json);
+    }
+
+    throw FormatException('Invalid type for turf field: ${json.runtimeType}');
+  }
+
+  @override
+  dynamic toJson(dynamic turf) {
+    if (turf == null) return null;
+    if (turf is String) return turf;
+    if (turf is TurfModel) return turf.toJson();
+    return turf;
+  }
+}
+
+// Custom converter for user fields to handle both ID and populated data
+class UserConverter implements JsonConverter<dynamic, dynamic> {
+  const UserConverter();
+
+  @override
+  dynamic fromJson(dynamic json) {
+    if (json == null) {
+      return null;
+    }
+
+    // If it's a String, it's just the user ID
+    if (json is String) {
+      return json;
+    }
+
+    // If it's a Map, it's a populated user object
+    if (json is Map<String, dynamic>) {
+      return UserModel.fromJson(json);
+    }
+
+    throw FormatException('Invalid type for user field: ${json.runtimeType}');
+  }
+
+  @override
+  dynamic toJson(dynamic user) {
+    if (user == null) return null;
+    if (user is String) return user;
+    if (user is UserModel) return user.toJson();
+    return user;
+  }
+}
 
 // Enums
 enum TurfBookingStatus {
@@ -30,9 +96,11 @@ enum PaymentStatus {
 class TurfBookingModel {
   @JsonKey(name: '_id')
   final String? id;
-  final String? turf;
+  @TurfConverter()
+  final dynamic turf; // Can be String (ID) or TurfModel (populated)
   @JsonKey(name: 'bookedBy')
-  final String? bookedBy;
+  @UserConverter()
+  final dynamic bookedBy; // Can be String (ID) or UserModel (populated)
   @JsonKey(name: 'startTime')
   final String? startTime;
   @JsonKey(name: 'endTime')
@@ -84,8 +152,8 @@ class TurfBookingModel {
 
   TurfBookingModel copyWith({
     String? id,
-    String? turf,
-    String? bookedBy,
+    dynamic turf,
+    dynamic bookedBy,
     String? startTime,
     String? endTime,
     int? playerCount,
@@ -118,6 +186,59 @@ class TurfBookingModel {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
+  }
+
+  // Helper getters for populated data
+  String? get turfId {
+    if (turf is String) return turf;
+    if (turf is TurfModel) return turf.id;
+    return null;
+  }
+
+  TurfModel? get turfModel {
+    if (turf is TurfModel) return turf;
+    return null;
+  }
+
+  String? get bookedById {
+    if (bookedBy is String) return bookedBy;
+    if (bookedBy is UserModel) return bookedBy.id;
+    return null;
+  }
+
+  UserModel? get bookedByUser {
+    if (bookedBy is UserModel) return bookedBy;
+    return null;
+  }
+
+  // Display helpers for populated data
+  String get turfDisplayName {
+    if (turf is TurfModel) {
+      return (turf as TurfModel).displayName;
+    }
+    return turfId ?? 'Unknown Turf';
+  }
+
+  String get bookedByDisplayName {
+    if (bookedBy is UserModel) {
+      final user = bookedBy as UserModel;
+      return user.fullName ?? user.email?.split('@').first ?? 'Unknown User';
+    }
+    return bookedById ?? 'Unknown User';
+  }
+
+  String? get bookedByAvatar {
+    if (bookedBy is UserModel) {
+      return (bookedBy as UserModel).avatar;
+    }
+    return null;
+  }
+
+  String? get bookedByEmail {
+    if (bookedBy is UserModel) {
+      return (bookedBy as UserModel).email;
+    }
+    return null;
   }
 
   // Helper getters
@@ -243,7 +364,7 @@ class TurfBookingModel {
 
   @override
   String toString() {
-    return 'TurfBookingModel(id: $id, turf: $turf, status: $status)';
+    return 'TurfBookingModel(id: $id, turfId: $turfId, status: $status)';
   }
 }
 

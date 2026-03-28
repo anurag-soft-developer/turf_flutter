@@ -1,4 +1,5 @@
 import '../models/turf_booking_model.dart';
+import '../models/common/paginated_response.dart';
 import '../config/api_constants.dart';
 import 'api_service.dart';
 
@@ -27,56 +28,56 @@ class TurfBookingService {
   }
 
   /// Get all bookings with optional filters
-  Future<List<TurfBookingModel>> findAll({
-    String? turf,
-    String? bookedBy,
-    TurfBookingStatus? status,
-    PaymentStatus? paymentStatus,
-    String? startDate,
-    String? endDate,
-    int page = 1,
-    int limit = 10,
-    String sortBy = 'createdAt',
-    String sortOrder = 'desc',
-  }) async {
-    final queryParams = <String, dynamic>{};
+  // Future<List<TurfBookingModel>> findAll({
+  //   String? turf,
+  //   String? bookedBy,
+  //   TurfBookingStatus? status,
+  //   PaymentStatus? paymentStatus,
+  //   String? startDate,
+  //   String? endDate,
+  //   int page = 1,
+  //   int limit = 10,
+  //   String sortBy = 'createdAt',
+  //   String sortOrder = 'desc',
+  // }) async {
+  //   final queryParams = <String, dynamic>{};
 
-    if (turf != null) queryParams['turf'] = turf;
-    if (bookedBy != null) queryParams['bookedBy'] = bookedBy;
-    if (status != null) {
-      queryParams['status'] = status.toString().split('.').last;
-    }
-    if (paymentStatus != null) {
-      queryParams['paymentStatus'] = paymentStatus.toString().split('.').last;
-    }
-    if (startDate != null) queryParams['startDate'] = startDate;
-    if (endDate != null) queryParams['endDate'] = endDate;
-    queryParams['page'] = page.toString();
-    queryParams['limit'] = limit.toString();
-    queryParams['sortBy'] = sortBy;
-    queryParams['sortOrder'] = sortOrder;
+  //   if (turf != null) queryParams['turf'] = turf;
+  //   if (bookedBy != null) queryParams['bookedBy'] = bookedBy;
+  //   if (status != null) {
+  //     queryParams['status'] = status.toString().split('.').last;
+  //   }
+  //   if (paymentStatus != null) {
+  //     queryParams['paymentStatus'] = paymentStatus.toString().split('.').last;
+  //   }
+  //   if (startDate != null) queryParams['startDate'] = startDate;
+  //   if (endDate != null) queryParams['endDate'] = endDate;
+  //   queryParams['page'] = page.toString();
+  //   queryParams['limit'] = limit.toString();
+  //   queryParams['sortBy'] = sortBy;
+  //   queryParams['sortOrder'] = sortOrder;
 
-    final response = await _apiService.get<List<dynamic>>(
-      ApiConstants.turfBooking.bookings,
-      queryParameters: queryParams,
-    );
+  //   final response = await _apiService.get<List<dynamic>>(
+  //     ApiConstants.turfBooking.bookings,
+  //     queryParameters: queryParams,
+  //   );
 
-    if (response == null) {
-      return [];
-    }
+  //   if (response == null) {
+  //     return [];
+  //   }
 
-    final bookings = response
-        .map(
-          (bookingJson) =>
-              TurfBookingModel.fromJson(bookingJson as Map<String, dynamic>),
-        )
-        .toList();
+  //   final bookings = response
+  //       .map(
+  //         (bookingJson) =>
+  //             TurfBookingModel.fromJson(bookingJson as Map<String, dynamic>),
+  //       )
+  //       .toList();
 
-    return bookings;
-  }
+  //   return bookings;
+  // }
 
   /// Get current user's bookings
-  Future<List<TurfBookingModel>> findUserBookings({
+  Future<PaginatedResponse<TurfBookingModel>?> findPlayerBookings({
     String? turf,
     TurfBookingStatus? status,
     PaymentStatus? paymentStatus,
@@ -103,27 +104,23 @@ class TurfBookingService {
     queryParams['sortBy'] = sortBy;
     queryParams['sortOrder'] = sortOrder;
 
-    final response = await _apiService.get<List<dynamic>>(
+    final response = await _apiService.get<Map<String, dynamic>>(
       ApiConstants.turfBooking.myBookings,
       queryParameters: queryParams,
     );
 
     if (response == null) {
-      return [];
+      return null;
     }
 
-    final bookings = response
-        .map(
-          (bookingJson) =>
-              TurfBookingModel.fromJson(bookingJson as Map<String, dynamic>),
-        )
-        .toList();
-
-    return bookings;
+    return PaginatedResponse.fromJson(
+      response,
+      (json) => TurfBookingModel.fromJson(json as Map<String, dynamic>),
+    );
   }
 
   /// Get bookings for turfs owned by current user
-  Future<List<TurfBookingModel>> findTurfOwnerBookings({
+  Future<PaginatedResponse<TurfBookingModel>?> findTurfOwnerBookings({
     String? turf,
     TurfBookingStatus? status,
     PaymentStatus? paymentStatus,
@@ -150,27 +147,23 @@ class TurfBookingService {
     queryParams['sortBy'] = sortBy;
     queryParams['sortOrder'] = sortOrder;
 
-    final response = await _apiService.get<List<dynamic>>(
+    final response = await _apiService.get<Map<String, dynamic>>(
       ApiConstants.turfBooking.myTurfBookings,
       queryParameters: queryParams,
     );
 
     if (response == null) {
-      return [];
+      return null;
     }
 
-    final bookings = response
-        .map(
-          (bookingJson) =>
-              TurfBookingModel.fromJson(bookingJson as Map<String, dynamic>),
-        )
-        .toList();
-
-    return bookings;
+    return PaginatedResponse.fromJson(
+      response,
+      (json) => TurfBookingModel.fromJson(json as Map<String, dynamic>),
+    );
   }
 
   /// Get bookings for a specific turf
-  Future<List<TurfBookingModel>> findTurfBookings(
+  Future<PaginatedResponse<TurfBookingModel>?> findTurfBookings(
     String turfId, {
     TurfBookingStatus? status,
     PaymentStatus? paymentStatus,
@@ -196,23 +189,19 @@ class TurfBookingService {
     queryParams['sortBy'] = sortBy;
     queryParams['sortOrder'] = sortOrder;
 
-    final response = await _apiService.get<List<dynamic>>(
+    final response = await _apiService.get<Map<String, dynamic>>(
       ApiConstants.turfBooking.turfBookings(turfId),
       queryParameters: queryParams,
     );
 
     if (response == null) {
-      return [];
+      return null;
     }
 
-    final bookings = response
-        .map(
-          (bookingJson) =>
-              TurfBookingModel.fromJson(bookingJson as Map<String, dynamic>),
-        )
-        .toList();
-
-    return bookings;
+    return PaginatedResponse.fromJson(
+      response,
+      (json) => TurfBookingModel.fromJson(json as Map<String, dynamic>),
+    );
   }
 
   /// Check time slot availability for a turf
@@ -271,12 +260,12 @@ class TurfBookingService {
   }
 
   /// Delete a booking
-  Future<bool> deleteBooking(String bookingId) async {
-    final response = await _apiService.delete(
-      ApiConstants.turfBooking.bookingById(bookingId),
-    );
-    return response != null;
-  }
+  // Future<bool> deleteBooking(String bookingId) async {
+  //   final response = await _apiService.delete(
+  //     ApiConstants.turfBooking.bookingById(bookingId),
+  //   );
+  //   return response != null;
+  // }
 
   /// Cancel a booking (convenient method)
   Future<TurfBookingModel?> cancelBooking(
@@ -328,13 +317,15 @@ class TurfBookingService {
     final now = DateTime.now();
     final startDate = now.toIso8601String();
 
-    return await findUserBookings(
+    final response = await findPlayerBookings(
       startDate: startDate,
       status: TurfBookingStatus.confirmed,
       limit: limit,
       sortBy: 'startTime',
       sortOrder: 'asc',
     );
+
+    return response?.data ?? [];
   }
 
   /// Get booking history for current user
@@ -342,12 +333,14 @@ class TurfBookingService {
     int page = 1,
     int limit = 10,
   }) async {
-    return await findUserBookings(
+    final response = await findPlayerBookings(
       page: page,
       limit: limit,
       sortBy: 'createdAt',
       sortOrder: 'desc',
     );
+
+    return response?.data ?? [];
   }
 
   /// Get today's bookings for a specific turf
@@ -356,13 +349,15 @@ class TurfBookingService {
     final startOfDay = DateTime(today.year, today.month, today.day);
     final endOfDay = DateTime(today.year, today.month, today.day, 23, 59, 59);
 
-    return await findTurfBookings(
+    final response = await findTurfBookings(
       turfId,
       startDate: startOfDay.toIso8601String(),
       endDate: endOfDay.toIso8601String(),
       sortBy: 'startTime',
       sortOrder: 'asc',
     );
+
+    return response?.data ?? [];
   }
 
   /// Get weekly bookings for a specific turf
@@ -371,12 +366,14 @@ class TurfBookingService {
     final startOfWeek = today.subtract(Duration(days: today.weekday - 1));
     final endOfWeek = startOfWeek.add(const Duration(days: 6));
 
-    return await findTurfBookings(
+    final response = await findTurfBookings(
       turfId,
       startDate: startOfWeek.toIso8601String(),
       endDate: endOfWeek.toIso8601String(),
       sortBy: 'startTime',
       sortOrder: 'asc',
     );
+
+    return response?.data ?? [];
   }
 }

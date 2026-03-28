@@ -9,8 +9,8 @@ part of 'turf_booking_model.dart';
 TurfBookingModel _$TurfBookingModelFromJson(Map<String, dynamic> json) =>
     TurfBookingModel(
       id: json['_id'] as String?,
-      turf: json['turf'] as String?,
-      bookedBy: json['bookedBy'] as String?,
+      turf: const TurfConverter().fromJson(json['turf']),
+      bookedBy: const UserConverter().fromJson(json['bookedBy']),
       startTime: json['startTime'] as String?,
       endTime: json['endTime'] as String?,
       playerCount: (json['playerCount'] as num?)?.toInt(),
@@ -32,8 +32,8 @@ TurfBookingModel _$TurfBookingModelFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$TurfBookingModelToJson(TurfBookingModel instance) =>
     <String, dynamic>{
       '_id': instance.id,
-      'turf': instance.turf,
-      'bookedBy': instance.bookedBy,
+      'turf': const TurfConverter().toJson(instance.turf),
+      'bookedBy': const UserConverter().toJson(instance.bookedBy),
       'startTime': instance.startTime,
       'endTime': instance.endTime,
       'playerCount': instance.playerCount,

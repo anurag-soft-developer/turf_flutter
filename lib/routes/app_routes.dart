@@ -10,6 +10,8 @@ import '../views/turf/turf_list_screen.dart';
 import '../views/turf/turf_detail_screen.dart';
 import '../views/turf/my_turfs_screen.dart';
 import '../views/turf/create_turf_screen.dart';
+import '../views/booking/player_bookings_screen.dart';
+import '../views/booking/Owner_bookings_screen.dart';
 import '../views/splash_screen.dart';
 import '../views/access_denied_screen.dart';
 import '../bindings/auth_binding.dart';
@@ -18,6 +20,7 @@ import '../bindings/turf_list_binding.dart';
 import '../bindings/turf_detail_binding.dart';
 import '../bindings/turf_management_binding.dart';
 import '../bindings/create_turf_binding.dart';
+import '../bindings/turf_booking_binding.dart';
 import '../config/constants.dart';
 
 class AppRoutes {
@@ -101,6 +104,20 @@ class AppRoutes {
       name: AppConstants.routes.editTurf,
       page: () => const CreateTurfScreen(),
       binding: CreateTurfBinding(),
+      transition: Transition.cupertino,
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppConstants.routes.myBookings,
+      page: () => const PlayerBookingsScreen(),
+      binding: TurfBookingBinding(),
+      transition: Transition.cupertino,
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppConstants.routes.turfBookings,
+      page: () => const OwnerBookingsScreen(),
+      binding: TurfBookingBinding(),
       transition: Transition.cupertino,
       middlewares: [AuthGuard()],
     ),

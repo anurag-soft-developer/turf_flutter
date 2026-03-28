@@ -41,7 +41,7 @@ class AppDrawer extends StatelessWidget {
         iconColor: const Color(AppColors.primaryColor),
         onTap: () {
           Get.back();
-          AppSnackbar.comingSoon(feature: 'My Bookings');
+          Get.toNamed(AppConstants.routes.myBookings);
         },
       ),
     ];
@@ -73,7 +73,7 @@ class AppDrawer extends StatelessWidget {
         iconColor: const Color(AppColors.primaryColor),
         onTap: () {
           Get.back();
-          AppSnackbar.comingSoon(feature: 'Turf Bookings management');
+          Get.toNamed(AppConstants.routes.turfBookings);
         },
       ),
     ];
@@ -87,7 +87,7 @@ class AppDrawer extends StatelessWidget {
         iconColor: const Color(AppColors.primaryColor),
         onTap: () {
           Get.back();
-          AppSnackbar.comingSoon(feature: 'Profile');
+          Get.toNamed(AppConstants.routes.profile);
         },
       ),
       DrawerMenuItem(
@@ -96,7 +96,7 @@ class AppDrawer extends StatelessWidget {
         iconColor: const Color(AppColors.primaryColor),
         onTap: () {
           Get.back();
-          AppSnackbar.comingSoon(feature: 'Settings');
+          Get.toNamed(AppConstants.routes.settings);
         },
       ),
     ];
@@ -223,17 +223,17 @@ class AppDrawer extends StatelessWidget {
                 const Divider(color: Color(AppColors.dividerColor)),
 
                 // Navigation Items
-                ListTile(
-                  leading: const Icon(
-                    Icons.dashboard,
-                    color: Color(AppColors.primaryColor),
-                  ),
-                  title: const Text(
-                    'Dashboard',
-                    style: TextStyle(color: Color(AppColors.textColor)),
-                  ),
-                  onTap: () => Get.back(),
-                ),
+                // ListTile(
+                //   leading: const Icon(
+                //     Icons.dashboard,
+                //     color: Color(AppColors.primaryColor),
+                //   ),
+                //   title: const Text(
+                //     'Dashboard',
+                //     style: TextStyle(color: Color(AppColors.textColor)),
+                //   ),
+                //   onTap: () => Get.back(),
+                // ),
 
                 // Mode Specific Items
                 Obx(() {

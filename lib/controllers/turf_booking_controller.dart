@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import '../models/turf_booking_model.dart';
+import '../models/common/paginated_response.dart';
 import '../services/turf_booking_service.dart';
 import '../utils/exception_handler.dart';
 
@@ -116,21 +117,24 @@ class TurfBookingController extends GetxController {
 
       _isLoading.value = true;
 
-      final bookings = await _bookingService.findUserBookings(
+      final response = await _bookingService.findPlayerBookings(
         page: _currentPage.value,
         limit: _limitPerPage,
         status: _statusFilter.value,
         paymentStatus: _paymentStatusFilter.value,
       );
 
-      if (bookings.length < _limitPerPage) {
+      if (response == null) {
         _hasMoreData.value = false;
+        return;
       }
 
+      _hasMoreData.value = response.hasNextPage;
+
       if (refresh) {
-        _userBookings.assignAll(bookings);
+        _userBookings.assignAll(response.data);
       } else {
-        _userBookings.addAll(bookings);
+        _userBookings.addAll(response.data);
       }
 
       _currentPage.value++;
@@ -150,8 +154,11 @@ class TurfBookingController extends GetxController {
 
       _isLoading.value = true;
 
-      final bookings = await _bookingService.findTurfOwnerBookings();
-      _turfOwnerBookings.assignAll(bookings);
+      final response = await _bookingService.findTurfOwnerBookings();
+
+      if (response != null) {
+        _turfOwnerBookings.assignAll(response.data);
+      }
     } catch (e) {
       ExceptionHandler.showErrorToast('Failed to load turf bookings');
     } finally {
@@ -288,26 +295,26 @@ class TurfBookingController extends GetxController {
   }
 
   /// Delete booking
-  Future<bool> deleteBooking(String bookingId) async {
-    try {
-      _isBookingLoading.value = true;
+  // Future<bool> deleteBooking(String bookingId) async {
+  //   try {
+  //     _isBookingLoading.value = true;
 
-      final success = await _bookingService.deleteBooking(bookingId);
+  //     final success = await _bookingService.deleteBooking(bookingId);
 
-      if (success) {
-        _removeBookingFromLists(bookingId);
-        ExceptionHandler.showSuccessToast('Booking deleted successfully');
-        return true;
-      }
+  //     if (success) {
+  //       _removeBookingFromLists(bookingId);
+  //       ExceptionHandler.showSuccessToast('Booking deleted successfully');
+  //       return true;
+  //     }
 
-      return false;
-    } catch (e) {
-      ExceptionHandler.showErrorToast('Failed to delete booking');
-      return false;
-    } finally {
-      _isBookingLoading.value = false;
-    }
-  }
+  //     return false;
+  //   } catch (e) {
+  //     ExceptionHandler.showErrorToast('Failed to delete booking');
+  //     return false;
+  //   } finally {
+  //     _isBookingLoading.value = false;
+  //   }
+  // }
 
   /// Apply filters
   void applyFilters({TurfBookingStatus? status, PaymentStatus? paymentStatus}) {
@@ -373,11 +380,13 @@ class TurfBookingController extends GetxController {
     PaymentStatus? paymentStatus,
   }) async {
     try {
-      return await _bookingService.findTurfBookings(
+      final response = await _bookingService.findTurfBookings(
         turfId,
         status: status,
         paymentStatus: paymentStatus,
       );
+
+      return response?.data ?? [];
     } catch (e) {
       ExceptionHandler.showErrorToast('Failed to load turf bookings');
       return [];
