@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/components/create_turf/location_section.dart';
-import '../../controllers/create_turf_controller.dart';
+import '../../turf/create/create_turf_controller.dart';
 import 'section_container.dart';
 import 'styled_text_field.dart';
 

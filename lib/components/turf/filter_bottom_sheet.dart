@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../config/constants.dart';
-import '../../controllers/turf_list_controller.dart';
+import '../../core/config/constants.dart';
+import '../../turf/feed/turf_list_controller.dart';
 
 class FilterBottomSheet extends StatelessWidget {
   final TurfListController controller;

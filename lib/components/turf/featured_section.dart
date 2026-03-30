@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../controllers/turf_list_controller.dart';
+import '../../turf/feed/turf_list_controller.dart';
 import 'turf_cards.dart';
 
 class FeaturedTurfsSection extends StatelessWidget {

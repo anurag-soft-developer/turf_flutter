@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../components/shared/custom_button.dart';
 import '../../components/shared/custom_text_field.dart';
-import '../../utils/validators.dart';
-import '../../config/constants.dart';
+import '../../core/utils/validators.dart';
+import '../../core/config/constants.dart';
 
 class ForgotPasswordEmailStep extends StatelessWidget {
   final TextEditingController emailController;

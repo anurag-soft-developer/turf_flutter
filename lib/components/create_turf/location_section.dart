@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_places_flutter/google_places_flutter.dart';
 import 'package:google_places_flutter/model/prediction.dart';
-import '../../controllers/create_turf_controller.dart';
-import '../../config/env_config.dart';
+import '../../turf/create/create_turf_controller.dart';
+import '../../core/config/env_config.dart';
 
 class LocationSection extends StatefulWidget {
   const LocationSection({super.key});

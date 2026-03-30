@@ -1,9 +1,9 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/utils/exception_handler.dart';
+import 'package:flutter_application_1/core/utils/exception_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../config/api_constants.dart';
-import '../config/constants.dart';
+import '../core/config/api_constants.dart';
+import '../core/config/constants.dart';
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();

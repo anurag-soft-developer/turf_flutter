@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../controllers/create_turf_controller.dart';
+import '../../turf/create/create_turf_controller.dart';
 import 'section_container.dart';
 
 class AmenitiesSection extends StatelessWidget {

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../controllers/auth/auth_state_controller.dart';
-import '../../controllers/settings_controller.dart';
-import '../../config/constants.dart';
-import '../../utils/app_snackbar.dart';
+import '../../core/auth/auth_state_controller.dart';
+import '../../settings/settings_controller.dart';
+import '../../core/config/constants.dart';
+import '../../core/utils/app_snackbar.dart';
 
 class DrawerMenuItem {
   final String title;
@@ -73,7 +73,7 @@ class AppDrawer extends StatelessWidget {
         iconColor: const Color(AppColors.primaryColor),
         onTap: () {
           Get.back();
-          Get.toNamed(AppConstants.routes.turfBookings);
+          Get.toNamed(AppConstants.routes.myBookings);
         },
       ),
     ];
@@ -146,30 +146,7 @@ class AppDrawer extends StatelessWidget {
                         fontSize: 16,
                       ),
                     ),
-                    accountEmail: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(authController.user?.email ?? ''),
-                        const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            settingsController.currentModeDisplay,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                    accountEmail: Text(authController.user?.email ?? ''),
                     currentAccountPicture: CircleAvatar(
                       backgroundColor: Colors.white,
                       backgroundImage: avatar != null

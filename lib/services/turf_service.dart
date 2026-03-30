@@ -1,5 +1,5 @@
-import '../models/turf_model.dart';
-import '../models/common/paginated_response.dart';
+import '../turf/model/turf_model.dart';
+import '../core/models/paginated_response.dart';
 import 'api_service.dart';
 
 class TurfService {

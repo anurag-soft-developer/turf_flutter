@@ -1,5 +1,5 @@
 import 'package:get/get.dart';
-import '../controllers/turf_booking_controller.dart';
+import '../turf_booking/player/turf_booking_controller.dart';
 
 class TurfBookingBinding extends Bindings {
   @override

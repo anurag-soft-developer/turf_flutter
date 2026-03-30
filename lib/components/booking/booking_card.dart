@@ -1,10 +1,6 @@
-// Booking Card Component
-// This is a placeholder for the BookingCard component that will be referenced in the screens
-// The actual implementation should be created in lib/components/booking/booking_card.dart
-
 import 'package:flutter/material.dart';
-import '../../models/turf_booking_model.dart';
-import '../../config/constants.dart';
+import '../../turf_booking/model/turf_booking_model.dart';
+import '../../core/config/constants.dart';
 
 class BookingCard extends StatelessWidget {
   final TurfBookingModel booking;
@@ -187,11 +183,11 @@ class BookingCard extends StatelessWidget {
         ]);
       } else if (booking.isConfirmed) {
         buttons.add(
-          ElevatedButton(
+          OutlinedButton(
             onPressed: () => onComplete?.call(booking.id!),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(AppColors.primaryColor),
-              foregroundColor: Colors.white,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(AppColors.primaryColor),
+              side: const BorderSide(color: Color(AppColors.primaryColor)),
             ),
             child: const Text('Mark Complete'),
           ),
@@ -228,23 +224,23 @@ class _StatusChip extends StatelessWidget {
 
     switch (status) {
       case TurfBookingStatus.pending:
-        backgroundColor = Colors.orange.withOpacity(0.2);
+        backgroundColor = Colors.orange.withValues(alpha: .2);
         textColor = Colors.orange[800]!;
         break;
       case TurfBookingStatus.confirmed:
-        backgroundColor = Colors.green.withOpacity(0.2);
+        backgroundColor = Colors.green.withValues(alpha: .2);
         textColor = Colors.green[800]!;
         break;
       case TurfBookingStatus.cancelled:
-        backgroundColor = Colors.red.withOpacity(0.2);
+        backgroundColor = Colors.red.withValues(alpha: .2);
         textColor = Colors.red[800]!;
         break;
       case TurfBookingStatus.completed:
-        backgroundColor = Colors.blue.withOpacity(0.2);
+        backgroundColor = Colors.blue.withValues(alpha: .2);
         textColor = Colors.blue[800]!;
         break;
       default:
-        backgroundColor = Colors.grey.withOpacity(0.2);
+        backgroundColor = Colors.grey.withValues(alpha: .2);
         textColor = Colors.grey[800]!;
     }
 
@@ -266,52 +262,52 @@ class _StatusChip extends StatelessWidget {
   }
 }
 
-class _PaymentStatusChip extends StatelessWidget {
-  final PaymentStatus? paymentStatus;
+// class _PaymentStatusChip extends StatelessWidget {
+//   final PaymentStatus? paymentStatus;
 
-  const _PaymentStatusChip({required this.paymentStatus});
+//   const _PaymentStatusChip({required this.paymentStatus});
 
-  @override
-  Widget build(BuildContext context) {
-    Color backgroundColor;
-    Color textColor;
+//   @override
+//   Widget build(BuildContext context) {
+//     Color backgroundColor;
+//     Color textColor;
 
-    switch (paymentStatus) {
-      case PaymentStatus.pending:
-        backgroundColor = Colors.orange.withOpacity(0.2);
-        textColor = Colors.orange[800]!;
-        break;
-      case PaymentStatus.paid:
-        backgroundColor = Colors.green.withOpacity(0.2);
-        textColor = Colors.green[800]!;
-        break;
-      case PaymentStatus.failed:
-        backgroundColor = Colors.red.withOpacity(0.2);
-        textColor = Colors.red[800]!;
-        break;
-      case PaymentStatus.refunded:
-        backgroundColor = Colors.purple.withOpacity(0.2);
-        textColor = Colors.purple[800]!;
-        break;
-      default:
-        backgroundColor = Colors.grey.withOpacity(0.2);
-        textColor = Colors.grey[800]!;
-    }
+//     switch (paymentStatus) {
+//       case PaymentStatus.pending:
+//         backgroundColor = Colors.orange.withOpacity(0.2);
+//         textColor = Colors.orange[800]!;
+//         break;
+//       case PaymentStatus.paid:
+//         backgroundColor = Colors.green.withOpacity(0.2);
+//         textColor = Colors.green[800]!;
+//         break;
+//       case PaymentStatus.failed:
+//         backgroundColor = Colors.red.withOpacity(0.2);
+//         textColor = Colors.red[800]!;
+//         break;
+//       case PaymentStatus.refunded:
+//         backgroundColor = Colors.purple.withOpacity(0.2);
+//         textColor = Colors.purple[800]!;
+//         break;
+//       default:
+//         backgroundColor = Colors.grey.withOpacity(0.2);
+//         textColor = Colors.grey[800]!;
+//     }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        paymentStatus?.name.toUpperCase() ?? 'UNKNOWN',
-        style: TextStyle(
-          color: textColor,
-          fontSize: 10,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
-}
+//     return Container(
+//       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+//       decoration: BoxDecoration(
+//         color: backgroundColor,
+//         borderRadius: BorderRadius.circular(12),
+//       ),
+//       child: Text(
+//         paymentStatus?.name.toUpperCase() ?? 'UNKNOWN',
+//         style: TextStyle(
+//           color: textColor,
+//           fontSize: 10,
+//           fontWeight: FontWeight.w500,
+//         ),
+//       ),
+//     );
+//   }
+// }

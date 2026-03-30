@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../config/constants.dart';
+import '../../core/config/constants.dart';
 
 class TurfManagementSection extends StatelessWidget {
   const TurfManagementSection({super.key});

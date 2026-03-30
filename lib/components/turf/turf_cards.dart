@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../config/constants.dart';
-import '../../controllers/turf_list_controller.dart';
-import '../../models/turf_model.dart';
+import '../../core/config/constants.dart';
+import '../../turf/feed/turf_list_controller.dart';
+import '../../turf/model/turf_model.dart';
 
 class FeaturedTurfCard extends StatelessWidget {
   final TurfModel turf;

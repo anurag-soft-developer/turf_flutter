@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../config/constants.dart';
-import '../../controllers/turf_detail_controller.dart';
+import '../../core/config/constants.dart';
+import '../../turf/details/turf_detail_controller.dart';
 
 class DateSelector extends StatelessWidget {
   final TurfDetailController controller;

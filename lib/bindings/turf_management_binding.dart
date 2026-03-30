@@ -1,5 +1,5 @@
 import 'package:get/get.dart';
-import '../controllers/turf_management_controller.dart';
+import '../turf/my_turves/turf_management_controller.dart';
 
 class TurfManagementBinding extends Bindings {
   @override

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../config/constants.dart';
-import '../../utils/app_snackbar.dart';
+import '../../core/config/constants.dart';
+import '../../core/utils/app_snackbar.dart';
 
 class BookingAnalyticsSection extends StatelessWidget {
   const BookingAnalyticsSection({super.key});

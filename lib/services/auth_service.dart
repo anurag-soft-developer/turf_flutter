@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/config/env_config.dart';
+import 'package:flutter_application_1/core/config/env_config.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import '../models/user_model.dart';
-import '../config/constants.dart';
-import '../config/api_constants.dart';
-import '../utils/exception_handler.dart';
+import '../core/models/user/user_model.dart';
+import '../core/config/constants.dart';
+import '../core/config/api_constants.dart';
+import '../core/utils/exception_handler.dart';
 import 'api_service.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
