@@ -66,7 +66,7 @@ Map<String, dynamic> _$OperatingHoursModelToJson(
 
 TurfModel _$TurfModelFromJson(Map<String, dynamic> json) => TurfModel(
   id: json['_id'] as String?,
-  postedBy: const PostedByConverter().fromJson(json['postedBy']),
+  postedBy: const UserConverter().fromJson(json['postedBy']),
   name: json['name'] as String?,
   description: json['description'] as String?,
   location: json['location'] == null
@@ -100,7 +100,7 @@ TurfModel _$TurfModelFromJson(Map<String, dynamic> json) => TurfModel(
 
 Map<String, dynamic> _$TurfModelToJson(TurfModel instance) => <String, dynamic>{
   '_id': instance.id,
-  'postedBy': const PostedByConverter().toJson(instance.postedBy),
+  'postedBy': const UserConverter().toJson(instance.postedBy),
   'name': instance.name,
   'description': instance.description,
   'location': instance.location,

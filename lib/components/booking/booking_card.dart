@@ -26,6 +26,7 @@ class BookingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 2,
+      color: Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -40,6 +41,7 @@ class BookingCard extends StatelessWidget {
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
+                    color: Color(AppColors.textColor),
                   ),
                 ),
                 _StatusChip(status: booking.status),
@@ -57,6 +59,7 @@ class BookingCard extends StatelessWidget {
                   child: Text(
                     booking.turfDisplayName,
                     style: const TextStyle(
+                      color: Color(AppColors.textSecondaryColor),
                       fontWeight: FontWeight.w500,
                       fontSize: 15,
                     ),
@@ -74,7 +77,10 @@ class BookingCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   booking.bookingTimeDisplay,
-                  style: const TextStyle(fontSize: 14),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Color(AppColors.textSecondaryColor),
+                  ),
                 ),
                 const SizedBox(width: 16),
                 const Icon(
@@ -85,7 +91,10 @@ class BookingCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   booking.startDateTime?.toString().split(' ').first ?? 'N/A',
-                  style: const TextStyle(fontSize: 14),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Color(AppColors.textSecondaryColor),
+                  ),
                 ),
               ],
             ),
@@ -99,8 +108,11 @@ class BookingCard extends StatelessWidget {
                   const Icon(Icons.person, size: 18, color: Colors.purple),
                   const SizedBox(width: 8),
                   Text(
-                    booking.bookedByDisplayName,
-                    style: const TextStyle(fontSize: 14),
+                    booking.bookedByHelper.getDisplayName(),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Color(AppColors.textSecondaryColor),
+                    ),
                   ),
                 ],
               ),
@@ -118,10 +130,11 @@ class BookingCard extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
+                      color: Color(AppColors.textSecondaryColor),
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  _PaymentStatusChip(paymentStatus: booking.paymentStatus),
+                  // const SizedBox(width: 16),
+                  // _PaymentStatusChip(paymentStatus: booking.paymentStatus),
                 ],
               ),
             ],
@@ -163,7 +176,7 @@ class BookingCard extends StatelessWidget {
             child: const Text('Decline'),
           ),
           const SizedBox(width: 8),
-          ElevatedButton(
+          OutlinedButton(
             onPressed: () => onConfirm?.call(booking.id!),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,

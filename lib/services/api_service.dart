@@ -27,10 +27,25 @@ class ApiService {
     dioInstance.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
+          // Add authorization token
           final token = await getStoredToken();
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
           }
+
+          // Remove null values from request data
+          if (options.data != null) {
+            options.data = _removeNullValues(options.data);
+          }
+
+          // Remove null values from query parameters
+          if (options.queryParameters.isNotEmpty) {
+            final cleanedParams = _removeNullValues(options.queryParameters);
+            options.queryParameters = cleanedParams is Map<String, dynamic>
+                ? cleanedParams
+                : <String, dynamic>{};
+          }
+
           handler.next(options);
         },
       ),
@@ -143,6 +158,31 @@ class ApiService {
     } catch (e) {
       ExceptionHandler.handleException(e);
       return null;
+    }
+  }
+
+  // Remove null values from payload data recursively
+  static dynamic _removeNullValues(dynamic data) {
+    if (data is Map<String, dynamic>) {
+      final Map<String, dynamic> filteredMap = {};
+
+      for (final entry in data.entries) {
+        final value = _removeNullValues(entry.value);
+
+        // Only add non-null values to the filtered map
+        if (value != null) {
+          filteredMap[entry.key] = value;
+        }
+      }
+
+      return filteredMap;
+    } else if (data is List) {
+      // For lists, recursively process each item but keep null items
+      // (you might want to filter nulls from lists too if needed)
+      return data.map(_removeNullValues).toList();
+    } else {
+      // For primitive values, return as-is (including null)
+      return data;
     }
   }
 

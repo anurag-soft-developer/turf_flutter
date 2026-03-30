@@ -6,13 +6,24 @@ part of 'turf_booking_model.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
+TimeSlot _$TimeSlotFromJson(Map<String, dynamic> json) => TimeSlot(
+  startTime: json['startTime'] as String,
+  endTime: json['endTime'] as String,
+);
+
+Map<String, dynamic> _$TimeSlotToJson(TimeSlot instance) => <String, dynamic>{
+  'startTime': instance.startTime,
+  'endTime': instance.endTime,
+};
+
 TurfBookingModel _$TurfBookingModelFromJson(Map<String, dynamic> json) =>
     TurfBookingModel(
       id: json['_id'] as String?,
       turf: const TurfConverter().fromJson(json['turf']),
       bookedBy: const UserConverter().fromJson(json['bookedBy']),
-      startTime: json['startTime'] as String?,
-      endTime: json['endTime'] as String?,
+      timeSlots: (json['timeSlots'] as List<dynamic>?)
+          ?.map((e) => TimeSlot.fromJson(e as Map<String, dynamic>))
+          .toList(),
       playerCount: (json['playerCount'] as num?)?.toInt(),
       totalAmount: (json['totalAmount'] as num?)?.toDouble(),
       status: $enumDecodeNullable(_$TurfBookingStatusEnumMap, json['status']),
@@ -34,8 +45,7 @@ Map<String, dynamic> _$TurfBookingModelToJson(TurfBookingModel instance) =>
       '_id': instance.id,
       'turf': const TurfConverter().toJson(instance.turf),
       'bookedBy': const UserConverter().toJson(instance.bookedBy),
-      'startTime': instance.startTime,
-      'endTime': instance.endTime,
+      'timeSlots': instance.timeSlots,
       'playerCount': instance.playerCount,
       'totalAmount': instance.totalAmount,
       'status': _$TurfBookingStatusEnumMap[instance.status],
@@ -67,8 +77,9 @@ CreateTurfBookingRequest _$CreateTurfBookingRequestFromJson(
   Map<String, dynamic> json,
 ) => CreateTurfBookingRequest(
   turf: json['turf'] as String,
-  startTime: json['startTime'] as String,
-  endTime: json['endTime'] as String,
+  timeSlots: (json['timeSlots'] as List<dynamic>)
+      .map((e) => TimeSlot.fromJson(e as Map<String, dynamic>))
+      .toList(),
   playerCount: (json['playerCount'] as num?)?.toInt(),
   notes: json['notes'] as String?,
 );
@@ -77,8 +88,7 @@ Map<String, dynamic> _$CreateTurfBookingRequestToJson(
   CreateTurfBookingRequest instance,
 ) => <String, dynamic>{
   'turf': instance.turf,
-  'startTime': instance.startTime,
-  'endTime': instance.endTime,
+  'timeSlots': instance.timeSlots,
   'playerCount': instance.playerCount,
   'notes': instance.notes,
 };
@@ -145,8 +155,9 @@ CheckTurfAvailabilityRequest _$CheckTurfAvailabilityRequestFromJson(
   Map<String, dynamic> json,
 ) => CheckTurfAvailabilityRequest(
   turf: json['turf'] as String,
-  startTime: json['startTime'] as String,
-  endTime: json['endTime'] as String,
+  timeSlots: (json['timeSlots'] as List<dynamic>)
+      .map((e) => TimeSlot.fromJson(e as Map<String, dynamic>))
+      .toList(),
   excludeBookingId: json['excludeBookingId'] as String?,
 );
 
@@ -154,8 +165,7 @@ Map<String, dynamic> _$CheckTurfAvailabilityRequestToJson(
   CheckTurfAvailabilityRequest instance,
 ) => <String, dynamic>{
   'turf': instance.turf,
-  'startTime': instance.startTime,
-  'endTime': instance.endTime,
+  'timeSlots': instance.timeSlots,
   'excludeBookingId': instance.excludeBookingId,
 };
 

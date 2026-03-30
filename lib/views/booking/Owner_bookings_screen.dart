@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/components/booking/filter_bottom_sheet.dart';
 import 'package:get/get.dart';
 import '../../controllers/turf_booking_controller.dart';
 import '../../models/turf_booking_model.dart';
@@ -24,125 +25,23 @@ class OwnerBookingsScreen extends StatelessWidget {
         backgroundColor: const Color(AppColors.primaryColor),
         foregroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          IconButton(
+            onPressed: () =>
+                BookingFilterBottomSheet.show(context, bookingController),
+            icon: const Icon(Icons.filter_list),
+          ),
+        ],
       ),
-      drawer: const AppDrawer(),
+      // drawer: const AppDrawer(),
       body: Column(
         children: [
-          // Filter and Stats Section
-          Container(
-            padding: const EdgeInsets.all(16),
-            color: Colors.white,
-            child: Column(
-              children: [
-                // Quick Stats
-                Obx(
-                  () => Row(
-                    children: [
-                      Expanded(
-                        child: _StatCard(
-                          title: 'Total Bookings',
-                          value: bookingController.turfOwnerBookings.length
-                              .toString(),
-                          icon: Icons.book_online,
-                          color: Colors.blue,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _StatCard(
-                          title: 'Pending',
-                          value: bookingController.turfOwnerBookings
-                              .where((b) => b.isPending)
-                              .length
-                              .toString(),
-                          icon: Icons.pending,
-                          color: Colors.orange,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _StatCard(
-                          title: 'Confirmed',
-                          value: bookingController.turfOwnerBookings
-                              .where((b) => b.isConfirmed)
-                              .length
-                              .toString(),
-                          icon: Icons.check_circle,
-                          color: Colors.green,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // Filter Row
-                Container(
-                  width: double.infinity,
-                  child: Column(
-                    children: [
-                      DropdownButtonFormField<TurfBookingStatus?>(
-                        value:
-                            null, // TODO: Add filter state for turf owner bookings
-                        decoration: const InputDecoration(
-                          labelText: 'Filter by Status',
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                        ),
-                        items: [
-                          const DropdownMenuItem(
-                            value: null,
-                            child: Text('All'),
-                          ),
-                          ...TurfBookingStatus.values.map(
-                            (status) => DropdownMenuItem(
-                              value: status,
-                              child: Text(status.name.toUpperCase()),
-                            ),
-                          ),
-                        ],
-                        onChanged: (value) {
-                          // TODO: Implement filter for turf owner bookings
-                        },
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      Container(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            bookingController.loadTurfOwnerBookings(
-                              refresh: true,
-                            );
-                          },
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('Refresh'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(
-                              AppColors.primaryColor,
-                            ),
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
           // Bookings List
           Expanded(
             child: Stack(
               children: [
                 Obx(() {
-                  if (bookingController.turfOwnerBookings.isEmpty &&
+                  if (bookingController.bookings.isEmpty &&
                       !bookingController.isLoading.value) {
                     return const Center(
                       child: Column(
@@ -175,13 +74,12 @@ class OwnerBookingsScreen extends StatelessWidget {
 
                   return RefreshIndicator(
                     onRefresh: () =>
-                        bookingController.loadTurfOwnerBookings(refresh: true),
+                        bookingController.loadBookings(refresh: true),
                     child: ListView.builder(
                       padding: const EdgeInsets.all(16),
-                      itemCount: bookingController.turfOwnerBookings.length,
+                      itemCount: bookingController.bookings.length,
                       itemBuilder: (context, index) {
-                        final booking =
-                            bookingController.turfOwnerBookings[index];
+                        final booking = bookingController.bookings[index];
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 12),
                           child: BookingCard(
@@ -208,7 +106,7 @@ class OwnerBookingsScreen extends StatelessWidget {
                   () => LoadingOverlay(
                     isLoading:
                         bookingController.isLoading.value &&
-                        bookingController.turfOwnerBookings.isEmpty,
+                        bookingController.bookings.isEmpty,
                     child: const SizedBox(),
                   ),
                 ),
@@ -226,17 +124,33 @@ class OwnerBookingsScreen extends StatelessWidget {
         title: const Text('Confirm Booking'),
         content: const Text('Are you sure you want to confirm this booking?'),
         actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('No')),
-          ElevatedButton(
-            onPressed: () {
-              Get.back();
-              TurfBookingController.instance.confirmBooking(bookingId);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Yes, Confirm'),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => Get.back(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('No'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    Get.back();
+                    TurfBookingController.instance.confirmBooking(bookingId);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Confirm'),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -265,22 +179,38 @@ class OwnerBookingsScreen extends StatelessWidget {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('No')),
-          ElevatedButton(
-            onPressed: () {
-              if (reasonController.text.trim().isNotEmpty) {
-                Get.back();
-                TurfBookingController.instance.cancelBooking(
-                  bookingId,
-                  reasonController.text.trim(),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Yes, Cancel'),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => Get.back(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('No'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    if (reasonController.text.trim().isNotEmpty) {
+                      Get.back();
+                      TurfBookingController.instance.cancelBooking(
+                        bookingId,
+                        reasonController.text.trim(),
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Yes, Cancel'),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -295,17 +225,32 @@ class OwnerBookingsScreen extends StatelessWidget {
           'Are you sure you want to mark this booking as completed?',
         ),
         actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('No')),
-          ElevatedButton(
-            onPressed: () {
-              Get.back();
-              TurfBookingController.instance.completeBooking(bookingId);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(AppColors.primaryColor),
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Yes, Complete'),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => Get.back(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('No'),
+                ),
+              ),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    Get.back();
+                    TurfBookingController.instance.completeBooking(bookingId);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(AppColors.primaryColor),
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Yes, Complete'),
+                ),
+              ),
+            ],
           ),
         ],
       ),

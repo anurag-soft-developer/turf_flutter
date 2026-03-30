@@ -17,7 +17,11 @@ class DateSelector extends StatelessWidget {
         children: [
           const Text(
             'Select Date',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(AppColors.textColor),
+            ),
           ),
           const SizedBox(height: 12),
           SizedBox(
@@ -27,16 +31,19 @@ class DateSelector extends StatelessWidget {
               itemCount: controller.availableDates.length,
               itemBuilder: (context, index) {
                 final date = controller.availableDates[index];
-                final isSelected =
-                    date.day == controller.selectedDate.value.day &&
-                    date.month == controller.selectedDate.value.month &&
-                    date.year == controller.selectedDate.value.year;
 
-                return DateCard(
-                  date: date,
-                  isSelected: isSelected,
-                  onTap: () => controller.changeSelectedDate(date),
-                );
+                return Obx(() {
+                  final isSelected =
+                      date.day == controller.selectedDate.value.day &&
+                      date.month == controller.selectedDate.value.month &&
+                      date.year == controller.selectedDate.value.year;
+
+                  return DateCard(
+                    date: date,
+                    isSelected: isSelected,
+                    onTap: () => controller.changeSelectedDate(date),
+                  );
+                });
               },
             ),
           ),
@@ -176,7 +183,11 @@ class TimeSlotsGrid extends StatelessWidget {
         children: [
           const Text(
             'Available Time Slots',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(AppColors.textColor),
+            ),
           ),
           const SizedBox(height: 12),
           Obx(() {
@@ -190,7 +201,10 @@ class TimeSlotsGrid extends StatelessWidget {
                 child: const Center(
                   child: Text(
                     'No time slots available for this date',
-                    style: TextStyle(color: Colors.grey),
+                    style: TextStyle(
+                      color: Color(AppColors.textSecondaryColor),
+                      fontSize: 16,
+                    ),
                   ),
                 ),
               );
@@ -208,13 +222,18 @@ class TimeSlotsGrid extends StatelessWidget {
               itemCount: controller.timeSlots.length,
               itemBuilder: (context, index) {
                 final slot = controller.timeSlots[index];
-                final isSelected = controller.selectedTimeSlots.contains(slot);
 
-                return TimeSlotCard(
-                  slot: slot,
-                  isSelected: isSelected,
-                  onTap: () => controller.toggleTimeSlot(slot),
-                );
+                return Obx(() {
+                  final isSelected = controller.selectedTimeSlots.contains(
+                    slot,
+                  );
+
+                  return TimeSlotCard(
+                    slot: slot,
+                    isSelected: isSelected,
+                    onTap: () => controller.toggleTimeSlot(slot),
+                  );
+                });
               },
             );
           }),
@@ -263,30 +282,35 @@ class TimeSlotCard extends StatelessWidget {
               slot.timeRange,
               style: TextStyle(
                 fontWeight: FontWeight.w600,
+                fontSize: 14,
                 color: !slot.isAvailable
-                    ? Colors.grey
+                    ? Colors.grey[600]
                     : isSelected
                     ? Colors.white
-                    : Colors.black,
+                    : const Color(AppColors.textColor),
               ),
             ),
             const SizedBox(height: 4),
             Text(
               '₹${slot.price.toStringAsFixed(0)}',
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 13,
                 color: !slot.isAvailable
-                    ? Colors.grey
+                    ? Colors.grey[600]
                     : isSelected
                     ? Colors.white
                     : const Color(AppColors.primaryColor),
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
               ),
             ),
             if (!slot.isAvailable)
-              const Text(
+              Text(
                 'Unavailable',
-                style: TextStyle(fontSize: 10, color: Colors.grey),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
               ),
           ],
         ),
@@ -327,11 +351,17 @@ class BookingSummaryCard extends StatelessWidget {
             children: [
               const Text(
                 'Date:',
-                style: TextStyle(fontWeight: FontWeight.w500),
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Color(AppColors.textColor),
+                ),
               ),
               Text(
                 '${controller.selectedDate.value.day}/${controller.selectedDate.value.month}/${controller.selectedDate.value.year}',
-                style: const TextStyle(fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Color(AppColors.textColor),
+                ),
               ),
             ],
           ),
@@ -341,11 +371,17 @@ class BookingSummaryCard extends StatelessWidget {
             children: [
               const Text(
                 'Time:',
-                style: TextStyle(fontWeight: FontWeight.w500),
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Color(AppColors.textColor),
+                ),
               ),
               Text(
                 controller.bookingSummary,
-                style: const TextStyle(fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Color(AppColors.textColor),
+                ),
               ),
             ],
           ),
@@ -355,7 +391,11 @@ class BookingSummaryCard extends StatelessWidget {
             children: [
               const Text(
                 'Total Amount:',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(AppColors.primaryColor),
+                ),
               ),
               Text(
                 '₹${controller.totalPrice.value.toStringAsFixed(0)}',

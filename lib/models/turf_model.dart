@@ -1,38 +1,9 @@
 import 'package:json_annotation/json_annotation.dart';
 import 'user_model.dart';
+import 'common/json_converters.dart';
+import 'common/user_field_instance.dart';
 
 part 'turf_model.g.dart';
-
-// Custom converter for postedBy field to handle populated user data
-class PostedByConverter implements JsonConverter<UserModel?, dynamic> {
-  const PostedByConverter();
-
-  @override
-  UserModel? fromJson(dynamic json) {
-    if (json == null) {
-      return null;
-    }
-
-    // If it's a String, it means the field is not populated - show error
-    if (json is String) {
-      throw FormatException('Got String, in populated field postedBy');
-    }
-
-    // If it's a Map, it should be a populated user object
-    if (json is Map<String, dynamic>) {
-      return UserModel.fromJson(json);
-    }
-
-    throw FormatException(
-      'Invalid type for postedBy field: ${json.runtimeType}',
-    );
-  }
-
-  @override
-  dynamic toJson(UserModel? user) {
-    return user?.toJson();
-  }
-}
 
 @JsonSerializable()
 class CoordinatesModel {
@@ -207,8 +178,8 @@ class TurfModel {
   @JsonKey(name: '_id')
   final String? id;
   @JsonKey(name: 'postedBy')
-  @PostedByConverter()
-  final UserModel? postedBy;
+  @UserConverter()
+  final dynamic postedBy; // Can be String (ID) or UserModel (populated)
   final String? name;
   final String? description;
   final LocationModel? location;
@@ -307,7 +278,7 @@ class TurfModel {
   // Helper getter for amenities as formatted string
   String get amenitiesDisplay => amenities?.join(', ') ?? 'None listed';
 
-  // Helper getter for created date parsing
+  // Helper getters for created date parsing
   DateTime? get createdAtDate {
     if (createdAt == null) return null;
     try {
@@ -315,6 +286,13 @@ class TurfModel {
     } catch (e) {
       return null;
     }
+  }
+
+  // Cached helper instance for posted by user information
+  UserFieldInstance? _postedByHelper;
+  UserFieldInstance get postedByHelper {
+    _postedByHelper ??= UserFieldInstance(postedBy);
+    return _postedByHelper!;
   }
 
   // Helper getter for updated date parsing
@@ -348,12 +326,6 @@ class TurfModel {
   }
 
   // Helper getter for main image
-  // Helper getters for posted by user information
-  String? get posterName =>
-      postedBy?.fullName ?? postedBy?.email?.split('@').first;
-  String? get posterEmail => postedBy?.email;
-  String? get posterAvatar => postedBy?.avatar;
-  String? get posterId => postedBy?.id;
 
   String? get mainImage => images?.isNotEmpty == true ? images!.first : null;
 

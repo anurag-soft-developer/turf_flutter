@@ -1,6 +1,8 @@
 import 'package:get/get.dart';
 import '../models/turf_model.dart';
 import '../services/turf_service.dart';
+import '../controllers/turf_booking_controller.dart';
+import '../models/turf_booking_model.dart' as booking_model;
 
 class TimeSlot {
   final DateTime startTime;
@@ -61,7 +63,7 @@ class TurfDetailController extends GetxController {
       _turfId = arguments['turfId'];
       if (_turfId != null) {
         loadTurfDetails();
-        generateTimeSlots();
+        // Don't call generateTimeSlots here - will be called after turf loads
       }
     }
   }
@@ -76,6 +78,8 @@ class TurfDetailController extends GetxController {
       final turfs = await _turfService.getTurfById(_turfId!);
       if (turfs != null) {
         _turf.value = turfs;
+        // Generate time slots after turf data is loaded
+        generateTimeSlots();
       } else {
         Get.snackbar('Error', 'Turf not found');
         Get.back();
@@ -204,23 +208,84 @@ class TurfDetailController extends GetxController {
       return;
     }
 
+    if (_turfId == null) {
+      Get.snackbar('Error', 'Turf ID not found');
+      return;
+    }
+
     _isBookingLoading.value = true;
 
     try {
-      // Here you would typically call a booking API
-      // For now, just simulate the booking
-      await Future.delayed(const Duration(seconds: 2));
+      // Convert selected time slots to API format
+      final apiTimeSlots = _selectedTimeSlots.map((slot) {
+        // Ensure the DateTime is in local timezone before converting to ISO with timezone
+        final localStartTime = slot.startTime.toLocal();
+        final localEndTime = slot.endTime.toLocal();
 
-      Get.snackbar(
-        'Booking Successful',
-        'Your turf has been booked for ${_selectedTimeSlots.length} slot(s)',
-        snackPosition: SnackPosition.BOTTOM,
+        // Use toIso8601String() to include timezone information
+        final startTimeString = localStartTime.toIso8601String();
+        final endTimeString = localEndTime.toIso8601String();
+
+        return booking_model.TimeSlot(
+          startTime: startTimeString,
+          endTime: endTimeString,
+        );
+      }).toList();
+
+      // Get or initialize the booking controller
+      TurfBookingController bookingController;
+      try {
+        bookingController = Get.find<TurfBookingController>();
+      } catch (e) {
+        // If not found, put it manually
+        bookingController = Get.put(TurfBookingController());
+      }
+
+      // Optional: Check availability before booking
+      final isAvailable = await bookingController.checkTimeSlotsAvailability(
+        turfId: _turfId!,
+        timeSlots: apiTimeSlots,
       );
 
-      // Navigate back or to booking confirmation screen
-      Get.back();
+      if (!isAvailable) {
+        Get.snackbar(
+          'Slots Unavailable',
+          'Some selected time slots are no longer available. Please refresh and try again.',
+        );
+        // Refresh time slots to get updated availability
+        generateTimeSlots();
+        return;
+      }
+
+      // Create the booking
+      final booking = await bookingController.createBooking(
+        turfId: _turfId!,
+        timeSlots: apiTimeSlots,
+        // playerCount: null, // You can add a player count field if needed
+        // notes: null, // You can add a notes field if needed
+      );
+
+      if (booking != null) {
+        Get.snackbar(
+          'Booking Successful',
+          'Your turf has been booked for ${_selectedTimeSlots.length} slot(s)',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+
+        // Clear selections
+        _selectedTimeSlots.clear();
+        _totalPrice.value = 0.0;
+
+        // Navigate back or to booking confirmation screen
+        Get.back();
+      } else {
+        Get.snackbar(
+          'Booking Failed',
+          'Failed to create booking. Please try again.',
+        );
+      }
     } catch (e) {
-      Get.snackbar('Booking Failed', 'Failed to book turf. Please try again');
+      Get.snackbar('Booking Failed', 'An error occurred: ${e.toString()}');
     } finally {
       _isBookingLoading.value = false;
     }

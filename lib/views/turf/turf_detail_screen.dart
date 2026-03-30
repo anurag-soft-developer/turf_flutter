@@ -20,7 +20,13 @@ class TurfDetailScreen extends StatelessWidget {
           // Main content
           Obx(
             () => controller.turf.value == null
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Color(AppColors.primaryColor),
+                      ),
+                    ),
+                  )
                 : RefreshIndicator(
                     onRefresh: controller.refreshData,
                     child: CustomScrollView(

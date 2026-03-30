@@ -1,8 +1,77 @@
 import 'package:json_annotation/json_annotation.dart';
 import 'turf_model.dart';
-import 'user_model.dart';
+import 'common/json_converters.dart';
+import 'common/user_field_instance.dart';
+import 'common/turf_field_instance.dart';
 
 part 'turf_booking_model.g.dart';
+
+// TimeSlot model for individual time slots
+@JsonSerializable()
+class TimeSlot {
+  @JsonKey(name: 'startTime')
+  final String startTime;
+  @JsonKey(name: 'endTime')
+  final String endTime;
+
+  TimeSlot({required this.startTime, required this.endTime});
+
+  factory TimeSlot.fromJson(Map<String, dynamic> json) =>
+      _$TimeSlotFromJson(json);
+
+  Map<String, dynamic> toJson() => _$TimeSlotToJson(this);
+
+  // Helper getters
+  DateTime? get startDateTime {
+    try {
+      return DateTime.parse(startTime);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  DateTime? get endDateTime {
+    try {
+      return DateTime.parse(endTime);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Duration? get duration {
+    final start = startDateTime;
+    final end = endDateTime;
+    if (start != null && end != null) {
+      return end.difference(start);
+    }
+    return null;
+  }
+
+  String get timeDisplay {
+    final start = startDateTime;
+    final end = endDateTime;
+    if (start != null && end != null) {
+      final startTime =
+          '${start.hour.toString().padLeft(2, '0')}:${start.minute.toString().padLeft(2, '0')}';
+      final endTime =
+          '${end.hour.toString().padLeft(2, '0')}:${end.minute.toString().padLeft(2, '0')}';
+      return '$startTime - $endTime';
+    }
+    return 'Time not available';
+  }
+
+  TimeSlot copyWith({String? startTime, String? endTime}) {
+    return TimeSlot(
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'TimeSlot(startTime: $startTime, endTime: $endTime)';
+  }
+}
 
 // Custom converter for turf field to handle both ID and populated data
 class TurfConverter implements JsonConverter<dynamic, dynamic> {
@@ -33,38 +102,6 @@ class TurfConverter implements JsonConverter<dynamic, dynamic> {
     if (turf is String) return turf;
     if (turf is TurfModel) return turf.toJson();
     return turf;
-  }
-}
-
-// Custom converter for user fields to handle both ID and populated data
-class UserConverter implements JsonConverter<dynamic, dynamic> {
-  const UserConverter();
-
-  @override
-  dynamic fromJson(dynamic json) {
-    if (json == null) {
-      return null;
-    }
-
-    // If it's a String, it's just the user ID
-    if (json is String) {
-      return json;
-    }
-
-    // If it's a Map, it's a populated user object
-    if (json is Map<String, dynamic>) {
-      return UserModel.fromJson(json);
-    }
-
-    throw FormatException('Invalid type for user field: ${json.runtimeType}');
-  }
-
-  @override
-  dynamic toJson(dynamic user) {
-    if (user == null) return null;
-    if (user is String) return user;
-    if (user is UserModel) return user.toJson();
-    return user;
   }
 }
 
@@ -101,10 +138,8 @@ class TurfBookingModel {
   @JsonKey(name: 'bookedBy')
   @UserConverter()
   final dynamic bookedBy; // Can be String (ID) or UserModel (populated)
-  @JsonKey(name: 'startTime')
-  final String? startTime;
-  @JsonKey(name: 'endTime')
-  final String? endTime;
+  @JsonKey(name: 'timeSlots')
+  final List<TimeSlot>? timeSlots;
   @JsonKey(name: 'playerCount')
   final int? playerCount;
   @JsonKey(name: 'totalAmount')
@@ -130,8 +165,7 @@ class TurfBookingModel {
     this.id,
     this.turf,
     this.bookedBy,
-    this.startTime,
-    this.endTime,
+    this.timeSlots,
     this.playerCount,
     this.totalAmount,
     this.status,
@@ -145,7 +179,7 @@ class TurfBookingModel {
     this.updatedAt,
   });
 
-  factory TurfBookingModel.fromJson(Map<String, dynamic> json) =>
+  factory TurfBookingModel.fromJson(dynamic json) =>
       _$TurfBookingModelFromJson(json);
 
   Map<String, dynamic> toJson() => _$TurfBookingModelToJson(this);
@@ -154,8 +188,7 @@ class TurfBookingModel {
     String? id,
     dynamic turf,
     dynamic bookedBy,
-    String? startTime,
-    String? endTime,
+    List<TimeSlot>? timeSlots,
     int? playerCount,
     double? totalAmount,
     TurfBookingStatus? status,
@@ -172,8 +205,7 @@ class TurfBookingModel {
       id: id ?? this.id,
       turf: turf ?? this.turf,
       bookedBy: bookedBy ?? this.bookedBy,
-      startTime: startTime ?? this.startTime,
-      endTime: endTime ?? this.endTime,
+      timeSlots: timeSlots ?? this.timeSlots,
       playerCount: playerCount ?? this.playerCount,
       totalAmount: totalAmount ?? this.totalAmount,
       status: status ?? this.status,
@@ -188,81 +220,42 @@ class TurfBookingModel {
     );
   }
 
-  // Helper getters for populated data
-  String? get turfId {
-    if (turf is String) return turf;
-    if (turf is TurfModel) return turf.id;
-    return null;
+  // Cached helper instances for dynamic fields
+  TurfFieldInstance? _turfHelper;
+  TurfFieldInstance get turfHelper {
+    _turfHelper ??= TurfFieldInstance(turf);
+    return _turfHelper!;
   }
 
-  TurfModel? get turfModel {
-    if (turf is TurfModel) return turf;
-    return null;
+  UserFieldInstance? _bookedByHelper;
+  UserFieldInstance get bookedByHelper {
+    _bookedByHelper ??= UserFieldInstance(bookedBy);
+    return _bookedByHelper!;
   }
 
-  String? get bookedById {
-    if (bookedBy is String) return bookedBy;
-    if (bookedBy is UserModel) return bookedBy.id;
-    return null;
-  }
+  // Legacy helper getters for backward compatibility
+  String? get turfId => turfHelper.getId();
+  TurfModel? get turfModel => turfHelper.getModel();
+  String get turfDisplayName => turfHelper.getDisplayName();
 
-  UserModel? get bookedByUser {
-    if (bookedBy is UserModel) return bookedBy;
-    return null;
-  }
-
-  // Display helpers for populated data
-  String get turfDisplayName {
-    if (turf is TurfModel) {
-      return (turf as TurfModel).displayName;
-    }
-    return turfId ?? 'Unknown Turf';
-  }
-
-  String get bookedByDisplayName {
-    if (bookedBy is UserModel) {
-      final user = bookedBy as UserModel;
-      return user.fullName ?? user.email?.split('@').first ?? 'Unknown User';
-    }
-    return bookedById ?? 'Unknown User';
-  }
-
-  String? get bookedByAvatar {
-    if (bookedBy is UserModel) {
-      return (bookedBy as UserModel).avatar;
+  // Helper getters for time slots
+  DateTime? get firstStartDateTime {
+    if (timeSlots != null && timeSlots!.isNotEmpty) {
+      return timeSlots!.first.startDateTime;
     }
     return null;
   }
 
-  String? get bookedByEmail {
-    if (bookedBy is UserModel) {
-      return (bookedBy as UserModel).email;
+  DateTime? get lastEndDateTime {
+    if (timeSlots != null && timeSlots!.isNotEmpty) {
+      return timeSlots!.last.endDateTime;
     }
     return null;
   }
 
-  // Helper getters
-  DateTime? get startDateTime {
-    if (startTime != null) {
-      try {
-        return DateTime.parse(startTime!);
-      } catch (e) {
-        return null;
-      }
-    }
-    return null;
-  }
-
-  DateTime? get endDateTime {
-    if (endTime != null) {
-      try {
-        return DateTime.parse(endTime!);
-      } catch (e) {
-        return null;
-      }
-    }
-    return null;
-  }
+  // Backward compatibility getters
+  DateTime? get startDateTime => firstStartDateTime;
+  DateTime? get endDateTime => lastEndDateTime;
 
   DateTime? get cancelledDateTime {
     if (cancelledAt != null) {
@@ -297,15 +290,22 @@ class TurfBookingModel {
     return null;
   }
 
-  // Duration getter
+  // Duration getter - total duration across all time slots
   Duration? get bookingDuration {
-    final start = startDateTime;
-    final end = endDateTime;
-    if (start != null && end != null) {
-      return end.difference(start);
+    if (timeSlots == null || timeSlots!.isEmpty) return null;
+
+    Duration totalDuration = Duration.zero;
+    for (final slot in timeSlots!) {
+      final slotDuration = slot.duration;
+      if (slotDuration != null) {
+        totalDuration += slotDuration;
+      }
     }
-    return null;
+    return totalDuration.inMinutes > 0 ? totalDuration : null;
   }
+
+  // Get total slots count
+  int get slotsCount => timeSlots?.length ?? 0;
 
   // Status helper getters
   bool get isPending => status == TurfBookingStatus.pending;
@@ -350,16 +350,35 @@ class TurfBookingModel {
   }
 
   String get bookingTimeDisplay {
-    final start = startDateTime;
-    final end = endDateTime;
-    if (start != null && end != null) {
-      final startTime =
-          '${start.hour.toString().padLeft(2, '0')}:${start.minute.toString().padLeft(2, '0')}';
-      final endTime =
-          '${end.hour.toString().padLeft(2, '0')}:${end.minute.toString().padLeft(2, '0')}';
-      return '$startTime - $endTime';
+    if (timeSlots == null || timeSlots!.isEmpty) {
+      return 'Time not available';
     }
-    return 'Time not available';
+
+    if (timeSlots!.length == 1) {
+      return timeSlots!.first.timeDisplay;
+    }
+
+    // Multiple time slots - show first to last
+    final firstSlot = timeSlots!.first;
+    final lastSlot = timeSlots!.last;
+    final firstStart = firstSlot.startDateTime;
+    final lastEnd = lastSlot.endDateTime;
+
+    if (firstStart != null && lastEnd != null) {
+      final startTime =
+          '${firstStart.hour.toString().padLeft(2, '0')}:${firstStart.minute.toString().padLeft(2, '0')}';
+      final endTime =
+          '${lastEnd.hour.toString().padLeft(2, '0')}:${lastEnd.minute.toString().padLeft(2, '0')}';
+      return '$startTime - $endTime (${timeSlots!.length} slots)';
+    }
+
+    return 'Multiple time slots';
+  }
+
+  // Get all time slots as display strings
+  List<String> get timeSlotsDisplay {
+    if (timeSlots == null) return [];
+    return timeSlots!.map((slot) => slot.timeDisplay).toList();
   }
 
   @override
@@ -373,18 +392,15 @@ class TurfBookingModel {
 @JsonSerializable()
 class CreateTurfBookingRequest {
   final String turf;
-  @JsonKey(name: 'startTime')
-  final String startTime;
-  @JsonKey(name: 'endTime')
-  final String endTime;
+  @JsonKey(name: 'timeSlots')
+  final List<TimeSlot> timeSlots;
   @JsonKey(name: 'playerCount')
   final int? playerCount;
   final String? notes;
 
   CreateTurfBookingRequest({
     required this.turf,
-    required this.startTime,
-    required this.endTime,
+    required this.timeSlots,
     this.playerCount,
     this.notes,
   });
@@ -464,17 +480,14 @@ class TurfBookingFilterRequest {
 @JsonSerializable()
 class CheckTurfAvailabilityRequest {
   final String turf;
-  @JsonKey(name: 'startTime')
-  final String startTime;
-  @JsonKey(name: 'endTime')
-  final String endTime;
+  @JsonKey(name: 'timeSlots')
+  final List<TimeSlot> timeSlots;
   @JsonKey(name: 'excludeBookingId')
   final String? excludeBookingId;
 
   CheckTurfAvailabilityRequest({
     required this.turf,
-    required this.startTime,
-    required this.endTime,
+    required this.timeSlots,
     this.excludeBookingId,
   });
 

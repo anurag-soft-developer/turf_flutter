@@ -143,83 +143,96 @@ class TurfInfoSection extends StatelessWidget {
           if (turf.description?.isNotEmpty == true) ...[
             const Text(
               'Description',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(AppColors.textColor),
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               turf.description!,
-              style: const TextStyle(fontSize: 16, height: 1.5),
+              style: const TextStyle(
+                fontSize: 16,
+                height: 1.5,
+                color: Color(AppColors.textColor),
+              ),
             ),
-            const SizedBox(height: 20),
-          ],
-
-          // Location
-          if (turf.location?.address != null) ...[
-            const Text(
-              'Location',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Icon(Icons.location_on, color: Colors.red, size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    turf.location!.address,
-                    style: const TextStyle(fontSize: 16),
+            // Location
+            if (turf.location?.address != null) ...[
+              const Text(
+                'Location',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(AppColors.textColor),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Icon(Icons.location_on, color: Colors.red, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      turf.location!.address,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Color(AppColors.textColor),
+                      ),
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-          ],
-
-          // Sports and amenities info grid
-          Row(
-            children: [
-              Expanded(
-                child: TurfInfoCard(
-                  title: 'Sports',
-                  value: turf.sportTypesDisplay,
-                  icon: Icons.sports_soccer,
-                ),
+                ],
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TurfInfoCard(
-                  title: 'Price',
-                  value: '₹${turf.pricing?.basePricePerHour ?? 0}/hr',
-                  icon: Icons.attach_money,
-                ),
-              ),
+              const SizedBox(height: 20),
             ],
-          ),
 
-          const SizedBox(height: 12),
-
-          if (turf.amenities?.isNotEmpty == true)
+            // Sports and amenities info grid
             Row(
               children: [
                 Expanded(
                   child: TurfInfoCard(
-                    title: 'Amenities',
-                    value: turf.amenitiesDisplay,
-                    icon: Icons.local_activity,
+                    title: 'Sports',
+                    value: turf.sportTypesDisplay,
+                    icon: Icons.sports_soccer,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: TurfInfoCard(
-                    title: 'Operating Hours',
-                    value: turf.operatingHours != null
-                        ? '${turf.operatingHours!.open} - ${turf.operatingHours!.close}'
-                        : 'Not specified',
-                    icon: Icons.access_time,
+                    title: 'Price',
+                    value: '₹${turf.pricing?.basePricePerHour ?? 0}/hr',
+                    icon: Icons.attach_money,
                   ),
                 ),
               ],
             ),
+
+            const SizedBox(height: 12),
+
+            if (turf.amenities?.isNotEmpty == true)
+              Row(
+                children: [
+                  Expanded(
+                    child: TurfInfoCard(
+                      title: 'Amenities',
+                      value: turf.amenitiesDisplay,
+                      icon: Icons.local_activity,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TurfInfoCard(
+                      title: 'Operating Hours',
+                      value: turf.operatingHours != null
+                          ? '${turf.operatingHours!.open} - ${turf.operatingHours!.close}'
+                          : 'Not specified',
+                      icon: Icons.access_time,
+                    ),
+                  ),
+                ],
+              ),
+          ],
         ],
       ),
     );
@@ -260,7 +273,7 @@ class TurfInfoSection extends StatelessWidget {
         controller.turf.value!.availabilityStatus,
         style: const TextStyle(
           color: Colors.white,
-          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.bold,
           fontSize: 12,
         ),
       ),
@@ -309,7 +322,11 @@ class TurfInfoCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             value,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: Color(AppColors.textColor),
+            ),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),

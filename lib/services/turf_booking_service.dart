@@ -79,7 +79,7 @@ class TurfBookingService {
   /// Get current user's bookings
   Future<PaginatedResponse<TurfBookingModel>?> findPlayerBookings({
     String? turf,
-    TurfBookingStatus? status,
+    List<TurfBookingStatus>? status,
     PaymentStatus? paymentStatus,
     String? startDate,
     String? endDate,
@@ -89,10 +89,11 @@ class TurfBookingService {
     String sortOrder = 'desc',
   }) async {
     final queryParams = <String, dynamic>{};
-
     if (turf != null) queryParams['turf'] = turf;
-    if (status != null) {
-      queryParams['status'] = status.toString().split('.').last;
+    if (status != null && status.isNotEmpty) {
+      queryParams['status'] = status
+          .map((status) => status.toString().split('.').last)
+          .join(',');
     }
     if (paymentStatus != null) {
       queryParams['paymentStatus'] = paymentStatus.toString().split('.').last;
@@ -115,7 +116,7 @@ class TurfBookingService {
 
     return PaginatedResponse.fromJson(
       response,
-      (json) => TurfBookingModel.fromJson(json as Map<String, dynamic>),
+      (json) => TurfBookingModel.fromJson(json),
     );
   }
 
@@ -158,7 +159,7 @@ class TurfBookingService {
 
     return PaginatedResponse.fromJson(
       response,
-      (json) => TurfBookingModel.fromJson(json as Map<String, dynamic>),
+      (json) => TurfBookingModel.fromJson(json),
     );
   }
 
@@ -200,12 +201,12 @@ class TurfBookingService {
 
     return PaginatedResponse.fromJson(
       response,
-      (json) => TurfBookingModel.fromJson(json as Map<String, dynamic>),
+      (json) => TurfBookingModel.fromJson(json),
     );
   }
 
-  /// Check time slot availability for a turf
-  Future<bool> checkTimeSlotAvailability(
+  /// Check time slots availability for a turf
+  Future<bool> checkTimeSlotsAvailability(
     CheckTurfAvailabilityRequest request,
   ) async {
     final response = await _apiService.post<Map<String, dynamic>>(
@@ -270,7 +271,7 @@ class TurfBookingService {
   /// Cancel a booking (convenient method)
   Future<TurfBookingModel?> cancelBooking(
     String bookingId,
-    String cancelReason,
+    String? cancelReason,
   ) async {
     final request = UpdateTurfBookingRequest(
       status: TurfBookingStatus.cancelled,
@@ -313,20 +314,20 @@ class TurfBookingService {
   }
 
   /// Get upcoming bookings for current user
-  Future<List<TurfBookingModel>> getUpcomingBookings({int limit = 10}) async {
-    final now = DateTime.now();
-    final startDate = now.toIso8601String();
+  // Future<List<TurfBookingModel>> getUpcomingBookings({int limit = 10}) async {
+  //   final now = DateTime.now();
+  //   final startDate = now.toIso8601String();
 
-    final response = await findPlayerBookings(
-      startDate: startDate,
-      status: TurfBookingStatus.confirmed,
-      limit: limit,
-      sortBy: 'startTime',
-      sortOrder: 'asc',
-    );
+  //   final response = await findPlayerBookings(
+  //     startDate: startDate,
+  //     status: [TurfBookingStatus.confirmed],
+  //     limit: limit,
+  //     sortBy: 'timeSlots.0.startTime', // Sort by first time slot start time
+  //     sortOrder: 'asc',
+  //   );
 
-    return response?.data ?? [];
-  }
+  //   return response?.data ?? [];
+  // }
 
   /// Get booking history for current user
   Future<List<TurfBookingModel>> getBookingHistory({
@@ -353,7 +354,7 @@ class TurfBookingService {
       turfId,
       startDate: startOfDay.toIso8601String(),
       endDate: endOfDay.toIso8601String(),
-      sortBy: 'startTime',
+      sortBy: 'timeSlots.0.startTime', // Sort by first time slot start time
       sortOrder: 'asc',
     );
 
@@ -370,7 +371,7 @@ class TurfBookingService {
       turfId,
       startDate: startOfWeek.toIso8601String(),
       endDate: endOfWeek.toIso8601String(),
-      sortBy: 'startTime',
+      sortBy: 'timeSlots.0.startTime', // Sort by first time slot start time
       sortOrder: 'asc',
     );
 

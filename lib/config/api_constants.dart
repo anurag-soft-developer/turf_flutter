@@ -45,8 +45,8 @@ class TurfBookingEndpoints {
 
   String get bookings => '/turf-bookings';
   String get create => '/turf-bookings';
-  String get myBookings => '/turf-bookings/my-bookings';
-  String get myTurfBookings => '/turf-bookings/my-turf-bookings';
+  String get myBookings => '/turf-bookings/player-bookings';
+  String get myTurfBookings => '/turf-bookings/owner-bookings';
   String get checkAvailability => '/turf-bookings/check-availability';
 
   String bookingById(String id) => '/turf-bookings/$id';
