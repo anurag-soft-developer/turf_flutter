@@ -32,7 +32,7 @@ class ImagesSection extends StatelessWidget {
   }
 
   Widget _buildImagePreviewGrid(CreateTurfController controller) {
-    return Container(
+    return SizedBox(
       height: 120,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,

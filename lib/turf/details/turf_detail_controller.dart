@@ -1,7 +1,7 @@
 import 'package:get/get.dart';
 import '../model/turf_model.dart';
 import '../../services/turf_service.dart';
-import '../../turf_booking/player/turf_booking_controller.dart';
+import '../../turf_booking/turf_booking_controller.dart';
 import '../../turf_booking/model/turf_booking_model.dart' as booking_model;
 
 class TimeSlot {
@@ -99,8 +99,9 @@ class TurfDetailController extends GetxController {
     _totalPrice.value = 0.0;
 
     final currentTurf = _turf.value;
-    if (currentTurf?.operatingHours == null || currentTurf?.pricing == null)
+    if (currentTurf?.operatingHours == null || currentTurf?.pricing == null) {
       return;
+    }
 
     final operatingHours = currentTurf!.operatingHours!;
     final pricing = currentTurf.pricing!;

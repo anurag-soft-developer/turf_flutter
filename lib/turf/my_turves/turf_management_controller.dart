@@ -230,9 +230,4 @@ class TurfManagementController extends GetxController {
 
   /// Check if user has any turfs
   bool get hasTurfs => _myTurfs.isNotEmpty;
-
-  @override
-  void onClose() {
-    super.onClose();
-  }
 }

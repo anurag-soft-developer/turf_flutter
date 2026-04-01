@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../turf_booking/model/turf_booking_model.dart';
 import '../../core/config/constants.dart';
+import 'booking_action_buttons.dart';
+import 'booking_details_screen.dart';
+import 'booking_ticket_dialog.dart';
 
 class BookingCard extends StatelessWidget {
   final TurfBookingModel booking;
@@ -20,195 +23,185 @@ class BookingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      color: Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header with booking ID and status
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Booking #${booking.id?.substring(0, 8) ?? 'N/A'}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: Color(AppColors.textColor),
-                  ),
-                ),
-                _StatusChip(status: booking.status),
-              ],
-            ),
-
-            const SizedBox(height: 12),
-
-            // Turf information
-            Row(
-              children: [
-                const Icon(Icons.grass, size: 18, color: Colors.green),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    booking.turfDisplayName,
+    return GestureDetector(
+      onTap: () => _handleCardTap(context),
+      child: Card(
+        elevation: 2,
+        color: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header with booking ID and status
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Booking #${booking.id?.substring(0, 8) ?? 'N/A'}',
                     style: const TextStyle(
-                      color: Color(AppColors.textSecondaryColor),
-                      fontWeight: FontWeight.w500,
-                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: Color(AppColors.textColor),
                     ),
                   ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 8),
-
-            // Time information
-            Row(
-              children: [
-                const Icon(Icons.access_time, size: 18, color: Colors.blue),
-                const SizedBox(width: 8),
-                Text(
-                  booking.bookingTimeDisplay,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Color(AppColors.textSecondaryColor),
+                  Row(
+                    children: [
+                      _StatusChip(status: booking.status),
+                      if (!isOwnerView) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withValues(alpha: .1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.qr_code,
+                                size: 12,
+                                color: Colors.blue[700],
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'TAP',
+                                style: TextStyle(
+                                  color: Colors.blue[700],
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-                ),
-                const SizedBox(width: 16),
-                const Icon(
-                  Icons.calendar_today,
-                  size: 18,
-                  color: Colors.orange,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  booking.startDateTime?.toString().split(' ').first ?? 'N/A',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Color(AppColors.textSecondaryColor),
-                  ),
-                ),
-              ],
-            ),
+                ],
+              ),
 
-            const SizedBox(height: 8),
+              const SizedBox(height: 12),
 
-            // Player information (for owner view) or amount (for player view)
-            if (isOwnerView) ...[
+              // Turf information
               Row(
                 children: [
-                  const Icon(Icons.person, size: 18, color: Colors.purple),
+                  const Icon(Icons.grass, size: 18, color: Colors.green),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      booking.turfDisplayName,
+                      style: const TextStyle(
+                        color: Color(AppColors.textSecondaryColor),
+                        fontWeight: FontWeight.w500,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 8),
+
+              // Time information
+              Row(
+                children: [
+                  const Icon(Icons.access_time, size: 18, color: Colors.blue),
                   const SizedBox(width: 8),
                   Text(
-                    booking.bookedByHelper.getDisplayName(),
+                    booking.bookingTimeDisplay,
                     style: const TextStyle(
                       fontSize: 14,
                       color: Color(AppColors.textSecondaryColor),
                     ),
                   ),
-                ],
-              ),
-            ] else ...[
-              Row(
-                children: [
+                  const SizedBox(width: 16),
                   const Icon(
-                    Icons.currency_rupee,
+                    Icons.calendar_today,
                     size: 18,
-                    color: Colors.green,
+                    color: Colors.orange,
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    '₹${booking.totalAmount?.toStringAsFixed(2) ?? '0.00'}',
+                    booking.startDateTime?.toString().split(' ').first ?? 'N/A',
                     style: const TextStyle(
                       fontSize: 14,
-                      fontWeight: FontWeight.w500,
                       color: Color(AppColors.textSecondaryColor),
                     ),
                   ),
-                  // const SizedBox(width: 16),
-                  // _PaymentStatusChip(paymentStatus: booking.paymentStatus),
                 ],
               ),
-            ],
 
-            // Action buttons based on status and view type
-            if (_shouldShowActions()) ...[
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: _buildActionButtons(),
-              ),
+              const SizedBox(height: 8),
+
+              // Player information (for owner view) or amount (for player view)
+              if (isOwnerView) ...[
+                Row(
+                  children: [
+                    const Icon(Icons.person, size: 18, color: Colors.purple),
+                    const SizedBox(width: 8),
+                    Text(
+                      booking.bookedByHelper.getDisplayName(),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Color(AppColors.textSecondaryColor),
+                      ),
+                    ),
+                  ],
+                ),
+              ] else ...[
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.currency_rupee,
+                      size: 18,
+                      color: Colors.green,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '₹${booking.totalAmount?.toStringAsFixed(2) ?? '0.00'}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Color(AppColors.textSecondaryColor),
+                      ),
+                    ),
+                    // const SizedBox(width: 16),
+                    // _PaymentStatusChip(paymentStatus: booking.paymentStatus),
+                  ],
+                ),
+              ],
+
+              if (BookingActionButtons.shouldShow(booking)) ...[
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: BookingActionButtons(
+                    booking: booking,
+                    isOwnerView: isOwnerView,
+                    onCancel: onCancel,
+                    onConfirm: onConfirm,
+                    onComplete: onComplete,
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
   }
 
-  bool _shouldShowActions() {
+  void _handleCardTap(BuildContext context) {
     if (isOwnerView) {
-      return booking.isPending || booking.isConfirmed;
+      BookingDetailsScreen.open(booking);
     } else {
-      return booking.isPending || booking.isConfirmed;
+      BookingTicketDialog.show(context, booking);
     }
-  }
-
-  List<Widget> _buildActionButtons() {
-    List<Widget> buttons = [];
-
-    if (isOwnerView) {
-      if (booking.isPending) {
-        buttons.addAll([
-          OutlinedButton(
-            onPressed: () => onCancel?.call(booking.id!),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.red,
-              side: const BorderSide(color: Colors.red),
-            ),
-            child: const Text('Decline'),
-          ),
-          const SizedBox(width: 8),
-          OutlinedButton(
-            onPressed: () => onConfirm?.call(booking.id!),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Confirm'),
-          ),
-        ]);
-      } else if (booking.isConfirmed) {
-        buttons.add(
-          OutlinedButton(
-            onPressed: () => onComplete?.call(booking.id!),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(AppColors.primaryColor),
-              side: const BorderSide(color: Color(AppColors.primaryColor)),
-            ),
-            child: const Text('Mark Complete'),
-          ),
-        );
-      }
-    } else {
-      if (booking.isPending || booking.isConfirmed) {
-        buttons.add(
-          OutlinedButton(
-            onPressed: () => onCancel?.call(booking.id!),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.red,
-              side: const BorderSide(color: Colors.red),
-            ),
-            child: const Text('Cancel'),
-          ),
-        );
-      }
-    }
-
-    return buttons;
   }
 }
 

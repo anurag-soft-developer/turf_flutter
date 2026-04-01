@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/core/utils/app_snackbar.dart';
 import 'package:get/get.dart';
 import '../auth_state_controller.dart';
 import '../../../components/shared/loading_overlay.dart';
@@ -131,6 +132,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
     if (success) {
       Get.back();
+      AppSnackbar.success(
+        title: 'Success',
+        message: 'Your password has been reset successfully.',
+      );
     }
   }
 

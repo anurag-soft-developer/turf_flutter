@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/settings/settings_controller.dart';
 import 'package:get/get.dart';
-import '../model/turf_booking_model.dart';
-import '../../core/models/paginated_response.dart';
-import '../../services/turf_booking_service.dart';
-import '../../core/utils/exception_handler.dart';
+import 'model/turf_booking_model.dart';
+import '../core/models/paginated_response.dart';
+import '../services/turf_booking_service.dart';
+import '../core/utils/exception_handler.dart';
 
 class TurfBookingController extends GetxController {
   static TurfBookingController get instance => Get.find();
@@ -436,8 +436,50 @@ class TurfBookingController extends GetxController {
     // loadUpcomingBookings();
   }
 
-  @override
-  void onClose() {
-    super.onClose();
+  /// Validate booking for check-in (scanner functionality)
+  Future<TurfBookingModel?> validateBookingForCheckIn(String bookingId) async {
+    try {
+      final booking = await _bookingService.findById(bookingId);
+
+      if (booking == null) {
+        return null;
+      }
+
+      // Check if booking is valid for check-in (confirmed status)
+      if (booking.status != TurfBookingStatus.confirmed) {
+        throw Exception('Booking is not in confirmed status');
+      }
+
+      // Additional validation can be added here
+      // For example, check if booking is for today or future date
+
+      return booking;
+    } catch (e) {
+      debugPrint('Error validating booking for check-in: $e');
+      throw Exception('Invalid booking or not eligible for check-in');
+    }
+  }
+
+  /// Check-in booking (for proprietors)
+  Future<bool> checkInBooking(String bookingId) async {
+    try {
+      _isBookingLoading.value = true;
+
+      // For now, we'll mark booking as completed when checked in
+      // You can add a specific "checked-in" status if needed in the backend
+      final updatedBooking = await _bookingService.completeBooking(bookingId);
+
+      if (updatedBooking != null) {
+        _updateBookingInLists(updatedBooking);
+        return true;
+      }
+
+      return false;
+    } catch (e) {
+      debugPrint('Error checking in booking: $e');
+      throw Exception('Failed to check in booking');
+    } finally {
+      _isBookingLoading.value = false;
+    }
   }
 }

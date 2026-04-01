@@ -504,11 +504,11 @@ class CreateTurfController extends GetxController {
 
     // Location
     addressController.text = turf.location?.address ?? '';
-    if (turf.location?.coordinates?.lat != null) {
-      latController.text = turf.location!.coordinates!.lat!.toString();
+    if (turf.location?.coordinates.lat != null) {
+      latController.text = turf.location!.coordinates.lat!.toString();
     }
-    if (turf.location?.coordinates?.lng != null) {
-      lngController.text = turf.location!.coordinates!.lng!.toString();
+    if (turf.location?.coordinates.lng != null) {
+      lngController.text = turf.location!.coordinates.lng!.toString();
     }
 
     // Dimensions

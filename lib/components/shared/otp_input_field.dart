@@ -25,12 +25,19 @@ class OtpInputField extends StatelessWidget {
       textAlign: TextAlign.center,
       maxLength: 6,
       style: const TextStyle(
+        color: Color(AppColors.textColor),
         fontSize: 18,
         fontWeight: FontWeight.w600,
         letterSpacing: 2.0,
       ),
       decoration: InputDecoration(
+        fillColor: Colors.white,
+        filled: true,
         labelText: labelText,
+        labelStyle: const TextStyle(
+          color: Color(AppColors.textSecondaryColor),
+          fontSize: 14,
+        ),
         hintText: hintText,
         prefixIcon: const Icon(
           Icons.security,

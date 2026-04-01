@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import '../../core/auth/auth_state_controller.dart';
 import '../../settings/settings_controller.dart';
 import '../../core/config/constants.dart';
-import '../../core/utils/app_snackbar.dart';
 
 class DrawerMenuItem {
   final String title;

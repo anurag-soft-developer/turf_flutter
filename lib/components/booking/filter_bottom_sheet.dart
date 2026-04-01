@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../core/config/constants.dart';
-import '../../turf_booking/player/turf_booking_controller.dart';
+import '../../turf_booking/turf_booking_controller.dart';
 import '../../turf_booking/model/turf_booking_model.dart';
 
 class BookingFilterBottomSheet extends StatelessWidget {

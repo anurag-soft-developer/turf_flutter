@@ -284,6 +284,7 @@ class ProfileScreen extends StatelessWidget {
                         const SizedBox(height: 16),
 
                         Card(
+                          color: Colors.white,
                           elevation: 1,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -330,6 +331,7 @@ class ProfileScreen extends StatelessWidget {
                         const SizedBox(height: 16),
 
                         Card(
+                          color: Colors.white,
                           elevation: 1,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -341,8 +343,19 @@ class ProfileScreen extends StatelessWidget {
                                   Icons.lock_outline,
                                   color: Color(AppColors.primaryColor),
                                 ),
-                                title: const Text('Change Password'),
-                                subtitle: const Text('Update your password'),
+                                title: const Text(
+                                  'Change Password',
+                                  style: TextStyle(
+                                    color: Color(AppColors.textColor),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                subtitle: const Text(
+                                  'Update your password',
+                                  style: TextStyle(
+                                    color: Color(AppColors.textSecondaryColor),
+                                  ),
+                                ),
                                 trailing: const Icon(Icons.arrow_forward_ios),
                                 onTap: () {
                                   Get.snackbar(
@@ -358,9 +371,18 @@ class ProfileScreen extends StatelessWidget {
                                   Icons.download,
                                   color: Color(AppColors.primaryColor),
                                 ),
-                                title: const Text('Download Data'),
+                                title: const Text(
+                                  'Download Data',
+                                  style: TextStyle(
+                                    color: Color(AppColors.textColor),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                                 subtitle: const Text(
                                   'Export your account data',
+                                  style: TextStyle(
+                                    color: Color(AppColors.textSecondaryColor),
+                                  ),
                                 ),
                                 trailing: const Icon(Icons.arrow_forward_ios),
                                 onTap: () {
@@ -383,6 +405,9 @@ class ProfileScreen extends StatelessWidget {
                                 ),
                                 subtitle: const Text(
                                   'Permanently delete your account',
+                                  style: TextStyle(
+                                    color: Color(AppColors.textSecondaryColor),
+                                  ),
                                 ),
                                 trailing: const Icon(Icons.arrow_forward_ios),
                                 onTap: () => _showDeleteAccountDialog(context),
