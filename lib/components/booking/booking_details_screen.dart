@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:intl/intl.dart';
 import '../../turf_booking/model/turf_booking_model.dart';
 import '../../core/config/constants.dart';
+import '../../core/utils/date_util.dart';
 import '../../core/models/user_field_instance.dart';
 import 'booking_action_buttons.dart';
 import 'booking_action_dialogs.dart';
@@ -65,7 +65,7 @@ class BookingDetailsScreen extends StatelessWidget {
                     icon: Icons.calendar_today_rounded,
                     label: 'Date',
                     value: booking.startDateTime != null
-                        ? _formatDateOnly(booking.startDateTime!, localeName)
+                        ? formatDateOnly(booking.startDateTime!, localeName)
                         : '—',
                   ),
                   const Divider(height: 20),
@@ -217,14 +217,14 @@ class BookingDetailsScreen extends StatelessWidget {
                     _InfoRow(
                       icon: Icons.event_available_rounded,
                       label: 'Booked at',
-                      value: _formatDateTime(booking.createdAt!, localeName),
+                      value: formatDateTime(booking.createdAt!, localeName),
                     ),
                   if (booking.confirmedAt != null) ...[
                     if (booking.createdAt != null) const Divider(height: 20),
                     _InfoRow(
                       icon: Icons.check_circle_rounded,
                       label: 'Confirmed at',
-                      value: _formatDateTime(booking.confirmedAt!, localeName),
+                      value: formatDateTime(booking.confirmedAt!, localeName),
                     ),
                   ],
                   if (booking.cancelledAt != null) ...[
@@ -234,7 +234,7 @@ class BookingDetailsScreen extends StatelessWidget {
                     _InfoRow(
                       icon: Icons.cancel_rounded,
                       label: 'Cancelled at',
-                      value: _formatDateTime(booking.cancelledAt!, localeName),
+                      value: formatDateTime(booking.cancelledAt!, localeName),
                     ),
                   ],
                 ],
@@ -260,118 +260,7 @@ class BookingDetailsScreen extends StatelessWidget {
         return null;
     }
   }
-
-  static String _formatDateOnly(DateTime dt, String localeName) {
-    return DateFormat('EEE, d MMM y', localeName).format(dt.toLocal());
-  }
-
-  static String _formatDateTime(String raw, String localeName) {
-    try {
-      return DateFormat('EEE, d MMM y · HH:mm', localeName)
-          .format(DateTime.parse(raw).toLocal());
-    } catch (_) {
-      return raw;
-    }
-  }
 }
-
-// class _SummaryHeader extends StatelessWidget {
-//   final TurfBookingModel booking;
-
-//   const _SummaryHeader({required this.booking});
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Container(
-//       decoration: BoxDecoration(
-//         // gradient: LinearGradient(
-//         //   begin: Alignment.topLeft,
-//         //   end: Alignment.bottomRight,
-//         //   colors: [
-//         //     const Color(AppColors.primaryColor),
-//         //     const Color(AppColors.primaryColor).withValues(alpha: 0.85),
-//         //     const Color(0xFF2E7D32),
-//         //   ],
-//         // ),
-//         borderRadius: BorderRadius.circular(20),
-//         // boxShadow: [
-//         //   BoxShadow(
-//         //     color: const Color(AppColors.primaryColor).withValues(alpha: 0.35),
-//         //     blurRadius: 16,
-//         //     offset: const Offset(0, 8),
-//         //   ),
-//         // ],
-//       ),
-//       padding: const EdgeInsets.all(20),
-//       child: Column(
-//         crossAxisAlignment: CrossAxisAlignment.stretch,
-//         children: [
-//           Align(
-//             alignment: Alignment.centerRight,
-//             child: _StatusPill(status: booking.status),
-//           ),
-//           const SizedBox(height: 10),
-//           BookingReferenceCard(bookingId: booking.id, margin: EdgeInsets.zero),
-//           const SizedBox(height: 16),
-//           Text(
-//             booking.turfDisplayName,
-//             maxLines: 2,
-//             overflow: TextOverflow.ellipsis,
-//             style: TextStyle(
-//               color: Colors.white.withValues(alpha: 0.95),
-//               fontSize: 15,
-//               fontWeight: FontWeight.w500,
-//               height: 1.35,
-//             ),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-// }
-
-// class _StatusPill extends StatelessWidget {
-//   final TurfBookingStatus? status;
-
-//   const _StatusPill({required this.status});
-
-//   @override
-//   Widget build(BuildContext context) {
-//     final (bg, fg) = switch (status) {
-//       TurfBookingStatus.pending => (
-//         Colors.orange.shade100,
-//         Colors.orange.shade900,
-//       ),
-//       TurfBookingStatus.confirmed => (
-//         Colors.lightGreen.shade100,
-//         Colors.green.shade900,
-//       ),
-//       TurfBookingStatus.cancelled => (Colors.red.shade100, Colors.red.shade900),
-//       TurfBookingStatus.completed => (
-//         Colors.blue.shade100,
-//         Colors.blue.shade900,
-//       ),
-//       null => (Colors.white24, Colors.white),
-//     };
-
-//     return Container(
-//       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-//       decoration: BoxDecoration(
-//         color: bg,
-//         borderRadius: BorderRadius.circular(20),
-//       ),
-//       child: Text(
-//         (status?.name ?? 'unknown').toUpperCase(),
-//         style: TextStyle(
-//           color: fg,
-//           fontSize: 11,
-//           fontWeight: FontWeight.w800,
-//           letterSpacing: 0.6,
-//         ),
-//       ),
-//     );
-//   }
-// }
 
 class _CustomerCard extends StatelessWidget {
   final UserFieldInstance helper;

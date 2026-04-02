@@ -1,6 +1,6 @@
-import '../turf/model/turf_model.dart';
+import 'model/turf_model.dart';
 import '../core/models/paginated_response.dart';
-import 'api_service.dart';
+import '../core/services/api_service.dart';
 
 class TurfService {
   static final TurfService _instance = TurfService._internal();

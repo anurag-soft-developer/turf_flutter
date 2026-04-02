@@ -35,6 +35,7 @@ class Routes {
   final String createTurf = '/create-turf';
   final String editTurf = '/edit-turf';
   final String myBookings = '/my-bookings';
+  final String turfReviews = '/turf-reviews';
   // final String turfBookings = '/turf-bookings';
 }
 

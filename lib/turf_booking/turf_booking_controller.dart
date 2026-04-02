@@ -3,7 +3,7 @@ import 'package:flutter_application_1/settings/settings_controller.dart';
 import 'package:get/get.dart';
 import 'model/turf_booking_model.dart';
 import '../core/models/paginated_response.dart';
-import '../services/turf_booking_service.dart';
+import 'turf_booking_service.dart';
 import '../core/utils/exception_handler.dart';
 
 class TurfBookingController extends GetxController {

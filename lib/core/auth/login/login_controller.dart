@@ -1,7 +1,7 @@
 import 'package:flutter_application_1/core/utils/exception_handler.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
-import '../../../services/auth_service.dart';
+import '../../services/auth_service.dart';
 import '../../config/constants.dart';
 import '../auth_state_controller.dart';
 

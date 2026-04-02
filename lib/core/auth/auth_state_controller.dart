@@ -1,5 +1,5 @@
 import 'package:get/get.dart';
-import '../../services/auth_service.dart';
+import '../services/auth_service.dart';
 import '../models/user/user_model.dart';
 import '../config/constants.dart';
 

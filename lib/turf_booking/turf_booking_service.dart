@@ -1,9 +1,9 @@
 import 'package:flutter_application_1/settings/settings_controller.dart';
 
-import '../turf_booking/model/turf_booking_model.dart';
+import 'model/turf_booking_model.dart';
 import '../core/models/paginated_response.dart';
 import '../core/config/api_constants.dart';
-import 'api_service.dart';
+import '../core/services/api_service.dart';
 
 class TurfBookingService {
   static final TurfBookingService _instance = TurfBookingService._internal();

@@ -1,6 +1,6 @@
 import 'package:json_annotation/json_annotation.dart';
 import '../../core/models/user/user_model.dart';
-import '../../core/models/json_converters.dart';
+import '../../core/models/user_field_converters.dart';
 import '../../core/models/user_field_instance.dart';
 
 part 'turf_model.g.dart';

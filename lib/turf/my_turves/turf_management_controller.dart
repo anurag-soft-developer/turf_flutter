@@ -2,7 +2,7 @@ import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import '../model/turf_model.dart';
 import '../../core/models/paginated_response.dart';
-import '../../services/turf_service.dart';
+import '../turf_service.dart';
 import '../../core/utils/exception_handler.dart';
 
 class TurfManagementController extends GetxController {

@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 import '../model/turf_model.dart';
-import '../../services/turf_service.dart';
+import '../turf_service.dart';
+import '../reviews/turf_reviews_list_controller.dart';
 import '../../turf_booking/turf_booking_controller.dart';
 import '../../turf_booking/model/turf_booking_model.dart' as booking_model;
 
@@ -53,6 +54,8 @@ class TurfDetailController extends GetxController {
 
   String? _turfId;
 
+  String? get turfId => _turfId;
+
   @override
   void onInit() {
     super.onInit();
@@ -60,12 +63,32 @@ class TurfDetailController extends GetxController {
     // Get turf ID from arguments
     final arguments = Get.arguments;
     if (arguments != null && arguments is Map<String, dynamic>) {
-      _turfId = arguments['turfId'];
+      _turfId = arguments['turfId'] as String?;
       if (_turfId != null) {
+        Get.put(
+          TurfReviewsListController(
+            turfId: _turfId!,
+            previewOnly: true,
+            previewLimit: 3,
+          ),
+          tag: turfReviewsPreviewTag(_turfId!),
+        );
         loadTurfDetails();
         // Don't call generateTimeSlots here - will be called after turf loads
       }
     }
+  }
+
+  @override
+  void onClose() {
+    final id = _turfId;
+    if (id != null &&
+        Get.isRegistered<TurfReviewsListController>(
+          tag: turfReviewsPreviewTag(id),
+        )) {
+      Get.delete<TurfReviewsListController>(tag: turfReviewsPreviewTag(id));
+    }
+    super.onClose();
   }
 
   // Load turf details
@@ -333,5 +356,14 @@ class TurfDetailController extends GetxController {
   Future<void> refreshData() async {
     await loadTurfDetails();
     generateTimeSlots();
+    final id = _turfId;
+    if (id != null &&
+        Get.isRegistered<TurfReviewsListController>(
+          tag: turfReviewsPreviewTag(id),
+        )) {
+      await Get.find<TurfReviewsListController>(
+        tag: turfReviewsPreviewTag(id),
+      ).reload();
+    }
   }
 }

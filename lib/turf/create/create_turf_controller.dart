@@ -6,7 +6,7 @@ import 'package:geocoding/geocoding.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../model/turf_model.dart';
-import '../../services/turf_service.dart';
+import '../turf_service.dart';
 import '../../core/utils/exception_handler.dart';
 
 class CreateTurfController extends GetxController {

@@ -4,6 +4,7 @@ import 'turf_detail_controller.dart';
 import '../../components/shared/loading_overlay.dart';
 import '../../components/turf/detail_info_section.dart';
 import '../../components/turf/booking_components.dart';
+import '../../components/turf_review/turf_detail_reviews_section.dart';
 import '../../core/config/constants.dart';
 
 class TurfDetailScreen extends StatelessWidget {
@@ -44,6 +45,11 @@ class TurfDetailScreen extends StatelessWidget {
                                     ? BookingSummaryCard(controller: controller)
                                     : const SizedBox(),
                               ),
+                              if (controller.turfId != null)
+                                TurfDetailReviewsSection(
+                                  turfId: controller.turf.value?.id ??
+                                      controller.turfId!,
+                                ),
                               const SizedBox(
                                 height: 100,
                               ), // Bottom spacing for floating button

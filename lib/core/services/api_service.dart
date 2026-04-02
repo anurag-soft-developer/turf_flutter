@@ -2,8 +2,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/utils/exception_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../core/config/api_constants.dart';
-import '../core/config/constants.dart';
+import '../config/api_constants.dart';
+import '../config/constants.dart';
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
@@ -158,6 +158,29 @@ class ApiService {
     } catch (e) {
       ExceptionHandler.handleException(e);
       return null;
+    }
+  }
+
+  /// DELETE with 204 No Content or empty body (avoids treating null body as error).
+  Future<bool> deleteResource(
+    String endpoint, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    try {
+      final response = await _dio.delete<dynamic>(
+        endpoint,
+        data: data,
+        queryParameters: queryParameters,
+        options: Options(
+          validateStatus: (status) =>
+              status != null && status >= 200 && status < 300,
+        ),
+      );
+      return response.statusCode == 204 || response.statusCode == 200;
+    } catch (e) {
+      ExceptionHandler.handleException(e);
+      return false;
     }
   }
 

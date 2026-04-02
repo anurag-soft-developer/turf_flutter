@@ -1,6 +1,7 @@
 import 'package:json_annotation/json_annotation.dart';
 import '../../turf/model/turf_model.dart';
-import '../../core/models/json_converters.dart';
+import '../../turf/model/turf_field_converter.dart';
+import '../../core/models/user_field_converters.dart';
 import '../../core/models/user_field_instance.dart';
 import '../../core/models/turf_field_instance.dart';
 
@@ -70,38 +71,6 @@ class TimeSlot {
   @override
   String toString() {
     return 'TimeSlot(startTime: $startTime, endTime: $endTime)';
-  }
-}
-
-// Custom converter for turf field to handle both ID and populated data
-class TurfConverter implements JsonConverter<dynamic, dynamic> {
-  const TurfConverter();
-
-  @override
-  dynamic fromJson(dynamic json) {
-    if (json == null) {
-      return null;
-    }
-
-    // If it's a String, it's just the turf ID
-    if (json is String) {
-      return json;
-    }
-
-    // If it's a Map, it's a populated turf object
-    if (json is Map<String, dynamic>) {
-      return TurfModel.fromJson(json);
-    }
-
-    throw FormatException('Invalid type for turf field: ${json.runtimeType}');
-  }
-
-  @override
-  dynamic toJson(dynamic turf) {
-    if (turf == null) return null;
-    if (turf is String) return turf;
-    if (turf is TurfModel) return turf.toJson();
-    return turf;
   }
 }
 

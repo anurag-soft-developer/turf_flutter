@@ -17,6 +17,8 @@ import '../binding/auth_binding.dart';
 import '../../bindings/profile_binding.dart';
 import '../../bindings/turf_list_binding.dart';
 import '../../bindings/turf_detail_binding.dart';
+import '../../bindings/turf_reviews_full_binding.dart';
+import '../../turf/reviews/turf_reviews_full_screen.dart';
 import '../../bindings/turf_management_binding.dart';
 import '../../bindings/create_turf_binding.dart';
 import '../../bindings/turf_booking_binding.dart';
@@ -82,6 +84,13 @@ class AppRoutes {
       name: AppConstants.routes.turfDetail,
       page: () => const TurfDetailScreen(),
       binding: TurfDetailBinding(),
+      transition: Transition.cupertino,
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppConstants.routes.turfReviews,
+      page: () => const TurfReviewsFullScreen(),
+      binding: TurfReviewsFullBinding(),
       transition: Transition.cupertino,
       middlewares: [AuthGuard()],
     ),

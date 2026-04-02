@@ -7,6 +7,7 @@ class ApiConstants {
   static const auth = AuthEndpoints();
   static const user = UserEndpoints();
   static const turfBooking = TurfBookingEndpoints();
+  static const turfReview = TurfReviewEndpoints();
 
   // Headers
   static const Map<String, String> defaultHeaders = {
@@ -51,4 +52,18 @@ class TurfBookingEndpoints {
 
   String bookingById(String id) => '/turf-bookings/$id';
   String turfBookings(String turfId) => '/turf-bookings/turf/$turfId';
+}
+
+class TurfReviewEndpoints {
+  const TurfReviewEndpoints();
+
+  String get base => '/turf-reviews';
+  String get myReviews => '/turf-reviews/my-reviews';
+  String turfReviews(String turfId) => '/turf-reviews/turf/$turfId';
+  String turfReviewStats(String turfId) =>
+      '/turf-reviews/turf/$turfId/stats';
+  String byId(String id) => '/turf-reviews/$id';
+  String vote(String id) => '/turf-reviews/$id/vote';
+  String report(String id) => '/turf-reviews/$id/report';
+  String moderate(String id) => '/turf-reviews/$id/moderate';
 }
