@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'turf_detail_controller.dart';
 import '../../components/shared/loading_overlay.dart';
-import '../../components/turf/detail_info_section.dart';
+import '../../components/turf/turf_detail_scroll_content.dart';
 import '../../components/turf/booking_components.dart';
-import '../../components/turf_review/turf_detail_reviews_section.dart';
 import '../../core/config/constants.dart';
 
 class TurfDetailScreen extends StatelessWidget {
@@ -18,7 +17,6 @@ class TurfDetailScreen extends StatelessWidget {
       backgroundColor: const Color(AppColors.backgroundColor),
       body: Stack(
         children: [
-          // Main content
           Obx(
             () => controller.turf.value == null
                 ? const Center(
@@ -30,37 +28,12 @@ class TurfDetailScreen extends StatelessWidget {
                   )
                 : RefreshIndicator(
                     onRefresh: controller.refreshData,
-                    child: CustomScrollView(
-                      slivers: [
-                        TurfImageCarousel(controller: controller),
-                        SliverToBoxAdapter(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              TurfInfoSection(controller: controller),
-                              DateSelector(controller: controller),
-                              TimeSlotsGrid(controller: controller),
-                              Obx(
-                                () => controller.selectedTimeSlots.isNotEmpty
-                                    ? BookingSummaryCard(controller: controller)
-                                    : const SizedBox(),
-                              ),
-                              if (controller.turfId != null)
-                                TurfDetailReviewsSection(
-                                  turfId: controller.turf.value?.id ??
-                                      controller.turfId!,
-                                ),
-                              const SizedBox(
-                                height: 100,
-                              ), // Bottom spacing for floating button
-                            ],
-                          ),
-                        ),
-                      ],
+                    child: TurfDetailScrollContent(
+                      controller: controller,
+                      showBookingSection: true,
                     ),
                   ),
           ),
-          // Loading overlay
           Obx(
             () => controller.isLoading.value
                 ? const LoadingOverlay(isLoading: true, child: SizedBox())

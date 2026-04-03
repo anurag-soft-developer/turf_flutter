@@ -1,56 +1,12 @@
 import 'package:json_annotation/json_annotation.dart';
+import '../../core/models/location_model.dart';
 import '../../core/models/user/user_model.dart';
 import '../../core/models/user_field_converters.dart';
 import '../../core/models/user_field_instance.dart';
 
+export '../../core/models/location_model.dart';
+
 part 'turf_model.g.dart';
-
-@JsonSerializable()
-class CoordinatesModel {
-  final double? lat;
-  final double? lng;
-
-  CoordinatesModel({this.lat, this.lng});
-
-  factory CoordinatesModel.fromJson(Map<String, dynamic> json) =>
-      _$CoordinatesModelFromJson(json);
-
-  Map<String, dynamic> toJson() => _$CoordinatesModelToJson(this);
-
-  CoordinatesModel copyWith({double? lat, double? lng}) {
-    return CoordinatesModel(lat: lat ?? this.lat, lng: lng ?? this.lng);
-  }
-
-  @override
-  String toString() {
-    return 'CoordinatesModel(lat: $lat, lng: $lng)';
-  }
-}
-
-@JsonSerializable()
-class LocationModel {
-  final String address;
-  final CoordinatesModel coordinates;
-
-  LocationModel({required this.address, required this.coordinates});
-
-  factory LocationModel.fromJson(Map<String, dynamic> json) =>
-      _$LocationModelFromJson(json);
-
-  Map<String, dynamic> toJson() => _$LocationModelToJson(this);
-
-  LocationModel copyWith({String? address, CoordinatesModel? coordinates}) {
-    return LocationModel(
-      address: address ?? this.address,
-      coordinates: coordinates ?? this.coordinates,
-    );
-  }
-
-  @override
-  String toString() {
-    return 'LocationModel(address: $address, coordinates: $coordinates)';
-  }
-}
 
 @JsonSerializable()
 class DimensionsModel {
@@ -173,7 +129,7 @@ class OperatingHoursModel {
   }
 }
 
-@JsonSerializable()
+@JsonSerializable(explicitToJson: true)
 class TurfModel {
   @JsonKey(name: '_id')
   final String? id;
@@ -337,7 +293,7 @@ class TurfModel {
 
 // Request/Response models for API operations
 
-@JsonSerializable()
+@JsonSerializable(explicitToJson: true)
 class CreateTurfRequest {
   final String name;
   final String description;
@@ -372,7 +328,7 @@ class CreateTurfRequest {
   Map<String, dynamic> toJson() => _$CreateTurfRequestToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(explicitToJson: true)
 class UpdateTurfRequest {
   final String? name;
   final String? description;

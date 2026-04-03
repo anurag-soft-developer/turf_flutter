@@ -60,40 +60,46 @@ class TurfImageCarousel extends StatelessWidget {
                       },
                     ),
 
-                    // Gradient overlay
-                    const DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Colors.transparent, Colors.black54],
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
+                    // Pass gestures through to PageView (DecoratedBox would absorb hits).
+                    const IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Colors.transparent, Colors.black54],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                          ),
                         ),
                       ),
                     ),
 
-                    // Image indicators
                     if (turf.images!.length > 1)
                       Positioned(
                         bottom: 20,
                         left: 0,
                         right: 0,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: turf.images!.asMap().entries.map((entry) {
-                            return Container(
-                              width: 8,
-                              height: 8,
-                              margin: const EdgeInsets.symmetric(horizontal: 4),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color:
-                                    controller.currentImageIndex.value ==
-                                        entry.key
-                                    ? Colors.white
-                                    : Colors.white.withValues(alpha: 0.5),
-                              ),
-                            );
-                          }).toList(),
+                        child: Obx(
+                          () => Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children:
+                                turf.images!.asMap().entries.map((entry) {
+                              return Container(
+                                width: 8,
+                                height: 8,
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color:
+                                      controller.currentImageIndex.value ==
+                                          entry.key
+                                      ? Colors.white
+                                      : Colors.white.withValues(alpha: 0.5),
+                                ),
+                              );
+                            }).toList(),
+                          ),
                         ),
                       ),
                   ],

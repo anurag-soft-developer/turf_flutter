@@ -49,7 +49,7 @@ class TurfReviewStatsSummary extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  avg > 0 ? avg.toStringAsFixed(1) : '—',
+                  avg.toStringAsFixed(1),
                   style: const TextStyle(
                     fontSize: 36,
                     fontWeight: FontWeight.w800,

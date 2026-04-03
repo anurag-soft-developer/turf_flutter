@@ -31,6 +31,7 @@ class Routes {
   final String accessDenied = '/access-denied';
   final String turfList = '/turf-list';
   final String turfDetail = '/turf-detail';
+  final String manageTurf = '/manage-turf';
   final String myTurfs = '/my-turfs';
   final String createTurf = '/create-turf';
   final String editTurf = '/edit-turf';

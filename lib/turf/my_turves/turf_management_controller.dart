@@ -1,7 +1,8 @@
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
+import '../../core/config/constants.dart';
+import '../details/turf_detail_controller.dart';
 import '../model/turf_model.dart';
-import '../../core/models/paginated_response.dart';
 import '../turf_service.dart';
 import '../../core/utils/exception_handler.dart';
 
@@ -113,13 +114,13 @@ class TurfManagementController extends GetxController {
     }
   }
 
-  /// Delete a turf
-  Future<void> deleteTurf(TurfModel turf) async {
-    if (turf.id == null) return;
+  /// Delete a turf. Returns true if the turf was deleted.
+  Future<bool> deleteTurf(TurfModel turf) async {
+    if (turf.id == null) return false;
 
     try {
       final confirmed = await _showDeleteConfirmation(turf);
-      if (!confirmed) return;
+      if (!confirmed) return false;
 
       _isLoading.value = true;
 
@@ -129,12 +130,15 @@ class TurfManagementController extends GetxController {
         _myTurfs.removeWhere((t) => t.id == turf.id);
         await loadMyTurfStats(); // Refresh stats
         ExceptionHandler.showSuccessToast('Turf deleted successfully');
+        return true;
       } else {
         ExceptionHandler.showErrorToast('Failed to delete turf');
+        return false;
       }
     } catch (e) {
       debugPrint('Error deleting turf: $e');
       ExceptionHandler.showErrorToast('Failed to delete turf');
+      return false;
     } finally {
       _isLoading.value = false;
     }
@@ -161,6 +165,12 @@ class TurfManagementController extends GetxController {
         if (index != -1) {
           _myTurfs[index] = updatedTurf;
         }
+        if (Get.isRegistered<TurfDetailController>()) {
+          final detail = Get.find<TurfDetailController>();
+          if (detail.turfId == turf.id) {
+            detail.refreshData();
+          }
+        }
         ExceptionHandler.showSuccessToast(
           updatedTurf.isAvailable == true
               ? 'Turf is now available'
@@ -181,12 +191,26 @@ class TurfManagementController extends GetxController {
   void navigateToEditTurf(TurfModel turf) {
     if (turf.id != null) {
       Get.toNamed('/edit-turf', arguments: turf)?.then((result) {
-        // Refresh list when returning from edit screen
         if (result == true) {
           loadMyTurfs(showLoader: false);
+          if (Get.isRegistered<TurfDetailController>()) {
+            final detail = Get.find<TurfDetailController>();
+            if (detail.turfId == turf.id) {
+              detail.refreshData();
+            }
+          }
         }
       });
     }
+  }
+
+  /// Owner: open manage screen (detail + actions) for a turf.
+  void navigateToManageTurf(TurfModel turf) {
+    if (turf.id == null) return;
+    Get.toNamed(
+      AppConstants.routes.manageTurf,
+      arguments: {'turfId': turf.id},
+    );
   }
 
   /// Navigate to create turf screen

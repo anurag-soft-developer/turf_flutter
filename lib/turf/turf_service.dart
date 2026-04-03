@@ -28,7 +28,8 @@ class TurfService {
     List<String>? sportTypes,
     List<String>? amenities,
     LocationModel? location,
-    double? radius,
+    /// Radius in km; omit to use [kDefaultNearbyRadiusKm].
+    double? nearbyRadiusKm,
     double? minPrice,
     double? maxPrice,
     bool? includeWeekendSurge,
@@ -51,15 +52,13 @@ class TurfService {
       queryParams['amenities'] = amenities!.join(',');
     }
     if (location != null) {
-      if (location.coordinates.lat != null) {
-        queryParams['location[lat]'] = location.coordinates.lat.toString();
-      }
-      if (location.coordinates.lng != null) {
-        queryParams['location[lng]'] = location.coordinates.lng.toString();
-      }
-      if (radius != null) {
-        queryParams['location[radius]'] = radius.toString();
-      }
+      queryParams.addAll(
+        nearbyLocationQueryParameters(
+          nearbyLat: location.latitude,
+          nearbyLng: location.longitude,
+          nearbyRadiusKm: nearbyRadiusKm,
+        ),
+      );
     }
     if (minPrice != null) {
       queryParams['pricing[minPrice]'] = minPrice.toString();

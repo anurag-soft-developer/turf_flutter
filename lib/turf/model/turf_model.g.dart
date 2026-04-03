@@ -6,29 +6,6 @@ part of 'turf_model.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-CoordinatesModel _$CoordinatesModelFromJson(Map<String, dynamic> json) =>
-    CoordinatesModel(
-      lat: (json['lat'] as num?)?.toDouble(),
-      lng: (json['lng'] as num?)?.toDouble(),
-    );
-
-Map<String, dynamic> _$CoordinatesModelToJson(CoordinatesModel instance) =>
-    <String, dynamic>{'lat': instance.lat, 'lng': instance.lng};
-
-LocationModel _$LocationModelFromJson(Map<String, dynamic> json) =>
-    LocationModel(
-      address: json['address'] as String,
-      coordinates: CoordinatesModel.fromJson(
-        json['coordinates'] as Map<String, dynamic>,
-      ),
-    );
-
-Map<String, dynamic> _$LocationModelToJson(LocationModel instance) =>
-    <String, dynamic>{
-      'address': instance.address,
-      'coordinates': instance.coordinates,
-    };
-
 DimensionsModel _$DimensionsModelFromJson(Map<String, dynamic> json) =>
     DimensionsModel(
       length: (json['length'] as num?)?.toDouble(),
@@ -103,13 +80,13 @@ Map<String, dynamic> _$TurfModelToJson(TurfModel instance) => <String, dynamic>{
   'postedBy': const UserConverter().toJson(instance.postedBy),
   'name': instance.name,
   'description': instance.description,
-  'location': instance.location,
+  'location': instance.location?.toJson(),
   'images': instance.images,
   'amenities': instance.amenities,
-  'dimensions': instance.dimensions,
+  'dimensions': instance.dimensions?.toJson(),
   'sportType': instance.sportType,
-  'pricing': instance.pricing,
-  'operatingHours': instance.operatingHours,
+  'pricing': instance.pricing?.toJson(),
+  'operatingHours': instance.operatingHours?.toJson(),
   'isAvailable': instance.isAvailable,
   'slotBufferMins': instance.slotBufferMins,
   'averageRating': instance.averageRating,
@@ -145,13 +122,13 @@ Map<String, dynamic> _$CreateTurfRequestToJson(CreateTurfRequest instance) =>
     <String, dynamic>{
       'name': instance.name,
       'description': instance.description,
-      'location': instance.location,
+      'location': instance.location.toJson(),
       'images': instance.images,
       'amenities': instance.amenities,
-      'dimensions': instance.dimensions,
+      'dimensions': instance.dimensions.toJson(),
       'sportType': instance.sportType,
-      'pricing': instance.pricing,
-      'operatingHours': instance.operatingHours,
+      'pricing': instance.pricing.toJson(),
+      'operatingHours': instance.operatingHours.toJson(),
       'slotBufferMins': instance.slotBufferMins,
     };
 
@@ -189,13 +166,13 @@ Map<String, dynamic> _$UpdateTurfRequestToJson(UpdateTurfRequest instance) =>
     <String, dynamic>{
       'name': instance.name,
       'description': instance.description,
-      'location': instance.location,
+      'location': instance.location?.toJson(),
       'images': instance.images,
       'amenities': instance.amenities,
-      'dimensions': instance.dimensions,
+      'dimensions': instance.dimensions?.toJson(),
       'sportType': instance.sportType,
-      'pricing': instance.pricing,
-      'operatingHours': instance.operatingHours,
+      'pricing': instance.pricing?.toJson(),
+      'operatingHours': instance.operatingHours?.toJson(),
       'isAvailable': instance.isAvailable,
       'slotBufferMins': instance.slotBufferMins,
     };

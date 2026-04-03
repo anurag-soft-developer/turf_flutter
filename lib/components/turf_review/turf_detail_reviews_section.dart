@@ -17,9 +17,16 @@ void openTurfReviewWriteSheet(BuildContext context, String turfId) {
 }
 
 class TurfDetailReviewsSection extends StatelessWidget {
-  const TurfDetailReviewsSection({super.key, required this.turfId});
+  const TurfDetailReviewsSection({
+    super.key,
+    required this.turfId,
+    this.showReviewList = true,
+  });
 
   final String turfId;
+
+  /// When false, only rating stats / summary is shown (e.g. owner manage screen).
+  final bool showReviewList;
 
   @override
   Widget build(BuildContext context) {
@@ -47,14 +54,26 @@ class TurfDetailReviewsSection extends StatelessWidget {
                   color: Color(AppColors.textColor),
                 ),
               ),
-              TextButton.icon(
-                style: TextButton.styleFrom(
-                  foregroundColor: const Color(AppColors.primaryColor),
+              if (showReviewList)
+                TextButton.icon(
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(AppColors.primaryColor),
+                  ),
+                  onPressed: () => openTurfReviewWriteSheet(context, turfId),
+                  icon: const Icon(Icons.edit_outlined, size: 15),
+                  label: const Text('Write'),
+                )
+              else
+                TextButton(
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(AppColors.primaryColor),
+                  ),
+                  onPressed: () => Get.toNamed(
+                    AppConstants.routes.turfReviews,
+                    arguments: {'turfId': turfId},
+                  ),
+                  child: const Text('View all'),
                 ),
-                onPressed: () => openTurfReviewWriteSheet(context, turfId),
-                icon: const Icon(Icons.edit_outlined, size: 15),
-                label: const Text('Write'),
-              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -78,6 +97,9 @@ class TurfDetailReviewsSection extends StatelessWidget {
                 ),
               );
             }
+            if (!showReviewList) {
+              return const SizedBox.shrink();
+            }
             if (list.isEmpty && !loading) {
               return const Padding(
                 padding: EdgeInsets.symmetric(vertical: 16),
@@ -95,36 +117,65 @@ class TurfDetailReviewsSection extends StatelessWidget {
               children: [
                 const SizedBox(height: 16),
 
-                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Popular reviews',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: Color(AppColors.textColor),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => Get.toNamed(
+                        AppConstants.routes.turfReviews,
+                        arguments: {'turfId': turfId},
+                      ),
+                      child: const Text(
+                        'View all',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Color(AppColors.primaryColor),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                // const SizedBox(height: 2),
                 ...list.map((r) => TurfReviewTile(review: r)),
               ],
             );
           }),
           const SizedBox(height: 8),
-          Obx(() {
-            final list = controller.reviews;
-            if (list.isEmpty) return const SizedBox.shrink();
-            final total = controller.stats.value?.totalReviews ?? 0;
-            final showViewAll =
-                total > list.length || (total == 0 && list.length >= 3);
-            if (!showViewAll) return const SizedBox.shrink();
-            return Center(
-              child: TextButton(
-                style: TextButton.styleFrom(
-                  foregroundColor: const Color(AppColors.primaryColor),
-                ),
-                onPressed: () => Get.toNamed(
-                  AppConstants.routes.turfReviews,
-                  arguments: {'turfId': turfId},
-                ),
-                child: const Text(
-                  'View all reviews',
-                  style: TextStyle(fontSize: 14),
-                ),
-              ),
-            );
-          }),
-          const SizedBox(height: 8),
+          // if (showReviewList)
+          //   Obx(() {
+          //     final list = controller.reviews;
+          //     if (list.isEmpty) return const SizedBox.shrink();
+          //     final total = controller.stats.value?.totalReviews ?? 0;
+          //     final showViewAll =
+          //         total > list.length || (total == 0 && list.length >= 3);
+          //     if (!showViewAll) return const SizedBox.shrink();
+          //     return Center(
+          //       child: TextButton(
+          //         style: TextButton.styleFrom(
+          //           foregroundColor: const Color(AppColors.primaryColor),
+          //         ),
+          //         onPressed: () => Get.toNamed(
+          //           AppConstants.routes.turfReviews,
+          //           arguments: {'turfId': turfId},
+          //         ),
+          //         child: const Text(
+          //           'View all reviews',
+          //           style: TextStyle(fontSize: 14),
+          //         ),
+          //       ),
+          //     );
+          //   }),
+          // const SizedBox(height: 8),
         ],
       ),
     );

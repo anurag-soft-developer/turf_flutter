@@ -417,9 +417,9 @@ class CreateTurfController extends GetxController {
   LocationModel _buildLocationModel() {
     return LocationModel(
       address: _getTrimmedText(addressController),
-      coordinates: CoordinatesModel(
-        lat: double.tryParse(_getTrimmedText(latController)),
-        lng: double.tryParse(_getTrimmedText(lngController)),
+      coordinates: GeoPointModel.fromLngLat(
+        longitude: double.tryParse(_getTrimmedText(lngController)) ?? 0,
+        latitude: double.tryParse(_getTrimmedText(latController)) ?? 0,
       ),
     );
   }
@@ -503,12 +503,11 @@ class CreateTurfController extends GetxController {
     descriptionController.text = turf.description ?? '';
 
     // Location
-    addressController.text = turf.location?.address ?? '';
-    if (turf.location?.coordinates.lat != null) {
-      latController.text = turf.location!.coordinates.lat!.toString();
-    }
-    if (turf.location?.coordinates.lng != null) {
-      lngController.text = turf.location!.coordinates.lng!.toString();
+    final loc = turf.location;
+    addressController.text = loc?.address ?? '';
+    if (loc != null) {
+      latController.text = loc.latitude.toString();
+      lngController.text = loc.longitude.toString();
     }
 
     // Dimensions
