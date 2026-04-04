@@ -3,7 +3,7 @@ import 'package:json_annotation/json_annotation.dart';
 import '../../core/models/user_field_converters.dart';
 import '../../core/models/turf_field_instance.dart';
 import '../../core/models/user_field_instance.dart';
-import 'turf_field_converter.dart';
+import '../../core/models/turf_field_converter.dart';
 
 part 'turf_review_model.g.dart';
 

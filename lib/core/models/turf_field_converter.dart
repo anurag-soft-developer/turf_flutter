@@ -1,8 +1,8 @@
 import 'package:json_annotation/json_annotation.dart';
 
-import 'turf_model.dart';
+import '../../turf/model/turf_model.dart';
 
-/// Handles [turf] JSON fields that may be an id ([String]) or a populated [TurfModel].
+/// Handles turf JSON fields that may be an id ([String]) or a populated [TurfModel].
 class TurfConverter implements JsonConverter<dynamic, dynamic> {
   const TurfConverter();
 
@@ -22,9 +22,15 @@ class TurfConverter implements JsonConverter<dynamic, dynamic> {
 
   @override
   dynamic toJson(dynamic turf) {
-    if (turf == null) return null;
-    if (turf is String) return turf;
-    if (turf is TurfModel) return turf.toJson();
+    if (turf == null) {
+      return null;
+    }
+    if (turf is String) {
+      return turf;
+    }
+    if (turf is TurfModel) {
+      return turf.toJson();
+    }
     return turf;
   }
 }
