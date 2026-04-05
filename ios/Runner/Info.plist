@@ -46,6 +46,10 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	
+	<!-- Location (nearby matches, map / address) -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>This app uses your location to find nearby local matches and fill in addresses.</string>
+
 	<!-- Image picker permissions -->
 	<key>NSCameraUsageDescription</key>
 	<string>This app needs access to camera to take photos of turfs</string>

@@ -8,6 +8,9 @@ class ApiConstants {
   static const user = UserEndpoints();
   static const turfBooking = TurfBookingEndpoints();
   static const turfReview = TurfReviewEndpoints();
+  static const team = TeamEndpoints();
+  static const teamMember = TeamMemberEndpoints();
+  static const teamMembershipSelf = TeamMembershipSelfEndpoints();
 
   // Headers
   static const Map<String, String> defaultHeaders = {
@@ -66,4 +69,45 @@ class TurfReviewEndpoints {
   String vote(String id) => '/turf-reviews/$id/vote';
   String report(String id) => '/turf-reviews/$id/report';
   String moderate(String id) => '/turf-reviews/$id/moderate';
+}
+
+class TeamEndpoints {
+  const TeamEndpoints();
+
+  String get base => '/teams';
+
+  String byId(String id) => '/teams/$id';
+
+  String promoteOwner(String teamId) => '/teams/$teamId/owners';
+
+  String demoteOwner(String teamId, String userId) =>
+      '/teams/$teamId/owners/$userId';
+}
+
+class TeamMemberEndpoints {
+  const TeamMemberEndpoints();
+
+  String membersBase(String teamId) => '/teams/$teamId/members';
+
+  String join(String teamId) => '/teams/$teamId/members/join';
+
+  String leave(String teamId) => '/teams/$teamId/members/leave';
+
+  String member(String teamId, String membershipId) =>
+      '/teams/$teamId/members/$membershipId';
+
+  String accept(String teamId, String membershipId) =>
+      '/teams/$teamId/members/$membershipId/accept';
+
+  String reject(String teamId, String membershipId) =>
+      '/teams/$teamId/members/$membershipId/reject';
+
+  String removeUser(String teamId, String targetUserId) =>
+      '/teams/$teamId/members/users/$targetUserId';
+}
+
+class TeamMembershipSelfEndpoints {
+  const TeamMembershipSelfEndpoints();
+
+  String get myMemberships => '/team-members/me';
 }
