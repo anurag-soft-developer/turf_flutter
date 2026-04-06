@@ -24,6 +24,11 @@ import '../../turf/reviews/turf_reviews_full_screen.dart';
 import '../../bindings/turf_management_binding.dart';
 import '../../bindings/create_turf_binding.dart';
 import '../../bindings/turf_booking_binding.dart';
+import '../../bindings/team_player_bindings.dart';
+import '../../team/add/add_team_screen.dart';
+import '../../team/members/player_profile_screen.dart';
+import '../../team/details/team_detail_screen.dart';
+import '../../team/feed/teams_ranking_screen.dart';
 import '../config/constants.dart';
 
 class AppRoutes {
@@ -128,6 +133,47 @@ class AppRoutes {
       name: AppConstants.routes.myBookings,
       page: () => const BookingsScreen(),
       binding: TurfBookingBinding(),
+      transition: Transition.cupertino,
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppConstants.routes.myTeam,
+      page: () => const TeamDetailScreen(),
+      binding: MyTeamBinding(),
+      transition: Transition.cupertino,
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppConstants.routes.teamsRanking,
+      page: () => const TeamsRankingScreen(),
+      binding: TeamsRankingBinding(),
+      transition: Transition.cupertino,
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppConstants.routes.addTeam,
+      page: () => const AddTeamScreen(),
+      binding: AddTeamBinding(),
+      transition: Transition.cupertino,
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppConstants.routes.editTeam,
+      page: () => const AddTeamScreen(),
+      binding: AddTeamBinding(),
+      transition: Transition.cupertino,
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppConstants.routes.teamProfile,
+      page: () => const TeamDetailScreen(),
+      binding: TeamProfileBinding(),
+      transition: Transition.cupertino,
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppConstants.routes.teamMemberProfile,
+      page: () => const PlayerProfileScreen(),
       transition: Transition.cupertino,
       middlewares: [AuthGuard()],
     ),

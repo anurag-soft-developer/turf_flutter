@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../components/turf/featured_section.dart';
+import '../../components/dashboard/player_teams_section.dart';
 import '../../components/dashboard/sports_section.dart';
 // import '../../components/dashboard/quick_actions_section.dart';
 
@@ -20,6 +21,11 @@ class PlayerDashboard extends StatelessWidget {
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 24.0),
             child: SportsSection(),
+          ),
+          const SizedBox(height: 24),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24.0),
+            child: PlayerTeamsSection(),
           ),
           const SizedBox(height: 32),
 

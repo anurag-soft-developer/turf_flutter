@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import 'create_turf_controller.dart';
 import '../../core/config/constants.dart';
 import '../../components/create_turf/basic_info_section.dart';
-import '../../components/create_turf/images_section.dart';
+import '../../components/shared/image_input.dart';
 import '../../components/create_turf/sport_types_section.dart';
 import '../../components/create_turf/amenities_section.dart';
 import '../../components/create_turf/dimensions_section.dart';
@@ -47,19 +47,26 @@ class CreateTurfScreen extends StatelessWidget {
           padding: const EdgeInsets.all(2),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              BasicInfoSection(),
-              SizedBox(height: 24),
-              DimensionsSection(),
-              SizedBox(height: 24),
-              SportTypesSection(),
-              SizedBox(height: 24),
-              AmenitiesSection(),
-              SizedBox(height: 24),
-              ImagesSection(),
-              SizedBox(height: 24),
-              SubmitButton(),
-              SizedBox(height: 20),
+            children: [
+              const BasicInfoSection(),
+              const SizedBox(height: 24),
+              const DimensionsSection(),
+              const SizedBox(height: 24),
+              const SportTypesSection(),
+              const SizedBox(height: 24),
+              const AmenitiesSection(),
+              const SizedBox(height: 24),
+              ImageInput(
+                imageUrls: controller.imageUrls,
+                onShowOptions: controller.showImagePickerOptions,
+                onPickCamera: controller.pickImageFromCamera,
+                onPickGallery: controller.pickImageFromGallery,
+                onRemove: controller.removeImageUrl,
+                requireAtLeastOne: true,
+              ),
+              const SizedBox(height: 24),
+              const SubmitButton(),
+              const SizedBox(height: 20),
             ],
           ),
         ),

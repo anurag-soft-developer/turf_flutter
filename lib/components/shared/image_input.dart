@@ -1,29 +1,49 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../turf/create/create_turf_controller.dart';
-import 'section_container.dart';
-import 'styled_text_field.dart';
+import '../create_turf/section_container.dart';
 
-class ImagesSection extends StatelessWidget {
-  const ImagesSection({super.key});
+class ImageInput extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final RxList<String> imageUrls;
+  final VoidCallback onShowOptions;
+  final VoidCallback onPickCamera;
+  final VoidCallback onPickGallery;
+  final void Function(String) onRemove;
+  final bool requireAtLeastOne;
+  final int? maxImages;
+
+  const ImageInput({
+    super.key,
+    this.title = 'Images',
+    this.icon = Icons.image,
+    required this.imageUrls,
+    required this.onShowOptions,
+    required this.onPickCamera,
+    required this.onPickGallery,
+    required this.onRemove,
+    this.requireAtLeastOne = false,
+    this.maxImages,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final controller = CreateTurfController.instance;
-
     return SectionContainer(
-      title: 'Images',
-      icon: Icons.image,
+      title: title,
+      icon: icon,
       children: [
         Obx(() {
+          final bool canAddMore =
+              maxImages == null || imageUrls.length < maxImages!;
           return Column(
             children: [
-              if (controller.imageUrls.isNotEmpty) ...[
-                _buildImagePreviewGrid(controller),
+              if (imageUrls.isNotEmpty) ...[
+                _buildImagePreviewGrid(),
                 const SizedBox(height: 16),
               ],
-              _buildImageAddButtons(controller),
-              if (controller.imageUrls.isEmpty) _buildImageRequiredWarning(),
+              if (canAddMore) _buildImageAddButtons(),
+              if (requireAtLeastOne && imageUrls.isEmpty)
+                _buildImageRequiredWarning(),
             ],
           );
         }),
@@ -31,13 +51,14 @@ class ImagesSection extends StatelessWidget {
     );
   }
 
-  Widget _buildImagePreviewGrid(CreateTurfController controller) {
+  Widget _buildImagePreviewGrid() {
     return SizedBox(
       height: 120,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        itemCount: controller.imageUrls.length,
+        itemCount: imageUrls.length,
         itemBuilder: (context, index) {
+          final url = imageUrls[index];
           return Container(
             width: 100,
             margin: const EdgeInsets.only(right: 8),
@@ -46,7 +67,7 @@ class ImagesSection extends StatelessWidget {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: Image.network(
-                    controller.imageUrls[index],
+                    url,
                     width: 100,
                     height: 100,
                     fit: BoxFit.cover,
@@ -55,7 +76,7 @@ class ImagesSection extends StatelessWidget {
                         width: 100,
                         height: 100,
                         color: Colors.grey[300],
-                        child: const Icon(Icons.error),
+                        child: const Icon(Icons.broken_image),
                       );
                     },
                   ),
@@ -64,8 +85,7 @@ class ImagesSection extends StatelessWidget {
                   top: 4,
                   right: 4,
                   child: GestureDetector(
-                    onTap: () =>
-                        controller.removeImageUrl(controller.imageUrls[index]),
+                    onTap: () => onRemove(url),
                     child: Container(
                       padding: const EdgeInsets.all(4),
                       decoration: const BoxDecoration(
@@ -88,16 +108,17 @@ class ImagesSection extends StatelessWidget {
     );
   }
 
-  Widget _buildImageAddButtons(CreateTurfController controller) {
+  Widget _buildImageAddButtons() {
     return Column(
       children: [
-        // Primary Add Button
         SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
-            onPressed: controller.showImagePickerOptions,
+            onPressed: onShowOptions,
             icon: const Icon(Icons.add_photo_alternate),
-            label: const Text('Add Images'),
+            label: Text(
+              maxImages == 1 ? 'Set Image' : 'Add Images',
+            ),
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(
@@ -106,15 +127,12 @@ class ImagesSection extends StatelessWidget {
             ),
           ),
         ),
-
         const SizedBox(height: 12),
-
-        // Quick Access Buttons
         Row(
           children: [
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: controller.pickImageFromCamera,
+                onPressed: onPickCamera,
                 icon: const Icon(Icons.camera_alt),
                 label: const Text('Camera'),
                 style: OutlinedButton.styleFrom(
@@ -125,7 +143,7 @@ class ImagesSection extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: controller.pickImageFromGallery,
+                onPressed: onPickGallery,
                 icon: const Icon(Icons.photo_library),
                 label: const Text('Gallery'),
                 style: OutlinedButton.styleFrom(
@@ -134,31 +152,6 @@ class ImagesSection extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildImageUrlInputLegacy(CreateTurfController controller) {
-    final textController = TextEditingController();
-
-    return Row(
-      children: [
-        Expanded(
-          child: TurfFormField(
-            controller: textController,
-            labelText: 'Image URL',
-            hintText: 'Paste image URL and press Enter',
-            suffixIcon: Icons.add_photo_alternate,
-            onFieldSubmitted: (value) {
-              debugPrint('Submitted image URL: $value');
-              if (value.trim().isNotEmpty) {
-                controller.addImageUrl(value.trim());
-                // Clear the input field after adding
-                textController.clear();
-              }
-            },
-          ),
         ),
       ],
     );

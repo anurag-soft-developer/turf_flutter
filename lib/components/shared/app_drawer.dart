@@ -43,6 +43,15 @@ class AppDrawer extends StatelessWidget {
           Get.toNamed(AppConstants.routes.myBookings);
         },
       ),
+      DrawerMenuItem(
+        title: 'My Team',
+        icon: Icons.groups,
+        iconColor: const Color(AppColors.primaryColor),
+        onTap: () {
+          Get.back();
+          Get.toNamed(AppConstants.routes.myTeam);
+        },
+      ),
     ];
   }
 
