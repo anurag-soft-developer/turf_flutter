@@ -44,6 +44,8 @@ class Routes {
   final String editTeam = '/edit-team';
   final String teamProfile = '/team-profile';
   final String teamMemberProfile = '/team-member-profile';
+  final String matchUp = '/match-up';
+  final String playerRanking = '/player-ranking';
 }
 
 class StorageKeys {

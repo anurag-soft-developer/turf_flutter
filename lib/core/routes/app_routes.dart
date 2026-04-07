@@ -25,14 +25,21 @@ import '../../bindings/turf_management_binding.dart';
 import '../../bindings/create_turf_binding.dart';
 import '../../bindings/turf_booking_binding.dart';
 import '../../bindings/team_player_bindings.dart';
+import '../../bindings/match_up_binding.dart';
+import '../../bindings/player_ranking_binding.dart';
+import '../../bindings/main_screen_wrapper_binding.dart';
 import '../../team/add/add_team_screen.dart';
 import '../../team/members/player_profile_screen.dart';
 import '../../team/details/team_detail_screen.dart';
 import '../../team/feed/teams_ranking_screen.dart';
+import '../../match_up/match_up_screen.dart';
+import '../../rankings/player_ranking_screen.dart';
+import '../components/bottom_navigation_panel/main_screen_wrapper.dart';
 import '../config/constants.dart';
 
 class AppRoutes {
   static const String splashRoute = '/';
+  static const String mainRoute = '/main';
 
   static final routes = [
     GetPage(name: splashRoute, page: () => const AuthWrapper()),
@@ -61,10 +68,31 @@ class AppRoutes {
       transition: Transition.cupertino,
     ),
     GetPage(
+      name: mainRoute,
+      page: () => const MainScreenWrapper(),
+      binding: NavigationBinding(),
+      transition: Transition.cupertino,
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
       name: AppConstants.routes.dashboard,
       page: () => const DashboardScreen(),
       transition: Transition.cupertino,
       binding: TurfListBinding(),
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppConstants.routes.matchUp,
+      page: () => const MatchUpScreen(),
+      binding: MatchUpBinding(),
+      transition: Transition.cupertino,
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppConstants.routes.playerRanking,
+      page: () => const PlayerRankingScreen(),
+      binding: PlayerRankingBinding(),
+      transition: Transition.cupertino,
       middlewares: [AuthGuard()],
     ),
     GetPage(

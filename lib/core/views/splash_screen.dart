@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../auth/auth_state_controller.dart';
 import '../config/constants.dart';
+import '../routes/app_routes.dart';
 
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
@@ -81,7 +82,7 @@ class AuthWrapper extends GetWidget<AuthStateController> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Get.offAllNamed(
           controller.isLoggedIn
-              ? AppConstants.routes.dashboard
+              ? AppRoutes.mainRoute
               : AppConstants.routes.login,
         );
       });
