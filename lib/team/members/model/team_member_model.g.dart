@@ -18,6 +18,9 @@ UpdateTeamMemberRequest _$UpdateTeamMemberRequestFromJson(
     _$LineupCategoryEnumMap,
     json['lineupCategory'],
   ),
+  jerseyNumber: (json['jerseyNumber'] as num?)?.toInt(),
+  nickname: json['nickname'] as String?,
+  isVerified: json['isVerified'] as bool?,
 );
 
 Map<String, dynamic> _$UpdateTeamMemberRequestToJson(
@@ -26,6 +29,9 @@ Map<String, dynamic> _$UpdateTeamMemberRequestToJson(
   'leadershipRole': _$LeadershipRoleEnumMap[instance.leadershipRole],
   'playingPosition': instance.playingPosition,
   'lineupCategory': _$LineupCategoryEnumMap[instance.lineupCategory],
+  'jerseyNumber': instance.jerseyNumber,
+  'nickname': instance.nickname,
+  'isVerified': instance.isVerified,
 };
 
 const _$LeadershipRoleEnumMap = {
@@ -36,6 +42,20 @@ const _$LeadershipRoleEnumMap = {
 const _$LineupCategoryEnumMap = {
   LineupCategory.starter: 'starter',
   LineupCategory.substitute: 'substitute',
+};
+
+SuspendTeamMemberRequest _$SuspendTeamMemberRequestFromJson(
+  Map<String, dynamic> json,
+) => SuspendTeamMemberRequest(
+  suspendedUntil: json['suspendedUntil'] == null
+      ? null
+      : DateTime.parse(json['suspendedUntil'] as String),
+);
+
+Map<String, dynamic> _$SuspendTeamMemberRequestToJson(
+  SuspendTeamMemberRequest instance,
+) => <String, dynamic>{
+  'suspendedUntil': ?instance.suspendedUntil?.toIso8601String(),
 };
 
 TeamMemberModel _$TeamMemberModelFromJson(Map<String, dynamic> json) =>
@@ -55,6 +75,10 @@ TeamMemberModel _$TeamMemberModelFromJson(Map<String, dynamic> json) =>
             json['lineupCategory'],
           ) ??
           LineupCategory.starter,
+      jerseyNumber: (json['jerseyNumber'] as num?)?.toInt(),
+      nickname: json['nickname'] as String?,
+      isVerified: json['isVerified'] as bool? ?? false,
+      suspendedUntil: json['suspendedUntil'] as String?,
       joinedAt: json['joinedAt'] as String?,
       leftAt: json['leftAt'] as String?,
       reviewedBy: const UserConverter().fromJson(json['reviewedBy']),
@@ -72,6 +96,10 @@ Map<String, dynamic> _$TeamMemberModelToJson(TeamMemberModel instance) =>
       'leadershipRole': _$LeadershipRoleEnumMap[instance.leadershipRole],
       'playingPosition': instance.playingPosition,
       'lineupCategory': _$LineupCategoryEnumMap[instance.lineupCategory]!,
+      'jerseyNumber': instance.jerseyNumber,
+      'nickname': instance.nickname,
+      'isVerified': instance.isVerified,
+      'suspendedUntil': instance.suspendedUntil,
       'joinedAt': instance.joinedAt,
       'leftAt': instance.leftAt,
       'reviewedBy': const UserConverter().toJson(instance.reviewedBy),
@@ -86,4 +114,5 @@ const _$TeamMemberStatusEnumMap = {
   TeamMemberStatus.resigned: 'resigned',
   TeamMemberStatus.removed: 'removed',
   TeamMemberStatus.rejected: 'rejected',
+  TeamMemberStatus.suspended: 'suspended',
 };

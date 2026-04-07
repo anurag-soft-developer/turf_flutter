@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../components/team/profile/team_hero_header.dart';
+import '../../components/team/profile/team_info_section.dart';
+import '../../components/team/profile/team_member_card.dart';
+import '../../components/team/profile/team_quick_stats_bar.dart';
+import '../../components/team/profile/team_section_header.dart';
+import '../../components/team/profile/team_social_links_row.dart';
+import '../../components/team/profile/team_sport_stats_section.dart';
 import '../../core/config/constants.dart';
 import '../members/model/team_member_model.dart';
 import '../model/team_model.dart';
-import '../utils/team_media_url.dart';
-import '../utils/team_ui.dart';
 import 'team_detail_controller.dart';
 
 class TeamDetailScreen extends StatelessWidget {
@@ -17,22 +22,12 @@ class TeamDetailScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Obx(() {
-          final name = controller.team.value?.name;
-          return Text(
-            name ?? (controller.isMyTeamMode ? 'My Team' : 'Team Profile'),
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          );
-        }),
-        backgroundColor: const Color(AppColors.primaryColor),
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
         elevation: 0,
+        foregroundColor: Colors.white,
         iconTheme: const IconThemeData(color: Colors.white),
-        // Edit only available in my-team mode, and only for owners.
         actions: [
           if (controller.isMyTeamMode)
             Obx(() {
@@ -53,80 +48,9 @@ class TeamDetailScreen extends StatelessWidget {
             }),
         ],
       ),
-      // Bottom bar: join actions for visitors (team-profile mode only).
-      // The isMyTeamMode check is OUTSIDE the Obx so the Obx always
-      // observes at least one reactive variable and GetX doesn't warn.
       bottomNavigationBar: controller.isMyTeamMode
           ? null
-          : Obx(() {
-              final t = controller.team.value;
-              if (t == null) return const SizedBox.shrink();
-
-              // Owners manage via in-body actions; no bottom bar for them.
-              if (controller.isOwner) return const SizedBox.shrink();
-
-              if (controller.isMember) {
-                return SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                    child: OutlinedButton(
-                      onPressed: null,
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 50),
-                      ),
-                      child: const Text('You are a member'),
-                    ),
-                  ),
-                );
-              }
-
-              if (controller.hasPendingRequest) {
-                return SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                    child: OutlinedButton(
-                      onPressed: null,
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 50),
-                      ),
-                      child: const Text('Join request pending…'),
-                    ),
-                  ),
-                );
-              }
-
-              return SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                  child: ElevatedButton(
-                    onPressed: controller.isJoining.value
-                        ? null
-                        : controller.sendJoinRequest,
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 50),
-                      backgroundColor: const Color(AppColors.primaryColor),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: controller.isJoining.value
-                        ? const SizedBox(
-                            height: 22,
-                            width: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text(
-                            'Send joining request',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                  ),
-                ),
-              );
-            }),
+          : _BottomJoinBar(controller: controller),
       body: Stack(
         children: [
           Obx(() {
@@ -142,7 +66,6 @@ class TeamDetailScreen extends StatelessWidget {
 
             final t = controller.team.value;
 
-            // My-Team mode: no team yet → show empty state
             if (t == null && controller.isMyTeamMode) {
               return _NoTeamBody(
                 onAddTeam: () => Get.toNamed(AppConstants.routes.addTeam),
@@ -150,7 +73,6 @@ class TeamDetailScreen extends StatelessWidget {
               );
             }
 
-            // Team-profile mode or error: no team
             if (t == null) {
               return Center(
                 child: Text(
@@ -167,122 +89,123 @@ class TeamDetailScreen extends StatelessWidget {
             return RefreshIndicator(
               onRefresh: controller.load,
               child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _TeamHeroHeader(team: t),
+                    // Hero header
+                    TeamHeroHeader(team: t),
+
+                    const SizedBox(height: 16),
+
+                    // Quick stats
+                    // if (t.matchesPlayed > 0) ...[
+                    TeamQuickStatsBar(team: t),
+                    const SizedBox(height: 24),
+                    // ] else
+                    //   const SizedBox(height: 8),
+
+                    // About & Info
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // About
-                          if (t.description != null &&
-                              t.description!.isNotEmpty) ...[
-                            const _SectionTitle(text: 'About'),
-                            const SizedBox(height: 12),
-                            _InfoCard(
-                              children: [
-                                _InfoRow(
-                                  icon: Icons.info_outline,
-                                  label: 'Description',
-                                  value: t.description!,
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 28),
-                          ],
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: const TeamSectionHeader(title: 'About'),
+                    ),
+                    const SizedBox(height: 12),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: TeamInfoSection(team: t),
+                    ),
 
-                          // Team info
-                          const _SectionTitle(text: 'Team info'),
-                          const SizedBox(height: 12),
-                          _InfoCard(
-                            children: [
-                              _InfoRow(
-                                icon: Icons.sports_soccer_outlined,
-                                label: 'Sport',
-                                value: teamSportLabel(t.sportType),
-                              ),
-                              const Divider(height: 1),
-                              _InfoRow(
-                                icon: Icons.visibility_outlined,
-                                label: 'Visibility',
-                                value: teamVisibilityLabel(t.visibility),
-                              ),
-                              const Divider(height: 1),
-                              _InfoRow(
-                                icon: Icons.how_to_reg_outlined,
-                                label: 'Joining',
-                                value: teamJoinModeLabel(t.joinMode),
-                              ),
-                              const Divider(height: 1),
-                              _InfoRow(
-                                icon: Icons.group_outlined,
-                                label: 'Roster limit',
-                                value: '${t.maxRosterSize} players',
-                              ),
-                              if (t.status != TeamStatus.active) ...[
-                                const Divider(height: 1),
-                                _InfoRow(
-                                  icon: Icons.info_outline,
-                                  label: 'Status',
-                                  value: t.status.name.toUpperCase(),
-                                  valueColor: const Color(AppColors.errorColor),
-                                ),
-                              ],
-                            ],
+                    const SizedBox(height: 28),
+
+                    // Sport-specific stats
+                    // Padding(
+                    //   padding: const EdgeInsets.symmetric(horizontal: 20),
+                    //   child: TeamSectionHeader(title: 'Stats'),
+                    // ),
+                    // const SizedBox(height: 12),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: TeamSportStatsSection(team: t),
+                    ),
+                    const SizedBox(height: 28),
+
+                    // Members
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: TeamSectionHeader(
+                        title: 'Squad',
+                        trailing: Text(
+                          '${controller.members.length} members',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Color(AppColors.textSecondaryColor),
                           ),
-
-                          const SizedBox(height: 28),
-
-                          // Members
-                          const _SectionTitle(text: 'Members'),
-                          const SizedBox(height: 12),
-                          _MembersList(members: controller.members),
-
-                          // Actions only shown in my-team mode.
-                          // Ownership/membership is checked here AND enforced
-                          // server-side through the controller guards.
-                          if (controller.isMyTeamMode)
-                            Obx(() {
-                              final isOwner = controller.isOwner;
-                              final isMember = controller.isMember;
-                              if (!isOwner && !isMember) {
-                                return const SizedBox.shrink();
-                              }
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const SizedBox(height: 28),
-                                  const _SectionTitle(text: 'Team actions'),
-                                  const SizedBox(height: 12),
-                                  _TeamActionsCard(
-                                    isOwner: isOwner,
-                                    isMember: isMember,
-                                    isActionLoading:
-                                        controller.isActionLoading.value,
-                                    teamStatus: t.status,
-                                    onToggleStatus: () => _confirmToggleStatus(
-                                      context,
-                                      controller,
-                                    ),
-                                    onLeave: () =>
-                                        _confirmLeave(context, controller),
-                                  ),
-                                ],
-                              );
-                            }),
-
-                          const SizedBox(height: 32),
-                        ],
+                        ),
                       ),
                     ),
+                    const SizedBox(height: 12),
+                    _MembersHorizontalList(members: controller.members),
+
+                    const SizedBox(height: 28),
+
+                    // Social links
+                    if (t.socialLinks.instagram != null ||
+                        t.socialLinks.twitter != null ||
+                        t.socialLinks.facebook != null ||
+                        t.socialLinks.youtube != null) ...[
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: const TeamSectionHeader(title: 'Connect'),
+                      ),
+                      const SizedBox(height: 12),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: TeamSocialLinksRow(links: t.socialLinks),
+                      ),
+                      const SizedBox(height: 28),
+                    ],
+
+                    // Team actions (my-team mode)
+                    if (controller.isMyTeamMode)
+                      Obx(() {
+                        final isOwner = controller.isOwner;
+                        final isMember = controller.isMember;
+                        if (!isOwner && !isMember) {
+                          return const SizedBox.shrink();
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const TeamSectionHeader(title: 'Team Actions'),
+                              const SizedBox(height: 12),
+                              _TeamActionsCard(
+                                isOwner: isOwner,
+                                isMember: isMember,
+                                isActionLoading:
+                                    controller.isActionLoading.value,
+                                teamStatus: t.status,
+                                onToggleStatus: () =>
+                                    _confirmToggleStatus(context, controller),
+                                onLeave: () =>
+                                    _confirmLeave(context, controller),
+                              ),
+                              const SizedBox(height: 28),
+                            ],
+                          ),
+                        );
+                      }),
+
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
             );
           }),
 
-          // Action-busy overlay (my-team mode only).
+          // Action-busy overlay
           if (controller.isMyTeamMode)
             Obx(
               () => controller.isActionLoading.value
@@ -310,6 +233,7 @@ class TeamDetailScreen extends StatelessWidget {
 
     Get.dialog<void>(
       AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(isActive ? 'Deactivate team?' : 'Activate team?'),
         content: Text(
           isActive
@@ -344,6 +268,7 @@ class TeamDetailScreen extends StatelessWidget {
     final name = c.team.value?.name ?? 'this team';
     Get.dialog<void>(
       AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Leave team?'),
         content: Text('Are you sure you want to leave "$name"?'),
         actions: [
@@ -368,286 +293,165 @@ class TeamDetailScreen extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Hero header
+// Bottom join bar (team-profile mode)
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _TeamHeroHeader extends StatefulWidget {
-  const _TeamHeroHeader({required this.team});
+class _BottomJoinBar extends StatelessWidget {
+  const _BottomJoinBar({required this.controller});
 
-  final TeamModel team;
-
-  @override
-  State<_TeamHeroHeader> createState() => _TeamHeroHeaderState();
-}
-
-class _TeamHeroHeaderState extends State<_TeamHeroHeader> {
-  final PageController _pageCtrl = PageController();
-  int _current = 0;
-
-  @override
-  void dispose() {
-    _pageCtrl.dispose();
-    super.dispose();
-  }
+  final TeamDetailController controller;
 
   @override
   Widget build(BuildContext context) {
-    final covers = widget.team.coverImages
-        .map(resolveTeamMediaUrl)
-        .whereType<String>()
-        .toList();
-    final logoUrl = resolveTeamMediaUrl(widget.team.logo);
+    return Obx(() {
+      final t = controller.team.value;
+      if (t == null) return const SizedBox.shrink();
+      if (controller.isOwner) return const SizedBox.shrink();
 
-    return Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        color: Color(AppColors.primaryColor),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(30),
-          bottomRight: Radius.circular(30),
-        ),
-      ),
-      child: Column(
-        children: [
-          // Cover carousel
-          ClipRRect(
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(30),
-              bottomRight: Radius.circular(30),
+      if (controller.isMember) {
+        return _bottomBarContainer(
+          child: OutlinedButton.icon(
+            onPressed: null,
+            icon: const Icon(Icons.check_circle, size: 20),
+            label: const Text('You are a member'),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(double.infinity, 50),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
             ),
-            child: covers.isEmpty
-                ? Container(
-                    height: 180,
-                    color: Colors.white.withValues(alpha: 0.10),
-                    child: const Center(
-                      child: Icon(
-                        Icons.image_outlined,
-                        size: 56,
-                        color: Colors.white54,
-                      ),
-                    ),
-                  )
-                : Column(
-                    children: [
-                      SizedBox(
-                        height: 180,
-                        child: PageView.builder(
-                          controller: _pageCtrl,
-                          itemCount: covers.length,
-                          onPageChanged: (i) => setState(() => _current = i),
-                          itemBuilder: (_, i) => Image.network(
-                            covers[i],
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            errorBuilder: (_, __, ___) => Container(
-                              color: Colors.white.withValues(alpha: 0.10),
-                              child: const Icon(
-                                Icons.broken_image_outlined,
-                                color: Colors.white54,
-                                size: 40,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      if (covers.length > 1) ...[
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: List.generate(
-                            covers.length,
-                            (i) => AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              margin: const EdgeInsets.symmetric(horizontal: 3),
-                              width: _current == i ? 20 : 7,
-                              height: 7,
-                              decoration: BoxDecoration(
-                                color: _current == i
-                                    ? Colors.white
-                                    : Colors.white.withValues(alpha: 0.4),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
           ),
+        );
+      }
 
-          // Logo + name + sport + status badge
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
-            child: Column(
-              children: [
-                Material(
-                  color: Colors.white,
-                  shape: const CircleBorder(),
-                  elevation: 4,
-                  shadowColor: Colors.black38,
-                  child: CircleAvatar(
-                    radius: 48,
-                    backgroundColor: const Color(
-                      AppColors.primaryColor,
-                    ).withValues(alpha: 0.12),
-                    backgroundImage: logoUrl != null
-                        ? NetworkImage(logoUrl)
-                        : null,
-                    child: logoUrl == null
-                        ? const Icon(
-                            Icons.shield_outlined,
-                            size: 44,
-                            color: Color(AppColors.primaryColor),
-                          )
-                        : null,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  widget.team.name,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
+      if (controller.hasPendingRequest) {
+        return _bottomBarContainer(
+          child: OutlinedButton.icon(
+            onPressed: null,
+            icon: const Icon(Icons.hourglass_top, size: 20),
+            label: const Text('Join request pending…'),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(double.infinity, 50),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
+        );
+      }
+
+      return _bottomBarContainer(
+        child: ElevatedButton.icon(
+          onPressed: controller.isJoining.value
+              ? null
+              : controller.sendJoinRequest,
+          icon: controller.isJoining.value
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
                     color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  teamSportLabel(widget.team.sportType),
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.90),
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: widget.team.status == TeamStatus.active
-                        ? const Color(AppColors.successColor)
-                        : const Color(AppColors.errorColor),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        widget.team.status == TeamStatus.active
-                            ? Icons.verified
-                            : Icons.block,
-                        color: Colors.white,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        widget.team.status == TeamStatus.active
-                            ? 'Active'
-                            : 'Inactive',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+                )
+              : const Icon(Icons.group_add, size: 20),
+          label: Text(
+            controller.isJoining.value ? 'Sending…' : 'Send join request',
+            style: const TextStyle(fontWeight: FontWeight.w600),
           ),
-        ],
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 50),
+            backgroundColor: const Color(AppColors.primaryColor),
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            elevation: 0,
+          ),
+        ),
+      );
+    });
+  }
+
+  Widget _bottomBarContainer({required Widget child}) {
+    return SafeArea(
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 12,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: child,
       ),
     );
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Members list
+// Members horizontal scrollable list
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _MembersList extends StatelessWidget {
-  const _MembersList({required this.members});
+class _MembersHorizontalList extends StatelessWidget {
+  const _MembersHorizontalList({required this.members});
 
   final List<TeamMemberModel> members;
 
   @override
   Widget build(BuildContext context) {
     if (members.isEmpty) {
-      return Card(
-        color: Colors.white,
-        elevation: 1,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: const Padding(
-          padding: EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-          child: Center(
-            child: Text(
-              'No active members yet.',
-              style: TextStyle(color: Color(AppColors.textSecondaryColor)),
-            ),
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 32),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 12,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Icon(
+                Icons.group_outlined,
+                size: 40,
+                color: const Color(
+                  AppColors.primaryColor,
+                ).withValues(alpha: 0.3),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'No active members yet',
+                style: TextStyle(
+                  color: Color(AppColors.textSecondaryColor),
+                  fontSize: 14,
+                ),
+              ),
+            ],
           ),
         ),
       );
     }
 
-    return Card(
-      color: Colors.white,
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Column(
-        children: [
-          for (int i = 0; i < members.length; i++) ...[
-            if (i > 0) const Divider(height: 1),
-            _MemberRow(member: members[i]),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _MemberRow extends StatelessWidget {
-  const _MemberRow({required this.member});
-
-  final TeamMemberModel member;
-
-  @override
-  Widget build(BuildContext context) {
-    final helper = member.userHelper;
-    final role = leadershipRoleLabel(member.leadershipRole);
-    final subtitle = role.isEmpty ? teamMemberStatusLabel(member.status) : role;
-
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: const Color(
-          AppColors.primaryColor,
-        ).withValues(alpha: 0.12),
-        backgroundImage:
-            helper.getAvatar() != null && helper.getAvatar()!.isNotEmpty
-            ? NetworkImage(helper.getAvatar()!)
-            : null,
-        child: helper.getAvatar() == null || helper.getAvatar()!.isEmpty
-            ? const Icon(Icons.person, color: Color(AppColors.primaryColor))
-            : null,
-      ),
-      title: Text(
-        helper.getDisplayName(),
-        style: const TextStyle(
-          color: Color(AppColors.textColor),
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: const TextStyle(color: Color(AppColors.textSecondaryColor)),
-      ),
-      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-      onTap: () => Get.toNamed(
-        AppConstants.routes.teamMemberProfile,
-        arguments: {'user': member.user},
+    return SizedBox(
+      height: 140,
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        scrollDirection: Axis.horizontal,
+        itemCount: members.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        itemBuilder: (_, i) => TeamMemberCard(member: members[i]),
       ),
     );
   }
@@ -678,19 +482,43 @@ class _TeamActionsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isActive = teamStatus == TeamStatus.active;
 
-    return Card(
-      color: Colors.white,
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Column(
         children: [
           if (isOwner) ...[
             ListTile(
-              leading: Icon(
-                isActive ? Icons.block_outlined : Icons.check_circle_outline,
-                color: isActive
-                    ? const Color(AppColors.errorColor)
-                    : const Color(AppColors.successColor),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              leading: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color:
+                      (isActive
+                              ? const Color(AppColors.errorColor)
+                              : const Color(AppColors.successColor))
+                          .withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  isActive ? Icons.block_outlined : Icons.check_circle_outline,
+                  color: isActive
+                      ? const Color(AppColors.errorColor)
+                      : const Color(AppColors.successColor),
+                  size: 20,
+                ),
               ),
               title: Text(
                 isActive ? 'Deactivate team' : 'Activate team',
@@ -707,25 +535,49 @@ class _TeamActionsCard extends StatelessWidget {
                     : 'Restore this team to active',
                 style: const TextStyle(
                   color: Color(AppColors.textSecondaryColor),
+                  fontSize: 12,
                 ),
               ),
-              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              trailing: const Icon(Icons.chevron_right, size: 20),
               onTap: isActionLoading ? null : onToggleStatus,
             ),
-            if (isMember) const Divider(height: 1),
+            if (isMember) const Divider(height: 1, indent: 16, endIndent: 16),
           ],
           if (isMember)
             ListTile(
-              leading: const Icon(Icons.exit_to_app, color: Colors.red),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              leading: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: const Color(
+                    AppColors.errorColor,
+                  ).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.exit_to_app,
+                  color: Color(AppColors.errorColor),
+                  size: 20,
+                ),
+              ),
               title: const Text(
                 'Leave team',
-                style: TextStyle(color: Colors.red),
+                style: TextStyle(
+                  color: Color(AppColors.errorColor),
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               subtitle: const Text(
                 'Remove yourself from this team',
-                style: TextStyle(color: Color(AppColors.textSecondaryColor)),
+                style: TextStyle(
+                  color: Color(AppColors.textSecondaryColor),
+                  fontSize: 12,
+                ),
               ),
-              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              trailing: const Icon(Icons.chevron_right, size: 20),
               onTap: isActionLoading ? null : onLeave,
             ),
         ],
@@ -735,99 +587,7 @@ class _TeamActionsCard extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Shared small widgets
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: const TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.bold,
-        color: Color(AppColors.textColor),
-      ),
-    );
-  }
-}
-
-class _InfoCard extends StatelessWidget {
-  const _InfoCard({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      color: Colors.white,
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(children: children),
-      ),
-    );
-  }
-}
-
-class _InfoRow extends StatelessWidget {
-  const _InfoRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-    this.valueColor,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color? valueColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 20, color: const Color(AppColors.primaryColor)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Color(AppColors.textSecondaryColor),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: valueColor ?? const Color(AppColors.textColor),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// No-team empty state (my-team mode only)
+// No-team empty state (my-team mode)
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _NoTeamBody extends StatelessWidget {
@@ -841,57 +601,75 @@ class _NoTeamBody extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        const SizedBox(height: 48),
-        Icon(
-          Icons.groups_2_outlined,
-          size: 88,
-          color: const Color(AppColors.primaryColor).withValues(alpha: 0.35),
+        const SizedBox(height: 80),
+        Container(
+          width: 100,
+          height: 100,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: const Color(AppColors.primaryColor).withValues(alpha: 0.08),
+          ),
+          child: Icon(
+            Icons.groups_2_outlined,
+            size: 52,
+            color: const Color(AppColors.primaryColor).withValues(alpha: 0.5),
+          ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 28),
         const Text(
           'No team yet',
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
             color: Color(AppColors.textColor),
+            letterSpacing: -0.5,
           ),
         ),
         const SizedBox(height: 12),
         const Text(
-          'Create your own squad or browse public teams and ask to join.',
+          'Create your own squad or browse\npublic teams and ask to join.',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 15,
             color: Color(AppColors.textSecondaryColor),
-            height: 1.4,
+            height: 1.5,
           ),
         ),
         const SizedBox(height: 36),
-        ElevatedButton(
+        ElevatedButton.icon(
           onPressed: onAddTeam,
+          icon: const Icon(Icons.add, size: 20),
+          label: const Text(
+            'Create a team',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
           style: ElevatedButton.styleFrom(
-            minimumSize: const Size(double.infinity, 50),
+            minimumSize: const Size(double.infinity, 52),
             backgroundColor: const Color(AppColors.primaryColor),
             foregroundColor: Colors.white,
+            elevation: 0,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
             ),
           ),
-          child: const Text('Add your own team'),
         ),
         const SizedBox(height: 12),
-        OutlinedButton(
+        OutlinedButton.icon(
           onPressed: onJoinTeam,
+          icon: const Icon(Icons.search, size: 20),
+          label: const Text(
+            'Browse teams',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
           style: OutlinedButton.styleFrom(
-            minimumSize: const Size(double.infinity, 50),
+            minimumSize: const Size(double.infinity, 52),
             foregroundColor: const Color(AppColors.primaryColor),
             side: const BorderSide(color: Color(AppColors.primaryColor)),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
             ),
           ),
-          child: const Text('Join a team'),
         ),
       ],
     );

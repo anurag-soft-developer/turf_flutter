@@ -19,6 +19,7 @@ enum TeamMemberStatus {
   resigned,
   removed,
   rejected,
+  suspended,
 }
 
 /// Backend [LeadershipRole].
@@ -93,22 +94,46 @@ class LeaveTeamResponse {
   }
 }
 
+/// Body for `PATCH /teams/:teamId/members/:membershipId` ([UpdateTeamMemberDto]).
 @JsonSerializable(explicitToJson: true)
 class UpdateTeamMemberRequest {
   final LeadershipRole? leadershipRole;
   final String? playingPosition;
   final LineupCategory? lineupCategory;
+  @JsonKey(name: 'jerseyNumber')
+  final int? jerseyNumber;
+  final String? nickname;
+  @JsonKey(name: 'isVerified')
+  final bool? isVerified;
 
   UpdateTeamMemberRequest({
     this.leadershipRole,
     this.playingPosition,
     this.lineupCategory,
+    this.jerseyNumber,
+    this.nickname,
+    this.isVerified,
   });
 
   factory UpdateTeamMemberRequest.fromJson(Map<String, dynamic> json) =>
       _$UpdateTeamMemberRequestFromJson(json);
 
   Map<String, dynamic> toJson() => _$UpdateTeamMemberRequestToJson(this);
+}
+
+/// Body for `POST /teams/:teamId/members/:membershipId/suspend` ([SuspendTeamMemberDto]).
+/// Omit [suspendedUntil] (or use empty [toJson()]) for an indefinite suspension.
+@JsonSerializable(includeIfNull: false)
+class SuspendTeamMemberRequest {
+  @JsonKey(name: 'suspendedUntil')
+  final DateTime? suspendedUntil;
+
+  const SuspendTeamMemberRequest({this.suspendedUntil});
+
+  factory SuspendTeamMemberRequest.fromJson(Map<String, dynamic> json) =>
+      _$SuspendTeamMemberRequestFromJson(json);
+
+  Map<String, dynamic> toJson() => _$SuspendTeamMemberRequestToJson(this);
 }
 
 @JsonSerializable(explicitToJson: true)
@@ -133,6 +158,17 @@ class TeamMemberModel {
 
   @JsonKey(name: 'lineupCategory', defaultValue: LineupCategory.starter)
   final LineupCategory lineupCategory;
+
+  @JsonKey(name: 'jerseyNumber')
+  final int? jerseyNumber;
+
+  final String? nickname;
+
+  @JsonKey(name: 'isVerified', defaultValue: false)
+  final bool isVerified;
+
+  @JsonKey(name: 'suspendedUntil')
+  final String? suspendedUntil;
 
   @JsonKey(name: 'joinedAt')
   final String? joinedAt;
@@ -161,6 +197,10 @@ class TeamMemberModel {
     this.leadershipRole,
     this.playingPosition,
     this.lineupCategory = LineupCategory.starter,
+    this.jerseyNumber,
+    this.nickname,
+    this.isVerified = false,
+    this.suspendedUntil,
     this.joinedAt,
     this.leftAt,
     this.reviewedBy,

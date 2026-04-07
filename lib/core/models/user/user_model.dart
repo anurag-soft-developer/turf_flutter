@@ -1,8 +1,12 @@
 import 'package:json_annotation/json_annotation.dart';
 
+import 'player_stats_models.dart';
+
+export 'player_stats_models.dart';
+
 part 'user_model.g.dart';
 
-@JsonSerializable()
+@JsonSerializable(explicitToJson: true)
 class UserModel {
   @JsonKey(name: '_id')
   final String? id;
@@ -25,6 +29,10 @@ class UserModel {
   final String? createdAt;
   @JsonKey(name: 'updatedAt')
   final String? updatedAt;
+  @JsonKey(name: 'playerSportStats', defaultValue: [])
+  final List<PlayerSportEntry> playerSportStats;
+  @JsonKey(name: 'badges', defaultValue: [])
+  final List<EarnedBadge> badges;
 
   UserModel({
     this.id,
@@ -40,6 +48,8 @@ class UserModel {
     this.lastLogin,
     this.createdAt,
     this.updatedAt,
+    this.playerSportStats = const [],
+    this.badges = const [],
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) =>
@@ -61,6 +71,8 @@ class UserModel {
     String? lastLogin,
     String? createdAt,
     String? updatedAt,
+    List<PlayerSportEntry>? playerSportStats,
+    List<EarnedBadge>? badges,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -76,6 +88,8 @@ class UserModel {
       lastLogin: lastLogin ?? this.lastLogin,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      playerSportStats: playerSportStats ?? this.playerSportStats,
+      badges: badges ?? this.badges,
     );
   }
 

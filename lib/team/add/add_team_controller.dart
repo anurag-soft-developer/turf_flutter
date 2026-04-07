@@ -15,21 +15,41 @@ import '../details/team_detail_controller.dart';
 class AddTeamController extends GetxController {
   final TeamService _teamService = TeamService();
 
+  // ── Text controllers ─────────────────────────────────────────────────────
+
   final nameController = TextEditingController();
+  final shortNameController = TextEditingController();
+  final taglineController = TextEditingController();
   final descriptionController = TextEditingController();
-  final maxRosterController = TextEditingController(text: '20');
+  final foundedYearController = TextEditingController();
   final maxPendingController = TextEditingController(text: '10');
+
+  final instagramController = TextEditingController();
+  final twitterController = TextEditingController();
+  final facebookController = TextEditingController();
+  final youtubeController = TextEditingController();
+
+  final tagInputController = TextEditingController();
+  final noticeInputController = TextEditingController();
+
+  // ── Reactive state ───────────────────────────────────────────────────────
 
   final Rx<TeamSportType> sportType = TeamSportType.football.obs;
   final Rx<TeamVisibility> visibility = TeamVisibility.public.obs;
   final Rx<TeamJoinMode> joinMode = TeamJoinMode.approval.obs;
+  final Rxn<TeamGenderCategory> genderCategory = Rxn<TeamGenderCategory>();
+  final Rxn<TeamPreferredTimeSlot> preferredTimeSlot =
+      Rxn<TeamPreferredTimeSlot>();
+
+  final RxSet<TeamDayOfWeek> preferredPlayDays = <TeamDayOfWeek>{}.obs;
+  final RxBool lookingForMembers = false.obs;
+  final RxList<String> tags = <String>[].obs;
+  final RxList<String> pinnedNotices = <String>[].obs;
+
   final RxBool isSubmitting = false.obs;
   final RxBool isLoadingImage = false.obs;
 
-  /// Reactive list for logo image (max 1).
   final RxList<String> logoImages = <String>[].obs;
-
-  /// Reactive list for cover images.
   final RxList<String> coverImages = <String>[].obs;
 
   final GlobalKey<FormState> formKey = GlobalKey<FormState>();
@@ -37,6 +57,8 @@ class AddTeamController extends GetxController {
   String? _editingTeamId;
 
   bool get isEditing => _editingTeamId != null;
+
+  // ── Lifecycle ────────────────────────────────────────────────────────────
 
   @override
   void onInit() {
@@ -53,12 +75,34 @@ class AddTeamController extends GetxController {
 
   void _applyExistingTeam(TeamModel t) {
     nameController.text = t.name;
+    shortNameController.text = t.shortName ?? '';
+    taglineController.text = t.tagline ?? '';
     descriptionController.text = t.description ?? '';
-    sportType.value = t.sportType;
-    maxRosterController.text = '${t.maxRosterSize}';
+    if (t.foundedYear != null) {
+      foundedYearController.text = t.foundedYear.toString();
+    }
     maxPendingController.text = '${t.maxPendingJoinRequests}';
+
+    sportType.value = t.sportType;
     visibility.value = t.visibility;
     joinMode.value = t.joinMode;
+    genderCategory.value = t.genderCategory;
+    preferredTimeSlot.value = t.preferredTimeSlot;
+    lookingForMembers.value = t.lookingForMembers;
+
+    for (final dayStr in t.preferredPlayDays) {
+      final match = TeamDayOfWeek.values.where((d) => d.name == dayStr);
+      if (match.isNotEmpty) preferredPlayDays.add(match.first);
+    }
+
+    instagramController.text = t.socialLinks.instagram ?? '';
+    twitterController.text = t.socialLinks.twitter ?? '';
+    facebookController.text = t.socialLinks.facebook ?? '';
+    youtubeController.text = t.socialLinks.youtube ?? '';
+
+    tags.assignAll(t.tags);
+    pinnedNotices.assignAll(t.pinnedNotices);
+
     if (t.logo.isNotEmpty) logoImages.add(t.logo);
     coverImages.addAll(t.coverImages);
   }
@@ -66,13 +110,59 @@ class AddTeamController extends GetxController {
   @override
   void onClose() {
     nameController.dispose();
+    shortNameController.dispose();
+    taglineController.dispose();
     descriptionController.dispose();
-    maxRosterController.dispose();
+    foundedYearController.dispose();
     maxPendingController.dispose();
+    instagramController.dispose();
+    twitterController.dispose();
+    facebookController.dispose();
+    youtubeController.dispose();
+    tagInputController.dispose();
+    noticeInputController.dispose();
     super.onClose();
   }
 
-  // ── Logo image helpers ──────────────────────────────────────────────────────
+  // ── Tag helpers ──────────────────────────────────────────────────────────
+
+  void addTag() {
+    final raw = tagInputController.text.trim();
+    if (raw.isNotEmpty && !tags.contains(raw)) {
+      tags.add(raw);
+      tagInputController.clear();
+    }
+  }
+
+  void removeTag(String tag) => tags.remove(tag);
+
+  // ── Notice helpers ───────────────────────────────────────────────────────
+
+  void addNotice() {
+    final raw = noticeInputController.text.trim();
+    if (raw.isNotEmpty) {
+      pinnedNotices.add(raw);
+      noticeInputController.clear();
+    }
+  }
+
+  void removeNotice(int index) {
+    if (index >= 0 && index < pinnedNotices.length) {
+      pinnedNotices.removeAt(index);
+    }
+  }
+
+  // ── Day toggle ───────────────────────────────────────────────────────────
+
+  void toggleDay(TeamDayOfWeek day) {
+    if (preferredPlayDays.contains(day)) {
+      preferredPlayDays.remove(day);
+    } else {
+      preferredPlayDays.add(day);
+    }
+  }
+
+  // ── Logo image helpers ───────────────────────────────────────────────────
 
   void addLogoUrl(String url) {
     if (url.isNotEmpty) {
@@ -92,7 +182,7 @@ class AddTeamController extends GetxController {
 
   void showLogoPickerOptions() => _showPickerSheet(isLogo: true);
 
-  // ── Cover image helpers ─────────────────────────────────────────────────────
+  // ── Cover image helpers ──────────────────────────────────────────────────
 
   void addCoverUrl(String url) {
     if (url.isNotEmpty && !coverImages.contains(url)) {
@@ -110,7 +200,7 @@ class AddTeamController extends GetxController {
 
   void showCoverPickerOptions() => _showPickerSheet(isLogo: false);
 
-  // ── Shared image-picking internals ──────────────────────────────────────────
+  // ── Shared image-picking internals ───────────────────────────────────────
 
   Future<void> _pickImage(ImageSource source, {required bool isLogo}) async {
     try {
@@ -246,24 +336,44 @@ class AddTeamController extends GetxController {
     );
   }
 
-  // ── Submit ──────────────────────────────────────────────────────────────────
+  // ── Collected DTO helpers ────────────────────────────────────────────────
+
+  TeamSocialLinks? _collectSocialLinks() {
+    final ig = instagramController.text.trim();
+    final tw = twitterController.text.trim();
+    final fb = facebookController.text.trim();
+    final yt = youtubeController.text.trim();
+    if (ig.isEmpty && tw.isEmpty && fb.isEmpty && yt.isEmpty) return null;
+    return TeamSocialLinks(
+      instagram: ig.isEmpty ? null : ig,
+      twitter: tw.isEmpty ? null : tw,
+      facebook: fb.isEmpty ? null : fb,
+      youtube: yt.isEmpty ? null : yt,
+    );
+  }
+
+  int? _collectFoundedYear() {
+    final raw = foundedYearController.text.trim();
+    if (raw.isEmpty) return null;
+    return int.tryParse(raw);
+  }
+
+  List<TeamDayOfWeek>? _collectPlayDays() {
+    if (preferredPlayDays.isEmpty) return null;
+    return preferredPlayDays.toList()
+      ..sort((a, b) => a.index.compareTo(b.index));
+  }
+
+  // ── Submit ───────────────────────────────────────────────────────────────
 
   Future<void> submit() async {
     if (!(formKey.currentState?.validate() ?? false)) return;
 
-    final maxRoster = int.tryParse(maxRosterController.text.trim());
     final maxPending = int.tryParse(maxPendingController.text.trim());
-    if (maxRoster == null || maxRoster < 1) {
-      AppSnackbar.error(
-        title: 'Invalid roster size',
-        message: 'Enter a positive number.',
-      );
-      return;
-    }
-    if (maxPending == null || maxPending < 0) {
+    if (maxPending == null || maxPending < 0 || maxPending > 1000) {
       AppSnackbar.error(
         title: 'Invalid pending requests',
-        message: 'Enter zero or a positive number.',
+        message: 'Enter a number from 0 to 1000.',
       );
       return;
     }
@@ -280,6 +390,14 @@ class AddTeamController extends GetxController {
 
     final logo = logoImages.isNotEmpty ? logoImages.first : null;
     final covers = coverImages.isNotEmpty ? coverImages.toList() : null;
+    final shortName = shortNameController.text.trim();
+    final tagline = taglineController.text.trim();
+    final description = descriptionController.text.trim();
+    final social = _collectSocialLinks();
+    final founded = _collectFoundedYear();
+    final playDays = _collectPlayDays();
+    final tagsVal = tags.isNotEmpty ? tags.toList() : null;
+    final notices = pinnedNotices.isNotEmpty ? pinnedNotices.toList() : null;
 
     isSubmitting.value = true;
     try {
@@ -288,14 +406,20 @@ class AddTeamController extends GetxController {
           _editingTeamId!,
           UpdateTeamRequest(
             name: nameController.text.trim(),
-            description: descriptionController.text.trim().isEmpty
-                ? null
-                : descriptionController.text.trim(),
-            sportType: sportType.value,
-            maxRosterSize: maxRoster,
+            shortName: shortName.isEmpty ? null : shortName,
+            description: description.isEmpty ? null : description,
+            tagline: tagline.isEmpty ? null : tagline,
+            socialLinks: social,
+            foundedYear: founded,
+            genderCategory: genderCategory.value,
             maxPendingJoinRequests: maxPending,
             logo: logo,
             coverImages: covers,
+            tags: tagsVal,
+            preferredPlayDays: playDays,
+            preferredTimeSlot: preferredTimeSlot.value,
+            lookingForMembers: lookingForMembers.value,
+            pinnedNotices: notices,
             visibility: visibility.value,
             joinMode: joinMode.value,
           ),
@@ -316,14 +440,21 @@ class AddTeamController extends GetxController {
         final created = await _teamService.create(
           CreateTeamRequest(
             name: nameController.text.trim(),
-            description: descriptionController.text.trim().isEmpty
-                ? null
-                : descriptionController.text.trim(),
-            sportType: sportType.value,
-            maxRosterSize: maxRoster,
+            shortName: shortName.isEmpty ? null : shortName,
+            description: description.isEmpty ? null : description,
+            tagline: tagline.isEmpty ? null : tagline,
+            socialLinks: social,
+            foundedYear: founded,
+            genderCategory: genderCategory.value,
             maxPendingJoinRequests: maxPending,
             logo: logo,
             coverImages: covers,
+            tags: tagsVal,
+            preferredPlayDays: playDays,
+            preferredTimeSlot: preferredTimeSlot.value,
+            lookingForMembers: lookingForMembers.value,
+            pinnedNotices: notices,
+            sportType: sportType.value,
             visibility: visibility.value,
             joinMode: joinMode.value,
           ),

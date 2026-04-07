@@ -48,6 +48,32 @@ class TeamMemberService {
     return TeamMemberModel.fromJson(response);
   }
 
+  /// Owner-only. [request] without [SuspendTeamMemberRequest.suspendedUntil] suspends indefinitely.
+  Future<TeamMemberModel?> suspendMember(
+    String teamId,
+    String membershipId, {
+    SuspendTeamMemberRequest request = const SuspendTeamMemberRequest(),
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiConstants.teamMember.suspend(teamId, membershipId),
+      data: request.toJson(),
+    );
+    if (response == null) return null;
+    return TeamMemberModel.fromJson(response);
+  }
+
+  /// Owner-only. Restores a suspended member to [TeamMemberStatus.active].
+  Future<TeamMemberModel?> unsuspendMember(
+    String teamId,
+    String membershipId,
+  ) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiConstants.teamMember.unsuspend(teamId, membershipId),
+    );
+    if (response == null) return null;
+    return TeamMemberModel.fromJson(response);
+  }
+
   Future<TeamMemberModel?> acceptRequest(
     String teamId,
     String membershipId,

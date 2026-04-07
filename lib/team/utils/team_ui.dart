@@ -40,6 +40,8 @@ String teamMemberStatusLabel(TeamMemberStatus s) {
       return 'Removed';
     case TeamMemberStatus.rejected:
       return 'Rejected';
+    case TeamMemberStatus.suspended:
+      return 'Suspended';
   }
 }
 

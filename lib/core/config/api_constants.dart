@@ -102,6 +102,12 @@ class TeamMemberEndpoints {
   String reject(String teamId, String membershipId) =>
       '/teams/$teamId/members/$membershipId/reject';
 
+  String suspend(String teamId, String membershipId) =>
+      '/teams/$teamId/members/$membershipId/suspend';
+
+  String unsuspend(String teamId, String membershipId) =>
+      '/teams/$teamId/members/$membershipId/unsuspend';
+
   String removeUser(String teamId, String targetUserId) =>
       '/teams/$teamId/members/users/$targetUserId';
 }
