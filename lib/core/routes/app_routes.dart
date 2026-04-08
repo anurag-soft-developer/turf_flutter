@@ -16,6 +16,8 @@ import '../views/splash_screen.dart';
 import '../views/access_denied_screen.dart';
 import '../binding/auth_binding.dart';
 import '../../bindings/profile_binding.dart';
+import '../../bindings/edit_profile_binding.dart';
+import '../../profile/edit_profile_screen.dart';
 import '../../bindings/turf_list_binding.dart';
 import '../../bindings/turf_detail_binding.dart';
 import '../../bindings/manage_turf_binding.dart';
@@ -29,6 +31,7 @@ import '../../bindings/match_up_binding.dart';
 import '../../bindings/player_ranking_binding.dart';
 import '../../bindings/main_screen_wrapper_binding.dart';
 import '../../team/add/add_team_screen.dart';
+import '../../team/my_teams/my_teams_screen.dart';
 import '../../team/members/player_profile_screen.dart';
 import '../../team/details/team_detail_screen.dart';
 import '../../team/feed/teams_ranking_screen.dart';
@@ -103,6 +106,13 @@ class AppRoutes {
       middlewares: [AuthGuard()],
     ),
     GetPage(
+      name: AppConstants.routes.editProfile,
+      page: () => const EditProfileScreen(),
+      binding: EditProfileBinding(),
+      transition: Transition.cupertino,
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
       name: AppConstants.routes.settings,
       page: () => const SettingsScreen(),
       transition: Transition.cupertino,
@@ -161,6 +171,13 @@ class AppRoutes {
       name: AppConstants.routes.myBookings,
       page: () => const BookingsScreen(),
       binding: TurfBookingBinding(),
+      transition: Transition.cupertino,
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppConstants.routes.myTeams,
+      page: () => const MyTeamsScreen(),
+      binding: MyTeamsBinding(),
       transition: Transition.cupertino,
       middlewares: [AuthGuard()],
     ),

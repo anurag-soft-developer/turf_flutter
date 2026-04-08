@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/components/shared/app_drawer.dart';
 import 'package:get/get.dart';
 import 'turf_list_controller.dart';
 import '../../components/shared/loading_overlay.dart';
@@ -15,6 +16,7 @@ class TurfListScreen extends StatelessWidget {
     final TurfListController controller = Get.find();
 
     return Scaffold(
+      drawer: const AppDrawer(),
       backgroundColor: const Color(AppColors.backgroundColor),
       appBar: AppBar(
         title: const Text(

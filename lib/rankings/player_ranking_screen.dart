@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/components/shared/app_drawer.dart';
 
 class PlayerRankingScreen extends StatelessWidget {
   const PlayerRankingScreen({super.key});
@@ -6,9 +7,10 @@ class PlayerRankingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: const AppDrawer(),
       appBar: AppBar(
         title: const Text('Player Rankings'),
-        automaticallyImplyLeading: false,
+        automaticallyImplyLeading: true,
       ),
       body: const Center(
         child: Column(

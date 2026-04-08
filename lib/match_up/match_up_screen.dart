@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/components/shared/app_drawer.dart';
 
 class MatchUpScreen extends StatelessWidget {
   const MatchUpScreen({super.key});
@@ -6,9 +7,10 @@ class MatchUpScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: const AppDrawer(),
       appBar: AppBar(
         title: const Text('Match Up'),
-        automaticallyImplyLeading: false,
+        automaticallyImplyLeading: true,
       ),
       body: const Center(
         child: Column(

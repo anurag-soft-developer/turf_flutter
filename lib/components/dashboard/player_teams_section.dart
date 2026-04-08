@@ -26,10 +26,10 @@ class PlayerTeamsSection extends StatelessWidget {
             children: [
               ListTile(
                 leading: const Icon(Icons.groups, color: Color(AppColors.primaryColor)),
-                title: const Text('My team'),
-                subtitle: const Text('Your roster, or create / join'),
+                title: const Text('My Teams'),
+                subtitle: const Text('View your teams, or create / join'),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () => Get.toNamed(AppConstants.routes.myTeam),
+                onTap: () => Get.toNamed(AppConstants.routes.myTeams),
               ),
               const Divider(height: 1),
               ListTile(

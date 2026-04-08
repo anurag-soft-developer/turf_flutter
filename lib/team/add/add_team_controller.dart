@@ -429,7 +429,7 @@ class AddTeamController extends GetxController {
           if (Get.isRegistered<TeamDetailController>()) {
             await Get.find<TeamDetailController>().load();
           }
-          Get.offNamed(AppConstants.routes.myTeam);
+          Get.offNamed(AppConstants.routes.myTeams);
         } else {
           AppSnackbar.error(
             title: 'Update failed',
@@ -467,7 +467,7 @@ class AddTeamController extends GetxController {
           if (Get.isRegistered<TeamDetailController>()) {
             await Get.find<TeamDetailController>().load();
           }
-          Get.offNamed(AppConstants.routes.myTeam);
+          Get.offNamed(AppConstants.routes.myTeams);
         } else {
           AppSnackbar.error(
             title: 'Could not create team',

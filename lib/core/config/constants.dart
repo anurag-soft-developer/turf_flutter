@@ -38,12 +38,14 @@ class Routes {
   final String myBookings = '/my-bookings';
   final String turfReviews = '/turf-reviews';
   // final String turfBookings = '/turf-bookings';
+  final String myTeams = '/my-teams';
   final String myTeam = '/my-team';
   final String teamsRanking = '/teams-ranking';
   final String addTeam = '/add-team';
   final String editTeam = '/edit-team';
   final String teamProfile = '/team-profile';
   final String teamMemberProfile = '/team-member-profile';
+  final String editProfile = '/edit-profile';
   final String matchUp = '/match-up';
   final String playerRanking = '/player-ranking';
 }

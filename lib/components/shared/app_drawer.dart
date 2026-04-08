@@ -44,12 +44,12 @@ class AppDrawer extends StatelessWidget {
         },
       ),
       DrawerMenuItem(
-        title: 'My Team',
+        title: 'My Teams',
         icon: Icons.groups,
         iconColor: const Color(AppColors.primaryColor),
         onTap: () {
           Get.back();
-          Get.toNamed(AppConstants.routes.myTeam);
+          Get.toNamed(AppConstants.routes.myTeams);
         },
       ),
     ];

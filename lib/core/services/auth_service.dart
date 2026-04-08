@@ -68,7 +68,7 @@ class AuthService {
     return authResponse.user;
   }
 
-  Future<UserModel?> signInWithEmailAndPassword({
+  Future<LoginResult?> signInWithEmailAndPassword({
     required String email,
     required String password,
   }) async {
@@ -83,10 +83,31 @@ class AuthService {
       return null;
     }
 
+    final requiresOtp = response['requiresOtp'] == true;
+    if (requiresOtp) {
+      return LoginResult.challenge(
+        LoginOtpChallengeResponse.fromJson(response),
+      );
+    }
+
     final authResponse = AuthResponse.fromJson(response);
-
     await _storeAuthData(authResponse);
+    ExceptionHandler.showSuccessToast(AppConstants.successMessages.login);
+    return LoginResult.authenticated(authResponse.user);
+  }
 
+  Future<UserModel?> verifyLoginOtp({
+    required String email,
+    required String otp,
+  }) async {
+    final request = VerifyLoginOtpRequest(email: email, otp: otp);
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiConstants.auth.verifyLoginOtp,
+      data: request.toJson(),
+    );
+    if (response == null) return null;
+    final authResponse = AuthResponse.fromJson(response);
+    await _storeAuthData(authResponse);
     ExceptionHandler.showSuccessToast(AppConstants.successMessages.login);
     return authResponse.user;
   }
@@ -191,12 +212,41 @@ class AuthService {
     required String newPassword,
   }) async {
     await _apiService.patch(
-      ApiConstants.user.changePassword,
+      ApiConstants.auth.changePassword,
       data: {'current_password': currentPassword, 'new_password': newPassword},
     );
 
     ExceptionHandler.showSuccessToast('Password changed successfully');
     return true;
+  }
+
+  Future<bool> sendChangePasswordOtp() async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiConstants.auth.sendChangePasswordOtp,
+    );
+    return response != null;
+  }
+
+  Future<bool> sendTwoFactorOtp() async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiConstants.auth.sendTwoFactorOtp,
+    );
+    return response != null;
+  }
+
+  Future<UserModel?> updateTwoFactor({
+    required bool enabled,
+    required String otp,
+  }) async {
+    final request = UpdateTwoFactorRequest(enabled: enabled, otp: otp);
+    final response = await _apiService.patch<Map<String, dynamic>>(
+      ApiConstants.auth.updateTwoFactor,
+      data: request.toJson(),
+    );
+    if (response == null) return null;
+    final updatedUser = UserModel.fromJson(response);
+    await _saveUserToPreferences(updatedUser);
+    return updatedUser;
   }
 
   Future<UserModel?> getCurrentUserProfile() async {

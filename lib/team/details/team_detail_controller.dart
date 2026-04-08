@@ -46,7 +46,13 @@ class TeamDetailController extends GetxController {
   void onInit() {
     super.onInit();
     if (isMyTeamMode) {
-      _loadFromMyMembership();
+      final args = Get.arguments;
+      if (args is Map<String, dynamic> && args['teamId'] is String) {
+        _teamId = args['teamId'] as String;
+        load();
+      } else {
+        _loadFromMyMembership();
+      }
     } else {
       final args = Get.arguments;
       if (args is Map<String, dynamic>) {

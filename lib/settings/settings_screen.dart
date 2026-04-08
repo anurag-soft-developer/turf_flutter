@@ -115,6 +115,61 @@ class SettingsScreen extends StatelessWidget {
         ],
       ),
       SettingSection(
+        title: 'Account Information',
+        items: [
+          SettingItem(
+            title: 'User ID',
+            subtitle: authController.user?.id?.substring(0, 8) ?? 'N/A',
+            icon: Icons.badge_outlined,
+            onTap: () {},
+          ),
+          SettingItem(
+            title: 'Account Created',
+            subtitle: authController.user?.createdAtDate != null
+                ? '${authController.user!.createdAtDate!.day}/${authController.user!.createdAtDate!.month}/${authController.user!.createdAtDate!.year}'
+                : 'Unknown',
+            icon: Icons.calendar_today_outlined,
+            onTap: () {},
+          ),
+          SettingItem(
+            title: 'Last Sign In',
+            subtitle: authController.user?.lastLoginDate != null
+                ? '${authController.user!.lastLoginDate!.day}/${authController.user!.lastLoginDate!.month}/${authController.user!.lastLoginDate!.year}'
+                : 'Unknown',
+            icon: Icons.access_time,
+            onTap: () {},
+          ),
+        ],
+      ),
+      SettingSection(
+        title: 'Account Actions',
+        items: [
+          // SettingItem(
+          //   title: 'Change Password',
+          //   subtitle: 'Update your password',
+          //   icon: Icons.lock_outline,
+          //   onTap: () {
+          //     AppSnackbar.comingSoon(feature: 'Password change');
+          //   },
+          // ),
+          SettingItem(
+            title: 'Download Data',
+            subtitle: 'Export your account data',
+            icon: Icons.download,
+            onTap: () {
+              AppSnackbar.comingSoon(feature: 'Data download');
+            },
+          ),
+          SettingItem(
+            title: 'Sign Out',
+            subtitle: 'Sign out from your account',
+            icon: Icons.logout,
+            onTap: () => _showSignOutDialog(context, authController),
+            isRed: true,
+          ),
+        ],
+      ),
+      SettingSection(
         title: 'Advanced',
         items: [
           SettingItem(
@@ -124,10 +179,10 @@ class SettingsScreen extends StatelessWidget {
             onTap: () => _showClearCacheDialog(context, settingsController),
           ),
           SettingItem(
-            title: 'Sign Out',
-            subtitle: 'Sign out from your account',
-            icon: Icons.logout,
-            onTap: () => _showSignOutDialog(context, authController),
+            title: 'Delete Account',
+            subtitle: 'Permanently delete your account',
+            icon: Icons.delete_outline,
+            onTap: () => _showDeleteAccountDialog(context),
             isRed: true,
           ),
         ],
@@ -395,6 +450,30 @@ class SettingsScreen extends StatelessWidget {
               settingsController.clearCache();
             },
             child: const Text('Clear Cache'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteAccountDialog(BuildContext context) {
+    Get.dialog(
+      AlertDialog(
+        title: const Text(
+          'Delete Account',
+          style: TextStyle(color: Colors.red),
+        ),
+        content: const Text(
+          'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently lost.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              Get.back();
+              AppSnackbar.comingSoon(feature: 'Account deletion');
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),

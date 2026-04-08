@@ -86,12 +86,13 @@ class _AppBottomNavigationPanelState extends State<AppBottomNavigationPanel>
   void _onDragEnd(DragEndDetails details) {
     final velocity = details.primaryVelocity ?? 0;
     int target;
-
-    if (velocity.abs() > 300) {
-      // Fling: go to next/previous
+    if (velocity.abs() > 400) {
+      // TWEAK 1: fling threshold (lower = easier to trigger)
+      final jump = (velocity.abs() / 1800)
+          .ceil(); // TWEAK 2: divisor (lower = jumps more items per swipe)
       target = velocity < 0
-          ? _position.ceil().clamp(0, _items.length - 1)
-          : _position.floor().clamp(0, _items.length - 1);
+          ? (_position + jump).round().clamp(0, _items.length - 1)
+          : (_position - jump).round().clamp(0, _items.length - 1);
     } else {
       // Snap to nearest
       target = _position.round().clamp(0, _items.length - 1);

@@ -18,11 +18,9 @@ class ProfileController extends GetxController {
 
   // Observable variables
   final RxBool _isLoading = false.obs;
-  final RxBool _isEditing = false.obs;
 
   // Getters
   bool get isLoading => _isLoading.value;
-  bool get isEditing => _isEditing.value;
 
   @override
   void onInit() {
@@ -49,13 +47,6 @@ class ProfileController extends GetxController {
     }
   }
 
-  void toggleEdit() {
-    _isEditing.value = !_isEditing.value;
-    if (!_isEditing.value) {
-      _loadUserData(); // Reset to original values if cancelling edit
-    }
-  }
-
   Future<void> updateProfile() async {
     if (!profileFormKey.currentState!.validate()) return;
 
@@ -69,7 +60,6 @@ class ProfileController extends GetxController {
           : null,
     );
 
-    _isEditing.value = false;
     _isLoading.value = false;
   }
 

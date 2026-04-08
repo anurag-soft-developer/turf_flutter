@@ -33,6 +33,12 @@ class UserModel {
   final List<PlayerSportEntry> playerSportStats;
   @JsonKey(name: 'badges', defaultValue: [])
   final List<EarnedBadge> badges;
+  @JsonKey(name: 'twoFactorEnabled')
+  final bool? twoFactorEnabled;
+  @JsonKey(name: 'emailNotificationsEnabled')
+  final bool? emailNotificationsEnabled;
+  @JsonKey(name: 'smsNotificationsEnabled')
+  final bool? smsNotificationsEnabled;
 
   UserModel({
     this.id,
@@ -50,6 +56,9 @@ class UserModel {
     this.updatedAt,
     this.playerSportStats = const [],
     this.badges = const [],
+    this.twoFactorEnabled,
+    this.emailNotificationsEnabled,
+    this.smsNotificationsEnabled,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) =>
@@ -73,6 +82,9 @@ class UserModel {
     String? updatedAt,
     List<PlayerSportEntry>? playerSportStats,
     List<EarnedBadge>? badges,
+    bool? twoFactorEnabled,
+    bool? emailNotificationsEnabled,
+    bool? smsNotificationsEnabled,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -90,6 +102,11 @@ class UserModel {
       updatedAt: updatedAt ?? this.updatedAt,
       playerSportStats: playerSportStats ?? this.playerSportStats,
       badges: badges ?? this.badges,
+      twoFactorEnabled: twoFactorEnabled ?? this.twoFactorEnabled,
+      emailNotificationsEnabled:
+          emailNotificationsEnabled ?? this.emailNotificationsEnabled,
+      smsNotificationsEnabled:
+          smsNotificationsEnabled ?? this.smsNotificationsEnabled,
     );
   }
 
@@ -153,6 +170,40 @@ class AuthResponse {
 }
 
 @JsonSerializable()
+class LoginOtpChallengeResponse {
+  final String message;
+  @JsonKey(name: 'requiresOtp')
+  final bool requiresOtp;
+  final String email;
+
+  LoginOtpChallengeResponse({
+    required this.message,
+    required this.requiresOtp,
+    required this.email,
+  });
+
+  factory LoginOtpChallengeResponse.fromJson(Map<String, dynamic> json) =>
+      _$LoginOtpChallengeResponseFromJson(json);
+
+  Map<String, dynamic> toJson() => _$LoginOtpChallengeResponseToJson(this);
+}
+
+class LoginResult {
+  final UserModel? user;
+  final LoginOtpChallengeResponse? otpChallenge;
+
+  const LoginResult._({this.user, this.otpChallenge});
+
+  bool get requiresOtp => otpChallenge?.requiresOtp == true;
+
+  factory LoginResult.authenticated(UserModel user) =>
+      LoginResult._(user: user);
+
+  factory LoginResult.challenge(LoginOtpChallengeResponse challenge) =>
+      LoginResult._(otpChallenge: challenge);
+}
+
+@JsonSerializable()
 class LoginRequest {
   final String email;
   final String password;
@@ -184,6 +235,32 @@ class RegisterRequest {
       _$RegisterRequestFromJson(json);
 
   Map<String, dynamic> toJson() => _$RegisterRequestToJson(this);
+}
+
+@JsonSerializable()
+class VerifyLoginOtpRequest {
+  final String email;
+  final String otp;
+
+  VerifyLoginOtpRequest({required this.email, required this.otp});
+
+  factory VerifyLoginOtpRequest.fromJson(Map<String, dynamic> json) =>
+      _$VerifyLoginOtpRequestFromJson(json);
+
+  Map<String, dynamic> toJson() => _$VerifyLoginOtpRequestToJson(this);
+}
+
+@JsonSerializable()
+class UpdateTwoFactorRequest {
+  final bool enabled;
+  final String otp;
+
+  UpdateTwoFactorRequest({required this.enabled, required this.otp});
+
+  factory UpdateTwoFactorRequest.fromJson(Map<String, dynamic> json) =>
+      _$UpdateTwoFactorRequestFromJson(json);
+
+  Map<String, dynamic> toJson() => _$UpdateTwoFactorRequestToJson(this);
 }
 
 @JsonSerializable()

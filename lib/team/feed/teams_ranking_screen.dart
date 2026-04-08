@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/components/shared/app_drawer.dart';
 import 'package:get/get.dart';
 
 import '../../core/config/constants.dart';
@@ -14,6 +15,7 @@ class TeamsRankingScreen extends StatelessWidget {
     final TeamsRankingController controller = Get.find();
 
     return Scaffold(
+      drawer: const AppDrawer(),
       backgroundColor: const Color(AppColors.backgroundColor),
       appBar: AppBar(title: const Text('Team rankings')),
       body: Obx(() {

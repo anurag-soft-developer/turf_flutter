@@ -27,12 +27,17 @@ class AuthEndpoints {
   const AuthEndpoints();
 
   String get login => '/auth/login';
+  String get verifyLoginOtp => '/auth/login/verify-otp';
   String get register => '/auth/register';
   String get refreshToken => '/auth/refresh';
   String get logout => '/auth/logout';
   String get forgotPassword => '/auth/forgot-password';
   String get resetPassword => '/auth/reset-password';
+  String get changePassword => '/auth/change-password';
   String get verifyEmail => '/auth/verify-email';
+  String get sendChangePasswordOtp => '/auth/change-password/send-otp';
+  String get sendTwoFactorOtp => '/auth/2fa-setting/send-otp';
+  String get updateTwoFactor => '/auth/2fa-setting';
 }
 
 class UserEndpoints {
@@ -40,8 +45,10 @@ class UserEndpoints {
 
   String get profile => '/users/profile';
   String get updateProfile => '/users/profile';
-  String get changePassword => '/users/change-password';
-  String get deleteAccount => '/users/delete';
+  String get notificationSettings => '/users/notification-settings';
+  String get publicProfiles => '/users/profiles';
+  String publicProfileByIdentifier(String identifier) =>
+      '/users/profile/$identifier';
 }
 
 class TurfBookingEndpoints {
@@ -63,8 +70,7 @@ class TurfReviewEndpoints {
   String get base => '/turf-reviews';
   String get myReviews => '/turf-reviews/my-reviews';
   String turfReviews(String turfId) => '/turf-reviews/turf/$turfId';
-  String turfReviewStats(String turfId) =>
-      '/turf-reviews/turf/$turfId/stats';
+  String turfReviewStats(String turfId) => '/turf-reviews/turf/$turfId/stats';
   String byId(String id) => '/turf-reviews/$id';
   String vote(String id) => '/turf-reviews/$id/vote';
   String report(String id) => '/turf-reviews/$id/report';

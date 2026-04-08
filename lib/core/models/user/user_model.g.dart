@@ -30,6 +30,9 @@ UserModel _$UserModelFromJson(Map<String, dynamic> json) => UserModel(
           ?.map((e) => EarnedBadge.fromJson(e as Map<String, dynamic>))
           .toList() ??
       [],
+  twoFactorEnabled: json['twoFactorEnabled'] as bool?,
+  emailNotificationsEnabled: json['emailNotificationsEnabled'] as bool?,
+  smsNotificationsEnabled: json['smsNotificationsEnabled'] as bool?,
 );
 
 Map<String, dynamic> _$UserModelToJson(UserModel instance) => <String, dynamic>{
@@ -48,6 +51,9 @@ Map<String, dynamic> _$UserModelToJson(UserModel instance) => <String, dynamic>{
   'updatedAt': instance.updatedAt,
   'playerSportStats': instance.playerSportStats.map((e) => e.toJson()).toList(),
   'badges': instance.badges.map((e) => e.toJson()).toList(),
+  'twoFactorEnabled': instance.twoFactorEnabled,
+  'emailNotificationsEnabled': instance.emailNotificationsEnabled,
+  'smsNotificationsEnabled': instance.smsNotificationsEnabled,
 };
 
 AuthResponse _$AuthResponseFromJson(Map<String, dynamic> json) => AuthResponse(
@@ -62,6 +68,22 @@ Map<String, dynamic> _$AuthResponseToJson(AuthResponse instance) =>
       'accessToken': instance.accessToken,
       'refreshToken': instance.refreshToken,
     };
+
+LoginOtpChallengeResponse _$LoginOtpChallengeResponseFromJson(
+  Map<String, dynamic> json,
+) => LoginOtpChallengeResponse(
+  message: json['message'] as String,
+  requiresOtp: json['requiresOtp'] as bool,
+  email: json['email'] as String,
+);
+
+Map<String, dynamic> _$LoginOtpChallengeResponseToJson(
+  LoginOtpChallengeResponse instance,
+) => <String, dynamic>{
+  'message': instance.message,
+  'requiresOtp': instance.requiresOtp,
+  'email': instance.email,
+};
 
 LoginRequest _$LoginRequestFromJson(Map<String, dynamic> json) => LoginRequest(
   email: json['email'] as String,
@@ -86,6 +108,28 @@ Map<String, dynamic> _$RegisterRequestToJson(RegisterRequest instance) =>
       'fullName': instance.fullName,
       'phone': instance.phone,
     };
+
+VerifyLoginOtpRequest _$VerifyLoginOtpRequestFromJson(
+  Map<String, dynamic> json,
+) => VerifyLoginOtpRequest(
+  email: json['email'] as String,
+  otp: json['otp'] as String,
+);
+
+Map<String, dynamic> _$VerifyLoginOtpRequestToJson(
+  VerifyLoginOtpRequest instance,
+) => <String, dynamic>{'email': instance.email, 'otp': instance.otp};
+
+UpdateTwoFactorRequest _$UpdateTwoFactorRequestFromJson(
+  Map<String, dynamic> json,
+) => UpdateTwoFactorRequest(
+  enabled: json['enabled'] as bool,
+  otp: json['otp'] as String,
+);
+
+Map<String, dynamic> _$UpdateTwoFactorRequestToJson(
+  UpdateTwoFactorRequest instance,
+) => <String, dynamic>{'enabled': instance.enabled, 'otp': instance.otp};
 
 GoogleSignInRequest _$GoogleSignInRequestFromJson(Map<String, dynamic> json) =>
     GoogleSignInRequest(idToken: json['idToken'] as String);

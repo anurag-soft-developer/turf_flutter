@@ -37,10 +37,15 @@ class LoginController extends GetxController {
         password: passwordController.text.trim(),
       );
 
-      if (result != null) {
-        _authStateController.setUser(result);
+      if (result?.user != null) {
+        _authStateController.setUser(result!.user!);
         _clearControllers();
         Get.offAllNamed(AppConstants.routes.dashboard);
+      } else if (result?.requiresOtp == true) {
+        ExceptionHandler.showSuccessToast(
+          result?.otpChallenge?.message ??
+              'OTP sent. Please verify to continue login.',
+        );
       }
 
       _isLoading.value = false;
