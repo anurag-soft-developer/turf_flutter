@@ -47,11 +47,7 @@ class SettingsScreen extends StatelessWidget {
             subtitle: 'Update your account password',
             icon: Icons.lock_outline,
             onTap: () {
-              Get.snackbar(
-                'Coming Soon',
-                'Password change will be available soon',
-                snackPosition: SnackPosition.BOTTOM,
-              );
+              Get.toNamed(AppConstants.routes.changePassword);
             },
           ),
           SettingItem(
@@ -59,11 +55,7 @@ class SettingsScreen extends StatelessWidget {
             subtitle: 'Add an extra layer of security',
             icon: Icons.security,
             onTap: () {
-              Get.snackbar(
-                'Coming Soon',
-                'Two-factor authentication will be available soon',
-                snackPosition: SnackPosition.BOTTOM,
-              );
+              Get.toNamed(AppConstants.routes.twoFactorAuth);
             },
           ),
           SettingItem(
@@ -73,44 +65,6 @@ class SettingsScreen extends StatelessWidget {
             onTap: () {
               AppSnackbar.comingSoon(feature: 'Privacy settings');
             },
-          ),
-        ],
-      ),
-      SettingSection(
-        title: 'Support & Information',
-        items: [
-          SettingItem(
-            title: 'Help Center',
-            subtitle: 'Get help and support',
-            icon: Icons.help_outline,
-            onTap: () {
-              AppSnackbar.info(
-                title: 'Help Center',
-                message: 'Contact us at support@example.com',
-              );
-            },
-          ),
-          SettingItem(
-            title: 'Terms of Service',
-            subtitle: 'Read our terms and conditions',
-            icon: Icons.description_outlined,
-            onTap: () {
-              AppSnackbar.comingSoon(feature: 'Terms of service');
-            },
-          ),
-          SettingItem(
-            title: 'Privacy Policy',
-            subtitle: 'Learn about our privacy practices',
-            icon: Icons.policy_outlined,
-            onTap: () {
-              AppSnackbar.comingSoon(feature: 'Privacy policy');
-            },
-          ),
-          SettingItem(
-            title: 'About',
-            subtitle: 'App version and information',
-            icon: Icons.info_outline,
-            onTap: settingsController.showAbout,
           ),
         ],
       ),
@@ -144,14 +98,6 @@ class SettingsScreen extends StatelessWidget {
       SettingSection(
         title: 'Account Actions',
         items: [
-          // SettingItem(
-          //   title: 'Change Password',
-          //   subtitle: 'Update your password',
-          //   icon: Icons.lock_outline,
-          //   onTap: () {
-          //     AppSnackbar.comingSoon(feature: 'Password change');
-          //   },
-          // ),
           SettingItem(
             title: 'Download Data',
             subtitle: 'Export your account data',
@@ -274,88 +220,10 @@ class SettingsScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Preferences Section
-                      // const Text(
-                      //   'Preferences',
-                      //   style: TextStyle(
-                      //     fontSize: 20,
-                      //     fontWeight: FontWeight.bold,
-                      //     color: Color(AppColors.textColor),
-                      //   ),
-                      // ),
-                      // const SizedBox(height: 16),
-                      // Card(
-                      //   elevation: 1,
-                      //   color: const Color(AppColors.surfaceColor),
-                      //   shape: RoundedRectangleBorder(
-                      //     borderRadius: BorderRadius.circular(12),
-                      //   ),
-                      //   child: Column(
-                      //     children: [
-                      //       Obx(
-                      //         () => SwitchListTile(
-                      //           title: const Text(
-                      //             'Notifications',
-                      //             style: TextStyle(
-                      //               color: Color(AppColors.textColor),
-                      //             ),
-                      //           ),
-                      //           subtitle: const Text(
-                      //             'Enable push notifications',
-                      //             style: TextStyle(
-                      //               color: Color(AppColors.textSecondaryColor),
-                      //             ),
-                      //           ),
-                      //           value: settingsController.notificationsEnabled,
-                      //           onChanged: (value) =>
-                      //               settingsController.toggleNotifications(),
-                      //           activeThumbColor: const Color(
-                      //             AppColors.primaryColor,
-                      //           ),
-                      //           secondary: const Icon(
-                      //             Icons.notifications_outlined,
-                      //             color: Color(AppColors.primaryColor),
-                      //           ),
-                      //         ),
-                      //       ),
-                      //       const Divider(
-                      //         height: 1,
-                      //         color: Color(AppColors.dividerColor),
-                      //       ),
-                      //       Obx(
-                      //         () => ListTile(
-                      //           title: const Text(
-                      //             'Current Mode',
-                      //             style: TextStyle(
-                      //               color: Color(AppColors.textColor),
-                      //             ),
-                      //           ),
-                      //           subtitle: Text(
-                      //             settingsController.currentModeDisplay,
-                      //             style: const TextStyle(
-                      //               color: Color(AppColors.textSecondaryColor),
-                      //             ),
-                      //           ),
-                      //           leading: Icon(
-                      //             settingsController.currentMode ==
-                      //                     UserMode.player
-                      //                 ? Icons.sports_soccer
-                      //                 : Icons.business,
-                      //             color: const Color(AppColors.primaryColor),
-                      //           ),
-                      //           trailing: IconButton(
-                      //             onPressed: () {
-                      //               settingsController.toggleMode();
-                      //             },
-                      //             icon: const Icon(Icons.swap_horiz),
-                      //           ),
-                      //         ),
-                      //       ),
-                      //     ],
-                      //   ),
-                      // ),
-                      // const SizedBox(height: 32),
-
+                      _NotificationsSettingsSection(
+                        authController: authController,
+                      ),
+                      const SizedBox(height: 32),
                       // Loop through setting sections
                       ...settingSections.map(
                         (section) => Column(
@@ -500,5 +368,104 @@ class SettingsScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _NotificationsSettingsSection extends StatelessWidget {
+  const _NotificationsSettingsSection({required this.authController});
+
+  final AuthStateController authController;
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final user = authController.user;
+      final busy = authController.notificationSettingsUpdating.value;
+      final emailOn = user?.emailNotificationsEnabled ?? true;
+      final smsOn = user?.smsNotificationsEnabled ?? false;
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Notifications',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Color(AppColors.textColor),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Card(
+            elevation: 1,
+            color: const Color(AppColors.surfaceColor),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              children: [
+                SwitchListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
+                  secondary: const Icon(
+                    Icons.email_outlined,
+                    color: Color(AppColors.primaryColor),
+                  ),
+                  title: const Text(
+                    'Email notifications',
+                    style: TextStyle(color: Color(AppColors.textColor)),
+                  ),
+                  subtitle: const Text(
+                    'Booking updates, reminders, and account alerts',
+                    style: TextStyle(
+                      color: Color(AppColors.textSecondaryColor),
+                    ),
+                  ),
+                  value: emailOn,
+                  onChanged: busy
+                      ? null
+                      : (enabled) {
+                          authController.updateNotificationSettings(
+                            emailNotificationsEnabled: enabled,
+                          );
+                        },
+                ),
+                const Divider(height: 1, color: Color(AppColors.dividerColor)),
+                SwitchListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
+                  secondary: const Icon(
+                    Icons.sms_outlined,
+                    color: Color(AppColors.primaryColor),
+                  ),
+                  title: const Text(
+                    'SMS notifications',
+                    style: TextStyle(color: Color(AppColors.textColor)),
+                  ),
+                  subtitle: const Text(
+                    'Text messages for important alerts',
+                    style: TextStyle(
+                      color: Color(AppColors.textSecondaryColor),
+                    ),
+                  ),
+                  value: smsOn,
+                  onChanged: busy
+                      ? null
+                      : (enabled) {
+                          authController.updateNotificationSettings(
+                            smsNotificationsEnabled: enabled,
+                          );
+                        },
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    });
   }
 }

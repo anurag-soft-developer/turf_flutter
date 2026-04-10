@@ -1,6 +1,13 @@
 import 'package:validators/validators.dart' as validator;
 
+import '../config/constants.dart';
+
 class Validators {
+  /// Matches NestJS: `(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]` with length 8–50.
+  static final RegExp passwordRegex = RegExp(
+    r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,50}$',
+  );
+
   static String? validateEmail(String? value) {
     if (value == null || value.isEmpty) {
       return 'Email is required';
@@ -13,15 +20,53 @@ class Validators {
     return null;
   }
 
+  /// Rules aligned with [passwordRegex] / NestJS. Empty input returns only the required message.
+  static List<String> passwordRequirementErrors(String? value) {
+    final s = value ?? '';
+    if (s.isEmpty) {
+      return ['Password is required'];
+    }
+
+    final errors = <String>[];
+
+    if (s.length < 8 || s.length > 50) {
+      errors.add('Password must be between 8 and 50 characters');
+    }
+    if (!RegExp(r'[a-z]').hasMatch(s)) {
+      errors.add('At least one lowercase letter is required');
+    }
+    if (!RegExp(r'[A-Z]').hasMatch(s)) {
+      errors.add('At least one uppercase letter is required');
+    }
+    if (!RegExp(r'\d').hasMatch(s)) {
+      errors.add('At least one number is required');
+    }
+    if (!RegExp(r'[@$!%*?&]').hasMatch(s)) {
+      errors.add(
+        r'At least one special character is required (@$!%*?&)',
+      );
+    }
+    if (!RegExp(r'^[A-Za-z\d@$!%*?&]+$').hasMatch(s)) {
+      errors.add(
+        r'Only letters, numbers, and @$!%*?& are allowed',
+      );
+    }
+
+    return errors;
+  }
+
+  /// Sign-up / new password: multiple errors as separate lines under the field.
   static String? validatePassword(String? value) {
+    final errors = passwordRequirementErrors(value);
+    if (errors.isEmpty) return null;
+    return errors.join('\n');
+  }
+
+  /// Login (existing password): do not enforce policy rules.
+  static String? validateLoginPassword(String? value) {
     if (value == null || value.isEmpty) {
       return 'Password is required';
     }
-
-    if (!validator.isLength(value, 6)) {
-      return 'Password must be at least 6 characters long';
-    }
-
     return null;
   }
 
@@ -46,6 +91,19 @@ class Validators {
       return 'Name must be at least 2 characters long';
     }
 
+    return null;
+  }
+
+  static String? validateOtp(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'OTP is required';
+    }
+    if (!validator.isNumeric(value)) {
+      return 'OTP must contain only numbers';
+    }
+    if (value.length != AppConstants.otp.length) {
+      return 'OTP must be ${AppConstants.otp.length} digits';
+    }
     return null;
   }
 

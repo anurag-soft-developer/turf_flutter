@@ -30,6 +30,7 @@ UserModel _$UserModelFromJson(Map<String, dynamic> json) => UserModel(
           ?.map((e) => EarnedBadge.fromJson(e as Map<String, dynamic>))
           .toList() ??
       [],
+  isPasswordExists: json['isPasswordExists'] as bool?,
   twoFactorEnabled: json['twoFactorEnabled'] as bool?,
   emailNotificationsEnabled: json['emailNotificationsEnabled'] as bool?,
   smsNotificationsEnabled: json['smsNotificationsEnabled'] as bool?,
@@ -51,6 +52,7 @@ Map<String, dynamic> _$UserModelToJson(UserModel instance) => <String, dynamic>{
   'updatedAt': instance.updatedAt,
   'playerSportStats': instance.playerSportStats.map((e) => e.toJson()).toList(),
   'badges': instance.badges.map((e) => e.toJson()).toList(),
+  'isPasswordExists': instance.isPasswordExists,
   'twoFactorEnabled': instance.twoFactorEnabled,
   'emailNotificationsEnabled': instance.emailNotificationsEnabled,
   'smsNotificationsEnabled': instance.smsNotificationsEnabled,

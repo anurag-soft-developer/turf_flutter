@@ -14,12 +14,18 @@ class UserService {
     bool? emailNotificationsEnabled,
     bool? smsNotificationsEnabled,
   }) async {
+    final data = <String, dynamic>{};
+    if (emailNotificationsEnabled != null) {
+      data['emailNotificationsEnabled'] = emailNotificationsEnabled;
+    }
+    if (smsNotificationsEnabled != null) {
+      data['smsNotificationsEnabled'] = smsNotificationsEnabled;
+    }
+    if (data.isEmpty) return null;
+
     final response = await _apiService.patch<Map<String, dynamic>>(
       ApiConstants.user.notificationSettings,
-      data: {
-        'emailNotificationsEnabled': emailNotificationsEnabled,
-        'smsNotificationsEnabled': smsNotificationsEnabled,
-      },
+      data: data,
     );
     if (response == null) return null;
     return UserModel.fromJson(response);

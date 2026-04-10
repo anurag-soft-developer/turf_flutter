@@ -28,6 +28,12 @@ class Routes {
   final String dashboard = '/dashboard';
   final String profile = '/profile';
   final String settings = '/settings';
+  final String about = '/about';
+  final String helpSupport = '/help-support';
+  final String termsOfService = '/terms-of-service';
+  final String privacyPolicy = '/privacy-policy';
+  final String changePassword = '/change-password';
+  final String twoFactorAuth = '/two-factor-auth';
   final String accessDenied = '/access-denied';
   final String turfList = '/turf-list';
   final String turfDetail = '/turf-detail';

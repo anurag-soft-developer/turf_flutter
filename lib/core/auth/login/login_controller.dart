@@ -1,3 +1,4 @@
+import 'package:flutter_application_1/core/models/user/user_model.dart';
 import 'package:flutter_application_1/core/utils/exception_handler.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
@@ -16,13 +17,19 @@ class LoginController extends GetxController {
 
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  final TextEditingController otpController = TextEditingController();
 
   final GlobalKey<FormState> loginFormKey = GlobalKey<FormState>();
+  final GlobalKey<FormState> otpFormKey = GlobalKey<FormState>();
+
+  /// When non-null, show the login OTP step (2FA / email OTP challenge).
+  final Rxn<LoginOtpChallengeResponse> pendingOtpChallenge = Rxn();
 
   @override
   void onClose() {
     emailController.dispose();
     passwordController.dispose();
+    otpController.dispose();
     super.onClose();
   }
 
@@ -41,10 +48,14 @@ class LoginController extends GetxController {
         _authStateController.setUser(result!.user!);
         _clearControllers();
         Get.offAllNamed(AppConstants.routes.dashboard);
-      } else if (result?.requiresOtp == true) {
+      } else if (result?.requiresOtp == true && result?.otpChallenge != null) {
+        final challenge = result!.otpChallenge!;
+        pendingOtpChallenge.value = challenge;
+        otpController.clear();
         ExceptionHandler.showSuccessToast(
-          result?.otpChallenge?.message ??
-              'OTP sent. Please verify to continue login.',
+          challenge.message.isNotEmpty
+              ? challenge.message
+              : 'OTP sent. Please verify to continue login.',
         );
       }
 
@@ -53,6 +64,40 @@ class LoginController extends GetxController {
       ExceptionHandler.handleException(e);
       _isLoading.value = false;
     }
+  }
+
+  Future<void> verifyLoginOtp() async {
+    try {
+      if (!otpFormKey.currentState!.validate()) return;
+
+      final challenge = pendingOtpChallenge.value;
+      if (challenge == null) return;
+
+      _isLoading.value = true;
+
+      final user = await _authService.verifyLoginOtp(
+        email: challenge.email,
+        otp: otpController.text.trim(),
+      );
+
+      if (user != null) {
+        _authStateController.setUser(user);
+        pendingOtpChallenge.value = null;
+        _clearControllers();
+        otpController.clear();
+        Get.offAllNamed(AppConstants.routes.dashboard);
+      }
+
+      _isLoading.value = false;
+    } catch (e) {
+      ExceptionHandler.handleException(e);
+      _isLoading.value = false;
+    }
+  }
+
+  void cancelLoginOtp() {
+    pendingOtpChallenge.value = null;
+    otpController.clear();
   }
 
   void _clearControllers() {

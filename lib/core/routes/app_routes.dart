@@ -6,6 +6,8 @@ import '../auth/forgot_password/forgot_password_screen.dart';
 import '../../dashboard/dashboard_screen.dart';
 import '../../profile/profile_screen.dart';
 import '../../settings/settings_screen.dart';
+import '../../settings/change_password_screen.dart';
+import '../../settings/two_factor_screen.dart';
 import '../../turf/feed/turf_list_screen.dart';
 import '../../turf/details/turf_detail_screen.dart';
 import '../../turf/my_turves/my_turfs_screen.dart';
@@ -39,6 +41,7 @@ import '../../match_up/match_up_screen.dart';
 import '../../rankings/player_ranking_screen.dart';
 import '../components/bottom_navigation_panel/main_screen_wrapper.dart';
 import '../config/constants.dart';
+import 'about_help_legal_routes.dart';
 
 class AppRoutes {
   static const String splashRoute = '/';
@@ -115,6 +118,19 @@ class AppRoutes {
     GetPage(
       name: AppConstants.routes.settings,
       page: () => const SettingsScreen(),
+      transition: Transition.cupertino,
+      middlewares: [AuthGuard()],
+    ),
+    ...aboutHelpLegalRoutes,
+    GetPage(
+      name: AppConstants.routes.changePassword,
+      page: () => const ChangePasswordScreen(),
+      transition: Transition.cupertino,
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppConstants.routes.twoFactorAuth,
+      page: () => const TwoFactorScreen(),
       transition: Transition.cupertino,
       middlewares: [AuthGuard()],
     ),

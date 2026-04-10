@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../components/shared/custom_button.dart';
 import '../../components/shared/custom_text_field.dart';
+import '../../components/shared/password_text_field.dart';
 import '../../components/shared/otp_input_field.dart';
 import '../../core/utils/validators.dart';
 import '../../core/config/constants.dart';
@@ -99,16 +100,14 @@ class ForgotPasswordOtpStep extends StatelessWidget {
             const SizedBox(height: 24),
 
             // New Password Field
-            CustomTextField(
+            PasswordTextField(
               controller: newPasswordController,
               labelText: 'New Password',
               hintText: 'Enter new password',
-              obscureText: true,
               prefixIcon: const Icon(
                 Icons.lock_outline,
                 color: Color(AppColors.textSecondaryColor),
               ),
-              validator: Validators.validatePassword,
             ),
             const SizedBox(height: 24),
 

@@ -208,14 +208,23 @@ class AuthService {
   }
 
   Future<bool> changePassword({
-    required String currentPassword,
     required String newPassword,
+    String? currentPassword,
+    String? otp,
   }) async {
-    await _apiService.patch(
+    final response = await _apiService.post<dynamic>(
       ApiConstants.auth.changePassword,
-      data: {'current_password': currentPassword, 'new_password': newPassword},
+      data: {
+        if (currentPassword != null && currentPassword.isNotEmpty)
+          'currentPassword': currentPassword,
+        if (otp != null && otp.isNotEmpty) 'otp': otp,
+        'newPassword': newPassword,
+      },
     );
 
+    if (response == null) {
+      return false;
+    }
     ExceptionHandler.showSuccessToast('Password changed successfully');
     return true;
   }
@@ -270,6 +279,11 @@ class AuthService {
     await prefs.setString('refresh_token', authResponse.refreshToken);
 
     await _saveUserToPreferences(authResponse.user);
+  }
+
+  /// Persist user JSON after profile or settings PATCH responses.
+  Future<void> persistUser(UserModel user) async {
+    await _saveUserToPreferences(user);
   }
 
   // Save user to preferences

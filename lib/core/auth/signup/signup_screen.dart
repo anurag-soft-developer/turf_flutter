@@ -4,6 +4,7 @@ import 'signup_controller.dart';
 import '../auth_state_controller.dart';
 import '../../../components/shared/custom_button.dart';
 import '../../../components/shared/custom_text_field.dart';
+import '../../../components/shared/password_text_field.dart';
 import '../../../components/shared/loading_overlay.dart';
 import '../../utils/validators.dart';
 import '../../config/constants.dart';
@@ -80,16 +81,14 @@ class SignupScreen extends StatelessWidget {
                     const SizedBox(height: 24),
 
                     // Password Field
-                    CustomTextField(
+                    PasswordTextField(
                       controller: signupController.passwordController,
                       labelText: 'Password',
                       hintText: 'Create a password',
-                      obscureText: true,
                       prefixIcon: const Icon(
                         Icons.lock_outline,
                         color: Color(AppColors.textSecondaryColor),
                       ),
-                      validator: Validators.validatePassword,
                     ),
                     const SizedBox(height: 24),
 

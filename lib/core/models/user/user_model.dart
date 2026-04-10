@@ -33,6 +33,8 @@ class UserModel {
   final List<PlayerSportEntry> playerSportStats;
   @JsonKey(name: 'badges', defaultValue: [])
   final List<EarnedBadge> badges;
+  @JsonKey(name: 'isPasswordExists')
+  final bool? isPasswordExists;
   @JsonKey(name: 'twoFactorEnabled')
   final bool? twoFactorEnabled;
   @JsonKey(name: 'emailNotificationsEnabled')
@@ -56,6 +58,7 @@ class UserModel {
     this.updatedAt,
     this.playerSportStats = const [],
     this.badges = const [],
+    this.isPasswordExists,
     this.twoFactorEnabled,
     this.emailNotificationsEnabled,
     this.smsNotificationsEnabled,
@@ -82,6 +85,7 @@ class UserModel {
     String? updatedAt,
     List<PlayerSportEntry>? playerSportStats,
     List<EarnedBadge>? badges,
+    bool? isPasswordExists,
     bool? twoFactorEnabled,
     bool? emailNotificationsEnabled,
     bool? smsNotificationsEnabled,
@@ -102,6 +106,7 @@ class UserModel {
       updatedAt: updatedAt ?? this.updatedAt,
       playerSportStats: playerSportStats ?? this.playerSportStats,
       badges: badges ?? this.badges,
+      isPasswordExists: isPasswordExists ?? this.isPasswordExists,
       twoFactorEnabled: twoFactorEnabled ?? this.twoFactorEnabled,
       emailNotificationsEnabled:
           emailNotificationsEnabled ?? this.emailNotificationsEnabled,

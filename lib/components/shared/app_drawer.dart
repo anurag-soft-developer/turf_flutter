@@ -242,6 +242,36 @@ class AppDrawer extends StatelessWidget {
 
                 const Spacer(),
 
+                const Divider(color: Color(AppColors.dividerColor)),
+                ListTile(
+                  leading: const Icon(
+                    Icons.help_outline_rounded,
+                    color: Color(AppColors.primaryColor),
+                  ),
+                  title: const Text(
+                    'Help & support',
+                    style: TextStyle(color: Color(AppColors.textColor)),
+                  ),
+                  onTap: () {
+                    Get.back();
+                    Get.toNamed(AppConstants.routes.helpSupport);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(
+                    Icons.info_outline_rounded,
+                    color: Color(AppColors.primaryColor),
+                  ),
+                  title: const Text(
+                    'About',
+                    style: TextStyle(color: Color(AppColors.textColor)),
+                  ),
+                  onTap: () {
+                    Get.back();
+                    Get.toNamed(AppConstants.routes.about);
+                  },
+                ),
+
                 // Logout Section
                 const Divider(color: Color(AppColors.dividerColor)),
                 ListTile(
