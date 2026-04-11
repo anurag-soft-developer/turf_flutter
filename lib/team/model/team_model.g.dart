@@ -328,6 +328,7 @@ TeamModel _$TeamModelFromJson(Map<String, dynamic> json) => TeamModel(
     json['preferredTimeSlot'],
   ),
   lookingForMembers: json['lookingForMembers'] as bool? ?? false,
+  teamOpenForMatch: json['teamOpenForMatch'] as bool? ?? false,
   pinnedNotices:
       (json['pinnedNotices'] as List<dynamic>?)
           ?.map((e) => e as String)
@@ -375,6 +376,7 @@ Map<String, dynamic> _$TeamModelToJson(TeamModel instance) => <String, dynamic>{
   'preferredTimeSlot':
       _$TeamPreferredTimeSlotEnumMap[instance.preferredTimeSlot],
   'lookingForMembers': instance.lookingForMembers,
+  'teamOpenForMatch': instance.teamOpenForMatch,
   'pinnedNotices': instance.pinnedNotices,
   'matchesPlayed': instance.matchesPlayed,
   'wins': instance.wins,

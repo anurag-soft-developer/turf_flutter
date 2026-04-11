@@ -11,6 +11,7 @@ class ApiConstants {
   static const team = TeamEndpoints();
   static const teamMember = TeamMemberEndpoints();
   static const teamMembershipSelf = TeamMembershipSelfEndpoints();
+  static const matchmaking = MatchmakingEndpoints();
 
   // Headers
   static const Map<String, String> defaultHeaders = {
@@ -122,4 +123,35 @@ class TeamMembershipSelfEndpoints {
   const TeamMembershipSelfEndpoints();
 
   String get myMemberships => '/team-members/me';
+}
+
+/// `GET/POST /matchmaking/*` — JWT required.
+class MatchmakingEndpoints {
+  const MatchmakingEndpoints();
+
+  String get feed => '/matchmaking/feed';
+
+  String teamOpenStatus(String teamId) =>
+      '/matchmaking/teams/$teamId/open-status';
+
+  String get requests => '/matchmaking/requests';
+
+  String requestRespond(String id) => '/matchmaking/requests/$id/respond';
+
+  String requestProposeSchedule(String id) =>
+      '/matchmaking/requests/$id/propose-schedule';
+
+  String requestSlotsDecide(String id) =>
+      '/matchmaking/requests/$id/slots/decide';
+
+  String requestTurfsDecide(String id) =>
+      '/matchmaking/requests/$id/turfs/decide';
+
+  String requestFinalizeSchedule(String id) =>
+      '/matchmaking/requests/$id/finalize-schedule';
+
+  String requestCancel(String id) => '/matchmaking/requests/$id/cancel';
+
+  String requestMatchResult(String id) =>
+      '/matchmaking/requests/$id/match-result';
 }

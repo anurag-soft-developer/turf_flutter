@@ -231,6 +231,9 @@ class TeamFilterQuery {
 
   /// Serialized as `'true'` / `'false'` (Zod enum).
   final bool? lookingForMembers;
+
+  /// Serialized as `'true'` / `'false'` (Zod enum).
+  final bool? teamOpenForMatch;
   final int page;
   final int limit;
   final double? nearbyLat;
@@ -243,6 +246,7 @@ class TeamFilterQuery {
     this.sportType,
     this.genderCategory,
     this.lookingForMembers,
+    this.teamOpenForMatch,
     this.page = 1,
     this.limit = 10,
     this.nearbyLat,
@@ -264,6 +268,9 @@ class TeamFilterQuery {
     }
     if (lookingForMembers != null) {
       params['lookingForMembers'] = lookingForMembers! ? 'true' : 'false';
+    }
+    if (teamOpenForMatch != null) {
+      params['teamOpenForMatch'] = teamOpenForMatch! ? 'true' : 'false';
     }
     if (nearbyLat != null && nearbyLng != null) {
       params.addAll(
@@ -444,6 +451,8 @@ class TeamModel {
   final TeamPreferredTimeSlot? preferredTimeSlot;
   @JsonKey(name: 'lookingForMembers', defaultValue: false)
   final bool lookingForMembers;
+  @JsonKey(name: 'teamOpenForMatch', defaultValue: false)
+  final bool teamOpenForMatch;
   @JsonKey(name: 'pinnedNotices', defaultValue: <String>[])
   final List<String> pinnedNotices;
   @JsonKey(fromJson: _intFromJson, defaultValue: 0)
@@ -493,6 +502,7 @@ class TeamModel {
     this.preferredPlayDays = const [],
     this.preferredTimeSlot,
     this.lookingForMembers = false,
+    this.teamOpenForMatch = false,
     this.pinnedNotices = const [],
     this.matchesPlayed = 0,
     this.wins = 0,
