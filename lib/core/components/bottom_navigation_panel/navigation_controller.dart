@@ -1,8 +1,5 @@
 import 'package:get/get.dart';
-import '../../../settings/settings_controller.dart';
-import '../../../turf/feed/turf_list_controller.dart';
-import '../../../team/feed/teams_ranking_controller.dart';
-import '../../../profile/profile_controller.dart';
+import 'nav_tabs.dart';
 
 class NavigationController extends GetxController {
   final RxInt _currentIndex = 0.obs;
@@ -10,16 +7,17 @@ class NavigationController extends GetxController {
 
   int get currentIndex => _currentIndex.value;
   double get slideValue => _slideValue.value;
+  int get tabCount => kNavTabs.length;
 
   void changeTab(int index) {
-    if (_currentIndex.value != index && index >= 0 && index < 6) {
+    if (_currentIndex.value != index && index >= 0 && index < tabCount) {
       _currentIndex.value = index;
       _loadControllerForCurrentTab();
     }
   }
 
   void slideToNext() {
-    if (_currentIndex.value < 5) {
+    if (_currentIndex.value < tabCount - 1) {
       changeTab(_currentIndex.value + 1);
     }
   }
@@ -35,55 +33,14 @@ class NavigationController extends GetxController {
   }
 
   void _loadControllerForCurrentTab() {
-    // Clean up previous tab controllers (except persistent ones)
     _cleanupPreviousControllers();
-
-    // Load controller for current tab
-    switch (_currentIndex.value) {
-      case 0: // Dashboard
-        _ensureController<SettingsController>(() => SettingsController());
-        break;
-      case 1: // Turfs
-        _ensureController<TurfListController>(() => TurfListController());
-        break;
-      case 2: // Match Up
-        // No controller needed for placeholder
-        break;
-      case 3: // Teams
-        _ensureController<TeamsRankingController>(
-          () => TeamsRankingController(),
-        );
-        break;
-      case 4: // Players
-        // No controller needed for placeholder
-        break;
-      case 5: // Profile
-        _ensureController<ProfileController>(() => ProfileController());
-        break;
-    }
-  }
-
-  void _ensureController<T extends GetxController>(T Function() controller) {
-    if (!Get.isRegistered<T>()) {
-      Get.put<T>(controller(), permanent: false);
-    }
+    kNavTabs[_currentIndex.value].loadController?.call();
   }
 
   void _cleanupPreviousControllers() {
-    // Remove non-persistent controllers when switching tabs
-    // Keep AuthStateController as it's persistent
     try {
-      if (Get.isRegistered<SettingsController>()) {
-        Get.delete<SettingsController>();
-      }
-      if (Get.isRegistered<TurfListController>()) {
-        Get.delete<TurfListController>();
-      }
-      if (Get.isRegistered<TeamsRankingController>()) {
-        Get.delete<TeamsRankingController>();
-      }
-      if (Get.isRegistered<ProfileController>()) {
-        Get.delete<ProfileController>();
+      for (final tab in kNavTabs) {
+        tab.disposeController?.call();
       }
     } catch (e) {
       // Controllers might already be disposed

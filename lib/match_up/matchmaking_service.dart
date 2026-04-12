@@ -1,7 +1,6 @@
 import '../core/config/api_constants.dart';
 import '../core/models/paginated_response.dart';
 import '../core/services/api_service.dart';
-import '../team/model/team_model.dart';
 import 'model/team_match_model.dart';
 
 /// Client for backend [MatchmakingController] / [MatchmakingService].
@@ -11,34 +10,6 @@ class MatchmakingService {
   MatchmakingService._internal();
 
   final ApiService _apiService = ApiService();
-
-  /// `GET /matchmaking/feed` — teams open for match (`teamOpenForMatch`), same sport, etc.
-  Future<PaginatedResponse<TeamModel>?> getFeed(MatchFeedFilterQuery query) async {
-    final response = await _apiService.get<Map<String, dynamic>>(
-      ApiConstants.matchmaking.feed,
-      queryParameters: query.toQueryParameters(),
-    );
-    if (response == null) {
-      return EmptyPaginatedResponse<TeamModel>();
-    }
-    return PaginatedResponse.fromJson(
-      response,
-      (json) => TeamModel.fromJson(json as Map<String, dynamic>),
-    );
-  }
-
-  /// `POST /matchmaking/teams/:teamId/open-status`
-  Future<TeamModel?> setTeamOpenStatus(
-    String teamId,
-    SetTeamOpenForMatchRequest body,
-  ) async {
-    final response = await _apiService.post<Map<String, dynamic>>(
-      ApiConstants.matchmaking.teamOpenStatus(teamId),
-      data: body.toJson(),
-    );
-    if (response == null) return null;
-    return TeamModel.fromJson(response);
-  }
 
   /// `POST /matchmaking/requests`
   Future<TeamMatchModel?> sendRequest(SendMatchRequest body) async {

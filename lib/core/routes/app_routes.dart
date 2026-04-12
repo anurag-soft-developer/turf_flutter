@@ -29,6 +29,7 @@ import '../../bindings/turf_management_binding.dart';
 import '../../bindings/create_turf_binding.dart';
 import '../../bindings/turf_booking_binding.dart';
 import '../../bindings/team_player_bindings.dart';
+import '../../bindings/match_history_binding.dart';
 import '../../bindings/match_up_binding.dart';
 import '../../bindings/player_ranking_binding.dart';
 import '../../bindings/main_screen_wrapper_binding.dart';
@@ -37,6 +38,7 @@ import '../../team/my_teams/my_teams_screen.dart';
 import '../../team/members/player_profile_screen.dart';
 import '../../team/details/team_detail_screen.dart';
 import '../../team/feed/teams_ranking_screen.dart';
+import '../../match_up/match_history_screen.dart';
 import '../../match_up/match_up_screen.dart';
 import '../../rankings/player_ranking_screen.dart';
 import '../components/bottom_navigation_panel/main_screen_wrapper.dart';
@@ -48,6 +50,7 @@ class AppRoutes {
   static const String mainRoute = '/main';
 
   static final routes = [
+    ...aboutHelpLegalRoutes,
     GetPage(name: splashRoute, page: () => const AuthWrapper()),
     GetPage(
       name: AppConstants.routes.accessDenied,
@@ -95,6 +98,13 @@ class AppRoutes {
       middlewares: [AuthGuard()],
     ),
     GetPage(
+      name: AppConstants.routes.matchHistory,
+      page: () => const MatchHistoryScreen(),
+      binding: MatchHistoryBinding(),
+      transition: Transition.cupertino,
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
       name: AppConstants.routes.playerRanking,
       page: () => const PlayerRankingScreen(),
       binding: PlayerRankingBinding(),
@@ -121,7 +131,6 @@ class AppRoutes {
       transition: Transition.cupertino,
       middlewares: [AuthGuard()],
     ),
-    ...aboutHelpLegalRoutes,
     GetPage(
       name: AppConstants.routes.changePassword,
       page: () => const ChangePasswordScreen(),

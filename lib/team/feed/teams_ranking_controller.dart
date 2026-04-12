@@ -3,12 +3,12 @@ import 'package:get/get.dart';
 import '../model/team_model.dart';
 import '../team_service.dart';
 
-/// Lists teams in API order until a dedicated ranking endpoint exists.
 class TeamsRankingController extends GetxController {
   final TeamService _teamService = TeamService();
 
   final RxBool isLoading = true.obs;
   final RxList<TeamModel> teams = <TeamModel>[].obs;
+  final Rx<TeamSportType> selectedSport = TeamSportType.cricket.obs;
 
   @override
   void onInit() {
@@ -16,13 +16,20 @@ class TeamsRankingController extends GetxController {
     load();
   }
 
+  void switchSport(TeamSportType sport) {
+    if (selectedSport.value == sport) return;
+    selectedSport.value = sport;
+    load();
+  }
+
   Future<void> load() async {
     isLoading.value = true;
     try {
       final page = await _teamService.findMany(
-        const TeamFilterQuery(
+        TeamFilterQuery(
           status: TeamStatus.active,
           visibility: TeamVisibility.public,
+          sportType: selectedSport.value,
           page: 1,
           limit: 50,
         ),

@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/components/shared/app_drawer.dart';
 import 'package:get/get.dart';
 
+import '../../components/match_up/sport_tabs.dart';
+import '../../components/match_up/team_logo.dart';
+import '../../components/match_up/team_stats_row.dart';
 import '../../core/config/constants.dart';
 import '../model/team_model.dart';
-import '../utils/team_ui.dart';
 import 'teams_ranking_controller.dart';
 
 class TeamsRankingScreen extends StatelessWidget {
@@ -17,7 +19,16 @@ class TeamsRankingScreen extends StatelessWidget {
     return Scaffold(
       drawer: const AppDrawer(),
       backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(title: const Text('Team rankings')),
+      appBar: AppBar(
+        title: const Text('Team Rankings'),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(52),
+          child: Obx(() => SportTabs(
+                selected: controller.selectedSport.value,
+                onChanged: controller.switchSport,
+              )),
+        ),
+      ),
       body: Obx(() {
         if (controller.isLoading.value && controller.teams.isEmpty) {
           return const Center(
@@ -29,36 +40,44 @@ class TeamsRankingScreen extends StatelessWidget {
           );
         }
 
+        if (controller.teams.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.emoji_events_outlined,
+                    size: 64, color: Colors.grey.shade300),
+                const SizedBox(height: 16),
+                const Text(
+                  'No teams ranked yet.',
+                  style: TextStyle(
+                    color: Color(AppColors.textSecondaryColor),
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final teams = controller.teams;
+        final topTeams = teams.take(3).toList();
+        final restTeams = teams.length > 3 ? teams.sublist(3) : <TeamModel>[];
+
         return RefreshIndicator(
           onRefresh: controller.reload,
           child: ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             children: [
-              const Text(
-                'Ordered by default for now. Backend ranking will replace this order later.',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Color(AppColors.textSecondaryColor),
-                  height: 1.35,
-                ),
-              ),
-              const SizedBox(height: 16),
-              if (controller.teams.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 48),
-                  child: Center(
-                    child: Text(
-                      'No public teams to show yet.',
-                      style: TextStyle(
-                        color: Color(AppColors.textSecondaryColor),
-                      ),
+              const SizedBox(height: 20),
+              _PodiumSection(teams: topTeams),
+              if (restTeams.isNotEmpty) ...[
+                const SizedBox(height: 24),
+                ...restTeams.asMap().entries.map(
+                      (e) => _RankCard(rank: e.key + 4, team: e.value),
                     ),
-                  ),
-                )
-              else
-                ...controller.teams.asMap().entries.map(
-                  (e) => _RankRow(rank: e.key + 1, team: e.value),
-                ),
+              ],
+              const SizedBox(height: 24),
             ],
           ),
         );
@@ -67,8 +86,200 @@ class TeamsRankingScreen extends StatelessWidget {
   }
 }
 
-class _RankRow extends StatelessWidget {
-  const _RankRow({required this.rank, required this.team});
+// ---------------------------------------------------------------------------
+// Podium — top 3 teams
+// ---------------------------------------------------------------------------
+
+class _PodiumSection extends StatelessWidget {
+  const _PodiumSection({required this.teams});
+
+  final List<TeamModel> teams;
+
+  @override
+  Widget build(BuildContext context) {
+    if (teams.isEmpty) return const SizedBox.shrink();
+
+    if (teams.length == 1) {
+      return _PodiumCard(rank: 1, team: teams[0]);
+    }
+
+    if (teams.length == 2) {
+      return Column(
+        children: [
+          _PodiumCard(rank: 1, team: teams[0]),
+          const SizedBox(height: 12),
+          _PodiumCard(rank: 2, team: teams[1]),
+        ],
+      );
+    }
+
+    return Column(
+      children: [
+        _PodiumCard(rank: 1, team: teams[0]),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(child: _PodiumCard(rank: 2, team: teams[1])),
+            const SizedBox(width: 12),
+            Expanded(child: _PodiumCard(rank: 3, team: teams[2])),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _PodiumCard extends StatelessWidget {
+  const _PodiumCard({required this.rank, required this.team});
+
+  final int rank;
+  final TeamModel team;
+
+  static const _rankConfigs = <int, _RankStyle>{
+    1: _RankStyle(
+      gradient: [Color(0xFFFFD700), Color(0xFFFFA000)],
+      medalIcon: Icons.emoji_events,
+      elevation: 8,
+      logoSize: 72,
+      nameFontSize: 18,
+    ),
+    2: _RankStyle(
+      gradient: [Color(0xFFB0BEC5), Color(0xFF78909C)],
+      medalIcon: Icons.emoji_events,
+      elevation: 4,
+      logoSize: 56,
+      nameFontSize: 15,
+    ),
+    3: _RankStyle(
+      gradient: [Color(0xFFCD7F32), Color(0xFFA0522D)],
+      medalIcon: Icons.emoji_events,
+      elevation: 2,
+      logoSize: 56,
+      nameFontSize: 15,
+    ),
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final style = _rankConfigs[rank] ?? _rankConfigs[3]!;
+    final id = team.id;
+
+    return GestureDetector(
+      onTap: id == null || id.isEmpty
+          ? null
+          : () => Get.toNamed(
+                AppConstants.routes.teamProfile,
+                arguments: {'teamId': id},
+              ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: LinearGradient(
+            colors: [
+              style.gradient[0].withValues(alpha: 0.15),
+              style.gradient[1].withValues(alpha: 0.08),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          border: Border.all(
+            color: style.gradient[0].withValues(alpha: 0.3),
+            width: rank == 1 ? 1.5 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: style.gradient[0].withValues(alpha: 0.15),
+              blurRadius: style.elevation,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        padding: EdgeInsets.symmetric(
+          vertical: rank == 1 ? 24 : 16,
+          horizontal: 16,
+        ),
+        child: Column(
+          children: [
+            Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.topRight,
+              children: [
+                TeamLogo(url: team.logo, size: style.logoSize, teamId: id),
+                Positioned(
+                  top: -6,
+                  right: -6,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(colors: style.gradient),
+                      boxShadow: [
+                        BoxShadow(
+                          color: style.gradient[0].withValues(alpha: 0.4),
+                          blurRadius: 6,
+                        ),
+                      ],
+                    ),
+                    child: Icon(style.medalIcon,
+                        size: rank == 1 ? 20 : 16, color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '#$rank',
+              style: TextStyle(
+                fontSize: rank == 1 ? 28 : 22,
+                fontWeight: FontWeight.w900,
+                foreground: Paint()
+                  ..shader = LinearGradient(colors: style.gradient)
+                      .createShader(const Rect.fromLTWH(0, 0, 60, 30)),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              team.name,
+              style: TextStyle(
+                fontSize: style.nameFontSize,
+                fontWeight: FontWeight.w700,
+                color: const Color(AppColors.textColor),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            TeamStatsRow(team: team, compact: rank != 1),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RankStyle {
+  final List<Color> gradient;
+  final IconData medalIcon;
+  final double elevation;
+  final double logoSize;
+  final double nameFontSize;
+
+  const _RankStyle({
+    required this.gradient,
+    required this.medalIcon,
+    required this.elevation,
+    required this.logoSize,
+    required this.nameFontSize,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Rest of list — uniform cards (rank 4+)
+// ---------------------------------------------------------------------------
+
+class _RankCard extends StatelessWidget {
+  const _RankCard({required this.rank, required this.team});
 
   final int rank;
   final TeamModel team;
@@ -76,30 +287,73 @@ class _RankRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final id = team.id;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: const Color(
-            AppColors.primaryColor,
-          ).withValues(alpha: 0.12),
-          child: Text(
-            '#$rank',
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              color: Color(AppColors.primaryColor),
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        elevation: 0,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: id == null || id.isEmpty
+              ? null
+              : () => Get.toNamed(
+                    AppConstants.routes.teamProfile,
+                    arguments: {'teamId': id},
+                  ),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: const Color(AppColors.dividerColor)
+                    .withValues(alpha: 0.5),
+              ),
+            ),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 36,
+                  child: Text(
+                    '#$rank',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: Color(AppColors.textSecondaryColor),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                TeamLogo(url: team.logo, size: 44, teamId: id),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        team.name,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Color(AppColors.textColor),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      TeamStatsRow(team: team, compact: true),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right,
+                    size: 20,
+                    color: Color(AppColors.textSecondaryColor)),
+              ],
             ),
           ),
         ),
-        title: Text(team.name),
-        subtitle: Text(teamSportLabel(team.sportType)),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: id == null || id.isEmpty
-            ? null
-            : () => Get.toNamed(
-                AppConstants.routes.teamProfile,
-                arguments: {'teamId': id},
-              ),
       ),
     );
   }

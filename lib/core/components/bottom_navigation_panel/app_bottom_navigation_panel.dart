@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import '../../config/constants.dart';
+import 'nav_tabs.dart';
 
 class AppBottomNavigationPanel extends StatefulWidget {
   final int currentIndex;
@@ -21,18 +22,11 @@ class AppBottomNavigationPanel extends StatefulWidget {
 class _AppBottomNavigationPanelState extends State<AppBottomNavigationPanel>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  double _position = 0; // fractional index (0.0 = first item centered)
+  double _position = 0;
   double _animFrom = 0;
   double _animTo = 0;
 
-  static const _items = [
-    _NavItem(Icons.dashboard_outlined, Icons.dashboard, 'Dashboard'),
-    _NavItem(Icons.grass_outlined, Icons.grass, 'Turfs'),
-    _NavItem(Icons.sports_soccer_outlined, Icons.sports_soccer, 'Match Up'),
-    _NavItem(Icons.groups_outlined, Icons.groups, 'Teams'),
-    _NavItem(Icons.emoji_events_outlined, Icons.emoji_events, 'Players'),
-    _NavItem(Icons.person_outline, Icons.person, 'Profile'),
-  ];
+  int get _itemCount => kNavTabs.length;
 
   static const double _itemSpacing = 82.0;
   static const double _itemWidth = 72.0;
@@ -78,7 +72,7 @@ class _AppBottomNavigationPanelState extends State<AppBottomNavigationPanel>
     setState(() {
       _position = (_position - details.delta.dx / _itemSpacing).clamp(
         0.0,
-        (_items.length - 1).toDouble(),
+        (_itemCount - 1).toDouble(),
       );
     });
   }
@@ -91,11 +85,11 @@ class _AppBottomNavigationPanelState extends State<AppBottomNavigationPanel>
       final jump = (velocity.abs() / 1800)
           .ceil(); // TWEAK 2: divisor (lower = jumps more items per swipe)
       target = velocity < 0
-          ? (_position + jump).round().clamp(0, _items.length - 1)
-          : (_position - jump).round().clamp(0, _items.length - 1);
+          ? (_position + jump).round().clamp(0, _itemCount - 1)
+          : (_position - jump).round().clamp(0, _itemCount - 1);
     } else {
       // Snap to nearest
-      target = _position.round().clamp(0, _items.length - 1);
+      target = _position.round().clamp(0, _itemCount - 1);
     }
 
     if (target != widget.currentIndex) {
@@ -144,7 +138,7 @@ class _AppBottomNavigationPanelState extends State<AppBottomNavigationPanel>
             onHorizontalDragUpdate: _onDragUpdate,
             onHorizontalDragEnd: _onDragEnd,
             child: Stack(
-              children: List.generate(_items.length, (index) {
+              children: List.generate(_itemCount, (index) {
                 final offset = index - _position;
                 final absOffset = offset.abs();
 
@@ -191,7 +185,7 @@ class _AppBottomNavigationPanelState extends State<AppBottomNavigationPanel>
   }
 
   Widget _buildIcon(int index, double absOffset, bool isCenter) {
-    final item = _items[index];
+    final tab = kNavTabs[index];
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       padding: EdgeInsets.all(isCenter ? 14 : 10),
@@ -215,7 +209,7 @@ class _AppBottomNavigationPanelState extends State<AppBottomNavigationPanel>
             : null,
       ),
       child: Icon(
-        isCenter ? item.activeIcon : item.icon,
+        isCenter ? tab.activeIcon : tab.icon,
         size: isCenter ? 28 : 22,
         color: isCenter
             ? Colors.white
@@ -228,7 +222,7 @@ class _AppBottomNavigationPanelState extends State<AppBottomNavigationPanel>
 
   Widget _buildLabel(int index, double absOffset, bool isCenter) {
     return Text(
-      _items[index].label,
+      kNavTabs[index].label,
       style: TextStyle(
         fontSize: isCenter ? 11 : 10,
         fontWeight: isCenter ? FontWeight.w700 : FontWeight.w500,
@@ -242,12 +236,4 @@ class _AppBottomNavigationPanelState extends State<AppBottomNavigationPanel>
       overflow: TextOverflow.ellipsis,
     );
   }
-}
-
-class _NavItem {
-  final IconData icon;
-  final IconData activeIcon;
-  final String label;
-
-  const _NavItem(this.icon, this.activeIcon, this.label);
 }

@@ -1,9 +1,9 @@
 import 'package:get/get.dart';
+import '../match_up/match_up_controller.dart';
 
 class MatchUpBinding extends Bindings {
   @override
   void dependencies() {
-    // Match up controller will be added here when implemented
-    // For now, this is just a placeholder binding
+    Get.lazyPut<MatchUpController>(() => MatchUpController());
   }
 }
