@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../components/match_history/history_team_selector.dart';
-import '../components/match_history/match_history_placeholders.dart';
-import '../components/match_history/match_history_tabs.dart';
-import '../core/config/constants.dart';
+import '../../components/match_history/history_team_selector.dart';
+import '../../components/match_history/match_history_placeholders.dart';
+import '../../components/match_history/match_history_tabs.dart';
+import '../../core/config/constants.dart';
 import 'match_history_controller.dart';
 
 class MatchHistoryScreen extends StatelessWidget {

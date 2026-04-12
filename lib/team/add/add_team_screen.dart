@@ -39,16 +39,16 @@ class AddTeamScreen extends StatelessWidget {
             children: [
               _BasicInfoSection(controller: controller),
               const SizedBox(height: 24),
-              _TeamSettingsSection(controller: controller),
-              const SizedBox(height: 24),
+              // _TeamSettingsSection(controller: controller),
+              // const SizedBox(height: 24),
               _ScheduleSection(controller: controller),
               const SizedBox(height: 24),
               _SocialLinksSection(controller: controller),
               const SizedBox(height: 24),
-              _TagsSection(controller: controller),
-              const SizedBox(height: 24),
-              _PinnedNoticesSection(controller: controller),
-              const SizedBox(height: 24),
+              // _TagsSection(controller: controller),
+              // const SizedBox(height: 24),
+              // _PinnedNoticesSection(controller: controller),
+              // const SizedBox(height: 24),
               _RosterSection(controller: controller),
               const SizedBox(height: 24),
               ImageInput(
@@ -141,24 +141,7 @@ class _BasicInfoSection extends StatelessWidget {
             return null;
           },
         ),
-      ],
-    );
-  }
-}
-
-// ── Team Settings ─────────────────────────────────────────────────────────────
-
-class _TeamSettingsSection extends StatelessWidget {
-  final AddTeamController controller;
-
-  const _TeamSettingsSection({required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return SectionContainer(
-      title: 'Team Settings',
-      icon: Icons.settings_outlined,
-      children: [
+        const SizedBox(height: 16),
         if (!controller.isEditing) ...[
           _StyledDropdown<TeamSportType>(
             label: 'Sport',
@@ -173,44 +156,11 @@ class _TeamSettingsSection extends StatelessWidget {
           label: 'Gender Category',
           value: controller.genderCategory,
           items: TeamGenderCategory.values,
-          itemLabel: _genderLabel,
+          itemLabel: (g) => g.name.capitalizeFirst!,
           onChanged: (v) => controller.genderCategory.value = v,
-        ),
-        const SizedBox(height: 16),
-        _StyledDropdown<TeamVisibility>(
-          label: 'Visibility',
-          value: controller.visibility,
-          items: TeamVisibility.values,
-          itemLabel: teamVisibilityLabel,
-          onChanged: (v) => controller.visibility.value = v,
-        ),
-        const SizedBox(height: 16),
-        _StyledDropdown<TeamJoinMode>(
-          label: 'How Players Join',
-          value: controller.joinMode,
-          items: TeamJoinMode.values,
-          itemLabel: teamJoinModeLabel,
-          onChanged: (v) => controller.joinMode.value = v,
-        ),
-        const SizedBox(height: 16),
-        Obx(
-          () => _SwitchTile(
-            label: 'Looking for members',
-            subtitle: 'Show a recruiting badge on your team profile',
-            value: controller.lookingForMembers.value,
-            onChanged: (v) => controller.lookingForMembers.value = v,
-          ),
         ),
       ],
     );
-  }
-
-  static String _genderLabel(TeamGenderCategory g) {
-    return switch (g) {
-      TeamGenderCategory.male => 'Male',
-      TeamGenderCategory.female => 'Female',
-      TeamGenderCategory.mixed => 'Mixed',
-    };
   }
 }
 
@@ -352,181 +302,181 @@ class _SocialLinksSection extends StatelessWidget {
 
 // ── Tags ──────────────────────────────────────────────────────────────────────
 
-class _TagsSection extends StatelessWidget {
-  final AddTeamController controller;
+// class _TagsSection extends StatelessWidget {
+//   final AddTeamController controller;
 
-  const _TagsSection({required this.controller});
+//   const _TagsSection({required this.controller});
 
-  @override
-  Widget build(BuildContext context) {
-    return SectionContainer(
-      title: 'Tags',
-      icon: Icons.tag,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: TurfFormField(
-                controller: controller.tagInputController,
-                labelText: 'Add a tag',
-                hintText: 'e.g. competitive',
-                onFieldSubmitted: (_) => controller.addTag(),
-              ),
-            ),
-            const SizedBox(width: 10),
-            IconButton.filled(
-              onPressed: controller.addTag,
-              icon: const Icon(Icons.add, size: 20),
-              style: IconButton.styleFrom(
-                backgroundColor: const Color(AppColors.primaryColor),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Obx(
-          () => controller.tags.isEmpty
-              ? const SizedBox.shrink()
-              : Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: controller.tags
-                      .map(
-                        (tag) => Chip(
-                          label: Text(
-                            '#$tag',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: Color(AppColors.primaryColor),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          backgroundColor: const Color(
-                            AppColors.primaryColor,
-                          ).withValues(alpha: 0.08),
-                          deleteIcon: const Icon(Icons.close, size: 16),
-                          deleteIconColor: const Color(AppColors.primaryColor),
-                          onDeleted: () => controller.removeTag(tag),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                            side: BorderSide(
-                              color: const Color(
-                                AppColors.primaryColor,
-                              ).withValues(alpha: 0.2),
-                            ),
-                          ),
-                        ),
-                      )
-                      .toList(),
-                ),
-        ),
-      ],
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return SectionContainer(
+//       title: 'Tags',
+//       icon: Icons.tag,
+//       children: [
+//         Row(
+//           children: [
+//             Expanded(
+//               child: TurfFormField(
+//                 controller: controller.tagInputController,
+//                 labelText: 'Add a tag',
+//                 hintText: 'e.g. competitive',
+//                 onFieldSubmitted: (_) => controller.addTag(),
+//               ),
+//             ),
+//             const SizedBox(width: 10),
+//             IconButton.filled(
+//               onPressed: controller.addTag,
+//               icon: const Icon(Icons.add, size: 20),
+//               style: IconButton.styleFrom(
+//                 backgroundColor: const Color(AppColors.primaryColor),
+//                 foregroundColor: Colors.white,
+//                 shape: RoundedRectangleBorder(
+//                   borderRadius: BorderRadius.circular(8),
+//                 ),
+//               ),
+//             ),
+//           ],
+//         ),
+//         const SizedBox(height: 12),
+//         Obx(
+//           () => controller.tags.isEmpty
+//               ? const SizedBox.shrink()
+//               : Wrap(
+//                   spacing: 8,
+//                   runSpacing: 8,
+//                   children: controller.tags
+//                       .map(
+//                         (tag) => Chip(
+//                           label: Text(
+//                             '#$tag',
+//                             style: const TextStyle(
+//                               fontSize: 13,
+//                               color: Color(AppColors.primaryColor),
+//                               fontWeight: FontWeight.w500,
+//                             ),
+//                           ),
+//                           backgroundColor: const Color(
+//                             AppColors.primaryColor,
+//                           ).withValues(alpha: 0.08),
+//                           deleteIcon: const Icon(Icons.close, size: 16),
+//                           deleteIconColor: const Color(AppColors.primaryColor),
+//                           onDeleted: () => controller.removeTag(tag),
+//                           shape: RoundedRectangleBorder(
+//                             borderRadius: BorderRadius.circular(20),
+//                             side: BorderSide(
+//                               color: const Color(
+//                                 AppColors.primaryColor,
+//                               ).withValues(alpha: 0.2),
+//                             ),
+//                           ),
+//                         ),
+//                       )
+//                       .toList(),
+//                 ),
+//         ),
+//       ],
+//     );
+//   }
+// }
 
 // ── Pinned Notices ────────────────────────────────────────────────────────────
 
-class _PinnedNoticesSection extends StatelessWidget {
-  final AddTeamController controller;
+// class _PinnedNoticesSection extends StatelessWidget {
+//   final AddTeamController controller;
 
-  const _PinnedNoticesSection({required this.controller});
+//   const _PinnedNoticesSection({required this.controller});
 
-  @override
-  Widget build(BuildContext context) {
-    return SectionContainer(
-      title: 'Pinned Notices',
-      icon: Icons.push_pin_outlined,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: TurfFormField(
-                controller: controller.noticeInputController,
-                labelText: 'Add a notice',
-                hintText: 'e.g. Practice every Saturday 5 PM',
-                onFieldSubmitted: (_) => controller.addNotice(),
-              ),
-            ),
-            const SizedBox(width: 10),
-            IconButton.filled(
-              onPressed: controller.addNotice,
-              icon: const Icon(Icons.add, size: 20),
-              style: IconButton.styleFrom(
-                backgroundColor: const Color(AppColors.primaryColor),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Obx(
-          () => controller.pinnedNotices.isEmpty
-              ? const SizedBox.shrink()
-              : Column(
-                  children: [
-                    for (int i = 0; i < controller.pinnedNotices.length; i++)
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(
-                            AppColors.accentColor,
-                          ).withValues(alpha: 0.06),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: const Color(
-                              AppColors.accentColor,
-                            ).withValues(alpha: 0.15),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.push_pin,
-                              size: 16,
-                              color: const Color(AppColors.accentColor),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                controller.pinnedNotices[i],
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: Color(AppColors.textColor),
-                                ),
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: () => controller.removeNotice(i),
-                              child: Icon(
-                                Icons.close,
-                                size: 18,
-                                color: const Color(
-                                  AppColors.textSecondaryColor,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
-        ),
-      ],
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return SectionContainer(
+//       title: 'Pinned Notices',
+//       icon: Icons.push_pin_outlined,
+//       children: [
+//         Row(
+//           children: [
+//             Expanded(
+//               child: TurfFormField(
+//                 controller: controller.noticeInputController,
+//                 labelText: 'Add a notice',
+//                 hintText: 'e.g. Practice every Saturday 5 PM',
+//                 onFieldSubmitted: (_) => controller.addNotice(),
+//               ),
+//             ),
+//             const SizedBox(width: 10),
+//             IconButton.filled(
+//               onPressed: controller.addNotice,
+//               icon: const Icon(Icons.add, size: 20),
+//               style: IconButton.styleFrom(
+//                 backgroundColor: const Color(AppColors.primaryColor),
+//                 foregroundColor: Colors.white,
+//                 shape: RoundedRectangleBorder(
+//                   borderRadius: BorderRadius.circular(8),
+//                 ),
+//               ),
+//             ),
+//           ],
+//         ),
+//         const SizedBox(height: 12),
+//         Obx(
+//           () => controller.pinnedNotices.isEmpty
+//               ? const SizedBox.shrink()
+//               : Column(
+//                   children: [
+//                     for (int i = 0; i < controller.pinnedNotices.length; i++)
+//                       Container(
+//                         margin: const EdgeInsets.only(bottom: 8),
+//                         padding: const EdgeInsets.symmetric(
+//                           horizontal: 14,
+//                           vertical: 10,
+//                         ),
+//                         decoration: BoxDecoration(
+//                           color: const Color(
+//                             AppColors.accentColor,
+//                           ).withValues(alpha: 0.06),
+//                           borderRadius: BorderRadius.circular(10),
+//                           border: Border.all(
+//                             color: const Color(
+//                               AppColors.accentColor,
+//                             ).withValues(alpha: 0.15),
+//                           ),
+//                         ),
+//                         child: Row(
+//                           children: [
+//                             Icon(
+//                               Icons.push_pin,
+//                               size: 16,
+//                               color: const Color(AppColors.accentColor),
+//                             ),
+//                             const SizedBox(width: 10),
+//                             Expanded(
+//                               child: Text(
+//                                 controller.pinnedNotices[i],
+//                                 style: const TextStyle(
+//                                   fontSize: 14,
+//                                   color: Color(AppColors.textColor),
+//                                 ),
+//                               ),
+//                             ),
+//                             GestureDetector(
+//                               onTap: () => controller.removeNotice(i),
+//                               child: Icon(
+//                                 Icons.close,
+//                                 size: 18,
+//                                 color: const Color(
+//                                   AppColors.textSecondaryColor,
+//                                 ),
+//                               ),
+//                             ),
+//                           ],
+//                         ),
+//                       ),
+//                   ],
+//                 ),
+//         ),
+//       ],
+//     );
+//   }
+// }
 
 // ── Join Requests ─────────────────────────────────────────────────────────────
 
@@ -689,61 +639,6 @@ class _NullableDropdown<T> extends StatelessWidget {
           ],
           onChanged: (v) => onChanged(v),
         ),
-      ),
-    );
-  }
-}
-
-// ── Switch Tile ───────────────────────────────────────────────────────────────
-
-class _SwitchTile extends StatelessWidget {
-  final String label;
-  final String? subtitle;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  const _SwitchTile({
-    required this.label,
-    this.subtitle,
-    required this.value,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-            spreadRadius: 1,
-          ),
-        ],
-        border: Border.all(color: Colors.grey.shade300, width: 1),
-      ),
-      child: SwitchListTile(
-        title: Text(
-          label,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
-        ),
-        subtitle: subtitle != null
-            ? Text(
-                subtitle!,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Color(AppColors.textSecondaryColor),
-                ),
-              )
-            : null,
-        value: value,
-        onChanged: onChanged,
-        activeColor: const Color(AppColors.primaryColor),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }

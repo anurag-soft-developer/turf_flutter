@@ -90,15 +90,16 @@ class _TeamCard extends StatelessWidget {
 
     return Card(
       elevation: 0,
+      color: const Color(AppColors.surfaceColor),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: teamId == null || teamId.isEmpty
             ? null
             : () => Get.toNamed(
-                  AppConstants.routes.myTeam,
-                  arguments: {'teamId': teamId},
-                ),
+                AppConstants.routes.myTeam,
+                arguments: {'teamId': teamId},
+              ),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
@@ -108,8 +109,9 @@ class _TeamCard extends StatelessWidget {
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
-                  color: const Color(AppColors.primaryColor)
-                      .withValues(alpha: 0.1),
+                  color: const Color(
+                    AppColors.primaryColor,
+                  ).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 clipBehavior: Clip.antiAlias,
@@ -154,8 +156,9 @@ class _TeamCard extends StatelessWidget {
                             width: 4,
                             height: 4,
                             decoration: BoxDecoration(
-                              color: const Color(AppColors.textSecondaryColor)
-                                  .withValues(alpha: 0.5),
+                              color: const Color(
+                                AppColors.textSecondaryColor,
+                              ).withValues(alpha: 0.5),
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -167,8 +170,9 @@ class _TeamCard extends StatelessWidget {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(AppColors.primaryColor)
-                                .withValues(alpha: 0.1),
+                            color: const Color(
+                              AppColors.primaryColor,
+                            ).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
@@ -199,11 +203,11 @@ class _TeamCard extends StatelessWidget {
   Widget _teamInitials(String name) {
     final initials = name.isNotEmpty
         ? name
-            .split(' ')
-            .where((w) => w.isNotEmpty)
-            .take(2)
-            .map((w) => w[0].toUpperCase())
-            .join()
+              .split(' ')
+              .where((w) => w.isNotEmpty)
+              .take(2)
+              .map((w) => w[0].toUpperCase())
+              .join()
         : '?';
     return Center(
       child: Text(
@@ -234,14 +238,12 @@ class _EmptyState extends StatelessWidget {
           height: 100,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color:
-                const Color(AppColors.primaryColor).withValues(alpha: 0.08),
+            color: const Color(AppColors.primaryColor).withValues(alpha: 0.08),
           ),
           child: Icon(
             Icons.groups_2_outlined,
             size: 52,
-            color:
-                const Color(AppColors.primaryColor).withValues(alpha: 0.5),
+            color: const Color(AppColors.primaryColor).withValues(alpha: 0.5),
           ),
         ),
         const SizedBox(height: 28),

@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/components/shared/app_drawer.dart';
 import 'package:get/get.dart';
 
+import '../components/match_up/my_team_selector.dart';
 import '../components/match_up/sport_tabs.dart';
 import '../components/match_up/team_logo.dart';
 import '../components/match_up/team_stats_row.dart';
 import '../core/config/constants.dart';
-import '../core/models/team/team_member_field_instance.dart';
 import '../team/model/team_model.dart';
 import 'match_up_controller.dart';
 
@@ -22,6 +22,14 @@ class MatchUpScreen extends StatelessWidget {
       backgroundColor: const Color(AppColors.backgroundColor),
       appBar: AppBar(
         title: const Text('Match Up'),
+        actions: [
+          IconButton(
+            tooltip: 'Challenges',
+            icon: const Icon(Icons.inbox_outlined),
+            onPressed: () =>
+                Get.toNamed(AppConstants.routes.matchUpChallenges),
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(52),
           child: Obx(() => SportTabs(
@@ -57,7 +65,20 @@ class MatchUpScreen extends StatelessWidget {
 
         return Column(
           children: [
-            _MyTeamSelector(controller: c),
+            Obx(() {
+              final teams = c.myTeamsForSport;
+              final sel = c.selectedTeam.value;
+              return MyTeamSelector(
+                teams: teams,
+                allowToSelectAll: false,
+                allTeamsSelected: false,
+                selectedTeam: sel,
+                bannerTitle: 'Your Team',
+                sheetTitle: 'Select your team',
+                onTeamSelected: c.selectTeam,
+                actionChipLabel: 'Switch',
+              );
+            }),
             Expanded(
               child: RefreshIndicator(
                 onRefresh: c.reload,
@@ -107,219 +128,6 @@ class MatchUpScreen extends StatelessWidget {
           Navigator.pop(context);
           controller.sendChallenge(opponent);
         },
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// My-team selector banner
-// ---------------------------------------------------------------------------
-
-class _MyTeamSelector extends StatelessWidget {
-  const _MyTeamSelector({required this.controller});
-
-  final MatchUpController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    return Obx(() {
-      final teams = controller.myTeamsForSport;
-      final selected = controller.selectedTeam.value;
-      if (selected == null) return const SizedBox.shrink();
-
-      final hasMultiple = teams.length > 1;
-
-      return Container(
-        color: const Color(AppColors.backgroundColor),
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
-        child: GestureDetector(
-          onTap: hasMultiple ? () => _showTeamPicker(context, teams) : null,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(AppColors.primaryColor),
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(AppColors.primaryColor)
-                      .withValues(alpha: 0.25),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white.withValues(alpha: 0.2),
-                  ),
-                  child: selected.logo.isEmpty
-                      ? const Icon(Icons.shield_outlined,
-                          size: 16, color: Colors.white)
-                      : ClipOval(
-                          child: Image.network(
-                            selected.logo,
-                            width: 32,
-                            height: 32,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(
-                                Icons.shield_outlined,
-                                size: 16,
-                                color: Colors.white),
-                          ),
-                        ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Your Team',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white.withValues(alpha: 0.7),
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                      const SizedBox(height: 1),
-                      Text(
-                        selected.name,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                if (hasMultiple)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.swap_horiz,
-                            size: 14, color: Colors.white),
-                        SizedBox(width: 4),
-                        Text(
-                          'Switch',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      );
-    });
-  }
-
-  void _showTeamPicker(
-    BuildContext context,
-    List<TeamMemberFieldInstance> teams,
-  ) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (_) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Select your team',
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                color: Color(AppColors.textColor),
-              ),
-            ),
-            const SizedBox(height: 16),
-            ...teams.map((team) {
-              final isSelected = team.id == controller.selectedTeam.value?.id;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Material(
-                  color: isSelected
-                      ? const Color(AppColors.primaryColor)
-                          .withValues(alpha: 0.08)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(14),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(14),
-                    onTap: () {
-                      controller.selectTeam(team);
-                      Navigator.pop(context);
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 12),
-                      child: Row(
-                        children: [
-                          TeamLogo(url: team.logo, size: 40),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              team.name,
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: isSelected
-                                    ? FontWeight.w700
-                                    : FontWeight.w500,
-                                color: const Color(AppColors.textColor),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if (isSelected)
-                            const Icon(Icons.check_circle,
-                                size: 22,
-                                color: Color(AppColors.primaryColor)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }),
-          ],
-        ),
       ),
     );
   }

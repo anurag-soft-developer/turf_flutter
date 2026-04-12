@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../core/config/constants.dart';
-import '../../match_up/match_history_controller.dart';
+import '../../match_up/match_history/match_history_controller.dart';
 import '../../match_up/model/team_match_model.dart';
 import 'match_card.dart';
 import 'match_history_placeholders.dart';
@@ -24,8 +24,9 @@ class MatchHistoryTabs extends StatelessWidget {
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: const Color(AppColors.dividerColor)
-                    .withValues(alpha: 0.5),
+                color: const Color(
+                  AppColors.dividerColor,
+                ).withValues(alpha: 0.5),
               ),
             ),
             child: TabBar(

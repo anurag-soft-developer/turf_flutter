@@ -53,6 +53,7 @@ class Routes {
   final String teamMemberProfile = '/team-member-profile';
   final String editProfile = '/edit-profile';
   final String matchUp = '/match-up';
+  final String matchUpChallenges = '/match-up/challenges';
   final String matchHistory = '/match-history';
   final String playerRanking = '/player-ranking';
 }

@@ -1,11 +1,11 @@
 import 'package:get/get.dart';
 
-import '../core/models/team/team_member_field_instance.dart';
-import '../team/members/model/team_member_model.dart';
-import '../team/model/team_model.dart';
-import '../team/team_service.dart';
-import 'matchmaking_service.dart';
-import 'model/team_match_model.dart';
+import '../../core/models/team/team_member_field_instance.dart';
+import '../../team/members/model/team_member_model.dart';
+import '../../team/model/team_model.dart';
+import '../../team/team_service.dart';
+import '../matchmaking_service.dart';
+import '../model/team_match_model.dart';
 
 class MatchHistoryController extends GetxController
     with GetSingleTickerProviderStateMixin {
@@ -138,11 +138,15 @@ class MatchHistoryController extends GetxController
         ),
       );
 
-      final List<TeamMatchModel> matches = [...(result?.data ?? []), ...(drawResult?.data ?? [])];
+      final List<TeamMatchModel> matches = [
+        ...(result?.data ?? []),
+        ...(drawResult?.data ?? []),
+      ];
       matches.sort(
-          (a, b) => (b.updatedAt ?? b.createdAt ?? DateTime(2000)).compareTo(
-                a.updatedAt ?? a.createdAt ?? DateTime(2000),
-              ));
+        (a, b) => (b.updatedAt ?? b.createdAt ?? DateTime(2000)).compareTo(
+          a.updatedAt ?? a.createdAt ?? DateTime(2000),
+        ),
+      );
 
       if (historyPage.value == 1) {
         completedMatches.assignAll(matches);
@@ -187,16 +191,18 @@ class MatchHistoryController extends GetxController
         ...(negotiating?.data ?? []),
       ];
       matches.sort(
-          (a, b) => (a.createdAt ?? DateTime(2099)).compareTo(
-                b.createdAt ?? DateTime(2099),
-              ));
+        (a, b) => (a.createdAt ?? DateTime(2099)).compareTo(
+          b.createdAt ?? DateTime(2099),
+        ),
+      );
 
       if (upcomingPage.value == 1) {
         upcomingMatches.assignAll(matches);
       } else {
         upcomingMatches.addAll(matches);
       }
-      hasMoreUpcoming.value = (scheduled?.hasNextPage ?? false) ||
+      hasMoreUpcoming.value =
+          (scheduled?.hasNextPage ?? false) ||
           (negotiating?.hasNextPage ?? false);
     } finally {
       isLoadingMatches.value = false;

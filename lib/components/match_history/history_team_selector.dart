@@ -4,7 +4,7 @@ import 'package:get/get.dart';
 import '../match_up/team_logo.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/team/team_member_field_instance.dart';
-import '../../match_up/match_history_controller.dart';
+import '../../match_up/match_history/match_history_controller.dart';
 
 class HistoryTeamSelector extends StatelessWidget {
   const HistoryTeamSelector({super.key, required this.controller});
@@ -32,8 +32,9 @@ class HistoryTeamSelector extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(AppColors.primaryColor)
-                      .withValues(alpha: 0.25),
+                  color: const Color(
+                    AppColors.primaryColor,
+                  ).withValues(alpha: 0.25),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -49,8 +50,11 @@ class HistoryTeamSelector extends StatelessWidget {
                     color: Colors.white.withValues(alpha: 0.2),
                   ),
                   child: selected.logo.isEmpty
-                      ? const Icon(Icons.shield_outlined,
-                          size: 18, color: Colors.white)
+                      ? const Icon(
+                          Icons.shield_outlined,
+                          size: 18,
+                          color: Colors.white,
+                        )
                       : ClipOval(
                           child: Image.network(
                             selected.logo,
@@ -58,9 +62,10 @@ class HistoryTeamSelector extends StatelessWidget {
                             height: 36,
                             fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) => const Icon(
-                                Icons.shield_outlined,
-                                size: 18,
-                                color: Colors.white),
+                              Icons.shield_outlined,
+                              size: 18,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                 ),
@@ -97,8 +102,10 @@ class HistoryTeamSelector extends StatelessWidget {
                 if (teams.length > 1) ...[
                   const SizedBox(width: 8),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(8),
@@ -163,14 +170,14 @@ class HistoryTeamSelector extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             ...teams.map((team) {
-              final isSelected =
-                  team.id == controller.selectedTeam.value?.id;
+              final isSelected = team.id == controller.selectedTeam.value?.id;
               return Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Material(
                   color: isSelected
-                      ? const Color(AppColors.primaryColor)
-                          .withValues(alpha: 0.08)
+                      ? const Color(
+                          AppColors.primaryColor,
+                        ).withValues(alpha: 0.08)
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(14),
                   child: InkWell(
@@ -181,7 +188,9 @@ class HistoryTeamSelector extends StatelessWidget {
                     },
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 12),
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
                       child: Row(
                         children: [
                           TeamLogo(url: team.logo, size: 40),
@@ -207,17 +216,18 @@ class HistoryTeamSelector extends StatelessWidget {
                                   team.sportType.name.capitalizeFirst ?? '',
                                   style: const TextStyle(
                                     fontSize: 12,
-                                    color:
-                                        Color(AppColors.textSecondaryColor),
+                                    color: Color(AppColors.textSecondaryColor),
                                   ),
                                 ),
                               ],
                             ),
                           ),
                           if (isSelected)
-                            const Icon(Icons.check_circle,
-                                size: 22,
-                                color: Color(AppColors.primaryColor)),
+                            const Icon(
+                              Icons.check_circle,
+                              size: 22,
+                              color: Color(AppColors.primaryColor),
+                            ),
                         ],
                       ),
                     ),

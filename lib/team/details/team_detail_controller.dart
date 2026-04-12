@@ -24,6 +24,7 @@ class TeamDetailController extends GetxController {
 
   final RxBool isLoading = true.obs;
   final RxBool isActionLoading = false.obs;
+  final RxBool isUpdatingTeamSettings = false.obs;
   final RxBool isJoining = false.obs;
 
   String? _teamId;
@@ -156,6 +157,68 @@ class TeamDetailController extends GetxController {
   }
 
   // ── Owner actions ─────────────────────────────────────────────────────────
+
+  /// Partial update for discovery / join preferences (owner only).
+  Future<void> updateTeamSettings({
+    TeamVisibility? visibility,
+    TeamJoinMode? joinMode,
+    bool? lookingForMembers,
+    bool? teamOpenForMatch,
+  }) async {
+    final id = _teamId;
+    final t = team.value;
+    if (id == null || !isMyTeamMode || !isOwner || t == null) return;
+
+    final affectsVisibilityOrJoin = visibility != null || joinMode != null;
+    if (affectsVisibilityOrJoin) {
+      final nextVisibility = visibility ?? t.visibility;
+      final nextJoinMode = joinMode ?? t.joinMode;
+      if (nextVisibility == TeamVisibility.private &&
+          nextJoinMode == TeamJoinMode.open) {
+        AppSnackbar.warning(
+          title: 'Join mode',
+          message:
+              'Private teams cannot use open join. Make the team public or use approval.',
+        );
+        return;
+      }
+    }
+
+    isUpdatingTeamSettings.value = true;
+    try {
+      TeamJoinMode? joinModePatch = joinMode;
+      TeamVisibility? visibilityPatch = visibility;
+      if (visibility == TeamVisibility.private &&
+          t.joinMode == TeamJoinMode.open &&
+          joinMode == null) {
+        joinModePatch = TeamJoinMode.approval;
+      }
+
+      final updated = await _teamService.update(
+        id,
+        UpdateTeamRequest(
+          visibility: visibilityPatch,
+          joinMode: joinModePatch,
+          lookingForMembers: lookingForMembers,
+          teamOpenForMatch: teamOpenForMatch,
+        ),
+      );
+      if (updated != null) {
+        team.value = updated;
+        AppSnackbar.success(
+          title: 'Settings saved',
+          message: 'Team preferences were updated.',
+        );
+      } else {
+        AppSnackbar.error(
+          title: 'Update failed',
+          message: 'Try again later.',
+        );
+      }
+    } finally {
+      isUpdatingTeamSettings.value = false;
+    }
+  }
 
   Future<void> activateTeam() async {
     final id = _teamId;

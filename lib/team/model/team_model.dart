@@ -371,6 +371,8 @@ class UpdateTeamRequest {
   final TeamPreferredTimeSlot? preferredTimeSlot;
   @JsonKey(name: 'lookingForMembers')
   final bool? lookingForMembers;
+  @JsonKey(name: 'teamOpenForMatch')
+  final bool? teamOpenForMatch;
   @JsonKey(name: 'pinnedNotices')
   final List<String>? pinnedNotices;
   final TeamVisibility? visibility;
@@ -393,6 +395,7 @@ class UpdateTeamRequest {
     this.preferredPlayDays,
     this.preferredTimeSlot,
     this.lookingForMembers,
+    this.teamOpenForMatch,
     this.pinnedNotices,
     this.visibility,
     this.joinMode,
