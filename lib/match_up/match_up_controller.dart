@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../core/models/team/team_member_field_instance.dart';
 import '../team/members/model/team_member_model.dart';
 import '../team/model/team_model.dart';
 import '../team/team_service.dart';
@@ -45,13 +44,12 @@ class MatchUpController extends GetxController {
     if (selectedSport.value == sport) return;
     selectedSport.value = sport;
     _autoSelectTeam();
-    _loadFeedIfPossible();
+    _loadFeed();
   }
 
   void selectTeam(TeamMemberFieldInstance team) {
     if (selectedTeam.value?.id == team.id) return;
     selectedTeam.value = team;
-    _loadFeedIfPossible();
   }
 
   Future<void> _loadMyTeams() async {
@@ -65,7 +63,6 @@ class MatchUpController extends GetxController {
       );
       myMemberships.assignAll(result?.data ?? []);
       _autoSelectTeam();
-      _loadFeedIfPossible();
     } finally {
       isLoadingMyTeams.value = false;
     }
@@ -81,14 +78,6 @@ class MatchUpController extends GetxController {
     }
   }
 
-  Future<void> _loadFeedIfPossible() async {
-    if (selectedTeam.value?.id == null) {
-      feedTeams.clear();
-      return;
-    }
-    await _loadFeed();
-  }
-
   Future<void> _loadFeed() async {
     isLoadingFeed.value = true;
     try {
@@ -102,8 +91,7 @@ class MatchUpController extends GetxController {
         ),
       );
       final myId = selectedTeam.value?.id;
-      final teams =
-          (result?.data ?? []).where((t) => t.id != myId).toList();
+      final teams = (result?.data ?? []).where((t) => t.id != myId).toList();
       feedTeams.assignAll(teams);
     } finally {
       isLoadingFeed.value = false;
@@ -134,7 +122,7 @@ class MatchUpController extends GetxController {
           borderRadius: 12,
           duration: const Duration(seconds: 3),
         );
-        _loadFeedIfPossible();
+        _loadFeed();
       }
     } catch (e) {
       Get.snackbar(

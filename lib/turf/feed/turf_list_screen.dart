@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/components/shared/app_drawer.dart';
 import 'package:get/get.dart';
 import 'turf_list_controller.dart';
-import '../../components/shared/loading_overlay.dart';
 import '../../components/turf/search_components.dart';
 import '../../components/turf/turf_cards.dart';
 import '../../components/turf/filter_bottom_sheet.dart';
@@ -47,12 +46,6 @@ class TurfListScreen extends StatelessWidget {
                 Expanded(child: _buildTurfsList(controller)),
               ],
             ),
-          ),
-          // Loading overlay for initial load only
-          Obx(
-            () => controller.isLoading.value && controller.turfs.isEmpty
-                ? const LoadingOverlay(isLoading: true, child: SizedBox())
-                : const SizedBox(),
           ),
         ],
       ),

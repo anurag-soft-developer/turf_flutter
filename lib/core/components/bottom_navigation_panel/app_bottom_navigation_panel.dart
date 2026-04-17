@@ -6,11 +6,13 @@ import 'nav_tabs.dart';
 
 class AppBottomNavigationPanel extends StatefulWidget {
   final int currentIndex;
+  final List<NavTab> tabs;
   final Function(int) onTap;
 
   const AppBottomNavigationPanel({
     super.key,
     required this.currentIndex,
+    required this.tabs,
     required this.onTap,
   });
 
@@ -26,7 +28,7 @@ class _AppBottomNavigationPanelState extends State<AppBottomNavigationPanel>
   double _animFrom = 0;
   double _animTo = 0;
 
-  int get _itemCount => kNavTabs.length;
+  int get _itemCount => widget.tabs.length;
 
   static const double _itemSpacing = 82.0;
   static const double _itemWidth = 72.0;
@@ -185,7 +187,7 @@ class _AppBottomNavigationPanelState extends State<AppBottomNavigationPanel>
   }
 
   Widget _buildIcon(int index, double absOffset, bool isCenter) {
-    final tab = kNavTabs[index];
+    final tab = widget.tabs[index];
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       padding: EdgeInsets.all(isCenter ? 14 : 10),
@@ -222,7 +224,7 @@ class _AppBottomNavigationPanelState extends State<AppBottomNavigationPanel>
 
   Widget _buildLabel(int index, double absOffset, bool isCenter) {
     return Text(
-      kNavTabs[index].label,
+      widget.tabs[index].label,
       style: TextStyle(
         fontSize: isCenter ? 11 : 10,
         fontWeight: isCenter ? FontWeight.w700 : FontWeight.w500,

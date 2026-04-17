@@ -3,11 +3,15 @@ import 'package:flutter_application_1/match_up/match_up_controller.dart';
 import 'package:flutter_application_1/match_up/match_up_screen.dart';
 import 'package:get/get.dart';
 import '../../../dashboard/dashboard_screen.dart';
+import '../../../settings/settings_controller.dart';
+import '../../../turf/my_turves/my_turfs_screen.dart';
+import '../../../turf/my_turves/turf_management_controller.dart';
+import '../../../turf_booking/bookings_screen.dart';
+import '../../../turf_booking/turf_booking_controller.dart';
 import '../../../turf/feed/turf_list_screen.dart';
 import '../../../team/feed/teams_ranking_screen.dart';
 import '../../../rankings/player_ranking_screen.dart';
 import '../../../profile/profile_screen.dart';
-import '../../../settings/settings_controller.dart';
 import '../../../turf/feed/turf_list_controller.dart';
 import '../../../team/feed/teams_ranking_controller.dart';
 import '../../../profile/profile_controller.dart';
@@ -81,6 +85,40 @@ final List<NavTab> kNavTabs = [
     disposeController: () => _dispose<ProfileController>(),
   ),
 ];
+
+final List<NavTab> kProprietorNavTabs = [
+  NavTab(
+    icon: Icons.dashboard_outlined,
+    activeIcon: Icons.dashboard,
+    label: 'Dashboard',
+    screenBuilder: () => const DashboardScreen(),
+    loadController: () =>
+        _ensure<SettingsController>(() => SettingsController()),
+    disposeController: () => _dispose<SettingsController>(),
+  ),
+  NavTab(
+    icon: Icons.grass_outlined,
+    activeIcon: Icons.grass,
+    label: 'My Turfs',
+    screenBuilder: () => const MyTurfsScreen(),
+    loadController: () =>
+        _ensure<TurfManagementController>(() => TurfManagementController()),
+    disposeController: () => _dispose<TurfManagementController>(),
+  ),
+  NavTab(
+    icon: Icons.calendar_today_outlined,
+    activeIcon: Icons.calendar_today,
+    label: 'Bookings',
+    screenBuilder: () => const BookingsScreen(),
+    loadController: () =>
+        _ensure<TurfBookingController>(() => TurfBookingController()),
+    disposeController: () => _dispose<TurfBookingController>(),
+  ),
+];
+
+List<NavTab> navTabsForMode(UserMode mode) {
+  return mode == UserMode.proprietor ? kProprietorNavTabs : kNavTabs;
+}
 
 void _ensure<T extends GetxController>(T Function() factory) {
   if (!Get.isRegistered<T>()) {

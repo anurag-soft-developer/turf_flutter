@@ -119,6 +119,87 @@ class AppDrawer extends StatelessWidget {
     ];
   }
 
+  Widget _buildModeSwitchCard(SettingsController settingsController) {
+    return Obx(() {
+      final Color primary = const Color(AppColors.primaryColor);
+      final bool isPlayer = settingsController.isPlayerMode;
+      final String title = isPlayer ? 'Become a host' : 'Become a player';
+      final String subtitle = isPlayer
+          ? 'List turfs and take bookings'
+          : 'Book venues and play';
+
+      return Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () {
+            settingsController.toggleMode();
+            Get.back();
+          },
+          borderRadius: BorderRadius.circular(14),
+          splashColor: primary.withValues(alpha: 0.12),
+          highlightColor: primary.withValues(alpha: 0.06),
+          child: Ink(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              color: primary.withValues(alpha: 0.06),
+              border: Border.all(color: primary.withValues(alpha: 0.18)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              child: Row(
+                children: [
+                  Icon(
+                    isPlayer
+                        ? Icons.storefront_outlined
+                        : Icons.sports_soccer_outlined,
+                    color: primary,
+                    size: 22,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: -0.2,
+                            height: 1.2,
+                            color: Color(AppColors.textColor),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                            height: 1.25,
+                            color: Color(AppColors.textSecondaryColor),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: primary.withValues(alpha: 0.55),
+                    size: 22,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    });
+  }
+
   Widget _buildMenuItem(DrawerMenuItem item) {
     return ListTile(
       leading: Icon(
@@ -179,43 +260,11 @@ class AppDrawer extends StatelessWidget {
                     ),
                   ),
                 ),
-
-                // Mode Switch Button
-                Obx(
-                  () => Container(
-                    margin: const EdgeInsets.all(16),
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        settingsController.toggleMode();
-                        Get.back(); // Close drawer
-                      },
-                      icon: Icon(
-                        settingsController.isPlayerMode
-                            ? Icons.business
-                            : Icons.sports_soccer,
-                        size: 20,
-                      ),
-                      label: Text(
-                        'Switch to ${settingsController.alternateModeDisplay}',
-                        style: const TextStyle(fontWeight: FontWeight.w500),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(AppColors.primaryColor),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                    ),
-                  ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+                  child: _buildModeSwitchCard(settingsController),
                 ),
-
                 const Divider(color: Color(AppColors.dividerColor)),
-
                 // Navigation Items
                 // ListTile(
                 //   leading: const Icon(
@@ -231,16 +280,13 @@ class AppDrawer extends StatelessWidget {
 
                 // Mode Specific Items
                 Obx(() {
-                  final SettingsController settingsController = Get.find();
                   final List<DrawerMenuItem> modeItems =
                       settingsController.currentMode.value == UserMode.player
                       ? _getPlayerModeItems()
                       : _getProprietorModeItems();
 
                   return Column(
-                    children: modeItems
-                        .map((item) => _buildMenuItem(item))
-                        .toList(),
+                    children: modeItems.map(_buildMenuItem).toList(),
                   );
                 }),
 
@@ -251,7 +297,6 @@ class AppDrawer extends StatelessWidget {
 
                 const Spacer(),
 
-                const Divider(color: Color(AppColors.dividerColor)),
                 ListTile(
                   leading: const Icon(
                     Icons.help_outline_rounded,

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'turf_detail_controller.dart';
-import '../../components/shared/loading_overlay.dart';
 import '../../components/turf/turf_detail_scroll_content.dart';
 import '../../components/turf/booking_components.dart';
 import '../../core/config/constants.dart';
@@ -33,11 +32,6 @@ class TurfDetailScreen extends StatelessWidget {
                       showBookingSection: true,
                     ),
                   ),
-          ),
-          Obx(
-            () => controller.isLoading.value
-                ? const LoadingOverlay(isLoading: true, child: SizedBox())
-                : const SizedBox(),
           ),
         ],
       ),

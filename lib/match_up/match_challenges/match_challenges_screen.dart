@@ -2,13 +2,40 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../components/match_up/my_team_selector.dart';
+import '../../components/shared/app_segmented_tabs.dart';
 import '../../core/config/constants.dart';
 import '../../team/utils/team_ui.dart';
-import 'match_challenges_controller.dart';
 import '../model/team_match_model.dart';
+import 'match_challenge_detail_screen.dart';
+import 'match_challenges_controller.dart';
 
-class MatchChallengesScreen extends StatelessWidget {
+class MatchChallengesScreen extends StatefulWidget {
   const MatchChallengesScreen({super.key});
+
+  @override
+  State<MatchChallengesScreen> createState() => _MatchChallengesScreenState();
+}
+
+class _MatchChallengesScreenState extends State<MatchChallengesScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    final c = Get.find<MatchChallengesController>();
+    _tabController = TabController(length: 2, vsync: this, initialIndex: c.tabIndex.value);
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) return;
+      c.switchTab(_tabController.index);
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,65 +75,38 @@ class MatchChallengesScreen extends StatelessWidget {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: Obx(
-                () => _DirectionTabBar(
-                  selectedIndex: c.tabIndex.value,
-                  onChanged: c.switchTab,
-                ),
+              child: AppSegmentedTabs(
+                controller: _tabController,
+                onTap: c.switchTab,
+                padding: EdgeInsets.zero,
+                items: const [
+                  AppTabItem(label: 'Received'),
+                  AppTabItem(label: 'Sent'),
+                ],
               ),
             ),
             Expanded(
               child: Obx(() {
-                if (c.isLoading.value &&
-                    (c.isReceivedTab ? c.received : c.sent).isEmpty) {
-                  return const Center(
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Color(AppColors.primaryColor),
-                      ),
+                return AppSegmentedTabView(
+                  controller: _tabController,
+                  children: [
+                    _ChallengesTabView(
+                      isLoading: c.isLoading.value,
+                      list: c.received,
+                      emptyMessage: 'No challenges received yet.',
+                      itemBuilder: (m) =>
+                          _ReceivedChallengeCard(match: m, controller: c),
+                      onRefresh: c.refreshAll,
                     ),
-                  );
-                }
-                final list = c.isReceivedTab ? c.received : c.sent;
-                return RefreshIndicator(
-                  onRefresh: c.refreshAll,
-                  color: const Color(AppColors.primaryColor),
-                  child: list.isEmpty
-                      ? ListView(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          children: [
-                            SizedBox(
-                              height: MediaQuery.sizeOf(context).height * 0.35,
-                              child: Center(
-                                child: Text(
-                                  c.isReceivedTab
-                                      ? 'No challenges received yet.'
-                                      : 'No challenges sent yet.',
-                                  style: const TextStyle(
-                                    color: Color(AppColors.textSecondaryColor),
-                                    fontSize: 15,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        )
-                      : ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          itemCount: list.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 12),
-                          itemBuilder: (context, i) {
-                            final m = list[i];
-                            return c.isReceivedTab
-                                ? _ReceivedChallengeCard(
-                                    match: m,
-                                    controller: c,
-                                  )
-                                : _SentChallengeCard(match: m, controller: c);
-                          },
-                        ),
+                    _ChallengesTabView(
+                      isLoading: c.isLoading.value,
+                      list: c.sent,
+                      emptyMessage: 'No challenges sent yet.',
+                      itemBuilder: (m) =>
+                          _SentChallengeCard(match: m, controller: c),
+                      onRefresh: c.refreshAll,
+                    ),
+                  ],
                 );
               }),
             ),
@@ -117,71 +117,59 @@ class MatchChallengesScreen extends StatelessWidget {
   }
 }
 
-class _DirectionTabBar extends StatelessWidget {
-  const _DirectionTabBar({
-    required this.selectedIndex,
-    required this.onChanged,
+class _ChallengesTabView extends StatelessWidget {
+  const _ChallengesTabView({
+    required this.isLoading,
+    required this.list,
+    required this.emptyMessage,
+    required this.itemBuilder,
+    required this.onRefresh,
   });
 
-  final int selectedIndex;
-  final ValueChanged<int> onChanged;
+  final bool isLoading;
+  final List<TeamMatchModel> list;
+  final String emptyMessage;
+  final Widget Function(TeamMatchModel match) itemBuilder;
+  final Future<void> Function() onRefresh;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _tabChip(
-            label: 'Received',
-            icon: Icons.inbox_outlined,
-            index: 0,
-          ),
+    if (isLoading && list.isEmpty) {
+      return const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(Color(AppColors.primaryColor)),
         ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _tabChip(label: 'Sent', icon: Icons.send_outlined, index: 1),
-        ),
-      ],
-    );
-  }
+      );
+    }
 
-  Widget _tabChip({
-    required String label,
-    required IconData icon,
-    required int index,
-  }) {
-    final isActive = selectedIndex == index;
-    return Material(
-      color: isActive
-          ? const Color(AppColors.primaryColor)
-          : const Color(AppColors.primaryColor).withValues(alpha: 0.08),
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () => onChanged(index),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 18,
-                color: isActive ? Colors.white : Colors.black87,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-                  color: isActive ? Colors.white : Colors.black87,
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      color: const Color(AppColors.primaryColor),
+      child: list.isEmpty
+          ? ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                SizedBox(
+                  height: MediaQuery.sizeOf(context).height * 0.35,
+                  child: Center(
+                    child: Text(
+                      emptyMessage,
+                      style: const TextStyle(
+                        color: Color(AppColors.textSecondaryColor),
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ),
-      ),
+              ],
+            )
+          : ListView.separated(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              physics: const AlwaysScrollableScrollPhysics(),
+              itemCount: list.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, i) => itemBuilder(list[i]),
+            ),
     );
   }
 }
@@ -198,9 +186,7 @@ class _ReceivedChallengeCard extends StatelessWidget {
     final canAccept = match.status == TeamMatchStatus.requested;
 
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -210,92 +196,105 @@ class _ReceivedChallengeCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  fromName,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Color(AppColors.textColor),
-                  ),
-                ),
-              ),
-              _StatusChip(status: match.status),
-            ],
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => Get.to(
+            () => MatchChallengeDetailScreen(match: match, isIncoming: true),
           ),
-          const SizedBox(height: 6),
-          Text(
-            teamSportLabel(match.sportType),
-            style: const TextStyle(
-              fontSize: 13,
-              color: Color(AppColors.textSecondaryColor),
-            ),
-          ),
-          Obx(() {
-            if (!controller.filterAllTeams.value) {
-              return const SizedBox.shrink();
-            }
-            return Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                'Receiving as: ${match.toTeamHelper.getDisplayName()}',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade700,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            );
-          }),
-          if (match.createdAt != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              _formatDate(match.createdAt!),
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-            ),
-          ],
-          if (canAccept) ...[
-            const SizedBox(height: 14),
-            Obx(() {
-              final busy = controller.acceptingMatchId.value == match.id;
-              return SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: busy
-                      ? null
-                      : () => controller.acceptChallenge(match),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(AppColors.primaryColor),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: busy
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text(
-                          'Accept challenge',
-                          style: TextStyle(fontWeight: FontWeight.w600),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        fromName,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Color(AppColors.textColor),
                         ),
+                      ),
+                    ),
+                    _StatusChip(status: match.status),
+                  ],
                 ),
-              );
-            }),
-          ],
-        ],
+                const SizedBox(height: 6),
+                Text(
+                  teamSportLabel(match.sportType),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(AppColors.textSecondaryColor),
+                  ),
+                ),
+                Obx(() {
+                  if (!controller.filterAllTeams.value) {
+                    return const SizedBox.shrink();
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      'Receiving as: ${match.toTeamHelper.getDisplayName()}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade700,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  );
+                }),
+                if (match.createdAt != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    _formatDate(match.createdAt!),
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  ),
+                ],
+                if (canAccept) ...[
+                  const SizedBox(height: 14),
+                  Obx(() {
+                    final busy = controller.acceptingMatchId.value == match.id;
+                    return SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: busy
+                            ? null
+                            : () => controller.acceptChallenge(match),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(AppColors.primaryColor),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: busy
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text(
+                                'Accept challenge',
+                                style: TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                      ),
+                    );
+                  }),
+                ],
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -312,9 +311,7 @@ class _SentChallengeCard extends StatelessWidget {
     final toName = match.toTeamHelper.getDisplayName();
 
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -324,56 +321,69 @@ class _SentChallengeCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  toName,
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => Get.to(
+            () => MatchChallengeDetailScreen(match: match, isIncoming: false),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        toName,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Color(AppColors.textColor),
+                        ),
+                      ),
+                    ),
+                    _StatusChip(status: match.status),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  teamSportLabel(match.sportType),
                   style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Color(AppColors.textColor),
+                    fontSize: 13,
+                    color: Color(AppColors.textSecondaryColor),
                   ),
                 ),
-              ),
-              _StatusChip(status: match.status),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            teamSportLabel(match.sportType),
-            style: const TextStyle(
-              fontSize: 13,
-              color: Color(AppColors.textSecondaryColor),
+                Obx(() {
+                  if (!controller.filterAllTeams.value) {
+                    return const SizedBox.shrink();
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      'Sent as: ${match.fromTeamHelper.getDisplayName()}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade700,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  );
+                }),
+                if (match.createdAt != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    _formatDate(match.createdAt!),
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  ),
+                ],
+              ],
             ),
           ),
-          Obx(() {
-            if (!controller.filterAllTeams.value) {
-              return const SizedBox.shrink();
-            }
-            return Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                'Sent as: ${match.fromTeamHelper.getDisplayName()}',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade700,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            );
-          }),
-          if (match.createdAt != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              _formatDate(match.createdAt!),
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }

@@ -3,15 +3,50 @@ import 'package:flutter_application_1/components/shared/app_drawer.dart';
 import 'package:get/get.dart';
 
 import '../components/match_up/my_team_selector.dart';
-import '../components/match_up/sport_tabs.dart';
+import '../components/shared/app_segmented_tabs.dart';
 import '../components/match_up/team_logo.dart';
 import '../components/match_up/team_stats_row.dart';
 import '../core/config/constants.dart';
+import '../team/members/model/team_member_model.dart';
 import '../team/model/team_model.dart';
 import 'match_up_controller.dart';
 
-class MatchUpScreen extends StatelessWidget {
+class MatchUpScreen extends StatefulWidget {
   const MatchUpScreen({super.key});
+
+  @override
+  State<MatchUpScreen> createState() => _MatchUpScreenState();
+}
+
+class _MatchUpScreenState extends State<MatchUpScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    final c = Get.find<MatchUpController>();
+    final sports = TeamSportType.values;
+    final selected = sports.indexOf(c.selectedSport.value);
+    _tabController = TabController(
+      length: sports.length,
+      vsync: this,
+      initialIndex: selected < 0 ? 0 : selected,
+    );
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) return;
+      final idx = _tabController.index;
+      if (idx >= 0 && idx < sports.length) {
+        c.switchSport(sports[idx]);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,34 +61,20 @@ class MatchUpScreen extends StatelessWidget {
           IconButton(
             tooltip: 'Challenges',
             icon: const Icon(Icons.inbox_outlined),
-            onPressed: () =>
-                Get.toNamed(AppConstants.routes.matchUpChallenges),
+            onPressed: () => Get.toNamed(AppConstants.routes.matchUpChallenges),
           ),
         ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(52),
-          child: Obx(() => SportTabs(
-                selected: c.selectedSport.value,
-                onChanged: c.switchSport,
-              )),
-        ),
       ),
       body: Obx(() {
+        final sports = TeamSportType.values;
+        final currentIndex = sports.indexOf(c.selectedSport.value);
+        final safeIndex = currentIndex < 0 ? 0 : currentIndex;
+
+        if (_tabController.index != safeIndex) {
+          _tabController.animateTo(safeIndex);
+        }
+
         if (c.isLoadingMyTeams.value) {
-          return const Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(
-                Color(AppColors.primaryColor),
-              ),
-            ),
-          );
-        }
-
-        if (!c.hasTeamForSport) {
-          return _NoTeamPlaceholder(sport: c.selectedSport.value);
-        }
-
-        if (c.isLoadingFeed.value && c.feedTeams.isEmpty) {
           return const Center(
             child: CircularProgressIndicator(
               valueColor: AlwaysStoppedAnimation<Color>(
@@ -65,48 +86,59 @@ class MatchUpScreen extends StatelessWidget {
 
         return Column(
           children: [
-            Obx(() {
-              final teams = c.myTeamsForSport;
-              final sel = c.selectedTeam.value;
-              return MyTeamSelector(
-                teams: teams,
-                allowToSelectAll: false,
-                allTeamsSelected: false,
-                selectedTeam: sel,
-                bannerTitle: 'Your Team',
-                sheetTitle: 'Select your team',
-                onTeamSelected: c.selectTeam,
-                actionChipLabel: 'Switch',
-              );
-            }),
+            AppSegmentedTabs(
+              controller: _tabController,
+              onTap: (index) => c.switchSport(sports[index]),
+              items: sports
+                  .map(
+                    (sport) => AppTabItem(
+                      label: sport == TeamSportType.cricket
+                          ? 'Cricket'
+                          : 'Football',
+                      icon: sport == TeamSportType.cricket
+                          ? Icons.sports_cricket
+                          : Icons.sports_soccer,
+                    ),
+                  )
+                  .toList(),
+            ),
             Expanded(
-              child: RefreshIndicator(
-                onRefresh: c.reload,
-                child: c.feedTeams.isEmpty
-                    ? ListView(
-                        children: [
-                          _EmptyFeedPlaceholder(
-                              sport: c.selectedSport.value),
-                        ],
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                        itemCount: c.feedTeams.length,
-                        itemBuilder: (context, index) {
-                          final team = c.feedTeams[index];
-                          return _OpponentCard(
-                            team: team,
-                            onChallenge: () =>
-                                _confirmChallenge(context, c, team),
-                          );
-                        },
-                      ),
+              child: AppSegmentedTabView(
+                controller: _tabController,
+                children: List.generate(sports.length, (index) {
+                  final sport = sports[index];
+                  final teamsForSport = _teamsForSport(c.myMemberships, sport);
+
+                  return _SportFeedSection(
+                    sport: sport,
+                    isActiveSport: c.selectedSport.value == sport,
+                    hasTeams: teamsForSport.isNotEmpty,
+                    isLoadingFeed: c.isLoadingFeed.value,
+                    feedTeams: c.feedTeams,
+                    onRefresh: c.reload,
+                    onChallenge: (team) => _confirmChallenge(context, c, team),
+                  );
+                }),
               ),
             ),
           ],
         );
       }),
     );
+  }
+
+  List<TeamMemberFieldInstance> _teamsForSport(
+    List<TeamMemberModel> memberships,
+    TeamSportType sport,
+  ) {
+    final teams = <TeamMemberFieldInstance>[];
+    for (final membership in memberships) {
+      final team = membership.team;
+      if (team is TeamMemberFieldInstance && team.sportType == sport) {
+        teams.add(team);
+      }
+    }
+    return teams;
   }
 
   void _confirmChallenge(
@@ -116,19 +148,77 @@ class MatchUpScreen extends StatelessWidget {
   ) {
     final myTeam = controller.selectedTeam.value;
     if (myTeam == null) return;
+    final teamsForSport = _teamsForSport(
+      controller.myMemberships,
+      controller.selectedSport.value,
+    );
 
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (_) => _ChallengeSheet(
-        myTeamName: myTeam.name,
-        myTeamLogo: myTeam.logo,
+        controller: controller,
+        teamsForSport: teamsForSport,
         opponent: opponent,
         onConfirm: () {
           Navigator.pop(context);
           controller.sendChallenge(opponent);
         },
       ),
+    );
+  }
+}
+
+class _SportFeedSection extends StatelessWidget {
+  const _SportFeedSection({
+    required this.sport,
+    required this.isActiveSport,
+    required this.hasTeams,
+    required this.isLoadingFeed,
+    required this.feedTeams,
+    required this.onRefresh,
+    required this.onChallenge,
+  });
+
+  final TeamSportType sport;
+  final bool isActiveSport;
+  final bool hasTeams;
+  final bool isLoadingFeed;
+  final List<TeamModel> feedTeams;
+  final Future<void> Function() onRefresh;
+  final ValueChanged<TeamModel> onChallenge;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!hasTeams) {
+      return _NoTeamPlaceholder(sport: sport);
+    }
+
+    if (isActiveSport && isLoadingFeed && feedTeams.isEmpty) {
+      return const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(
+            Color(AppColors.primaryColor),
+          ),
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: feedTeams.isEmpty
+          ? ListView(children: [_EmptyFeedPlaceholder(sport: sport)])
+          : ListView.builder(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+              itemCount: feedTeams.length,
+              itemBuilder: (context, index) {
+                final team = feedTeams[index];
+                return _OpponentCard(
+                  team: team,
+                  onChallenge: () => onChallenge(team),
+                );
+              },
+            ),
     );
   }
 }
@@ -192,18 +282,18 @@ class _OpponentCard extends StatelessWidget {
                           const SizedBox(height: 3),
                           Row(
                             children: [
-                              const Icon(Icons.location_on_outlined,
-                                  size: 13,
-                                  color:
-                                      Color(AppColors.textSecondaryColor)),
+                              const Icon(
+                                Icons.location_on_outlined,
+                                size: 13,
+                                color: Color(AppColors.textSecondaryColor),
+                              ),
                               const SizedBox(width: 3),
                               Flexible(
                                 child: Text(
                                   team.location!.address,
                                   style: const TextStyle(
                                     fontSize: 12,
-                                    color:
-                                        Color(AppColors.textSecondaryColor),
+                                    color: Color(AppColors.textSecondaryColor),
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -275,14 +365,14 @@ class _ChallengeButton extends StatelessWidget {
 
 class _ChallengeSheet extends StatelessWidget {
   const _ChallengeSheet({
-    required this.myTeamName,
-    required this.myTeamLogo,
+    required this.controller,
+    required this.teamsForSport,
     required this.opponent,
     required this.onConfirm,
   });
 
-  final String myTeamName;
-  final String myTeamLogo;
+  final MatchUpController controller;
+  final List<TeamMemberFieldInstance> teamsForSport;
   final TeamModel opponent;
   final VoidCallback onConfirm;
 
@@ -306,35 +396,116 @@ class _ChallengeSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              TeamLogo(url: myTeamLogo, size: 56),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  'VS',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    color: const Color(AppColors.primaryColor)
-                        .withValues(alpha: 0.7),
-                  ),
+          Obx(() {
+            final selected = controller.selectedTeam.value;
+            final myTeamName = selected?.name ?? 'Your Team';
+            final myTeamLogo = selected?.logo ?? '';
+            final double logoSize = 75;
+            return Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 92,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          MyTeamSelector(
+                            teams: teamsForSport
+                                .where((t) => t.id != opponent.id)
+                                .toList(),
+                            selectedTeam: selected,
+                            onTeamSelected: controller.selectTeam,
+                            buttonChild: SizedBox(
+                              width: logoSize,
+                              height: logoSize,
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  TeamLogo(url: myTeamLogo, size: logoSize),
+                                  Positioned(
+                                    right: 0,
+                                    top: 0,
+                                    child: Container(
+                                      width: 24,
+                                      height: 24,
+                                      decoration: BoxDecoration(
+                                        color: const Color(
+                                          AppColors.primaryColor,
+                                        ),
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: Colors.white,
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                      child: const Icon(
+                                        Icons.edit,
+                                        size: 12,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            myTeamName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Color(AppColors.textColor),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'VS',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          color: const Color(
+                            AppColors.primaryColor,
+                          ).withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 92,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          TeamLogo(url: opponent.logo, size: logoSize),
+                          const SizedBox(height: 8),
+                          Text(
+                            opponent.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Color(AppColors.textColor),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              TeamLogo(url: opponent.logo, size: 56),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            '$myTeamName  vs  ${opponent.name}',
-            style: const TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              color: Color(AppColors.textColor),
-            ),
-            textAlign: TextAlign.center,
-          ),
+                const SizedBox(height: 16),
+              ],
+            );
+          }),
           const SizedBox(height: 8),
           const Text(
             'Send a friendly match request?\nThey\'ll have 2 hours to respond.',
@@ -357,12 +528,16 @@ class _ChallengeSheet extends StatelessWidget {
                       borderRadius: BorderRadius.circular(14),
                     ),
                     side: const BorderSide(
-                        color: Color(AppColors.dividerColor)),
+                      color: Color(AppColors.dividerColor),
+                    ),
                   ),
-                  child: const Text('Cancel',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: Color(AppColors.textSecondaryColor))),
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Color(AppColors.textSecondaryColor),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -384,9 +559,13 @@ class _ChallengeSheet extends StatelessWidget {
                     children: [
                       Icon(Icons.sports_mma, size: 18),
                       SizedBox(width: 8),
-                      Text('Send Challenge',
-                          style: TextStyle(
-                              fontSize: 15, fontWeight: FontWeight.w700)),
+                      Text(
+                        'Send Challenge',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -445,8 +624,10 @@ class _NoTeamPlaceholder extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(AppColors.primaryColor),
                 foregroundColor: Colors.white,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
@@ -473,8 +654,7 @@ class _EmptyFeedPlaceholder extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.search_off_rounded,
-              size: 64, color: Colors.grey.shade300),
+          Icon(Icons.search_off_rounded, size: 64, color: Colors.grey.shade300),
           const SizedBox(height: 16),
           const Text(
             'No opponents found',

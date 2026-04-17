@@ -9,19 +9,20 @@ class MyTeamSelector extends StatelessWidget {
   const MyTeamSelector({
     super.key,
     required this.teams,
-    required this.allowToSelectAll,
-    required this.allTeamsSelected,
-    required this.selectedTeam,
-    required this.bannerTitle,
-    required this.sheetTitle,
     required this.onTeamSelected,
+    this.selectedTeam,
+    this.allTeamsSelected = false,
+    this.bannerTitle = 'Your Team',
+    this.sheetTitle = 'Select your team',
+    this.allowToSelectAll = false,
     this.onAllTeamsSelected,
     this.allTeamsLabel = 'All my teams',
     this.actionChipLabel = 'Switch',
+    this.buttonChild,
   }) : assert(
-          !allowToSelectAll || onAllTeamsSelected != null,
-          'onAllTeamsSelected is required when allowToSelectAll is true',
-        );
+         !allowToSelectAll || onAllTeamsSelected != null,
+         'onAllTeamsSelected is required when allowToSelectAll is true',
+       );
 
   final List<TeamMemberFieldInstance> teams;
 
@@ -34,6 +35,7 @@ class MyTeamSelector extends StatelessWidget {
   final String sheetTitle;
   final String allTeamsLabel;
   final String actionChipLabel;
+  final Widget? buttonChild;
 
   final void Function(TeamMemberFieldInstance team) onTeamSelected;
   final VoidCallback? onAllTeamsSelected;
@@ -53,6 +55,13 @@ class MyTeamSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (buttonChild != null) {
+      return GestureDetector(
+        onTap: _tappable ? () => _showTeamPicker(context) : null,
+        child: buttonChild!,
+      );
+    }
+
     if (!allowToSelectAll && selectedTeam == null) {
       return const SizedBox.shrink();
     }
@@ -69,8 +78,9 @@ class MyTeamSelector extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
-                color: const Color(AppColors.primaryColor)
-                    .withValues(alpha: 0.25),
+                color: const Color(
+                  AppColors.primaryColor,
+                ).withValues(alpha: 0.25),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -110,8 +120,10 @@ class MyTeamSelector extends StatelessWidget {
               ),
               if (_showActionChip && _tappable)
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(8),
@@ -119,7 +131,11 @@ class MyTeamSelector extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.swap_horiz, size: 14, color: Colors.white),
+                      const Icon(
+                        Icons.swap_horiz,
+                        size: 14,
+                        color: Colors.white,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         actionChipLabel,
@@ -226,9 +242,9 @@ class MyTeamSelector extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Material(
                   color: allTeamsSelected
-                      ? const Color(AppColors.primaryColor).withValues(
-                          alpha: 0.08,
-                        )
+                      ? const Color(
+                          AppColors.primaryColor,
+                        ).withValues(alpha: 0.08)
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(14),
                   child: InkWell(
@@ -248,8 +264,9 @@ class MyTeamSelector extends StatelessWidget {
                             width: 40,
                             height: 40,
                             decoration: BoxDecoration(
-                              color: const Color(AppColors.primaryColor)
-                                  .withValues(alpha: 0.12),
+                              color: const Color(
+                                AppColors.primaryColor,
+                              ).withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: const Icon(
@@ -290,8 +307,9 @@ class MyTeamSelector extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Material(
                   color: isSelected
-                      ? const Color(AppColors.primaryColor)
-                          .withValues(alpha: 0.08)
+                      ? const Color(
+                          AppColors.primaryColor,
+                        ).withValues(alpha: 0.08)
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(14),
                   child: InkWell(
@@ -314,8 +332,9 @@ class MyTeamSelector extends StatelessWidget {
                               team.name,
                               style: TextStyle(
                                 fontSize: 15,
-                                fontWeight:
-                                    isSelected ? FontWeight.w700 : FontWeight.w500,
+                                fontWeight: isSelected
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
                                 color: const Color(AppColors.textColor),
                               ),
                               maxLines: 1,

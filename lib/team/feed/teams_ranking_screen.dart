@@ -2,15 +2,49 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/components/shared/app_drawer.dart';
 import 'package:get/get.dart';
 
-import '../../components/match_up/sport_tabs.dart';
 import '../../components/match_up/team_logo.dart';
 import '../../components/match_up/team_stats_row.dart';
+import '../../components/shared/app_segmented_tabs.dart';
 import '../../core/config/constants.dart';
 import '../model/team_model.dart';
 import 'teams_ranking_controller.dart';
 
-class TeamsRankingScreen extends StatelessWidget {
+class TeamsRankingScreen extends StatefulWidget {
   const TeamsRankingScreen({super.key});
+
+  @override
+  State<TeamsRankingScreen> createState() => _TeamsRankingScreenState();
+}
+
+class _TeamsRankingScreenState extends State<TeamsRankingScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    final controller = Get.find<TeamsRankingController>();
+    final sports = TeamSportType.values;
+    final selected = sports.indexOf(controller.selectedSport.value);
+    _tabController = TabController(
+      length: sports.length,
+      vsync: this,
+      initialIndex: selected < 0 ? 0 : selected,
+    );
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) return;
+      final idx = _tabController.index;
+      if (idx >= 0 && idx < sports.length) {
+        controller.switchSport(sports[idx]);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,67 +55,114 @@ class TeamsRankingScreen extends StatelessWidget {
       backgroundColor: const Color(AppColors.backgroundColor),
       appBar: AppBar(
         title: const Text('Team Rankings'),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(52),
-          child: Obx(() => SportTabs(
-                selected: controller.selectedSport.value,
-                onChanged: controller.switchSport,
-              )),
-        ),
       ),
       body: Obx(() {
-        if (controller.isLoading.value && controller.teams.isEmpty) {
-          return const Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(
-                Color(AppColors.primaryColor),
+        final sports = TeamSportType.values;
+        final currentIndex = sports.indexOf(controller.selectedSport.value);
+        final safeIndex = currentIndex < 0 ? 0 : currentIndex;
+        if (_tabController.index != safeIndex) {
+          _tabController.animateTo(safeIndex);
+        }
+        return Column(
+          children: [
+            AppSegmentedTabs(
+              controller: _tabController,
+              onTap: (index) => controller.switchSport(sports[index]),
+              items: sports
+                  .map(
+                    (sport) => AppTabItem(
+                      label: sport == TeamSportType.cricket
+                          ? 'Cricket'
+                          : 'Football',
+                      icon: sport == TeamSportType.cricket
+                          ? Icons.sports_cricket
+                          : Icons.sports_soccer,
+                    ),
+                  )
+                  .toList(),
+            ),
+            Expanded(
+              child: AppSegmentedTabView(
+                controller: _tabController,
+                children: sports
+                    .map(
+                      (sport) => _RankingTabContent(
+                        controller: controller,
+                        sport: sport,
+                      ),
+                    )
+                    .toList(),
               ),
             ),
-          );
-        }
-
-        if (controller.teams.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.emoji_events_outlined,
-                    size: 64, color: Colors.grey.shade300),
-                const SizedBox(height: 16),
-                const Text(
-                  'No teams ranked yet.',
-                  style: TextStyle(
-                    color: Color(AppColors.textSecondaryColor),
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-
-        final teams = controller.teams;
-        final topTeams = teams.take(3).toList();
-        final restTeams = teams.length > 3 ? teams.sublist(3) : <TeamModel>[];
-
-        return RefreshIndicator(
-          onRefresh: controller.reload,
-          child: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            children: [
-              const SizedBox(height: 20),
-              _PodiumSection(teams: topTeams),
-              if (restTeams.isNotEmpty) ...[
-                const SizedBox(height: 24),
-                ...restTeams.asMap().entries.map(
-                      (e) => _RankCard(rank: e.key + 4, team: e.value),
-                    ),
-              ],
-              const SizedBox(height: 24),
-            ],
-          ),
+          ],
         );
       }),
+    );
+  }
+}
+
+class _RankingTabContent extends StatelessWidget {
+  const _RankingTabContent({required this.controller, required this.sport});
+
+  final TeamsRankingController controller;
+  final TeamSportType sport;
+
+  @override
+  Widget build(BuildContext context) {
+    final isActiveSport = controller.selectedSport.value == sport;
+    if (!isActiveSport) {
+      return const SizedBox.shrink();
+    }
+
+    if (controller.isLoading.value && controller.teams.isEmpty) {
+      return const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(
+            Color(AppColors.primaryColor),
+          ),
+        ),
+      );
+    }
+
+    if (controller.teams.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.emoji_events_outlined, size: 64, color: Colors.grey.shade300),
+            const SizedBox(height: 16),
+            const Text(
+              'No teams ranked yet.',
+              style: TextStyle(
+                color: Color(AppColors.textSecondaryColor),
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final teams = controller.teams;
+    final topTeams = teams.take(3).toList();
+    final restTeams = teams.length > 3 ? teams.sublist(3) : <TeamModel>[];
+
+    return RefreshIndicator(
+      onRefresh: controller.reload,
+      child: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        children: [
+          const SizedBox(height: 20),
+          _PodiumSection(teams: topTeams),
+          if (restTeams.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            ...restTeams.asMap().entries.map(
+                  (e) => _RankCard(rank: e.key + 4, team: e.value),
+                ),
+          ],
+          const SizedBox(height: 24),
+        ],
+      ),
     );
   }
 }
