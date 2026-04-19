@@ -12,6 +12,7 @@ class ApiConstants {
   static const teamMember = TeamMemberEndpoints();
   static const teamMembershipSelf = TeamMembershipSelfEndpoints();
   static const matchmaking = MatchmakingEndpoints();
+  static const storage = StorageEndpoints();
 
   // Headers
   static const Map<String, String> defaultHeaders = {
@@ -154,4 +155,14 @@ class MatchmakingEndpoints {
 
   String requestMatchResult(String id) =>
       '/matchmaking/requests/$id/match-result';
+}
+
+/// Presigned uploads (DigitalOcean Spaces).
+class StorageEndpoints {
+  const StorageEndpoints();
+
+  String get uploadUrl => '/storage/upload-url';
+
+  /// Owner-scoped deletes (JWT).
+  String get delete => '/storage/objects';
 }

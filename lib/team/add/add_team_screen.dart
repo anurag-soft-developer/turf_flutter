@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../../components/shared/image_input.dart';
 import '../../components/create_turf/section_container.dart';
+import '../../core/models/media_upload_models.dart';
 import '../../components/create_turf/styled_text_field.dart';
 import '../../core/config/constants.dart';
 import '../model/team_model.dart';
@@ -55,21 +56,25 @@ class AddTeamScreen extends StatelessWidget {
                 title: 'Team Logo',
                 icon: Icons.shield,
                 imageUrls: controller.logoImages,
-                onShowOptions: controller.showLogoPickerOptions,
-                onPickCamera: controller.pickLogoFromCamera,
-                onPickGallery: controller.pickLogoFromGallery,
-                onRemove: controller.removeLogo,
+                onChange: (_) {},
                 maxImages: 1,
+                uploadPurpose: MediaUploadPurpose.teamMedia,
+                allowPasteUrl: true,
+                deleteRemoteOnRemove: !controller.isEditing,
+                onDeferredRemoteRemoval:
+                    controller.queueDeferredRemoteImageDeletion,
               ),
               const SizedBox(height: 24),
               ImageInput(
                 title: 'Cover Images',
                 icon: Icons.image,
                 imageUrls: controller.coverImages,
-                onShowOptions: controller.showCoverPickerOptions,
-                onPickCamera: controller.pickCoverFromCamera,
-                onPickGallery: controller.pickCoverFromGallery,
-                onRemove: controller.removeCover,
+                onChange: (_) {},
+                uploadPurpose: MediaUploadPurpose.teamMedia,
+                allowPasteUrl: true,
+                deleteRemoteOnRemove: !controller.isEditing,
+                onDeferredRemoteRemoval:
+                    controller.queueDeferredRemoteImageDeletion,
               ),
               const SizedBox(height: 24),
               _SubmitButton(controller: controller),

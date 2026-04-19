@@ -22,7 +22,7 @@ class _LocationSectionState extends State<LocationSection> {
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 4),
             spreadRadius: 1,
@@ -96,13 +96,13 @@ class _PlaceAutocompleteFieldState extends State<_PlaceAutocompleteField> {
         hintStyle: TextStyle(color: Colors.grey),
         filled: true,
         fillColor: Colors.transparent,
-        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        // contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
       debounceTime: 800, // Slightly longer debounce to reduce API calls
       isLatLngRequired: true,
 
       // Styled suggestions list
-      containerHorizontalPadding: 16,
+      // containerHorizontalPadding: 16,
       seperatedBuilder: Divider(
         color: Colors.grey.shade300,
         height: 1,
@@ -176,7 +176,7 @@ class _PlaceAutocompleteFieldState extends State<_PlaceAutocompleteField> {
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 4),
             spreadRadius: 1,

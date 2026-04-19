@@ -1,13 +1,9 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter_application_1/core/services/media_upload_service.dart';
 import 'package:get/get.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../core/config/constants.dart';
 import '../../core/utils/app_snackbar.dart';
-import '../../core/utils/exception_handler.dart';
 import '../model/team_model.dart';
 import '../team_service.dart';
 import '../details/team_detail_controller.dart';
@@ -47,7 +43,6 @@ class AddTeamController extends GetxController {
   final RxList<String> pinnedNotices = <String>[].obs;
 
   final RxBool isSubmitting = false.obs;
-  final RxBool isLoadingImage = false.obs;
 
   final RxList<String> logoImages = <String>[].obs;
   final RxList<String> coverImages = <String>[].obs;
@@ -56,7 +51,18 @@ class AddTeamController extends GetxController {
 
   String? _editingTeamId;
 
+  /// Storage URLs removed while editing; deleted after a successful team update.
+  final List<String> _pendingRemoteImageDeletes = [];
+
   bool get isEditing => _editingTeamId != null;
+
+  void queueDeferredRemoteImageDeletion(String url) {
+    final trimmed = url.trim();
+    if (trimmed.isEmpty) return;
+    if (!_pendingRemoteImageDeletes.contains(trimmed)) {
+      _pendingRemoteImageDeletes.add(trimmed);
+    }
+  }
 
   // ── Lifecycle ────────────────────────────────────────────────────────────
 
@@ -74,6 +80,8 @@ class AddTeamController extends GetxController {
   }
 
   void _applyExistingTeam(TeamModel t) {
+    _pendingRemoteImageDeletes.clear();
+
     nameController.text = t.name;
     shortNameController.text = t.shortName ?? '';
     taglineController.text = t.tagline ?? '';
@@ -160,180 +168,6 @@ class AddTeamController extends GetxController {
     } else {
       preferredPlayDays.add(day);
     }
-  }
-
-  // ── Logo image helpers ───────────────────────────────────────────────────
-
-  void addLogoUrl(String url) {
-    if (url.isNotEmpty) {
-      logoImages
-        ..clear()
-        ..add(url);
-    }
-  }
-
-  void removeLogo(String url) => logoImages.remove(url);
-
-  Future<void> pickLogoFromGallery() async =>
-      _pickImage(ImageSource.gallery, isLogo: true);
-
-  Future<void> pickLogoFromCamera() async =>
-      _pickImage(ImageSource.camera, isLogo: true);
-
-  void showLogoPickerOptions() => _showPickerSheet(isLogo: true);
-
-  // ── Cover image helpers ──────────────────────────────────────────────────
-
-  void addCoverUrl(String url) {
-    if (url.isNotEmpty && !coverImages.contains(url)) {
-      coverImages.add(url);
-    }
-  }
-
-  void removeCover(String url) => coverImages.remove(url);
-
-  Future<void> pickCoverFromGallery() async =>
-      _pickImage(ImageSource.gallery, isLogo: false);
-
-  Future<void> pickCoverFromCamera() async =>
-      _pickImage(ImageSource.camera, isLogo: false);
-
-  void showCoverPickerOptions() => _showPickerSheet(isLogo: false);
-
-  // ── Shared image-picking internals ───────────────────────────────────────
-
-  Future<void> _pickImage(ImageSource source, {required bool isLogo}) async {
-    try {
-      final XFile? image = await ImagePicker().pickImage(
-        source: source,
-        maxWidth: 1920,
-        maxHeight: 1080,
-        imageQuality: 80,
-      );
-      if (image != null) {
-        await _uploadImage(File(image.path), isLogo: isLogo);
-      }
-    } on PlatformException catch (e) {
-      String msg = source == ImageSource.camera
-          ? 'Failed to take photo'
-          : 'Failed to pick image from gallery';
-      if (e.code == 'channel-error') {
-        msg =
-            'Camera/Gallery service unavailable. Restart the app and try again.';
-      } else if (e.message?.contains('Permission denied') == true) {
-        msg = 'Permission denied. Enable access in device settings.';
-      }
-      debugPrint('Image picker error: ${e.code} - ${e.message}');
-      ExceptionHandler.showErrorToast(msg);
-    } on Exception catch (e) {
-      debugPrint('Image picker error: $e');
-      ExceptionHandler.showErrorToast('Failed to pick image');
-    }
-  }
-
-  Future<void> _uploadImage(File imageFile, {required bool isLogo}) async {
-    try {
-      isLoadingImage.value = true;
-      // TODO: replace with your actual upload service
-      await Future.delayed(const Duration(seconds: 1));
-      const String uploadedUrl =
-          'https://fastly.picsum.photos/id/363/200/300.jpg?hmac=LvonEMeE2QnwxULuBZW5xHtdjkz844GnAPpEhDwGvMY';
-      if (isLogo) {
-        logoImages
-          ..clear()
-          ..add(uploadedUrl);
-      } else {
-        coverImages.add(uploadedUrl);
-      }
-      ExceptionHandler.showSuccessToast('Image uploaded successfully');
-    } catch (e) {
-      ExceptionHandler.showErrorToast('Failed to upload image');
-    } finally {
-      isLoadingImage.value = false;
-    }
-  }
-
-  void _showPickerSheet({required bool isLogo}) {
-    Get.bottomSheet(
-      Container(
-        padding: const EdgeInsets.all(16),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              isLogo ? 'Set Logo' : 'Add Cover Image',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            ListTile(
-              leading: const Icon(Icons.camera_alt),
-              title: const Text('Camera'),
-              onTap: () {
-                Get.back();
-                isLogo ? pickLogoFromCamera() : pickCoverFromCamera();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const Text('Gallery'),
-              onTap: () {
-                Get.back();
-                isLogo ? pickLogoFromGallery() : pickCoverFromGallery();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.link),
-              title: const Text('Image URL'),
-              subtitle: const Text('Add from web URL'),
-              onTap: () {
-                Get.back();
-                _showUrlDialog(isLogo: isLogo);
-              },
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showUrlDialog({required bool isLogo}) {
-    final urlCtrl = TextEditingController();
-    Get.dialog(
-      AlertDialog(
-        title: Text(isLogo ? 'Set Logo URL' : 'Add Cover Image URL'),
-        content: TextField(
-          controller: urlCtrl,
-          decoration: const InputDecoration(
-            hintText: 'Paste image URL here',
-            prefixIcon: Icon(Icons.link),
-          ),
-          onSubmitted: (v) {
-            if (v.trim().isNotEmpty) {
-              isLogo ? addLogoUrl(v.trim()) : addCoverUrl(v.trim());
-              Get.back();
-            }
-          },
-        ),
-        actions: [
-          TextButton(onPressed: Get.back, child: const Text('Cancel')),
-          TextButton(
-            onPressed: () {
-              final url = urlCtrl.text.trim();
-              if (url.isNotEmpty) {
-                isLogo ? addLogoUrl(url) : addCoverUrl(url);
-                Get.back();
-              }
-            },
-            child: const Text('Add'),
-          ),
-        ],
-      ),
-    );
   }
 
   // ── Collected DTO helpers ────────────────────────────────────────────────
@@ -425,6 +259,7 @@ class AddTeamController extends GetxController {
           ),
         );
         if (updated != null) {
+          await flushPendingRemoteImageDeletions(_pendingRemoteImageDeletes);
           AppSnackbar.success(title: 'Team updated', message: updated.name);
           if (Get.isRegistered<TeamDetailController>()) {
             await Get.find<TeamDetailController>().load();

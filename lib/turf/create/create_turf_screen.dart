@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'create_turf_controller.dart';
 import '../../core/config/constants.dart';
+import '../../core/models/media_upload_models.dart';
 import '../../components/create_turf/basic_info_section.dart';
 import '../../components/shared/image_input.dart';
-import '../../components/create_turf/sport_types_section.dart';
-import '../../components/create_turf/amenities_section.dart';
+import '../../components/shared/selectable_chip_input.dart';
 import '../../components/create_turf/dimensions_section.dart';
 import '../../components/create_turf/submit_button.dart';
 
@@ -52,17 +52,33 @@ class CreateTurfScreen extends StatelessWidget {
               const SizedBox(height: 24),
               const DimensionsSection(),
               const SizedBox(height: 24),
-              const SportTypesSection(),
+              SelectableChipInput(
+                title: 'Sport Types',
+                icon: Icons.sports_soccer,
+                options: controller.availableSportTypes,
+                selected: controller.selectedSportTypes,
+                onToggle: controller.toggleSportType,
+                emptySelectionWarning: 'Please select at least one sport type',
+              ),
               const SizedBox(height: 24),
-              const AmenitiesSection(),
+              SelectableChipInput(
+                title: 'Amenities',
+                icon: Icons.business_center,
+                options: controller.availableAmenities,
+                selected: controller.selectedAmenities,
+                onToggle: controller.toggleAmenity,
+              ),
               const SizedBox(height: 24),
-              ImageInput(
-                imageUrls: controller.imageUrls,
-                onShowOptions: controller.showImagePickerOptions,
-                onPickCamera: controller.pickImageFromCamera,
-                onPickGallery: controller.pickImageFromGallery,
-                onRemove: controller.removeImageUrl,
-                requireAtLeastOne: true,
+              Obx(
+                () => ImageInput(
+                  imageUrls: controller.imageUrls,
+                  minImages: 1,
+                  uploadPurpose: MediaUploadPurpose.turfMedia,
+                  allowPasteUrl: true,
+                  deleteRemoteOnRemove: !controller.isEditMode.value,
+                  onDeferredRemoteRemoval:
+                      controller.queueDeferredRemoteImageDeletion,
+                ),
               ),
               const SizedBox(height: 24),
               const SubmitButton(),

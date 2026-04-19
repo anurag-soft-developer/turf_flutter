@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter_application_1/core/services/media_upload_service.dart';
 import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:io';
 import '../model/turf_model.dart';
 import '../turf_service.dart';
 import '../../core/utils/exception_handler.dart';
@@ -37,6 +35,9 @@ class CreateTurfController extends GetxController {
   final RxString _selectedDimensionUnit = 'meters'.obs;
   final Rxn<TurfModel> _editingTurf = Rxn<TurfModel>();
   final RxBool _isEditMode = false.obs;
+
+  /// Storage URLs removed in edit mode; deleted via API only after a successful update.
+  final List<String> _pendingRemoteImageDeletes = [];
 
   // Getters
   RxBool get isLoading => _isLoading;
@@ -101,6 +102,15 @@ class CreateTurfController extends GetxController {
     }
   }
 
+  /// Queue a Spaces object for delete after turf update (edit mode deferred removal).
+  void queueDeferredRemoteImageDeletion(String url) {
+    final trimmed = url.trim();
+    if (trimmed.isEmpty) return;
+    if (!_pendingRemoteImageDeletes.contains(trimmed)) {
+      _pendingRemoteImageDeletes.add(trimmed);
+    }
+  }
+
   /// Toggle amenity selection
   void toggleAmenity(String amenity) {
     if (_selectedAmenities.contains(amenity)) {
@@ -108,201 +118,6 @@ class CreateTurfController extends GetxController {
     } else {
       _selectedAmenities.add(amenity);
     }
-  }
-
-  /// Add image URL
-  void addImageUrl(String url) {
-    if (url.isNotEmpty && !_imageUrls.contains(url)) {
-      _imageUrls.add(url);
-    }
-  }
-
-  /// Remove image URL
-  void removeImageUrl(String url) {
-    _imageUrls.remove(url);
-  }
-
-  /// Pick image from gallery
-  Future<void> pickImageFromGallery() async {
-    try {
-      final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 1920,
-        maxHeight: 1080,
-        imageQuality: 80,
-      );
-
-      if (image != null) {
-        await _uploadImage(File(image.path));
-      }
-    } on PlatformException catch (e) {
-      String errorMessage = 'Failed to pick image from gallery';
-
-      if (e.code == 'channel-error') {
-        errorMessage =
-            'Camera/Gallery service unavailable. Please restart the app and try again.';
-      } else if (e.code == 'photo_access_denied' ||
-          e.message?.contains('Permission denied') == true) {
-        errorMessage =
-            'Gallery access denied. Please enable photo library permissions in your device settings.';
-      } else if (e.code == 'photo_access_restricted') {
-        errorMessage = 'Photo library access is restricted on this device.';
-      }
-
-      debugPrint('Gallery picker error: ${e.code} - ${e.message}');
-      ExceptionHandler.showErrorToast(errorMessage);
-    } on Exception catch (e) {
-      debugPrint('Gallery picker error: $e');
-      ExceptionHandler.showErrorToast('Failed to pick image from gallery');
-    }
-  }
-
-  /// Pick image from camera
-  Future<void> pickImageFromCamera() async {
-    try {
-      final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(
-        source: ImageSource.camera,
-        maxWidth: 1920,
-        maxHeight: 1080,
-        imageQuality: 80,
-      );
-
-      if (image != null) {
-        await _uploadImage(File(image.path));
-      }
-    } on PlatformException catch (e) {
-      String errorMessage = 'Failed to take photo';
-
-      if (e.code == 'channel-error') {
-        errorMessage =
-            'Camera service unavailable. Please restart the app and try again.';
-      } else if (e.code == 'camera_access_denied' ||
-          e.message?.contains('Permission denied') == true) {
-        errorMessage =
-            'Camera access denied. Please enable camera permissions in your device settings.';
-      } else if (e.code == 'camera_access_restricted') {
-        errorMessage = 'Camera access is restricted on this device.';
-      } else if (e.code == 'camera_no_available') {
-        errorMessage = 'No camera available on this device.';
-      }
-
-      debugPrint('Camera picker error: ${e.code} - ${e.message}');
-      ExceptionHandler.showErrorToast(errorMessage);
-    } on Exception catch (e) {
-      debugPrint('Camera picker error: $e');
-      ExceptionHandler.showErrorToast('Failed to take photo');
-    }
-  }
-
-  /// Upload image to service (placeholder - replace with your upload logic)
-  Future<void> _uploadImage(File imageFile) async {
-    try {
-      _isLoading.value = true;
-
-      // TODO: Replace this with your actual image upload service
-      // For now, we'll simulate an upload and use a placeholder URL
-      await Future.delayed(const Duration(seconds: 1));
-
-      // Generate a placeholder URL (replace with actual uploaded URL)
-      final String uploadedUrl =
-          'https://fastly.picsum.photos/id/363/200/300.jpg?hmac=LvonEMeE2QnwxULuBZW5xHtdjkz844GnAPpEhDwGvMY';
-
-      _imageUrls.add(uploadedUrl);
-
-      ExceptionHandler.showSuccessToast('Image uploaded successfully');
-    } catch (e) {
-      ExceptionHandler.showErrorToast('Failed to upload image');
-    } finally {
-      _isLoading.value = false;
-    }
-  }
-
-  /// Show image picker options
-  void showImagePickerOptions() {
-    Get.bottomSheet(
-      Container(
-        padding: const EdgeInsets.all(16),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Add Image',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            ListTile(
-              leading: const Icon(Icons.camera_alt),
-              title: const Text('Camera'),
-              onTap: () {
-                Get.back();
-                pickImageFromCamera();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const Text('Gallery'),
-              onTap: () {
-                Get.back();
-                pickImageFromGallery();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.link),
-              title: const Text('Image URL'),
-              subtitle: const Text('Add from web URL'),
-              onTap: () {
-                Get.back();
-                _showUrlDialog();
-              },
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Show URL input dialog
-  void _showUrlDialog() {
-    final TextEditingController urlController = TextEditingController();
-
-    Get.dialog(
-      AlertDialog(
-        title: const Text('Add Image URL'),
-        content: TextField(
-          controller: urlController,
-          decoration: const InputDecoration(
-            hintText: 'Paste image URL here',
-            prefixIcon: Icon(Icons.link),
-          ),
-          onSubmitted: (value) {
-            if (value.trim().isNotEmpty) {
-              addImageUrl(value.trim());
-              Get.back();
-            }
-          },
-        ),
-        actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () {
-              final url = urlController.text.trim();
-              if (url.isNotEmpty) {
-                addImageUrl(url);
-                Get.back();
-              }
-            },
-            child: const Text('Add'),
-          ),
-        ],
-      ),
-    );
   }
 
   /// Set dimension unit
@@ -405,6 +220,9 @@ class CreateTurfController extends GetxController {
       _editingTurf.value!.id!,
       request,
     );
+    if (result != null) {
+      await flushPendingRemoteImageDeletions(_pendingRemoteImageDeletes);
+    }
     _handleTurfOperationResult(result, isUpdate: true);
   }
 
@@ -486,6 +304,7 @@ class CreateTurfController extends GetxController {
     _selectedSportTypes.clear();
     _selectedAmenities.clear();
     _imageUrls.clear();
+    _pendingRemoteImageDeletes.clear();
     _selectedDimensionUnit.value = 'meters';
 
     // Reset edit mode
@@ -498,6 +317,8 @@ class CreateTurfController extends GetxController {
 
   /// Populate form fields from existing turf data (for edit mode)
   void _populateFormFromTurf(TurfModel turf) {
+    _pendingRemoteImageDeletes.clear();
+
     // Basic info
     nameController.text = turf.name ?? '';
     descriptionController.text = turf.description ?? '';

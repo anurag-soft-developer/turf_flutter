@@ -81,8 +81,7 @@ class TurfImageCarousel extends StatelessWidget {
                         child: Obx(
                           () => Row(
                             mainAxisAlignment: MainAxisAlignment.center,
-                            children:
-                                turf.images!.asMap().entries.map((entry) {
+                            children: turf.images!.asMap().entries.map((entry) {
                               return Container(
                                 width: 8,
                                 height: 8,
@@ -229,7 +228,7 @@ class TurfInfoSection extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: TurfInfoCard(
-                      title: 'Operating Hours',
+                      title: 'Timing',
                       value: turf.operatingHours != null
                           ? '${turf.operatingHours!.open} - ${turf.operatingHours!.close}'
                           : 'Not specified',
