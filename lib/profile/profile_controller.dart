@@ -8,6 +8,9 @@ class ProfileController extends GetxController {
 
   final AuthStateController _authController = AuthStateController.instance;
 
+  /// URLs bound to [ImageInput] for avatar (single slot). Synced from user in [_loadUserData].
+  final RxList<String> avatarImageUrls = <String>[].obs;
+
   // Form controllers
   final TextEditingController fullNameController = TextEditingController();
   final TextEditingController bioController = TextEditingController();
@@ -45,6 +48,13 @@ class ProfileController extends GetxController {
       bioController.text = user.bio ?? '';
       emailController.text = user.email ?? '';
       phoneController.text = user.phone ?? '';
+      avatarImageUrls
+        ..clear()
+        ..addAll(
+          user.avatar != null && user.avatar!.isNotEmpty ? [user.avatar!] : [],
+        );
+    } else {
+      avatarImageUrls.clear();
     }
   }
 

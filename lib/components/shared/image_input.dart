@@ -51,6 +51,10 @@ class ImageInput extends StatefulWidget {
   /// replaces the slot ([maxImages] == 1). Parent should delete after a successful save.
   final void Function(String url)? onDeferredRemoteRemoval;
 
+  /// When set, this widget is shown instead of [SectionContainer]. The whole
+  /// widget receives taps that open the image source sheet (camera / gallery).
+  final Widget? buttonChild;
+
   const ImageInput({
     super.key,
     this.title = 'Images',
@@ -66,6 +70,7 @@ class ImageInput extends StatefulWidget {
     this.showImagePickerOptions,
     this.deleteRemoteOnRemove = true,
     this.onDeferredRemoteRemoval,
+    this.buttonChild,
   });
 
   @override
@@ -218,7 +223,19 @@ class _ImageInputState extends State<ImageInput> {
 
   bool _canAddMore() {
     final max = widget.maxImages;
-    return max == null || widget.imageUrls.length < max;
+    if (max == null) return true;
+    if (widget.imageUrls.length < max) return true;
+    // Single-image fields (avatar, cover): allow picking again to replace.
+    return max == 1;
+  }
+
+  /// Pops the sheet first; opening the picker in the same frame often fails.
+  void _closeSheetThenRun(VoidCallback action) {
+    Get.back();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      action();
+    });
   }
 
   void _defaultShowImagePickerOptions() {
@@ -251,13 +268,14 @@ class _ImageInputState extends State<ImageInput> {
                 style: TextStyle(color: Color(AppColors.textColor)),
               ),
               onTap: () {
-                Get.back();
-                final pick = widget.pickImageFromCamera;
-                if (pick != null) {
-                  pick();
-                } else {
-                  _defaultPick(ImageSource.camera);
-                }
+                _closeSheetThenRun(() {
+                  final pick = widget.pickImageFromCamera;
+                  if (pick != null) {
+                    pick();
+                  } else {
+                    _defaultPick(ImageSource.camera);
+                  }
+                });
               },
             ),
             ListTile(
@@ -270,13 +288,14 @@ class _ImageInputState extends State<ImageInput> {
                 style: TextStyle(color: Color(AppColors.textColor)),
               ),
               onTap: () {
-                Get.back();
-                final pick = widget.pickImageFromGallery;
-                if (pick != null) {
-                  pick();
-                } else {
-                  _defaultPick(ImageSource.gallery);
-                }
+                _closeSheetThenRun(() {
+                  final pick = widget.pickImageFromGallery;
+                  if (pick != null) {
+                    pick();
+                  } else {
+                    _defaultPick(ImageSource.gallery);
+                  }
+                });
               },
             ),
             if (widget.allowPasteUrl) ...[
@@ -291,8 +310,7 @@ class _ImageInputState extends State<ImageInput> {
                   style: TextStyle(color: Color(AppColors.textColor)),
                 ),
                 onTap: () {
-                  Get.back();
-                  _showUrlDialog();
+                  _closeSheetThenRun(_showUrlDialog);
                 },
               ),
             ],
@@ -350,6 +368,42 @@ class _ImageInputState extends State<ImageInput> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.buttonChild != null) {
+      return Obx(() {
+        widget.imageUrls.length;
+        return Stack(
+          alignment: Alignment.center,
+          clipBehavior: Clip.none,
+          children: [
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: _uploading ? null : _onShowOptionsTap,
+              child: widget.buttonChild!,
+            ),
+            if (_uploading)
+              Positioned.fill(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: ColoredBox(
+                    color: Colors.black.withValues(alpha: 0.35),
+                    child: const Center(
+                      child: SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      });
+    }
+
     return SectionContainer(
       title: widget.title,
       icon: widget.icon,

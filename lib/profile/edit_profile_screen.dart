@@ -3,9 +3,11 @@ import 'package:get/get.dart';
 
 import '../components/shared/custom_button.dart';
 import '../components/shared/custom_text_field.dart';
+import '../components/shared/image_input.dart';
 import '../components/shared/loading_overlay.dart';
 import '../core/auth/auth_state_controller.dart';
 import '../core/config/constants.dart';
+import '../core/models/media_upload_models.dart';
 import '../core/utils/validators.dart';
 import 'profile_controller.dart';
 
@@ -51,53 +53,59 @@ class EditProfileScreen extends StatelessWidget {
                     child: Center(
                       child: Stack(
                         children: [
-                          Obx(
-                            () => CircleAvatar(
+                          Obx(() {
+                            final avatarUrl =
+                                profileController.avatarImageUrls.isNotEmpty
+                                ? profileController.avatarImageUrls.first
+                                : authController.user?.avatar;
+                            return CircleAvatar(
                               radius: 50,
                               backgroundColor: Colors.white,
-                              backgroundImage:
-                                  authController.user?.avatar != null
-                                  ? NetworkImage(authController.user!.avatar!)
+                              backgroundImage: avatarUrl != null
+                                  ? NetworkImage(avatarUrl)
                                   : null,
-                              child: authController.user?.avatar == null
+                              child: avatarUrl == null
                                   ? const Icon(
                                       Icons.person,
                                       size: 50,
                                       color: Color(AppColors.primaryColor),
                                     )
                                   : null,
-                            ),
-                          ),
+                            );
+                          }),
                           Positioned(
                             bottom: 0,
                             right: 0,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: const Color(AppColors.primaryColor),
-                                  width: 2,
+                            child: ImageInput(
+                              title: 'Profile photo',
+                              imageUrls: profileController.avatarImageUrls,
+                              maxImages: 1,
+                              uploadPurpose: MediaUploadPurpose.avatar,
+                              onChange: (urls) async {
+                                if (urls.isEmpty) return;
+                                await authController.updateUserProfile(
+                                  avatar: urls.first,
+                                );
+                              },
+                              buttonChild: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: const Color(AppColors.primaryColor),
+                                    width: 2,
+                                  ),
                                 ),
-                              ),
-                              child: IconButton(
                                 constraints: const BoxConstraints(
                                   minWidth: 36,
                                   minHeight: 36,
                                 ),
-                                padding: EdgeInsets.zero,
-                                icon: const Icon(
+                                padding: const EdgeInsets.all(8),
+                                child: const Icon(
                                   Icons.camera_alt,
                                   color: Color(AppColors.primaryColor),
                                   size: 18,
                                 ),
-                                onPressed: () {
-                                  Get.snackbar(
-                                    'Coming Soon',
-                                    'Photo upload will be available soon',
-                                    snackPosition: SnackPosition.BOTTOM,
-                                  );
-                                },
                               ),
                             ),
                           ),
