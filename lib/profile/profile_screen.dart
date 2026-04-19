@@ -10,6 +10,7 @@ import '../core/auth/auth_state_controller.dart';
 import '../core/config/constants.dart';
 import '../core/models/user/player_stats_models.dart';
 import '../core/models/user_field_instance.dart';
+import '../settings/settings_controller.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -69,8 +70,80 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
+  List<Widget> _buildProfileHeaderSlivers(
+    UserFieldInstance helper, {
+    required bool isPlayerMode,
+  }) {
+    return [
+      SliverToBoxAdapter(child: PlayerHeroSection(helper: helper)),
+      if (isPlayerMode) ...[
+        SliverToBoxAdapter(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 24),
+              PlayerQuickStats(helper: helper),
+              const SizedBox(height: 24),
+              PlayerBadgesSection(badges: helper.getModel()?.badges ?? []),
+            ],
+          ),
+        ),
+      ],
+    ];
+  }
+
+  Widget _buildPlayerSportStatsBody(List<SportType> availableSports) {
+    return Column(
+      children: [
+        const SizedBox(height: 24),
+        if (availableSports.isNotEmpty && _tabController != null) ...[
+          Container(
+            color: Colors.white,
+            child: TabBar(
+              controller: _tabController,
+              labelColor: const Color(AppColors.primaryColor),
+              unselectedLabelColor: const Color(AppColors.textSecondaryColor),
+              indicatorColor: const Color(AppColors.primaryColor),
+              tabs: availableSports.map((sport) {
+                if (sport == SportType.football) {
+                  return const Tab(
+                    icon: Icon(Icons.sports_soccer, size: 20),
+                    text: 'Football',
+                  );
+                } else {
+                  return const Tab(
+                    icon: Icon(Icons.sports_cricket, size: 20),
+                    text: 'Cricket',
+                  );
+                }
+              }).toList(),
+            ),
+          ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: availableSports.map((sport) {
+                final stats = _getStatsForSport(sport);
+                return SportStatsView(sport: sport, stats: stats);
+              }).toList(),
+            ),
+          ),
+        ] else
+          const Expanded(
+            child: Center(
+              child: Text(
+                'No sport stats available',
+                style: TextStyle(color: Color(AppColors.textSecondaryColor)),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final settingsController = Get.find<SettingsController>();
     return Obx(() {
       final user = authController.user;
       final helper = UserFieldInstance(user);
@@ -92,71 +165,19 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
           ],
         ),
-        body: NestedScrollView(
-          headerSliverBuilder: (context, innerBoxIsScrolled) {
-            return [
-              SliverToBoxAdapter(child: PlayerHeroSection(helper: helper)),
-            ];
-          },
-          body: Column(
-            children: [
-              // Quick Stats Bar
-              PlayerQuickStats(helper: helper),
-
-              // Badges Section
-              if (user != null) PlayerBadgesSection(badges: user.badges),
-
-              const SizedBox(height: 20),
-
-              // Sport Stats Tabs
-              if (availableSports.isNotEmpty && _tabController != null) ...[
-                Container(
-                  color: Colors.white,
-                  child: TabBar(
-                    controller: _tabController,
-                    labelColor: const Color(AppColors.primaryColor),
-                    unselectedLabelColor: const Color(
-                      AppColors.textSecondaryColor,
-                    ),
-                    indicatorColor: const Color(AppColors.primaryColor),
-                    tabs: availableSports.map((sport) {
-                      if (sport == SportType.football) {
-                        return const Tab(
-                          icon: Icon(Icons.sports_soccer, size: 20),
-                          text: 'Football',
-                        );
-                      } else {
-                        return const Tab(
-                          icon: Icon(Icons.sports_cricket, size: 20),
-                          text: 'Cricket',
-                        );
-                      }
-                    }).toList(),
-                  ),
+        body: settingsController.isPlayerMode
+            ? NestedScrollView(
+                headerSliverBuilder: (context, innerBoxIsScrolled) {
+                  return _buildProfileHeaderSlivers(helper, isPlayerMode: true);
+                },
+                body: _buildPlayerSportStatsBody(availableSports),
+              )
+            : CustomScrollView(
+                slivers: _buildProfileHeaderSlivers(
+                  helper,
+                  isPlayerMode: false,
                 ),
-                Expanded(
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: availableSports.map((sport) {
-                      final stats = _getStatsForSport(sport);
-                      return SportStatsView(sport: sport, stats: stats);
-                    }).toList(),
-                  ),
-                ),
-              ] else
-                const Expanded(
-                  child: Center(
-                    child: Text(
-                      'No sport stats available',
-                      style: TextStyle(
-                        color: Color(AppColors.textSecondaryColor),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
+              ),
       );
     });
   }

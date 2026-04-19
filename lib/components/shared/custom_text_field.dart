@@ -13,7 +13,10 @@ class CustomTextField extends StatefulWidget {
   final bool readOnly;
   final Widget? prefixIcon;
   final Widget? suffixIcon;
-  final int maxLines;
+
+  /// When [minLines] is set and this is null, the field grows with content.
+  final int? maxLines;
+  final int? minLines;
   final int? maxLength;
   final TextAlign textAlign;
   final bool enabled;
@@ -34,7 +37,8 @@ class CustomTextField extends StatefulWidget {
     this.readOnly = false,
     this.prefixIcon,
     this.suffixIcon,
-    this.maxLines = 1,
+    this.maxLines,
+    this.minLines,
     this.maxLength,
     this.textAlign = TextAlign.start,
     this.enabled = true,
@@ -58,6 +62,16 @@ class _CustomTextFieldState extends State<CustomTextField> {
 
   @override
   Widget build(BuildContext context) {
+    final int? textFieldMaxLines;
+    final int? textFieldMinLines;
+    if (widget.minLines != null && widget.maxLines == null) {
+      textFieldMinLines = widget.minLines;
+      textFieldMaxLines = null;
+    } else {
+      textFieldMinLines = widget.minLines;
+      textFieldMaxLines = widget.maxLines ?? 1;
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -81,8 +95,10 @@ class _CustomTextFieldState extends State<CustomTextField> {
           onTap: widget.onTap,
           onChanged: widget.onChanged,
           readOnly: widget.readOnly,
-          maxLines: widget.maxLines,
+          minLines: textFieldMinLines,
+          maxLines: textFieldMaxLines,
           maxLength: widget.maxLength,
+
           textAlign: widget.textAlign,
           enabled: widget.enabled,
           textCapitalization: widget.textCapitalization,

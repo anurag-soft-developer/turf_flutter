@@ -42,14 +42,10 @@ class Validators {
       errors.add('At least one number is required');
     }
     if (!RegExp(r'[@$!%*?&]').hasMatch(s)) {
-      errors.add(
-        r'At least one special character is required (@$!%*?&)',
-      );
+      errors.add(r'At least one special character is required (@$!%*?&)');
     }
     if (!RegExp(r'^[A-Za-z\d@$!%*?&]+$').hasMatch(s)) {
-      errors.add(
-        r'Only letters, numbers, and @$!%*?& are allowed',
-      );
+      errors.add(r'Only letters, numbers, and @$!%*?& are allowed');
     }
 
     return errors;
@@ -89,6 +85,14 @@ class Validators {
 
     if (!validator.isLength(value, 2)) {
       return 'Name must be at least 2 characters long';
+    }
+
+    if (value.length > 50) {
+      return 'Name must be less than 50 characters';
+    }
+
+    if (!validator.isAlpha(value)) {
+      return 'Name must contain only letters';
     }
 
     return null;

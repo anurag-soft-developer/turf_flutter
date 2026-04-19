@@ -1,3 +1,4 @@
+import 'package:flutter_application_1/core/models/user/user_model.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import '../core/auth/auth_state_controller.dart';
@@ -47,20 +48,20 @@ class ProfileController extends GetxController {
     }
   }
 
-  Future<void> updateProfile() async {
-    if (!profileFormKey.currentState!.validate()) return;
+  Future<UserModel?> updateProfile() async {
+    if (!profileFormKey.currentState!.validate()) return null;
 
     _isLoading.value = true;
 
-    await _authController.updateUserProfile(
+    final result = await _authController.updateUserProfile(
       fullName: fullNameController.text.trim(),
       bio: bioController.text.trim(),
-      phone: phoneController.text.trim().isNotEmpty
-          ? phoneController.text.trim()
-          : null,
+      phone: phoneController.text.trim(),
     );
 
     _isLoading.value = false;
+
+    return result;
   }
 
   void refreshProfile() {

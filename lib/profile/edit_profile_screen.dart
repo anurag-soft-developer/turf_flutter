@@ -135,6 +135,7 @@ class EditProfileScreen extends StatelessWidget {
                             color: Color(AppColors.textSecondaryColor),
                           ),
                           validator: Validators.validateName,
+                          maxLength: 50,
                         ),
                         const SizedBox(height: 24),
 
@@ -143,7 +144,9 @@ class EditProfileScreen extends StatelessWidget {
                           controller: profileController.bioController,
                           labelText: 'Bio',
                           hintText: 'Tell us about yourself',
-                          maxLines: 3,
+                          minLines: 3,
+                          keyboardType: TextInputType.multiline,
+                          maxLength: 500,
                           prefixIcon: const Icon(
                             Icons.description_outlined,
                             color: Color(AppColors.textSecondaryColor),
@@ -151,32 +154,13 @@ class EditProfileScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 24),
 
-                        // Email (read-only)
-                        // CustomTextField(
-                        //   controller: profileController.emailController,
-                        //   labelText: 'Email',
-                        //   hintText: 'Your email address',
-                        //   readOnly: true,
-                        //   prefixIcon: const Icon(
-                        //     Icons.email_outlined,
-                        //     color: Color(AppColors.textSecondaryColor),
-                        //   ),
-                        //   suffixIcon:
-                        //       authController.user?.isEmailVerified == true
-                        //           ? const Icon(
-                        //               Icons.verified,
-                        //               color: Color(AppColors.successColor),
-                        //             )
-                        //           : null,
-                        // ),
-                        // const SizedBox(height: 24),
-
                         // Phone
                         CustomTextField(
                           controller: profileController.phoneController,
                           labelText: 'Phone Number',
                           hintText: 'Enter your phone number',
                           keyboardType: TextInputType.phone,
+                          maxLength: 12,
                           prefixIcon: const Icon(
                             Icons.phone_outlined,
                             color: Color(AppColors.textSecondaryColor),
@@ -197,10 +181,11 @@ class EditProfileScreen extends StatelessWidget {
                             const SizedBox(width: 16),
                             Expanded(
                               child: CustomButton(
-                                text: 'Save Changes',
+                                text: 'Save',
                                 onPressed: () async {
-                                  await profileController.updateProfile();
-                                  if (!profileController.isLoading) {
+                                  final result = await profileController
+                                      .updateProfile();
+                                  if (result != null) {
                                     Get.back();
                                   }
                                 },

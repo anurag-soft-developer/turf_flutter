@@ -18,6 +18,7 @@ class AuthStateController extends GetxController {
   UserModel? get user => _user.value;
   bool get isLoading => _isLoading.value;
   bool get isLoggedIn => _isLoggedIn.value;
+
   /// Use `.value` inside [Obx] so toggles rebuild while PATCH runs.
   RxBool get notificationSettingsUpdating => _updatingNotificationSettings;
 
@@ -60,7 +61,7 @@ class AuthStateController extends GetxController {
     _isLoading.value = false;
   }
 
-  Future<void> updateUserProfile({
+  Future<UserModel?> updateUserProfile({
     String? fullName,
     String? bio,
     String? phone,
@@ -80,6 +81,7 @@ class AuthStateController extends GetxController {
     }
 
     _isLoading.value = false;
+    return result;
   }
 
   Future<void> sendPasswordResetEmail(String email) async {

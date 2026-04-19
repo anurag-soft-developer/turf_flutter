@@ -47,6 +47,14 @@ class ExceptionHandler {
         return 'No internet connection. Please check your network settings.';
       case DioExceptionType.badResponse:
         final responseData = e.response?.data;
+        if (responseData?['errors'] != null &&
+            responseData['errors'] is List &&
+            responseData['errors'].isNotEmpty) {
+          final message = responseData['errors'][0]['message'];
+          if (message is String) {
+            return message;
+          }
+        }
         if (responseData?['message'] != null) {
           return responseData['message'].toString();
         }
@@ -69,6 +77,7 @@ class ExceptionHandler {
   static void handleException(dynamic e) {
     debugPrint('\x1B[31m[Exception occurred]: $e\x1B[0m');
     final errorMessage = handleGenericException(e);
+    debugPrint('\x1B[31m[Error message]: $errorMessage\x1B[0m');
     showErrorToast(errorMessage);
   }
 

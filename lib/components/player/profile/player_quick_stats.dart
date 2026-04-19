@@ -37,7 +37,7 @@ class PlayerQuickStats extends StatelessWidget {
     final winRate = totalMatches > 0 ? (totalWins / totalMatches * 100) : 0.0;
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
       decoration: BoxDecoration(
         color: Colors.white,

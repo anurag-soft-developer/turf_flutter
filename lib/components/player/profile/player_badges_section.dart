@@ -12,29 +12,29 @@ class PlayerBadgesSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      margin: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(
-                Icons.military_tech,
-                size: 20,
-                color: const Color(AppColors.accentColor),
-              ),
-              const SizedBox(width: 8),
-              const Text(
-                'Badges',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: Color(AppColors.textColor),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
+          // Row(
+          //   children: [
+          //     Icon(
+          //       Icons.military_tech,
+          //       size: 20,
+          //       color: const Color(AppColors.accentColor),
+          //     ),
+          //     const SizedBox(width: 8),
+          //     const Text(
+          //       'Badges',
+          //       style: TextStyle(
+          //         fontSize: 18,
+          //         fontWeight: FontWeight.w700,
+          //         color: Color(AppColors.textColor),
+          //       ),
+          //     ),
+          //   ],
+          // ),
+          // const SizedBox(height: 12),
           if (badges.isEmpty)
             Container(
               width: double.infinity,
@@ -98,7 +98,9 @@ class _BadgeCard extends StatelessWidget {
         .replaceAll('_', ' ')
         .replaceAll('-', ' ')
         .split(' ')
-        .map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '')
+        .map(
+          (w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '',
+        )
         .join(' ');
   }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/components/player/profile/player_badges_section.dart';
 import 'package:get/get.dart';
 
 import '../../components/player/profile/player_hero_section.dart';
@@ -93,15 +94,24 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen>
         headerSliverBuilder: (context, innerBoxIsScrolled) {
           return [
             SliverToBoxAdapter(child: PlayerHeroSection(helper: helper!)),
+            SliverToBoxAdapter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Quick Stats Bar
+                  const SizedBox(height: 24),
+                  PlayerQuickStats(helper: helper!),
+
+                  const SizedBox(height: 24),
+                  PlayerBadgesSection(badges: helper?.getModel()?.badges ?? []),
+                ],
+              ),
+            ),
           ];
         },
         body: Column(
           children: [
-            // Quick Stats Bar
-            PlayerQuickStats(helper: helper!),
-
             const SizedBox(height: 24),
-
             // Sport Stats Tabs
             if (availableSports.isNotEmpty) ...[
               Container(
