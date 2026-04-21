@@ -38,7 +38,7 @@ class BookingCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Booking #${booking.id?.substring(0, 8) ?? 'N/A'}',
+                    'Booking #${booking.id?.substring(0, 6) ?? 'N/A'}',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,

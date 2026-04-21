@@ -13,7 +13,7 @@ class TurfSearchBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return CustomTextField(
       controller: controller.searchController,
-      hintText: 'Search turfs by name, location...',
+      hintText: 'Search turfs by name',
       prefixIcon: const Icon(Icons.search, color: Colors.grey),
       suffixIcon: Obx(
         () => controller.isSearching.value
@@ -81,13 +81,13 @@ class QuickFiltersRow extends StatelessWidget {
       child: Obx(
         () => Row(
           children: [
-            QuickFilterChip(
-              label: '4+ Rating',
-              isSelected: controller.selectedRating >= 4.0,
-              onTap: () => controller.updateRating(
-                controller.selectedRating >= 4.0 ? 0.0 : 4.0,
-              ),
-            ),
+            // QuickFilterChip(
+            //   label: '4+ Rating',
+            //   isSelected: controller.selectedRating >= 4.0,
+            //   onTap: () => controller.updateRating(
+            //     controller.selectedRating >= 4.0 ? 0.0 : 4.0,
+            //   ),
+            // ),
             const SizedBox(width: 8),
             ...controller.availableSportTypes
                 .take(3)

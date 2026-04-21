@@ -62,6 +62,10 @@ class TurfBookingEndpoints {
   String get ownerBookings => '/turf-bookings/owner-bookings';
   String get checkAvailability => '/turf-bookings/check-availability';
 
+  /// Day listing for booking UI (`GET` with `?date=`).
+  String turfTimeSlots(String turfId) =>
+      '/turf-bookings/turf/$turfId/time-slots';
+
   String bookingById(String id) => '/turf-bookings/$id';
   String turfBookings(String turfId) => '/turf-bookings/turf/$turfId';
 }

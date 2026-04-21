@@ -1,53 +1,38 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_application_1/turf_booking/model/turf_booking_model.dart';
 import 'package:get/get.dart';
 import '../model/turf_model.dart';
 import '../turf_service.dart';
 import '../reviews/turf_reviews_list_controller.dart';
 import '../../turf_booking/turf_booking_controller.dart';
+import '../../turf_booking/turf_booking_service.dart';
 import '../../turf_booking/model/turf_booking_model.dart' as booking_model;
-
-class TimeSlot {
-  final DateTime startTime;
-  final DateTime endTime;
-  final bool isAvailable;
-  final double price;
-
-  TimeSlot({
-    required this.startTime,
-    required this.endTime,
-    required this.isAvailable,
-    required this.price,
-  });
-
-  String get timeRange {
-    final startHour = startTime.hour.toString().padLeft(2, '0');
-    final startMin = startTime.minute.toString().padLeft(2, '0');
-    final endHour = endTime.hour.toString().padLeft(2, '0');
-    final endMin = endTime.minute.toString().padLeft(2, '0');
-    return '$startHour:$startMin - $endHour:$endMin';
-  }
-}
 
 class TurfDetailController extends GetxController {
   static TurfDetailController get instance => Get.find();
 
   final TurfService _turfService = TurfService();
+  final TurfBookingService _bookingService = TurfBookingService();
 
   // Observable variables
   final RxBool _isLoading = false.obs;
+  final RxBool _isSlotsLoading = false.obs;
   final RxBool _isBookingLoading = false.obs;
   final Rxn<TurfModel> _turf = Rxn<TurfModel>();
-  final RxList<TimeSlot> _timeSlots = <TimeSlot>[].obs;
-  final RxList<TimeSlot> _selectedTimeSlots = <TimeSlot>[].obs;
+  final RxList<TurfTimeSlotListing> _timeSlots = <TurfTimeSlotListing>[].obs;
+  final RxList<TurfTimeSlotListing> _selectedTimeSlots =
+      <TurfTimeSlotListing>[].obs;
   final Rx<DateTime> _selectedDate = DateTime.now().obs;
   final RxInt _currentImageIndex = 0.obs;
   final RxDouble _totalPrice = 0.0.obs;
 
   // Getters - Return observables for reactivity
   RxBool get isLoading => _isLoading;
+  RxBool get isSlotsLoading => _isSlotsLoading;
   RxBool get isBookingLoading => _isBookingLoading;
   Rxn<TurfModel> get turf => _turf;
-  RxList<TimeSlot> get timeSlots => _timeSlots;
-  RxList<TimeSlot> get selectedTimeSlots => _selectedTimeSlots;
+  RxList<TurfTimeSlotListing> get timeSlots => _timeSlots;
+  RxList<TurfTimeSlotListing> get selectedTimeSlots => _selectedTimeSlots;
   Rx<DateTime> get selectedDate => _selectedDate;
   RxInt get currentImageIndex => _currentImageIndex;
   RxDouble get totalPrice => _totalPrice;
@@ -74,7 +59,6 @@ class TurfDetailController extends GetxController {
           tag: turfReviewsPreviewTag(_turfId!),
         );
         loadTurfDetails();
-        // Don't call generateTimeSlots here - will be called after turf loads
       }
     }
   }
@@ -101,8 +85,7 @@ class TurfDetailController extends GetxController {
       final turfs = await _turfService.getTurfById(_turfId!);
       if (turfs != null) {
         _turf.value = turfs;
-        // Generate time slots after turf data is loaded
-        generateTimeSlots();
+        await loadTimeSlots();
       } else {
         Get.snackbar('Error', 'Turf not found');
         Get.back();
@@ -115,69 +98,37 @@ class TurfDetailController extends GetxController {
     }
   }
 
-  // Generate time slots based on operating hours
-  void generateTimeSlots() {
+  Future<void> loadTimeSlots() async {
+    if (_turfId == null) return;
+
     _timeSlots.clear();
     _selectedTimeSlots.clear();
     _totalPrice.value = 0.0;
 
-    final currentTurf = _turf.value;
-    if (currentTurf?.operatingHours == null || currentTurf?.pricing == null) {
-      return;
-    }
+    _isSlotsLoading.value = true;
 
-    final operatingHours = currentTurf!.operatingHours!;
-    final pricing = currentTurf.pricing!;
-    final selectedDateTime = _selectedDate.value;
+    final tempDate = _selectedDate.value;
 
-    // Parse operating hours
-    final openTime = operatingHours.parseTime(
-      operatingHours.open,
-      selectedDateTime,
-    );
-    final closeTime = operatingHours.parseTime(
-      operatingHours.close,
-      selectedDateTime,
-    );
-
-    if (openTime == null || closeTime == null) return;
-
-    // Generate hourly slots
-    DateTime currentSlotStart = openTime;
-    while (currentSlotStart.isBefore(closeTime)) {
-      final slotEnd = currentSlotStart.add(const Duration(hours: 1));
-      if (slotEnd.isAfter(closeTime)) break;
-
-      // Check if slot is in the past for today
-      final now = DateTime.now();
-      final isToday =
-          selectedDateTime.year == now.year &&
-          selectedDateTime.month == now.month &&
-          selectedDateTime.day == now.day;
-      final isPastSlot = isToday && currentSlotStart.isBefore(now);
-
-      // Calculate price (include weekend surge if applicable)
-      final isWeekend =
-          selectedDateTime.weekday == DateTime.saturday ||
-          selectedDateTime.weekday == DateTime.sunday;
-      final slotPrice = isWeekend
-          ? pricing.weekendPricePerHour
-          : pricing.basePricePerHour;
-
-      final timeSlot = TimeSlot(
-        startTime: currentSlotStart,
-        endTime: slotEnd,
-        isAvailable: !isPastSlot && (currentTurf.isAvailable ?? false),
-        price: slotPrice,
+    try {
+      final listings = await _bookingService.getTimeSlotsForDate(
+        _turfId!,
+        tempDate,
       );
 
-      _timeSlots.add(timeSlot);
-      currentSlotStart = slotEnd;
+      if (tempDate != _selectedDate.value) {
+        debugPrint(
+          'Date changed, ignoring time slots ${_selectedDate.value} $tempDate',
+        );
+        return;
+      }
+      _timeSlots.assignAll(listings);
+    } finally {
+      _isSlotsLoading.value = false;
     }
   }
 
   // Select/deselect time slot
-  void toggleTimeSlot(TimeSlot slot) {
+  void toggleTimeSlot(TurfTimeSlotListing slot) {
     if (!slot.isAvailable) return;
 
     if (_selectedTimeSlots.contains(slot)) {
@@ -214,7 +165,7 @@ class TurfDetailController extends GetxController {
     }
 
     _selectedDate.value = date;
-    generateTimeSlots();
+    loadTimeSlots();
   }
 
   // Change image index for carousel
@@ -242,17 +193,9 @@ class TurfDetailController extends GetxController {
     try {
       // Convert selected time slots to API format
       final apiTimeSlots = _selectedTimeSlots.map((slot) {
-        // Ensure the DateTime is in local timezone before converting to ISO with timezone
-        final localStartTime = slot.startTime.toLocal();
-        final localEndTime = slot.endTime.toLocal();
-
-        // Use toIso8601String() to include timezone information
-        final startTimeString = localStartTime.toIso8601String();
-        final endTimeString = localEndTime.toIso8601String();
-
         return booking_model.TimeSlot(
-          startTime: startTimeString,
-          endTime: endTimeString,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
         );
       }).toList();
 
@@ -277,7 +220,7 @@ class TurfDetailController extends GetxController {
           'Some selected time slots are no longer available. Please refresh and try again.',
         );
         // Refresh time slots to get updated availability
-        generateTimeSlots();
+        loadTimeSlots();
         return;
       }
 
@@ -323,9 +266,9 @@ class TurfDetailController extends GetxController {
     final lastSlot = _selectedTimeSlots.last;
 
     final startTime =
-        '${firstSlot.startTime.hour.toString().padLeft(2, '0')}:${firstSlot.startTime.minute.toString().padLeft(2, '0')}';
+        '${DateTime.parse(firstSlot.startTime).hour.toString().padLeft(2, '0')}:${DateTime.parse(firstSlot.startTime).minute.toString().padLeft(2, '0')}';
     final endTime =
-        '${lastSlot.endTime.hour.toString().padLeft(2, '0')}:${lastSlot.endTime.minute.toString().padLeft(2, '0')}';
+        '${DateTime.parse(lastSlot.endTime).hour.toString().padLeft(2, '0')}:${DateTime.parse(lastSlot.endTime).minute.toString().padLeft(2, '0')}';
 
     return '$startTime - $endTime (${_selectedTimeSlots.length} slot${_selectedTimeSlots.length > 1 ? 's' : ''})';
   }
@@ -355,7 +298,6 @@ class TurfDetailController extends GetxController {
   // Refresh data
   Future<void> refreshData() async {
     await loadTurfDetails();
-    generateTimeSlots();
     final id = _turfId;
     if (id != null &&
         Get.isRegistered<TurfReviewsListController>(

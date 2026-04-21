@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/turf_booking/model/turf_booking_model.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import '../../core/config/constants.dart';
 import '../../turf/details/turf_detail_controller.dart';
 
@@ -87,7 +89,7 @@ class DateCard extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              _getDayName(date.weekday),
+              DateFormat('EEE').format(date),
               style: TextStyle(
                 fontSize: 12,
                 color: isSelected ? Colors.white : Colors.grey[600],
@@ -104,7 +106,7 @@ class DateCard extends StatelessWidget {
               ),
             ),
             Text(
-              _getMonthName(date.month),
+              DateFormat('MMM').format(date),
               style: TextStyle(
                 fontSize: 10,
                 color: isSelected ? Colors.white : Colors.grey[600],
@@ -114,58 +116,6 @@ class DateCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  String _getDayName(int weekday) {
-    switch (weekday) {
-      case 1:
-        return 'Mon';
-      case 2:
-        return 'Tue';
-      case 3:
-        return 'Wed';
-      case 4:
-        return 'Thu';
-      case 5:
-        return 'Fri';
-      case 6:
-        return 'Sat';
-      case 7:
-        return 'Sun';
-      default:
-        return '';
-    }
-  }
-
-  String _getMonthName(int month) {
-    switch (month) {
-      case 1:
-        return 'Jan';
-      case 2:
-        return 'Feb';
-      case 3:
-        return 'Mar';
-      case 4:
-        return 'Apr';
-      case 5:
-        return 'May';
-      case 6:
-        return 'Jun';
-      case 7:
-        return 'Jul';
-      case 8:
-        return 'Aug';
-      case 9:
-        return 'Sep';
-      case 10:
-        return 'Oct';
-      case 11:
-        return 'Nov';
-      case 12:
-        return 'Dec';
-      default:
-        return '';
-    }
   }
 }
 
@@ -189,8 +139,14 @@ class TimeSlotsGrid extends StatelessWidget {
               color: Color(AppColors.textColor),
             ),
           ),
-          const SizedBox(height: 12),
+          // const SizedBox(height: 12),
           Obx(() {
+            if (controller.isSlotsLoading.value) {
+              return const Padding(
+                padding: EdgeInsets.all(32),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
             if (controller.timeSlots.isEmpty) {
               return Container(
                 padding: const EdgeInsets.all(24),
@@ -244,7 +200,7 @@ class TimeSlotsGrid extends StatelessWidget {
 }
 
 class TimeSlotCard extends StatelessWidget {
-  final TimeSlot slot;
+  final TurfTimeSlotListing slot;
   final bool isSelected;
   final VoidCallback onTap;
 
@@ -257,18 +213,25 @@ class TimeSlotCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isBooked = slot.isBooked;
+    final isDisabled = !slot.isAvailable || isBooked;
+
     return GestureDetector(
-      onTap: onTap,
+      onTap: isDisabled ? null : onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: !slot.isAvailable
+          color: isBooked
+              ? Colors.red[50]
+              : !slot.isAvailable
               ? Colors.grey[100]
               : isSelected
               ? const Color(AppColors.primaryColor)
               : Colors.white,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: !slot.isAvailable
+            color: isBooked
+                ? Colors.red[200]!
+                : !slot.isAvailable
                 ? Colors.grey[300]!
                 : isSelected
                 ? const Color(AppColors.primaryColor)
@@ -279,11 +242,13 @@ class TimeSlotCard extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              slot.timeRange,
+              slot.timeDisplay,
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
-                color: !slot.isAvailable
+                color: isBooked
+                    ? Colors.red[700]
+                    : !slot.isAvailable
                     ? Colors.grey[600]
                     : isSelected
                     ? Colors.white
@@ -295,7 +260,9 @@ class TimeSlotCard extends StatelessWidget {
               '₹${slot.price.toStringAsFixed(0)}',
               style: TextStyle(
                 fontSize: 13,
-                color: !slot.isAvailable
+                color: isBooked
+                    ? Colors.red[700]
+                    : !slot.isAvailable
                     ? Colors.grey[600]
                     : isSelected
                     ? Colors.white
@@ -303,7 +270,16 @@ class TimeSlotCard extends StatelessWidget {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            if (!slot.isAvailable)
+            if (isBooked)
+              Text(
+                'Booked',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.red[700],
+                  fontWeight: FontWeight.w600,
+                ),
+              )
+            else if (!slot.isAvailable)
               Text(
                 'Unavailable',
                 style: TextStyle(

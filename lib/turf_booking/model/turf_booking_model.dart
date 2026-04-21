@@ -74,6 +74,37 @@ class TimeSlot {
   }
 }
 
+/// Response item from `GET /turf/:turfId/time-slots`.
+class TurfTimeSlotListing {
+  final String startTime;
+  final String endTime;
+  final bool isAvailable;
+  final double price;
+  final bool isBooked;
+
+  TurfTimeSlotListing({
+    required this.startTime,
+    required this.endTime,
+    required this.isAvailable,
+    required this.price,
+    required this.isBooked,
+  });
+
+  factory TurfTimeSlotListing.fromJson(Map<String, dynamic> json) {
+    return TurfTimeSlotListing(
+      startTime: json['startTime'] as String,
+      endTime: json['endTime'] as String,
+      isAvailable: json['isAvailable'] as bool,
+      price: (json['price'] as num).toDouble(),
+      isBooked: json['isBooked'] as bool,
+    );
+  }
+
+  String get timeDisplay {
+    return '${DateTime.parse(startTime).hour.toString().padLeft(2, '0')}:${DateTime.parse(startTime).minute.toString().padLeft(2, '0')} - ${DateTime.parse(endTime).hour.toString().padLeft(2, '0')}:${DateTime.parse(endTime).minute.toString().padLeft(2, '0')}';
+  }
+}
+
 // Enums
 enum TurfBookingStatus {
   @JsonValue('pending')

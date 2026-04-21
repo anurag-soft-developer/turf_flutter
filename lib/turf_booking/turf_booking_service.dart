@@ -210,6 +210,38 @@ class TurfBookingService {
   //   );
   // }
 
+  /// Hourly slots for a turf on a calendar day (availability, overlap, pricing).
+  Future<List<TurfTimeSlotListing>> getTimeSlotsForDate(
+    String turfId,
+    DateTime date,
+  ) async {
+    final response = await _apiService.get<dynamic>(
+      ApiConstants.turfBooking.turfTimeSlots(turfId),
+      queryParameters: {'date': date.toString()},
+    );
+
+    if (response == null) {
+      return [];
+    }
+
+    final List<dynamic> raw;
+    if (response is List<dynamic>) {
+      raw = response;
+    } else if (response is Map<String, dynamic>) {
+      final data = response['data'];
+      if (data is! List<dynamic>) {
+        return [];
+      }
+      raw = data;
+    } else {
+      return [];
+    }
+
+    return raw
+        .map((e) => TurfTimeSlotListing.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
   /// Check time slots availability for a turf
   Future<bool> checkTimeSlotsAvailability(
     CheckTurfAvailabilityRequest request,
