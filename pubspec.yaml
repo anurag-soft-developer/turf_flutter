@@ -51,6 +51,7 @@ dependencies:
   share_plus: ^7.2.2
   intl: ^0.20.2
   url_launcher: ^6.3.2
+  razorpay_flutter: ^1.4.4
 
 dev_dependencies:
   flutter_test:

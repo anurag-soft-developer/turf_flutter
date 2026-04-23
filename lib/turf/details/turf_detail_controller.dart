@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/core/config/constants.dart';
+import 'package:flutter_application_1/core/config/env_config.dart';
 import 'package:flutter_application_1/turf_booking/model/turf_booking_model.dart';
 import 'package:get/get.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 import '../model/turf_model.dart';
 import '../turf_service.dart';
 import '../reviews/turf_reviews_list_controller.dart';
-import '../../turf_booking/turf_booking_controller.dart';
 import '../../turf_booking/turf_booking_service.dart';
 import '../../turf_booking/model/turf_booking_model.dart' as booking_model;
 
@@ -13,6 +15,7 @@ class TurfDetailController extends GetxController {
 
   final TurfService _turfService = TurfService();
   final TurfBookingService _bookingService = TurfBookingService();
+  late final Razorpay _razorpay;
 
   // Observable variables
   final RxBool _isLoading = false.obs;
@@ -38,12 +41,15 @@ class TurfDetailController extends GetxController {
   RxDouble get totalPrice => _totalPrice;
 
   String? _turfId;
+  String? _pendingBookingId;
+  String? _pendingOrderId;
 
   String? get turfId => _turfId;
 
   @override
   void onInit() {
     super.onInit();
+    _initializeRazorpay();
 
     // Get turf ID from arguments
     final arguments = Get.arguments;
@@ -65,6 +71,7 @@ class TurfDetailController extends GetxController {
 
   @override
   void onClose() {
+    _razorpay.clear();
     final id = _turfId;
     if (id != null &&
         Get.isRegistered<TurfReviewsListController>(
@@ -73,6 +80,106 @@ class TurfDetailController extends GetxController {
       Get.delete<TurfReviewsListController>(tag: turfReviewsPreviewTag(id));
     }
     super.onClose();
+  }
+
+  void _initializeRazorpay() {
+    _razorpay = Razorpay();
+    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+  }
+
+  void _openRazorpayCheckout({
+    required RazorpayOrderModel order,
+    required TurfBookingModel booking,
+  }) {
+    final key = EnvConfig.razorpayKeyId;
+    if (key.isEmpty) {
+      Get.snackbar(
+        'Payment Setup Missing',
+        'Razorpay key is not configured. Please add RAZORPAY_KEY_ID to .env',
+      );
+      return;
+    }
+
+    _pendingBookingId = booking.id;
+    _pendingOrderId = order.id;
+
+    final options = {
+      'key': key,
+      'amount': order.amount,
+      'order_id': order.id,
+      'name': EnvConfig.appName.isNotEmpty ? EnvConfig.appName : 'Play App',
+      'description': 'Turf booking payment',
+      'currency': order.currency,
+      'prefill': {'contact': '', 'email': ''},
+      'theme': {'color': '#00835A'},
+    };
+
+    _razorpay.open(options);
+  }
+
+  Future<void> _handlePaymentSuccess(PaymentSuccessResponse response) async {
+    if (_pendingBookingId == null) {
+      Get.snackbar('Payment Error', 'Booking reference missing for verification.');
+      return;
+    }
+
+    _isBookingLoading.value = true;
+    try {
+      final verifiedBooking = await _bookingService.verifyBookingPayment(
+        VerifyRazorpayPaymentRequest(
+          bookingId: _pendingBookingId!,
+          razorpayOrderId: response.orderId ?? _pendingOrderId ?? '',
+          razorpayPaymentId: response.paymentId ?? '',
+          razorpaySignature: response.signature ?? '',
+        ),
+      );
+
+      if (verifiedBooking != null) {
+        Get.snackbar(
+          'Payment Successful',
+          'Your booking is confirmed. Redirecting to My Bookings.',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+
+        _selectedTimeSlots.clear();
+        _totalPrice.value = 0.0;
+        _pendingBookingId = null;
+        _pendingOrderId = null;
+        await loadTimeSlots();
+        Get.offAllNamed(AppConstants.routes.myBookings);
+        return;
+      }
+
+      Get.snackbar(
+        'Verification Failed',
+        'Payment captured but booking verification failed. Please contact support.',
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Verification Failed',
+        'Could not verify payment. Please check My Bookings.',
+      );
+    } finally {
+      _isBookingLoading.value = false;
+    }
+  }
+
+  void _handlePaymentError(PaymentFailureResponse response) {
+    final message =
+        response.message?.isNotEmpty == true
+        ? response.message!
+        : 'Payment was not completed.';
+    Get.snackbar('Payment Failed', message);
+  }
+
+  void _handleExternalWallet(ExternalWalletResponse response) {
+    final walletName = response.walletName ?? 'external wallet';
+    Get.snackbar(
+      'External Wallet Selected',
+      'Complete payment using $walletName to continue.',
+    );
   }
 
   // Load turf details
@@ -199,19 +306,12 @@ class TurfDetailController extends GetxController {
         );
       }).toList();
 
-      // Get or initialize the booking controller
-      TurfBookingController bookingController;
-      try {
-        bookingController = Get.find<TurfBookingController>();
-      } catch (e) {
-        // If not found, put it manually
-        bookingController = Get.put(TurfBookingController());
-      }
-
       // Optional: Check availability before booking
-      final isAvailable = await bookingController.checkTimeSlotsAvailability(
-        turfId: _turfId!,
-        timeSlots: apiTimeSlots,
+      final isAvailable = await _bookingService.checkTimeSlotsAvailability(
+        CheckTurfAvailabilityRequest(
+          turf: _turfId!,
+          timeSlots: apiTimeSlots,
+        ),
       );
 
       if (!isAvailable) {
@@ -224,31 +324,25 @@ class TurfDetailController extends GetxController {
         return;
       }
 
-      // Create the booking
-      final booking = await bookingController.createBooking(
-        turfId: _turfId!,
-        timeSlots: apiTimeSlots,
-        // playerCount: null, // You can add a player count field if needed
-        // notes: null, // You can add a notes field if needed
+      // Create booking order and open Razorpay checkout
+      final bookingOrder = await _bookingService.createBookingOrder(
+        CreateTurfBookingRequest(turf: _turfId!, timeSlots: apiTimeSlots),
       );
 
-      if (booking != null) {
+      if (bookingOrder != null) {
         Get.snackbar(
-          'Booking Successful',
-          'Your turf has been booked for ${_selectedTimeSlots.length} slot(s)',
+          'Order Created',
+          'Proceed to payment to confirm your booking.',
           snackPosition: SnackPosition.BOTTOM,
         );
-
-        // Clear selections
-        _selectedTimeSlots.clear();
-        _totalPrice.value = 0.0;
-
-        // Navigate back or to booking confirmation screen
-        Get.back();
+        _openRazorpayCheckout(
+          order: bookingOrder.order,
+          booking: bookingOrder.booking,
+        );
       } else {
         Get.snackbar(
-          'Booking Failed',
-          'Failed to create booking. Please try again.',
+          'Order Creation Failed',
+          'Failed to create booking order. Please try again.',
         );
       }
     } catch (e) {

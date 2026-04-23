@@ -9,6 +9,7 @@ class EnvConfig {
       dotenv.env['GOOGLE_PLACES_API_KEY'] ?? '';
 
   static String get baseApiUrl => dotenv.env['BASE_API_URL'] ?? '';
+  static String get razorpayKeyId => dotenv.env['RAZORPAY_KEY_ID'] ?? '';
 
   static Future<void> initialize() async {
     try {

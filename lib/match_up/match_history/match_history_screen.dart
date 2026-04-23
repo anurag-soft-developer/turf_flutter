@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/components/match_up/my_team_selector.dart';
 import 'package:get/get.dart';
 
-import '../../components/match_history/history_team_selector.dart';
 import '../../components/match_history/match_history_placeholders.dart';
 import '../../components/match_history/match_history_tabs.dart';
 import '../../core/config/constants.dart';
@@ -34,7 +34,11 @@ class MatchHistoryScreen extends StatelessWidget {
 
         return Column(
           children: [
-            HistoryTeamSelector(controller: c),
+            MyTeamSelector(
+              selectedTeam: c.selectedTeam.value,
+              teams: c.allTeams,
+              onTeamSelected: (team) => c.selectTeam(team),
+            ),
             Expanded(child: MatchHistoryTabs(controller: c)),
           ],
         );

@@ -128,6 +128,13 @@ enum PaymentStatus {
   refunded,
 }
 
+enum SlotHoldStatus {
+  @JsonValue('active')
+  active,
+  @JsonValue('released')
+  released,
+}
+
 // Main Model
 @JsonSerializable()
 class TurfBookingModel {
@@ -149,6 +156,22 @@ class TurfBookingModel {
   final PaymentStatus? paymentStatus;
   @JsonKey(name: 'paymentId')
   final String? paymentId;
+  @JsonKey(name: 'razorpayOrderId')
+  final String? razorpayOrderId;
+  @JsonKey(name: 'invoiceId')
+  final String? invoiceId;
+  @JsonKey(name: 'paidAt')
+  final String? paidAt;
+  @JsonKey(name: 'paymentExpiresAt')
+  final String? paymentExpiresAt;
+  @JsonKey(name: 'slotHoldStatus')
+  final SlotHoldStatus? slotHoldStatus;
+  @JsonKey(name: 'refundId')
+  final String? refundId;
+  @JsonKey(name: 'refundedAt')
+  final String? refundedAt;
+  @JsonKey(name: 'refundAmount')
+  final double? refundAmount;
   final String? notes;
   @JsonKey(name: 'cancelReason')
   final String? cancelReason;
@@ -171,6 +194,14 @@ class TurfBookingModel {
     this.status,
     this.paymentStatus,
     this.paymentId,
+    this.razorpayOrderId,
+    this.invoiceId,
+    this.paidAt,
+    this.paymentExpiresAt,
+    this.slotHoldStatus,
+    this.refundId,
+    this.refundedAt,
+    this.refundAmount,
     this.notes,
     this.cancelReason,
     this.cancelledAt,
@@ -194,6 +225,14 @@ class TurfBookingModel {
     TurfBookingStatus? status,
     PaymentStatus? paymentStatus,
     String? paymentId,
+    String? razorpayOrderId,
+    String? invoiceId,
+    String? paidAt,
+    String? paymentExpiresAt,
+    SlotHoldStatus? slotHoldStatus,
+    String? refundId,
+    String? refundedAt,
+    double? refundAmount,
     String? notes,
     String? cancelReason,
     String? cancelledAt,
@@ -211,6 +250,14 @@ class TurfBookingModel {
       status: status ?? this.status,
       paymentStatus: paymentStatus ?? this.paymentStatus,
       paymentId: paymentId ?? this.paymentId,
+      razorpayOrderId: razorpayOrderId ?? this.razorpayOrderId,
+      invoiceId: invoiceId ?? this.invoiceId,
+      paidAt: paidAt ?? this.paidAt,
+      paymentExpiresAt: paymentExpiresAt ?? this.paymentExpiresAt,
+      slotHoldStatus: slotHoldStatus ?? this.slotHoldStatus,
+      refundId: refundId ?? this.refundId,
+      refundedAt: refundedAt ?? this.refundedAt,
+      refundAmount: refundAmount ?? this.refundAmount,
       notes: notes ?? this.notes,
       cancelReason: cancelReason ?? this.cancelReason,
       cancelledAt: cancelledAt ?? this.cancelledAt,
@@ -409,6 +456,78 @@ class CreateTurfBookingRequest {
       _$CreateTurfBookingRequestFromJson(json);
 
   Map<String, dynamic> toJson() => _$CreateTurfBookingRequestToJson(this);
+}
+
+@JsonSerializable()
+class RazorpayOrderModel {
+  final String id;
+  final String entity;
+  final int amount;
+  @JsonKey(name: 'amount_paid')
+  final int amountPaid;
+  @JsonKey(name: 'amount_due')
+  final int amountDue;
+  final String currency;
+  final String receipt;
+  final String status;
+  final int attempts;
+  @JsonKey(name: 'created_at')
+  final int createdAt;
+
+  RazorpayOrderModel({
+    required this.id,
+    required this.entity,
+    required this.amount,
+    required this.amountPaid,
+    required this.amountDue,
+    required this.currency,
+    required this.receipt,
+    required this.status,
+    required this.attempts,
+    required this.createdAt,
+  });
+
+  factory RazorpayOrderModel.fromJson(Map<String, dynamic> json) =>
+      _$RazorpayOrderModelFromJson(json);
+
+  Map<String, dynamic> toJson() => _$RazorpayOrderModelToJson(this);
+}
+
+@JsonSerializable()
+class CreateBookingOrderResponse {
+  final TurfBookingModel booking;
+  final RazorpayOrderModel order;
+
+  CreateBookingOrderResponse({required this.booking, required this.order});
+
+  factory CreateBookingOrderResponse.fromJson(Map<String, dynamic> json) =>
+      _$CreateBookingOrderResponseFromJson(json);
+
+  Map<String, dynamic> toJson() => _$CreateBookingOrderResponseToJson(this);
+}
+
+@JsonSerializable()
+class VerifyRazorpayPaymentRequest {
+  @JsonKey(name: 'bookingId')
+  final String bookingId;
+  @JsonKey(name: 'razorpay_order_id')
+  final String razorpayOrderId;
+  @JsonKey(name: 'razorpay_payment_id')
+  final String razorpayPaymentId;
+  @JsonKey(name: 'razorpay_signature')
+  final String razorpaySignature;
+
+  VerifyRazorpayPaymentRequest({
+    required this.bookingId,
+    required this.razorpayOrderId,
+    required this.razorpayPaymentId,
+    required this.razorpaySignature,
+  });
+
+  factory VerifyRazorpayPaymentRequest.fromJson(Map<String, dynamic> json) =>
+      _$VerifyRazorpayPaymentRequestFromJson(json);
+
+  Map<String, dynamic> toJson() => _$VerifyRazorpayPaymentRequestToJson(this);
 }
 
 @JsonSerializable()

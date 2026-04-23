@@ -64,16 +64,16 @@ class TurfBookingController extends GetxController {
         notes: notes,
       );
 
-      final booking = await _bookingService.createBooking(request);
+      final bookingOrder = await _bookingService.createBookingOrder(request);
 
-      if (booking != null) {
-        _bookings.insert(0, booking);
+      if (bookingOrder != null) {
+        _bookings.insert(0, bookingOrder.booking);
         ExceptionHandler.showSuccessToast('Booking created successfully');
         // Refresh upcoming bookings
         // loadUpcomingBookings();
       }
 
-      return booking;
+      return bookingOrder?.booking;
     } catch (e) {
       debugPrint('Error creating booking: $e');
       ExceptionHandler.showErrorToast('Failed to create booking');

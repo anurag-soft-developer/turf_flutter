@@ -209,154 +209,177 @@ class MyTeamSelector extends StatelessWidget {
   void _showTeamPicker(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (sheetContext) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
+      builder: (sheetContext) {
+        final maxHeight = MediaQuery.of(sheetContext).size.height * 0.75;
+        return SafeArea(
+          top: false,
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
             ),
-            const SizedBox(height: 20),
-            Text(
-              sheetTitle,
-              style: const TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                color: Color(AppColors.textColor),
-              ),
-            ),
-            const SizedBox(height: 16),
-            if (allowToSelectAll) ...[
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Material(
-                  color: allTeamsSelected
-                      ? const Color(
-                          AppColors.primaryColor,
-                        ).withValues(alpha: 0.08)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(14),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(14),
-                    onTap: () {
-                      onAllTeamsSelected!();
-                      Navigator.pop(sheetContext);
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 12,
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+            child: SizedBox(
+              height: maxHeight,
+              child: Column(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    sheetTitle,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: Color(AppColors.textColor),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: ListView(
+                      padding: EdgeInsets.only(
+                        bottom:
+                            MediaQuery.of(sheetContext).viewPadding.bottom + 8,
                       ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: const Color(
-                                AppColors.primaryColor,
-                              ).withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(
-                              Icons.groups,
-                              color: Color(AppColors.primaryColor),
-                              size: 22,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              allTeamsLabel,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                color: Color(AppColors.textColor),
+                      children: [
+                        if (allowToSelectAll) ...[
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Material(
+                              color: allTeamsSelected
+                                  ? const Color(
+                                      AppColors.primaryColor,
+                                    ).withValues(alpha: 0.08)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(14),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(14),
+                                onTap: () {
+                                  onAllTeamsSelected!();
+                                  Navigator.pop(sheetContext);
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 12,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 40,
+                                        height: 40,
+                                        decoration: BoxDecoration(
+                                          color: const Color(
+                                            AppColors.primaryColor,
+                                          ).withValues(alpha: 0.12),
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                        ),
+                                        child: const Icon(
+                                          Icons.groups,
+                                          color: Color(AppColors.primaryColor),
+                                          size: 22,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Text(
+                                          allTeamsLabel,
+                                          style: const TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w600,
+                                            color: Color(AppColors.textColor),
+                                          ),
+                                        ),
+                                      ),
+                                      if (allTeamsSelected)
+                                        const Icon(
+                                          Icons.check_circle,
+                                          size: 22,
+                                          color: Color(AppColors.primaryColor),
+                                        ),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ),
                           ),
-                          if (allTeamsSelected)
-                            const Icon(
-                              Icons.check_circle,
-                              size: 22,
-                              color: Color(AppColors.primaryColor),
-                            ),
                         ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-            ...teams.map((team) {
-              final isSelected = allowToSelectAll
-                  ? !allTeamsSelected && selectedTeam?.id == team.id
-                  : selectedTeam?.id == team.id;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Material(
-                  color: isSelected
-                      ? const Color(
-                          AppColors.primaryColor,
-                        ).withValues(alpha: 0.08)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(14),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(14),
-                    onTap: () {
-                      onTeamSelected(team);
-                      Navigator.pop(sheetContext);
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 12,
-                      ),
-                      child: Row(
-                        children: [
-                          TeamLogo(url: team.logo, size: 40),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              team.name,
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: isSelected
-                                    ? FontWeight.w700
-                                    : FontWeight.w500,
-                                color: const Color(AppColors.textColor),
+                        ...teams.map((team) {
+                          final isSelected = allowToSelectAll
+                              ? !allTeamsSelected && selectedTeam?.id == team.id
+                              : selectedTeam?.id == team.id;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Material(
+                              color: isSelected
+                                  ? const Color(
+                                      AppColors.primaryColor,
+                                    ).withValues(alpha: 0.08)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(14),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(14),
+                                onTap: () {
+                                  onTeamSelected(team);
+                                  Navigator.pop(sheetContext);
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 12,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      TeamLogo(url: team.logo, size: 40),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Text(
+                                          team.name,
+                                          style: TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: isSelected
+                                                ? FontWeight.w700
+                                                : FontWeight.w500,
+                                            color: const Color(
+                                              AppColors.textColor,
+                                            ),
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      if (isSelected)
+                                        const Icon(
+                                          Icons.check_circle,
+                                          size: 22,
+                                          color: Color(AppColors.primaryColor),
+                                        ),
+                                    ],
+                                  ),
+                                ),
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                          if (isSelected)
-                            const Icon(
-                              Icons.check_circle,
-                              size: 22,
-                              color: Color(AppColors.primaryColor),
-                            ),
-                        ],
-                      ),
+                          );
+                        }),
+                      ],
                     ),
                   ),
-                ),
-              );
-            }),
-          ],
-        ),
-      ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -32,6 +32,17 @@ TurfBookingModel _$TurfBookingModelFromJson(Map<String, dynamic> json) =>
         json['paymentStatus'],
       ),
       paymentId: json['paymentId'] as String?,
+      razorpayOrderId: json['razorpayOrderId'] as String?,
+      invoiceId: json['invoiceId'] as String?,
+      paidAt: json['paidAt'] as String?,
+      paymentExpiresAt: json['paymentExpiresAt'] as String?,
+      slotHoldStatus: $enumDecodeNullable(
+        _$SlotHoldStatusEnumMap,
+        json['slotHoldStatus'],
+      ),
+      refundId: json['refundId'] as String?,
+      refundedAt: json['refundedAt'] as String?,
+      refundAmount: (json['refundAmount'] as num?)?.toDouble(),
       notes: json['notes'] as String?,
       cancelReason: json['cancelReason'] as String?,
       cancelledAt: json['cancelledAt'] as String?,
@@ -51,6 +62,14 @@ Map<String, dynamic> _$TurfBookingModelToJson(TurfBookingModel instance) =>
       'status': _$TurfBookingStatusEnumMap[instance.status],
       'paymentStatus': _$PaymentStatusEnumMap[instance.paymentStatus],
       'paymentId': instance.paymentId,
+      'razorpayOrderId': instance.razorpayOrderId,
+      'invoiceId': instance.invoiceId,
+      'paidAt': instance.paidAt,
+      'paymentExpiresAt': instance.paymentExpiresAt,
+      'slotHoldStatus': _$SlotHoldStatusEnumMap[instance.slotHoldStatus],
+      'refundId': instance.refundId,
+      'refundedAt': instance.refundedAt,
+      'refundAmount': instance.refundAmount,
       'notes': instance.notes,
       'cancelReason': instance.cancelReason,
       'cancelledAt': instance.cancelledAt,
@@ -73,6 +92,11 @@ const _$PaymentStatusEnumMap = {
   PaymentStatus.refunded: 'refunded',
 };
 
+const _$SlotHoldStatusEnumMap = {
+  SlotHoldStatus.active: 'active',
+  SlotHoldStatus.released: 'released',
+};
+
 CreateTurfBookingRequest _$CreateTurfBookingRequestFromJson(
   Map<String, dynamic> json,
 ) => CreateTurfBookingRequest(
@@ -91,6 +115,63 @@ Map<String, dynamic> _$CreateTurfBookingRequestToJson(
   'timeSlots': instance.timeSlots,
   'playerCount': instance.playerCount,
   'notes': instance.notes,
+};
+
+RazorpayOrderModel _$RazorpayOrderModelFromJson(Map<String, dynamic> json) =>
+    RazorpayOrderModel(
+      id: json['id'] as String,
+      entity: json['entity'] as String,
+      amount: (json['amount'] as num).toInt(),
+      amountPaid: (json['amount_paid'] as num).toInt(),
+      amountDue: (json['amount_due'] as num).toInt(),
+      currency: json['currency'] as String,
+      receipt: json['receipt'] as String,
+      status: json['status'] as String,
+      attempts: (json['attempts'] as num).toInt(),
+      createdAt: (json['created_at'] as num).toInt(),
+    );
+
+Map<String, dynamic> _$RazorpayOrderModelToJson(RazorpayOrderModel instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'entity': instance.entity,
+      'amount': instance.amount,
+      'amount_paid': instance.amountPaid,
+      'amount_due': instance.amountDue,
+      'currency': instance.currency,
+      'receipt': instance.receipt,
+      'status': instance.status,
+      'attempts': instance.attempts,
+      'created_at': instance.createdAt,
+    };
+
+CreateBookingOrderResponse _$CreateBookingOrderResponseFromJson(
+  Map<String, dynamic> json,
+) => CreateBookingOrderResponse(
+  booking: TurfBookingModel.fromJson(json['booking']),
+  order: RazorpayOrderModel.fromJson(json['order'] as Map<String, dynamic>),
+);
+
+Map<String, dynamic> _$CreateBookingOrderResponseToJson(
+  CreateBookingOrderResponse instance,
+) => <String, dynamic>{'booking': instance.booking, 'order': instance.order};
+
+VerifyRazorpayPaymentRequest _$VerifyRazorpayPaymentRequestFromJson(
+  Map<String, dynamic> json,
+) => VerifyRazorpayPaymentRequest(
+  bookingId: json['bookingId'] as String,
+  razorpayOrderId: json['razorpay_order_id'] as String,
+  razorpayPaymentId: json['razorpay_payment_id'] as String,
+  razorpaySignature: json['razorpay_signature'] as String,
+);
+
+Map<String, dynamic> _$VerifyRazorpayPaymentRequestToJson(
+  VerifyRazorpayPaymentRequest instance,
+) => <String, dynamic>{
+  'bookingId': instance.bookingId,
+  'razorpay_order_id': instance.razorpayOrderId,
+  'razorpay_payment_id': instance.razorpayPaymentId,
+  'razorpay_signature': instance.razorpaySignature,
 };
 
 UpdateTurfBookingRequest _$UpdateTurfBookingRequestFromJson(
