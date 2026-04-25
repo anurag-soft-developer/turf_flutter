@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../components/match_up/my_team_selector.dart';
-import '../../components/shared/app_segmented_tabs.dart';
+import '../../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
 import '../../core/config/constants.dart';
 import '../../team/utils/team_ui.dart';
 import '../model/team_match_model.dart';
@@ -27,7 +27,7 @@ class _MatchChallengesScreenState extends State<MatchChallengesScreen>
     _tabController = TabController(
       length: 2,
       vsync: this,
-      initialIndex: c.tabIndex.value,
+      initialIndex: c.selectedTab.value.index,
     );
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) return;
@@ -99,24 +99,24 @@ class _MatchChallengesScreenState extends State<MatchChallengesScreen>
             ),
             Expanded(
               child: Obx(() {
+                final receivedState = c.tabStateFor(MatchChallengesTab.received);
+                final sentState = c.tabStateFor(MatchChallengesTab.sent);
                 return AppSegmentedTabView(
                   controller: _tabController,
                   children: [
                     _ChallengesTabView(
-                      isLoading: c.isLoading.value,
-                      list: c.received,
+                      state: receivedState,
                       emptyMessage: 'No challenges received yet.',
                       itemBuilder: (m) =>
                           _ReceivedChallengeCard(match: m, controller: c),
-                      onRefresh: c.refreshAll,
+                      onRefresh: c.refreshCurrentTab,
                     ),
                     _ChallengesTabView(
-                      isLoading: c.isLoading.value,
-                      list: c.sent,
+                      state: sentState,
                       emptyMessage: 'No challenges sent yet.',
                       itemBuilder: (m) =>
                           _SentChallengeCard(match: m, controller: c),
-                      onRefresh: c.refreshAll,
+                      onRefresh: c.refreshCurrentTab,
                     ),
                   ],
                 );
@@ -131,28 +131,64 @@ class _MatchChallengesScreenState extends State<MatchChallengesScreen>
 
 class _ChallengesTabView extends StatelessWidget {
   const _ChallengesTabView({
-    required this.isLoading,
-    required this.list,
+    required this.state,
     required this.emptyMessage,
     required this.itemBuilder,
     required this.onRefresh,
   });
 
-  final bool isLoading;
-  final List<TeamMatchModel> list;
+  final SegmentedTabDataState<TeamMatchModel> state;
   final String emptyMessage;
   final Widget Function(TeamMatchModel match) itemBuilder;
   final Future<void> Function() onRefresh;
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading && list.isEmpty) {
+    final list = state.items;
+    if ((state.isFetching && list.isEmpty) ||
+        (!state.hasInitialized && list.isEmpty)) {
       return const Center(
         child: CircularProgressIndicator(
           valueColor: AlwaysStoppedAnimation<Color>(
             Color(AppColors.primaryColor),
           ),
         ),
+      );
+    }
+
+    if (state.error != null && list.isEmpty) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          SizedBox(
+            height: MediaQuery.sizeOf(context).height * 0.35,
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    size: 42,
+                    color: Color(AppColors.textSecondaryColor),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    state.error!,
+                    style: const TextStyle(
+                      color: Color(AppColors.textSecondaryColor),
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ElevatedButton(
+                    onPressed: onRefresh,
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       );
     }
 

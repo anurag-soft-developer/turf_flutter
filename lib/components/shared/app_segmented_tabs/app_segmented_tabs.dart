@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../core/config/constants.dart';
+import '../../../core/config/constants.dart';
+export 'segmented_tab_cache_controller.dart';
 
 class AppTabItem {
   const AppTabItem({required this.label, this.icon});
@@ -36,15 +37,21 @@ class AppSegmentedTabs extends StatelessWidget {
           // Auto-switch to scroll mode when tabs cannot fit comfortably.
           const minTabWidth = 112.0;
           const outerHorizontalPadding = 24.0; // left + right
-          final neededWidth = (items.length * minTabWidth) + outerHorizontalPadding;
-          final shouldScroll = isScrollable || neededWidth > constraints.maxWidth;
+          final neededWidth =
+              (items.length * minTabWidth) + outerHorizontalPadding;
+          final shouldScroll =
+              isScrollable || neededWidth > constraints.maxWidth;
 
           return Container(
             decoration: BoxDecoration(
-              color: const Color(AppColors.primaryColor).withValues(alpha: 0.06),
+              color: const Color(
+                AppColors.primaryColor,
+              ).withValues(alpha: 0.06),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: const Color(AppColors.dividerColor).withValues(alpha: 0.35),
+                color: const Color(
+                  AppColors.dividerColor,
+                ).withValues(alpha: 0.35),
               ),
             ),
             child: TabBar(
@@ -71,7 +78,9 @@ class AppSegmentedTabs extends StatelessWidget {
               unselectedLabelColor: const Color(AppColors.textSecondaryColor),
               splashFactory: NoSplash.splashFactory,
               overlayColor: WidgetStateProperty.all(Colors.transparent),
-              labelPadding: EdgeInsets.symmetric(horizontal: shouldScroll ? 14 : 8),
+              labelPadding: EdgeInsets.symmetric(
+                horizontal: shouldScroll ? 14 : 8,
+              ),
               labelStyle: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,

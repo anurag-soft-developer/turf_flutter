@@ -4,7 +4,7 @@ import 'package:get/get.dart';
 
 import '../../components/match_up/team_logo.dart';
 import '../../components/match_up/team_stats_row.dart';
-import '../../components/shared/app_segmented_tabs.dart';
+import '../../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
 import '../../core/config/constants.dart';
 import '../model/team_model.dart';
 import 'teams_ranking_controller.dart';
@@ -38,6 +38,7 @@ class _TeamsRankingScreenState extends State<TeamsRankingScreen>
         controller.switchSport(sports[idx]);
       }
     });
+    controller.ensureSportLoaded(controller.selectedSport.value);
   }
 
   @override
@@ -53,9 +54,7 @@ class _TeamsRankingScreenState extends State<TeamsRankingScreen>
     return Scaffold(
       drawer: const AppDrawer(),
       backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(
-        title: const Text('Team Rankings'),
-      ),
+      appBar: AppBar(title: const Text('Team Rankings')),
       body: Obx(() {
         final sports = TeamSportType.values;
         final currentIndex = sports.indexOf(controller.selectedSport.value);
@@ -89,6 +88,7 @@ class _TeamsRankingScreenState extends State<TeamsRankingScreen>
                       (sport) => _RankingTabContent(
                         controller: controller,
                         sport: sport,
+                        state: controller.stateForSport(sport),
                       ),
                     )
                     .toList(),
@@ -102,19 +102,20 @@ class _TeamsRankingScreenState extends State<TeamsRankingScreen>
 }
 
 class _RankingTabContent extends StatelessWidget {
-  const _RankingTabContent({required this.controller, required this.sport});
+  const _RankingTabContent({
+    required this.controller,
+    required this.sport,
+    required this.state,
+  });
 
   final TeamsRankingController controller;
   final TeamSportType sport;
+  final SegmentedTabDataState<TeamModel> state;
 
   @override
   Widget build(BuildContext context) {
-    final isActiveSport = controller.selectedSport.value == sport;
-    if (!isActiveSport) {
-      return const SizedBox.shrink();
-    }
-
-    if (controller.isLoading.value && controller.teams.isEmpty) {
+    final isFirstLoad = !state.hasInitialized && state.items.isEmpty;
+    if (isFirstLoad || (state.isFetching && state.items.isEmpty)) {
       return const Center(
         child: CircularProgressIndicator(
           valueColor: AlwaysStoppedAnimation<Color>(
@@ -124,12 +125,44 @@ class _RankingTabContent extends StatelessWidget {
       );
     }
 
-    if (controller.teams.isEmpty) {
+    if (state.error != null && state.items.isEmpty) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.emoji_events_outlined, size: 64, color: Colors.grey.shade300),
+            const Icon(
+              Icons.error_outline,
+              size: 42,
+              color: Color(AppColors.textSecondaryColor),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              state.error!,
+              style: const TextStyle(
+                color: Color(AppColors.textSecondaryColor),
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: () => controller.reloadSport(sport),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (state.items.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.emoji_events_outlined,
+              size: 64,
+              color: Colors.grey.shade300,
+            ),
             const SizedBox(height: 16),
             const Text(
               'No teams ranked yet.',
@@ -143,12 +176,12 @@ class _RankingTabContent extends StatelessWidget {
       );
     }
 
-    final teams = controller.teams;
+    final teams = state.items;
     final topTeams = teams.take(3).toList();
     final restTeams = teams.length > 3 ? teams.sublist(3) : <TeamModel>[];
 
     return RefreshIndicator(
-      onRefresh: controller.reload,
+      onRefresh: () => controller.reloadSport(sport),
       child: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         children: [
@@ -157,8 +190,8 @@ class _RankingTabContent extends StatelessWidget {
           if (restTeams.isNotEmpty) ...[
             const SizedBox(height: 24),
             ...restTeams.asMap().entries.map(
-                  (e) => _RankCard(rank: e.key + 4, team: e.value),
-                ),
+              (e) => _RankCard(rank: e.key + 4, team: e.value),
+            ),
           ],
           const SizedBox(height: 24),
         ],
@@ -249,9 +282,9 @@ class _PodiumCard extends StatelessWidget {
       onTap: id == null || id.isEmpty
           ? null
           : () => Get.toNamed(
-                AppConstants.routes.teamProfile,
-                arguments: {'teamId': id},
-              ),
+              AppConstants.routes.teamProfile,
+              arguments: {'teamId': id},
+            ),
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
@@ -301,8 +334,11 @@ class _PodiumCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    child: Icon(style.medalIcon,
-                        size: rank == 1 ? 20 : 16, color: Colors.white),
+                    child: Icon(
+                      style.medalIcon,
+                      size: rank == 1 ? 20 : 16,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ],
@@ -314,8 +350,9 @@ class _PodiumCard extends StatelessWidget {
                 fontSize: rank == 1 ? 28 : 22,
                 fontWeight: FontWeight.w900,
                 foreground: Paint()
-                  ..shader = LinearGradient(colors: style.gradient)
-                      .createShader(const Rect.fromLTWH(0, 0, 60, 30)),
+                  ..shader = LinearGradient(
+                    colors: style.gradient,
+                  ).createShader(const Rect.fromLTWH(0, 0, 60, 30)),
               ),
             ),
             const SizedBox(height: 4),
@@ -380,19 +417,19 @@ class _RankCard extends StatelessWidget {
           onTap: id == null || id.isEmpty
               ? null
               : () => Get.toNamed(
-                    AppConstants.routes.teamProfile,
-                    arguments: {'teamId': id},
-                  ),
+                  AppConstants.routes.teamProfile,
+                  arguments: {'teamId': id},
+                ),
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: const Color(AppColors.dividerColor)
-                    .withValues(alpha: 0.5),
+                color: const Color(
+                  AppColors.dividerColor,
+                ).withValues(alpha: 0.5),
               ),
             ),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Row(
               children: [
                 SizedBox(
@@ -428,9 +465,11 @@ class _RankCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                const Icon(Icons.chevron_right,
-                    size: 20,
-                    color: Color(AppColors.textSecondaryColor)),
+                const Icon(
+                  Icons.chevron_right,
+                  size: 20,
+                  color: Color(AppColors.textSecondaryColor),
+                ),
               ],
             ),
           ),

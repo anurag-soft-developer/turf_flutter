@@ -3,8 +3,7 @@ import 'package:get/get.dart';
 
 import '../../core/config/constants.dart';
 import '../../match_up/match_history/match_history_controller.dart';
-import '../../match_up/model/team_match_model.dart';
-import '../shared/app_segmented_tabs.dart';
+import '../shared/app_segmented_tabs/app_segmented_tabs.dart';
 import 'match_card.dart';
 import 'match_history_placeholders.dart';
 
@@ -29,7 +28,7 @@ class _MatchHistoryTabsState extends State<MatchHistoryTabs>
   List<Widget> get _children => [
     MatchList(
       controller: widget.controller,
-      matches: widget.controller.completedMatches,
+      tab: MatchHistoryTab.completed,
       isHistory: true,
       emptyIcon: Icons.history,
       emptyTitle: 'No match history',
@@ -38,7 +37,7 @@ class _MatchHistoryTabsState extends State<MatchHistoryTabs>
     ),
     MatchList(
       controller: widget.controller,
-      matches: widget.controller.upcomingMatches,
+      tab: MatchHistoryTab.upcoming,
       isHistory: false,
       emptyIcon: Icons.event_available,
       emptyTitle: 'No upcoming matches',
@@ -49,7 +48,19 @@ class _MatchHistoryTabsState extends State<MatchHistoryTabs>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _tabs.length, vsync: this);
+    final initialIndex = widget.controller.selectedHistoryTab.value.index;
+    _tabController = TabController(
+      length: _tabs.length,
+      vsync: this,
+      initialIndex: initialIndex,
+    );
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) return;
+      final idx = _tabController.index;
+      if (idx >= 0 && idx < MatchHistoryTab.values.length) {
+        widget.controller.switchHistoryTab(MatchHistoryTab.values[idx]);
+      }
+    });
   }
 
   @override
@@ -86,7 +97,7 @@ class MatchList extends StatelessWidget {
   const MatchList({
     super.key,
     required this.controller,
-    required this.matches,
+    required this.tab,
     required this.isHistory,
     required this.emptyIcon,
     required this.emptyTitle,
@@ -94,7 +105,7 @@ class MatchList extends StatelessWidget {
   });
 
   final MatchHistoryController controller;
-  final RxList<TeamMatchModel> matches;
+  final MatchHistoryTab tab;
   final bool isHistory;
   final IconData emptyIcon;
   final String emptyTitle;
@@ -103,12 +114,43 @@ class MatchList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      if (controller.isLoadingMatches.value && matches.isEmpty) {
+      final state = controller.tabStateFor(tab);
+      final matches = state.items;
+      if ((state.isFetching && matches.isEmpty) ||
+          (!state.hasInitialized && matches.isEmpty)) {
         return const Center(
           child: CircularProgressIndicator(
             valueColor: AlwaysStoppedAnimation<Color>(
               Color(AppColors.primaryColor),
             ),
+          ),
+        );
+      }
+
+      if (state.error != null && matches.isEmpty) {
+        return Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                size: 42,
+                color: Color(AppColors.textSecondaryColor),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                state.error!,
+                style: const TextStyle(
+                  color: Color(AppColors.textSecondaryColor),
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: () => controller.refreshTab(tab),
+                child: const Text('Retry'),
+              ),
+            ],
           ),
         );
       }
@@ -122,7 +164,7 @@ class MatchList extends StatelessWidget {
       }
 
       return RefreshIndicator(
-        onRefresh: controller.reload,
+        onRefresh: () => controller.refreshTab(tab),
         child: ListView.builder(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
           itemCount: matches.length,

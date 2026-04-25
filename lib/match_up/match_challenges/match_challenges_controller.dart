@@ -1,20 +1,21 @@
 import 'package:get/get.dart';
 
+import '../../components/shared/app_segmented_tabs/segmented_tab_cache_controller.dart';
 import '../../core/utils/app_snackbar.dart';
 import '../../team/members/model/team_member_model.dart';
 import '../../team/team_service.dart';
 import '../matchmaking_service.dart';
 import '../model/team_match_model.dart';
 
+enum MatchChallengesTab { received, sent }
+
 /// Lists match requests; filter by one team or merge all of the user’s teams.
-class MatchChallengesController extends GetxController {
+class MatchChallengesController extends GetxController
+    with SegmentedTabCacheController<MatchChallengesTab, TeamMatchModel> {
   final MatchmakingService _matchmakingService = MatchmakingService();
   final TeamService _teamService = TeamService();
 
-  final RxInt tabIndex = 0.obs;
-  final RxList<TeamMatchModel> received = <TeamMatchModel>[].obs;
-  final RxList<TeamMatchModel> sent = <TeamMatchModel>[].obs;
-  final RxBool isLoading = false.obs;
+  final Rx<MatchChallengesTab> selectedTab = MatchChallengesTab.received.obs;
   final RxBool isLoadingMemberships = true.obs;
   final Rxn<String> acceptingMatchId = Rxn<String>();
 
@@ -23,7 +24,8 @@ class MatchChallengesController extends GetxController {
   final Rxn<TeamMemberFieldInstance> selectedMembershipTeam =
       Rxn<TeamMemberFieldInstance>();
 
-  bool get isReceivedTab => tabIndex.value == 0;
+  @override
+  List<MatchChallengesTab> get tabKeys => MatchChallengesTab.values;
 
   List<TeamMemberFieldInstance> get myTeams {
     final list = <TeamMemberFieldInstance>[];
@@ -45,7 +47,7 @@ class MatchChallengesController extends GetxController {
 
   Future<void> _bootstrap() async {
     await loadMemberships();
-    await loadCurrentTab();
+    await loadSelectedTab();
   }
 
   Future<void> loadMemberships() async {
@@ -74,52 +76,51 @@ class MatchChallengesController extends GetxController {
   void selectTeamForFilter(TeamMemberFieldInstance team) {
     filterAllTeams.value = false;
     selectedMembershipTeam.value = team;
-    loadCurrentTab();
+    refreshAllTabs();
   }
 
   void selectAllTeamsFilter() {
     filterAllTeams.value = true;
-    loadCurrentTab();
+    refreshAllTabs();
   }
 
-  Future<void> loadCurrentTab() async {
+  Future<void> loadSelectedTab() async {
     if (myTeams.isEmpty) {
-      received.clear();
-      sent.clear();
-      isLoading.value = false;
+      _clearAllTabStates();
       return;
     }
+    await ensureTabLoaded(selectedTab.value);
+  }
 
-    isLoading.value = true;
-    try {
-      final type = isReceivedTab
-          ? NegotiationListType.incoming
-          : NegotiationListType.outgoing;
-      if (filterAllTeams.value) {
-        await _loadMerged(type);
-      } else {
-        final tid = selectedMembershipTeam.value?.id;
-        if (tid == null || tid.isEmpty) {
-          received.clear();
-          sent.clear();
-          return;
-        }
-        final res = await _matchmakingService.listRequests(
-          ListNegotiationsFilterQuery(teamId: tid, type: type, limit: 50),
-        );
-        final items = res?.data ?? [];
-        if (isReceivedTab) {
-          received.assignAll(items);
-        } else {
-          sent.assignAll(items);
-        }
-      }
-    } finally {
-      isLoading.value = false;
+  void _clearAllTabStates() {
+    for (final tab in tabKeys) {
+      setTabState(tab, const SegmentedTabDataState<TeamMatchModel>());
     }
   }
 
-  Future<void> _loadMerged(NegotiationListType type) async {
+  @override
+  Future<List<TeamMatchModel>> fetchTabItems(MatchChallengesTab tab) async {
+    final type = tab == MatchChallengesTab.received
+        ? NegotiationListType.incoming
+        : NegotiationListType.outgoing;
+
+    if (!filterAllTeams.value) {
+      final tid = selectedMembershipTeam.value?.id;
+      if (tid == null || tid.isEmpty) {
+        return <TeamMatchModel>[];
+      }
+      final res = await _matchmakingService.listRequests(
+        ListNegotiationsFilterQuery(teamId: tid, type: type, limit: 50),
+      );
+      final items = (res?.data ?? []).toList()
+        ..sort((a, b) {
+          final da = a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+          final db = b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+          return db.compareTo(da);
+        });
+      return items;
+    }
+
     final merged = <String, TeamMatchModel>{};
     for (final t in myTeams) {
       final tid = t.id;
@@ -132,28 +133,32 @@ class MatchChallengesController extends GetxController {
         if (mid != null && mid.isNotEmpty) merged[mid] = m;
       }
     }
-    final list = merged.values.toList()
+    return merged.values.toList()
       ..sort((a, b) {
         final da = a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
         final db = b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
         return db.compareTo(da);
       });
-    if (isReceivedTab) {
-      received.assignAll(list);
-    } else {
-      sent.assignAll(list);
-    }
   }
+
+  @override
+  String mapFetchError(Object error) => 'Failed to load challenges';
 
   Future<void> switchTab(int index) async {
-    if (tabIndex.value == index) return;
-    tabIndex.value = index;
-    await loadCurrentTab();
+    if (index < 0 || index >= MatchChallengesTab.values.length) return;
+    final tab = MatchChallengesTab.values[index];
+    if (selectedTab.value == tab) return;
+    selectedTab.value = tab;
+    await ensureTabLoaded(tab);
   }
 
-  Future<void> refreshAll() async {
-    await loadMemberships();
-    await loadCurrentTab();
+  Future<void> refreshCurrentTab() async {
+    await ensureTabLoaded(selectedTab.value, force: true);
+  }
+
+  Future<void> refreshAllTabs() async {
+    _clearAllTabStates();
+    await loadSelectedTab();
   }
 
   Future<void> acceptChallenge(TeamMatchModel match) async {
@@ -182,7 +187,13 @@ class MatchChallengesController extends GetxController {
           message:
               'You can continue scheduling from match details when available.',
         );
-        received.removeWhere((m) => m.id == matchId);
+        final receivedState = tabStateFor(MatchChallengesTab.received);
+        setTabState(
+          MatchChallengesTab.received,
+          receivedState.copyWith(
+            items: receivedState.items.where((m) => m.id != matchId).toList(),
+          ),
+        );
       } else {
         AppSnackbar.error(
           title: 'Could not accept',

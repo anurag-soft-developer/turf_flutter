@@ -1,46 +1,58 @@
 import 'package:get/get.dart';
 
+import '../../components/shared/app_segmented_tabs/segmented_tab_cache_controller.dart';
 import '../model/team_model.dart';
 import '../team_service.dart';
 
-class TeamsRankingController extends GetxController {
+class TeamsRankingController extends GetxController
+    with SegmentedTabCacheController<TeamSportType, TeamModel> {
   final TeamService _teamService = TeamService();
 
-  final RxBool isLoading = true.obs;
-  final RxList<TeamModel> teams = <TeamModel>[].obs;
   final Rx<TeamSportType> selectedSport = TeamSportType.cricket.obs;
+
+  @override
+  List<TeamSportType> get tabKeys => TeamSportType.values;
 
   @override
   void onInit() {
     super.onInit();
-    load();
+    ensureSportLoaded(selectedSport.value);
   }
 
   void switchSport(TeamSportType sport) {
     if (selectedSport.value == sport) return;
     selectedSport.value = sport;
-    load();
+    ensureSportLoaded(sport);
   }
 
-  Future<void> load() async {
-    isLoading.value = true;
-    try {
-      final page = await _teamService.findMany(
-        TeamFilterQuery(
-          status: TeamStatus.active,
-          visibility: TeamVisibility.public,
-          sportType: selectedSport.value,
-          page: 1,
-          limit: 50,
-        ),
-      );
-      teams.assignAll(page?.data ?? []);
-    } finally {
-      isLoading.value = false;
-    }
+  SegmentedTabDataState<TeamModel> stateForSport(TeamSportType sport) {
+    return tabStateFor(sport);
   }
 
-  Future<void> reload() async {
-    await load();
+  Future<void> ensureSportLoaded(TeamSportType sport) async {
+    await ensureTabLoaded(sport);
+  }
+
+  Future<void> reloadSport(TeamSportType sport) async {
+    await ensureTabLoaded(sport, force: true);
+  }
+
+  @override
+  Future<List<TeamModel>> fetchTabItems(TeamSportType sport) async {
+    final page = await _teamService.findMany(
+      TeamFilterQuery(
+        status: TeamStatus.active,
+        visibility: TeamVisibility.public,
+        sportType: sport,
+        page: 1,
+        limit: 50,
+      ),
+    );
+    return page?.data ?? <TeamModel>[];
+  }
+
+  @override
+  String mapFetchError(Object error) {
+    return 'Failed to load ranked teams';
   }
 }

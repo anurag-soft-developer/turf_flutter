@@ -3,7 +3,7 @@ import 'package:flutter_application_1/settings/settings_controller.dart';
 import 'package:get/get.dart';
 import 'model/turf_booking_model.dart';
 import 'turf_booking_controller.dart';
-import '../components/shared/app_segmented_tabs.dart';
+import '../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
 import '../components/booking/booking_action_dialogs.dart';
 import '../components/booking/booking_card.dart';
 import '../components/booking/qr_scanner_screen.dart';
@@ -20,12 +20,7 @@ class _BookingsScreenState extends State<BookingsScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
   late final List<AppTabItem> _tabItems;
-  late int _lastHandledTabIndex;
-  static const TurfBookingStatus? _allStatuses = null;
-  final List<TurfBookingStatus?> _tabStatuses = [
-    _allStatuses,
-    ...TurfBookingStatus.values,
-  ];
+  final List<TurfBookingStatus?> _tabStatuses = [null, ...TurfBookingStatus.values];
 
   @override
   void initState() {
@@ -42,44 +37,25 @@ class _BookingsScreenState extends State<BookingsScreen>
       vsync: this,
       initialIndex: _getInitialTabIndex(),
     );
-    _lastHandledTabIndex = _tabController.index;
-    _tabController.addListener(_onTabIndexChanged);
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) return;
+      final idx = _tabController.index;
+      if (idx >= 0 && idx < _tabStatuses.length) {
+        TurfBookingController.instance.switchStatusTab(_tabStatuses[idx]);
+      }
+    });
   }
 
   @override
   void dispose() {
-    _tabController.removeListener(_onTabIndexChanged);
     _tabController.dispose();
     super.dispose();
   }
 
   int _getInitialTabIndex() {
-    final selectedFilters =
-        TurfBookingController.instance.selectedStatusFilters;
-    if (selectedFilters.length != 1) return 0;
-    final selectedStatus = selectedFilters.first;
+    final selectedStatus = TurfBookingController.instance.selectedStatusTab.value;
     final matchedIndex = _tabStatuses.indexOf(selectedStatus);
     return matchedIndex == -1 ? 0 : matchedIndex;
-  }
-
-  void _onStatusTabSelected(
-    int index,
-    TurfBookingController bookingController,
-  ) {
-    _lastHandledTabIndex = index;
-    final selectedStatus = _tabStatuses[index];
-    if (selectedStatus == null) {
-      bookingController.clearFilters();
-      return;
-    }
-    bookingController.applyFilters(status: selectedStatus);
-  }
-
-  void _onTabIndexChanged() {
-    if (_tabController.indexIsChanging) return;
-    if (_lastHandledTabIndex == _tabController.index) return;
-    _lastHandledTabIndex = _tabController.index;
-    _onStatusTabSelected(_tabController.index, TurfBookingController.instance);
   }
 
   @override
@@ -118,7 +94,7 @@ class _BookingsScreenState extends State<BookingsScreen>
                 controller: _tabController,
                 items: _tabItems,
                 onTap: (index) =>
-                    _onStatusTabSelected(index, bookingController),
+                    bookingController.switchStatusTab(_tabStatuses[index]),
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               ),
               Expanded(
@@ -126,9 +102,52 @@ class _BookingsScreenState extends State<BookingsScreen>
                   controller: _tabController,
                   children: List.generate(
                     _tabItems.length,
-                    (_) => Obx(() {
-                      if (bookingController.bookings.isEmpty &&
-                          !bookingController.isLoading.value) {
+                    (index) => Obx(() {
+                      final status = _tabStatuses[index];
+                      final state = bookingController.tabStateFor(status);
+                      final bookings = state.items;
+                      final isFirstLoad = !state.hasInitialized && bookings.isEmpty;
+
+                      if (isFirstLoad || (state.isFetching && bookings.isEmpty)) {
+                        return const Center(
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Color(AppColors.primaryColor),
+                            ),
+                          ),
+                        );
+                      }
+
+                      if (state.error != null && bookings.isEmpty) {
+                        return Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.error_outline,
+                                size: 42,
+                                color: Color(AppColors.textSecondaryColor),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                state.error!,
+                                style: const TextStyle(
+                                  color: Color(AppColors.textSecondaryColor),
+                                  fontSize: 15,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              ElevatedButton(
+                                onPressed: () =>
+                                    bookingController.ensureTabLoaded(status, force: true),
+                                child: const Text('Retry'),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      if (bookings.isEmpty) {
                         return Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -162,28 +181,13 @@ class _BookingsScreenState extends State<BookingsScreen>
 
                       return RefreshIndicator(
                         onRefresh: () =>
-                            bookingController.loadBookings(refresh: true),
+                            bookingController.ensureTabLoaded(status, force: true),
                         child: NotificationListener<ScrollNotification>(
                           child: ListView.builder(
                             padding: const EdgeInsets.all(16),
-                            itemCount:
-                                bookingController.bookings.length +
-                                (bookingController.hasMoreData.value ? 1 : 0),
+                            itemCount: bookings.length,
                             itemBuilder: (context, index) {
-                              if (index == bookingController.bookings.length) {
-                                return Obx(
-                                  () => bookingController.isLoading.value
-                                      ? const Padding(
-                                          padding: EdgeInsets.all(20),
-                                          child: Center(
-                                            child: CircularProgressIndicator(),
-                                          ),
-                                        )
-                                      : const SizedBox(),
-                                );
-                              }
-
-                              final booking = bookingController.bookings[index];
+                              final booking = bookings[index];
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 12),
                                 child: BookingCard(

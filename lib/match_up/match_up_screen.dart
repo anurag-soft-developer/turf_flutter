@@ -3,7 +3,7 @@ import 'package:flutter_application_1/components/shared/app_drawer.dart';
 import 'package:get/get.dart';
 
 import '../components/match_up/my_team_selector.dart';
-import '../components/shared/app_segmented_tabs.dart';
+import '../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
 import '../components/match_up/team_logo.dart';
 import '../components/match_up/team_stats_row.dart';
 import '../core/config/constants.dart';
@@ -40,6 +40,7 @@ class _MatchUpScreenState extends State<MatchUpScreen>
         c.switchSport(sports[idx]);
       }
     });
+    c.ensureSportFeedLoaded(c.selectedSport.value);
   }
 
   @override
@@ -51,7 +52,6 @@ class _MatchUpScreenState extends State<MatchUpScreen>
   @override
   Widget build(BuildContext context) {
     final MatchUpController c = Get.find();
-
     return Scaffold(
       drawer: const AppDrawer(),
       backgroundColor: const Color(AppColors.backgroundColor),
@@ -108,14 +108,13 @@ class _MatchUpScreenState extends State<MatchUpScreen>
                 children: List.generate(sports.length, (index) {
                   final sport = sports[index];
                   final teamsForSport = _teamsForSport(c.myMemberships, sport);
+                  final feedState = c.feedStateForSport(sport);
 
                   return _SportFeedSection(
                     sport: sport,
-                    isActiveSport: c.selectedSport.value == sport,
                     hasTeams: teamsForSport.isNotEmpty,
-                    isLoadingFeed: c.isLoadingFeed.value,
-                    feedTeams: c.feedTeams,
-                    onRefresh: c.reload,
+                    feedState: feedState,
+                    onRefresh: () => c.reloadSport(sport),
                     onChallenge: (team) => _confirmChallenge(context, c, team),
                   );
                 }),
@@ -172,19 +171,15 @@ class _MatchUpScreenState extends State<MatchUpScreen>
 class _SportFeedSection extends StatelessWidget {
   const _SportFeedSection({
     required this.sport,
-    required this.isActiveSport,
     required this.hasTeams,
-    required this.isLoadingFeed,
-    required this.feedTeams,
+    required this.feedState,
     required this.onRefresh,
     required this.onChallenge,
   });
 
   final TeamSportType sport;
-  final bool isActiveSport;
   final bool hasTeams;
-  final bool isLoadingFeed;
-  final List<TeamModel> feedTeams;
+  final SegmentedTabDataState<TeamModel> feedState;
   final Future<void> Function() onRefresh;
   final ValueChanged<TeamModel> onChallenge;
 
@@ -194,7 +189,8 @@ class _SportFeedSection extends StatelessWidget {
       return _NoTeamPlaceholder(sport: sport);
     }
 
-    if (isActiveSport && isLoadingFeed && feedTeams.isEmpty) {
+    final isFirstLoad = !feedState.hasInitialized && feedState.items.isEmpty;
+    if (isFirstLoad || (feedState.isFetching && feedState.items.isEmpty)) {
       return const Center(
         child: CircularProgressIndicator(
           valueColor: AlwaysStoppedAnimation<Color>(
@@ -204,15 +200,23 @@ class _SportFeedSection extends StatelessWidget {
       );
     }
 
+    if (feedState.error != null && feedState.items.isEmpty) {
+      return _FeedErrorPlaceholder(
+        sport: sport,
+        message: feedState.error!,
+        onRetry: onRefresh,
+      );
+    }
+
     return RefreshIndicator(
       onRefresh: onRefresh,
-      child: feedTeams.isEmpty
+      child: feedState.items.isEmpty
           ? ListView(children: [_EmptyFeedPlaceholder(sport: sport)])
           : ListView.builder(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-              itemCount: feedTeams.length,
+              itemCount: feedState.items.length,
               itemBuilder: (context, index) {
-                final team = feedTeams[index];
+                final team = feedState.items[index];
                 return _OpponentCard(
                   team: team,
                   onChallenge: () => onChallenge(team),
@@ -676,6 +680,73 @@ class _EmptyFeedPlaceholder extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _FeedErrorPlaceholder extends StatelessWidget {
+  const _FeedErrorPlaceholder({
+    required this.sport,
+    required this.message,
+    required this.onRetry,
+  });
+
+  final TeamSportType sport;
+  final String message;
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = sport == TeamSportType.cricket ? 'cricket' : 'football';
+    return ListView(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 48),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.error_outline, size: 64, color: Colors.grey.shade300),
+              const SizedBox(height: 16),
+              Text(
+                'Could not load $label teams',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Color(AppColors.textColor),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Color(AppColors.textSecondaryColor),
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                onPressed: () => onRetry(),
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('Retry'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(AppColors.primaryColor),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  elevation: 0,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

@@ -2,44 +2,38 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/settings/settings_controller.dart';
 import 'package:get/get.dart';
 import 'model/turf_booking_model.dart';
-import '../core/models/paginated_response.dart';
+import '../components/shared/app_segmented_tabs/segmented_tab_cache_controller.dart';
 import 'turf_booking_service.dart';
 import '../core/utils/exception_handler.dart';
 
-class TurfBookingController extends GetxController {
+class TurfBookingController extends GetxController
+    with SegmentedTabCacheController<TurfBookingStatus?, TurfBookingModel> {
   static TurfBookingController get instance => Get.find();
   final settingController = Get.find<SettingsController>();
   final TurfBookingService _bookingService = TurfBookingService();
 
   // Observable variables
-  final RxBool _isLoading = false.obs;
   final RxBool _isBookingLoading = false.obs;
-  final RxList<TurfBookingModel> _bookings = <TurfBookingModel>[].obs;
-  // final RxList<TurfBookingModel> _turfOwnerBookings = <TurfBookingModel>[].obs;
-  // final RxList<TurfBookingModel> _upcomingBookings = <TurfBookingModel>[].obs;
   final Rxn<TurfBookingModel> _selectedBooking = Rxn<TurfBookingModel>();
-
-  // Pagination
-  final RxInt _currentPage = 1.obs;
-  final RxBool _hasMoreData = true.obs;
-  final int _limitPerPage = 10;
+  final Rxn<TurfBookingStatus> _selectedStatusTab = Rxn<TurfBookingStatus>();
+  final int _limitPerPage = 50;
 
   // Filters
-  final RxList<TurfBookingStatus> _selectedStatusFilters =
-      <TurfBookingStatus>[].obs;
   final Rxn<PaymentStatus> _paymentStatusFilter = Rxn<PaymentStatus>();
 
   // Getters - Return observables for reactivity
-  RxBool get isLoading => _isLoading;
   RxBool get isBookingLoading => _isBookingLoading;
-  RxList<TurfBookingModel> get bookings => _bookings;
-  // RxList<TurfBookingModel> get turfOwnerBookings => _turfOwnerBookings;
-  // RxList<TurfBookingModel> get upcomingBookings => _upcomingBookings;
   Rxn<TurfBookingModel> get selectedBooking => _selectedBooking;
-  RxInt get currentPage => _currentPage;
-  RxBool get hasMoreData => _hasMoreData;
-  RxList<TurfBookingStatus> get selectedStatusFilters => _selectedStatusFilters;
+  Rxn<TurfBookingStatus> get selectedStatusTab => _selectedStatusTab;
+  RxList<TurfBookingStatus> get selectedStatusFilters => RxList.unmodifiable(
+    _selectedStatusTab.value == null
+        ? const <TurfBookingStatus>[]
+        : <TurfBookingStatus>[_selectedStatusTab.value!],
+  );
   Rxn<PaymentStatus> get paymentStatusFilter => _paymentStatusFilter;
+
+  @override
+  List<TurfBookingStatus?> get tabKeys => [null, ...TurfBookingStatus.values];
 
   @override
   void onInit() {
@@ -67,10 +61,12 @@ class TurfBookingController extends GetxController {
       final bookingOrder = await _bookingService.createBookingOrder(request);
 
       if (bookingOrder != null) {
-        _bookings.insert(0, bookingOrder.booking);
+        final allState = tabStateFor(null);
+        setTabState(
+          null,
+          allState.copyWith(items: [bookingOrder.booking, ...allState.items]),
+        );
         ExceptionHandler.showSuccessToast('Booking created successfully');
-        // Refresh upcoming bookings
-        // loadUpcomingBookings();
       }
 
       return bookingOrder?.booking;
@@ -106,88 +102,12 @@ class TurfBookingController extends GetxController {
 
   /// Load user's bookings
   Future<void> loadBookings({bool refresh = false}) async {
-    try {
-      if (refresh) {
-        _currentPage.value = 1;
-        _hasMoreData.value = true;
-        _bookings.clear();
-      }
-
-      if (!_hasMoreData.value) return;
-
-      _isLoading.value = true;
-
-      final response = await _bookingService.findBookings(
-        settingController.currentMode.value,
-        page: _currentPage.value,
-        limit: _limitPerPage,
-        status: _selectedStatusFilters.isNotEmpty
-            ? _selectedStatusFilters
-            : null,
-        paymentStatus: _paymentStatusFilter.value,
-      );
-
-      if (response == null) {
-        _hasMoreData.value = false;
-        return;
-      }
-
-      _hasMoreData.value = response.hasNextPage;
-
-      if (refresh) {
-        _bookings.assignAll(response.data);
-      } else {
-        _bookings.addAll(response.data);
-      }
-
-      _currentPage.value++;
-    } catch (e) {
-      debugPrint('Error loading bookings: $e');
-      ExceptionHandler.showErrorToast('Failed to load bookings');
-    } finally {
-      _isLoading.value = false;
-    }
+    await ensureTabLoaded(_selectedStatusTab.value, force: refresh);
   }
-
-  /// Load turf owner's bookings
-  // Future<void> loadTurfOwnerBookings({bool refresh = false}) async {
-  //   try {
-  //     if (refresh) {
-  //       _turfOwnerBookings.clear();
-  //     }
-
-  //     _isLoading.value = true;
-
-  //     final response = await _bookingService.findTurfOwnerBookings();
-
-  //     if (response != null) {
-  //       _turfOwnerBookings.assignAll(response.data);
-  //     }
-  //     debugPrint('response iop: $response');
-  //   } catch (e) {
-  //     debugPrint('Error loading turf owner bookings: $e');
-  //     ExceptionHandler.showErrorToast('Failed to load turf bookings');
-  //   } finally {
-  //     _isLoading.value = false;
-  //   }
-  // }
-
-  /// Load upcoming bookings
-  // Future<void> loadUpcomingBookings() async {
-  //   try {
-  //     final bookings = await _bookingService.getUpcomingBookings(limit: 5);
-  //     _upcomingBookings.assignAll(bookings);
-  //   } catch (e) {
-  //     debugPrint('Error loading upcoming bookings: $e');
-  //     // Silent fail for upcoming bookings
-  //   }
-  // }
 
   /// Get booking by ID
   Future<void> getBookingById(String bookingId) async {
     try {
-      _isLoading.value = true;
-
       final booking = await _bookingService.findById(bookingId);
       if (booking != null) {
         _selectedBooking.value = booking;
@@ -195,8 +115,6 @@ class TurfBookingController extends GetxController {
     } catch (e) {
       debugPrint('Error loading booking by ID: $e');
       ExceptionHandler.showErrorToast('Failed to load booking details');
-    } finally {
-      _isLoading.value = false;
     }
   }
 
@@ -303,93 +221,44 @@ class TurfBookingController extends GetxController {
     }
   }
 
-  /// Delete booking
-  // Future<bool> deleteBooking(String bookingId) async {
-  //   try {
-  //     _isBookingLoading.value = true;
-
-  //     final success = await _bookingService.deleteBooking(bookingId);
-
-  //     if (success) {
-  //       _removeBookingFromLists(bookingId);
-  //       ExceptionHandler.showSuccessToast('Booking deleted successfully');
-  //       return true;
-  //     }
-
-  //     return false;
-  //   } catch (e) {
-  //     ExceptionHandler.showErrorToast('Failed to delete booking');
-  //     return false;
-  //   } finally {
-  //     _isBookingLoading.value = false;
-  //   }
-  // }
-
   /// Toggle status filter
   void toggleStatusFilter(TurfBookingStatus status) {
-    if (_selectedStatusFilters.contains(status)) {
-      _selectedStatusFilters.remove(status);
+    if (_selectedStatusTab.value == status) {
+      _selectedStatusTab.value = null;
     } else {
-      _selectedStatusFilters.add(status);
+      _selectedStatusTab.value = status;
     }
-    loadBookings(refresh: true);
+    ensureTabLoaded(_selectedStatusTab.value, force: true);
   }
 
   /// Apply filters (kept for backward compatibility)
   void applyFilters({TurfBookingStatus? status, PaymentStatus? paymentStatus}) {
-    if (status != null) {
-      _selectedStatusFilters.clear();
-      _selectedStatusFilters.add(status);
-    }
+    _selectedStatusTab.value = status;
     _paymentStatusFilter.value = paymentStatus;
-    loadBookings(refresh: true);
+    ensureTabLoaded(_selectedStatusTab.value, force: true);
   }
 
   /// Clear filters
   void clearFilters() {
-    _selectedStatusFilters.clear();
+    _selectedStatusTab.value = null;
     _paymentStatusFilter.value = null;
-    loadBookings(refresh: true);
+    ensureTabLoaded(_selectedStatusTab.value, force: true);
   }
 
   /// Helper method to update booking in all lists
   void _updateBookingInLists(TurfBookingModel updatedBooking) {
-    // Update in user bookings
-    final userIndex = _bookings.indexWhere((b) => b.id == updatedBooking.id);
-    if (userIndex != -1) {
-      _bookings[userIndex] = updatedBooking;
+    for (final key in tabKeys) {
+      final state = tabStateFor(key);
+      final index = state.items.indexWhere((b) => b.id == updatedBooking.id);
+      if (index == -1) continue;
+      final updated = [...state.items];
+      updated[index] = updatedBooking;
+      setTabState(key, state.copyWith(items: updated));
     }
-
-    // Update in turf owner bookings
-    // final ownerIndex = _turfOwnerBookings.indexWhere(
-    //   (b) => b.id == updatedBooking.id,
-    // );
-    // if (ownerIndex != -1) {
-    //   _turfOwnerBookings[ownerIndex] = updatedBooking;
-    // }
-
-    // Update in upcoming bookings
-    // final upcomingIndex = _upcomingBookings.indexWhere(
-    //   (b) => b.id == updatedBooking.id,
-    // );
-    // if (upcomingIndex != -1) {
-    //   _upcomingBookings[upcomingIndex] = updatedBooking;
-    // }
 
     // Update selected booking
     if (_selectedBooking.value?.id == updatedBooking.id) {
       _selectedBooking.value = updatedBooking;
-    }
-  }
-
-  /// Helper method to remove booking from all lists
-  void _removeBookingFromLists(String bookingId) {
-    _bookings.removeWhere((booking) => booking.id == bookingId);
-    // _turfOwnerBookings.removeWhere((booking) => booking.id == bookingId);
-    // _upcomingBookings.removeWhere((booking) => booking.id == bookingId);
-
-    if (_selectedBooking.value?.id == bookingId) {
-      _selectedBooking.value = null;
     }
   }
 
@@ -414,27 +283,34 @@ class TurfBookingController extends GetxController {
     }
   }
 
-  /// Get today's bookings for a turf
-  // Future<List<TurfBookingModel>> getTodaysBookings(String turfId) async {
-  //   try {
-  //     return await _bookingService.getTodaysBookings(turfId);
-  //   } catch (e) {
-  //     ExceptionHandler.showErrorToast('Failed to load today\'s bookings');
-  //     return [];
-  //   }
-  // }
-
   /// Refresh all data
   void refreshAll() {
-    // if (settingController.isPlayerMode) {
-    loadBookings(refresh: true);
-    //   debugPrint('Refreshing user bookings');
-    // } else {
-    //   // loadTurfOwnerBookings(refresh: true);
-    //   debugPrint('Refreshing turf owner bookings');
-    // }
-    // loadUpcomingBookings();
+    for (final key in tabKeys) {
+      setTabState(key, const SegmentedTabDataState<TurfBookingModel>());
+    }
+    ensureTabLoaded(_selectedStatusTab.value);
   }
+
+  Future<void> switchStatusTab(TurfBookingStatus? status) async {
+    if (_selectedStatusTab.value == status) return;
+    _selectedStatusTab.value = status;
+    await ensureTabLoaded(status);
+  }
+
+  @override
+  Future<List<TurfBookingModel>> fetchTabItems(TurfBookingStatus? status) async {
+    final response = await _bookingService.findBookings(
+      settingController.currentMode.value,
+      page: 1,
+      limit: _limitPerPage,
+      status: status == null ? null : [status],
+      paymentStatus: _paymentStatusFilter.value,
+    );
+    return response?.data ?? <TurfBookingModel>[];
+  }
+
+  @override
+  String mapFetchError(Object error) => 'Failed to load bookings';
 
   /// Validate booking for check-in (scanner functionality)
   Future<TurfBookingModel?> validateBookingForCheckIn(String bookingId) async {
