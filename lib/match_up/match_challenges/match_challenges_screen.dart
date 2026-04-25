@@ -24,7 +24,11 @@ class _MatchChallengesScreenState extends State<MatchChallengesScreen>
   void initState() {
     super.initState();
     final c = Get.find<MatchChallengesController>();
-    _tabController = TabController(length: 2, vsync: this, initialIndex: c.tabIndex.value);
+    _tabController = TabController(
+      length: 2,
+      vsync: this,
+      initialIndex: c.tabIndex.value,
+    );
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) return;
       c.switchTab(_tabController.index);
@@ -60,21 +64,29 @@ class _MatchChallengesScreenState extends State<MatchChallengesScreen>
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Obx(
-              () => MyTeamSelector(
-                teams: c.myTeams,
-                allowToSelectAll: true,
-                allTeamsSelected: c.filterAllTeams.value,
-                selectedTeam: c.selectedMembershipTeam.value,
-                bannerTitle: 'Show challenges for',
-                sheetTitle: 'Show challenges for',
-                onTeamSelected: c.selectTeamForFilter,
-                onAllTeamsSelected: c.selectAllTeamsFilter,
-                actionChipLabel: 'Select',
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Row(
+                // spacing: 4,
+                children: [
+                  Expanded(
+                    child: Obx(
+                      () => MyTeamSelector(
+                        teams: c.myTeams,
+                        allowToSelectAll: true,
+                        allTeamsSelected: c.filterAllTeams.value,
+                        selectedTeam: c.selectedMembershipTeam.value,
+                        sheetTitle: 'Show challenges for',
+                        onTeamSelected: c.selectTeamForFilter,
+                        onAllTeamsSelected: c.selectAllTeamsFilter,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
               child: AppSegmentedTabs(
                 controller: _tabController,
                 onTap: c.switchTab,
@@ -137,7 +149,9 @@ class _ChallengesTabView extends StatelessWidget {
     if (isLoading && list.isEmpty) {
       return const Center(
         child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(Color(AppColors.primaryColor)),
+          valueColor: AlwaysStoppedAnimation<Color>(
+            Color(AppColors.primaryColor),
+          ),
         ),
       );
     }

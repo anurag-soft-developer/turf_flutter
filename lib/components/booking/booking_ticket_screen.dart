@@ -7,12 +7,27 @@ import '../../core/config/constants.dart';
 import 'booking_reference_card.dart';
 
 class BookingTicketScreen extends StatelessWidget {
-  final TurfBookingModel booking;
+  final TurfBookingModel? booking;
 
-  const BookingTicketScreen({super.key, required this.booking});
+  const BookingTicketScreen({super.key, this.booking});
+
+  TurfBookingModel _resolveBooking() {
+    if (booking != null) return booking!;
+
+    final args = Get.arguments;
+    if (args is Map<String, dynamic>) {
+      final routeBooking = args['booking'];
+      if (routeBooking is TurfBookingModel) {
+        return routeBooking;
+      }
+    }
+
+    throw Exception('Booking ticket requires a TurfBookingModel argument.');
+  }
 
   @override
   Widget build(BuildContext context) {
+    final booking = _resolveBooking();
     return Scaffold(
       backgroundColor: const Color(AppColors.primaryColor),
       appBar: AppBar(
@@ -29,7 +44,7 @@ class BookingTicketScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.share, color: Colors.white),
-            onPressed: _shareTicket,
+            onPressed: () => _shareTicket(booking),
           ),
         ],
       ),
@@ -312,7 +327,7 @@ class BookingTicketScreen extends StatelessWidget {
     }
   }
 
-  void _shareTicket() {
+  void _shareTicket(TurfBookingModel booking) {
     final shareText =
         '''
 🎫 Turf Booking Ticket
@@ -335,8 +350,11 @@ Show this at the turf for check-in!
     );
   }
 
-  static void show(BuildContext context, TurfBookingModel booking) {
-    Get.to(() => BookingTicketScreen(booking: booking));
+  static void show(TurfBookingModel booking) {
+    Get.toNamed(
+      AppConstants.routes.bookingTicket,
+      arguments: {'booking': booking},
+    );
   }
 }
 
@@ -402,7 +420,3 @@ class _DetailRow extends StatelessWidget {
     );
   }
 }
-
-// Backward compatibility typedef
-// For existing code that references BookingTicketDialog
-typedef BookingTicketDialog = BookingTicketScreen;

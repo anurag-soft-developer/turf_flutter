@@ -121,7 +121,10 @@ class TurfDetailController extends GetxController {
 
   Future<void> _handlePaymentSuccess(PaymentSuccessResponse response) async {
     if (_pendingBookingId == null) {
-      Get.snackbar('Payment Error', 'Booking reference missing for verification.');
+      Get.snackbar(
+        'Payment Error',
+        'Booking reference missing for verification.',
+      );
       return;
     }
 
@@ -137,18 +140,15 @@ class TurfDetailController extends GetxController {
       );
 
       if (verifiedBooking != null) {
-        Get.snackbar(
-          'Payment Successful',
-          'Your booking is confirmed. Redirecting to My Bookings.',
-          snackPosition: SnackPosition.BOTTOM,
-        );
-
         _selectedTimeSlots.clear();
         _totalPrice.value = 0.0;
         _pendingBookingId = null;
         _pendingOrderId = null;
         await loadTimeSlots();
-        Get.offAllNamed(AppConstants.routes.myBookings);
+        Get.toNamed(
+          AppConstants.routes.bookingTicket,
+          arguments: {'booking': verifiedBooking},
+        );
         return;
       }
 
@@ -167,8 +167,7 @@ class TurfDetailController extends GetxController {
   }
 
   void _handlePaymentError(PaymentFailureResponse response) {
-    final message =
-        response.message?.isNotEmpty == true
+    final message = response.message?.isNotEmpty == true
         ? response.message!
         : 'Payment was not completed.';
     Get.snackbar('Payment Failed', message);
@@ -308,10 +307,7 @@ class TurfDetailController extends GetxController {
 
       // Optional: Check availability before booking
       final isAvailable = await _bookingService.checkTimeSlotsAvailability(
-        CheckTurfAvailabilityRequest(
-          turf: _turfId!,
-          timeSlots: apiTimeSlots,
-        ),
+        CheckTurfAvailabilityRequest(turf: _turfId!, timeSlots: apiTimeSlots),
       );
 
       if (!isAvailable) {
@@ -330,11 +326,6 @@ class TurfDetailController extends GetxController {
       );
 
       if (bookingOrder != null) {
-        Get.snackbar(
-          'Order Created',
-          'Proceed to payment to confirm your booking.',
-          snackPosition: SnackPosition.BOTTOM,
-        );
         _openRazorpayCheckout(
           order: bookingOrder.order,
           booking: bookingOrder.booking,

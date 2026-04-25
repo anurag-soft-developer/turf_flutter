@@ -12,13 +12,12 @@ class MyTeamSelector extends StatelessWidget {
     required this.onTeamSelected,
     this.selectedTeam,
     this.allTeamsSelected = false,
-    this.bannerTitle = 'Your Team',
     this.sheetTitle = 'Select your team',
     this.allowToSelectAll = false,
     this.onAllTeamsSelected,
-    this.allTeamsLabel = 'All my teams',
-    this.actionChipLabel = 'Switch',
+    this.allTeamsLabel = 'All',
     this.buttonChild,
+    this.trimLabel = false,
   }) : assert(
          !allowToSelectAll || onAllTeamsSelected != null,
          'onAllTeamsSelected is required when allowToSelectAll is true',
@@ -31,18 +30,27 @@ class MyTeamSelector extends StatelessWidget {
   final bool allTeamsSelected;
   final TeamMemberFieldInstance? selectedTeam;
 
-  final String bannerTitle;
   final String sheetTitle;
   final String allTeamsLabel;
-  final String actionChipLabel;
   final Widget? buttonChild;
+  final bool trimLabel;
 
   final void Function(TeamMemberFieldInstance team) onTeamSelected;
   final VoidCallback? onAllTeamsSelected;
 
   String get _bannerValue {
-    if (allowToSelectAll && allTeamsSelected) return allTeamsLabel;
-    return selectedTeam?.name ?? 'Select team';
+    final maxLength = 10;
+    late String name = selectedTeam?.name ?? 'Select team';
+    if (allowToSelectAll && allTeamsSelected) {
+      name = allTeamsLabel;
+    } else {
+      name = selectedTeam?.name ?? 'Select team';
+    }
+    if (trimLabel) {
+      name =
+          '${name.substring(0, name.length > maxLength ? maxLength : name.length)}${name.length > maxLength ? '...' : ''}';
+    }
+    return name;
   }
 
   bool get _tappable {
@@ -51,7 +59,7 @@ class MyTeamSelector extends StatelessWidget {
     return teams.length > 1;
   }
 
-  bool get _showActionChip => teams.length > 1;
+  // bool get _showActionChip => teams.length > 1;
 
   @override
   Widget build(BuildContext context) {
@@ -66,90 +74,41 @@ class MyTeamSelector extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    return Container(
-      color: const Color(AppColors.backgroundColor),
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
-      child: GestureDetector(
-        onTap: _tappable ? () => _showTeamPicker(context) : null,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: const Color(AppColors.primaryColor),
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(
-                  AppColors.primaryColor,
-                ).withValues(alpha: 0.25),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
+    return GestureDetector(
+      onTap: _tappable ? () => _showTeamPicker(context) : null,
+      child: Container(
+        height: 40,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: const Color(AppColors.primaryColor).withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: const Color(AppColors.dividerColor).withValues(alpha: 0.35),
           ),
-          child: Row(
-            children: [
-              _bannerLeading(),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      bannerTitle,
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white.withValues(alpha: 0.7),
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                    const SizedBox(height: 1),
-                    Text(
-                      _bannerValue,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+        ),
+        child: Row(
+          children: [
+            _bannerLeading(),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                _bannerValue,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: Color(AppColors.primaryColor),
                 ),
               ),
-              if (_showActionChip && _tappable)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.swap_horiz,
-                        size: 14,
-                        color: Colors.white,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        actionChipLabel,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 4),
+            const Icon(
+              Icons.expand_more_rounded,
+              size: 16,
+              color: Color(AppColors.textSecondaryColor),
+            ),
+          ],
         ),
       ),
     );
@@ -158,48 +117,60 @@ class MyTeamSelector extends StatelessWidget {
   Widget _bannerLeading() {
     if (allowToSelectAll && allTeamsSelected) {
       return Container(
-        width: 32,
-        height: 32,
+        width: 22,
+        height: 22,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: Colors.white.withValues(alpha: 0.2),
+          color: Color(AppColors.primaryColor).withValues(alpha: 0.1),
         ),
-        child: const Icon(Icons.groups, size: 18, color: Colors.white),
+        child: const Icon(
+          Icons.groups,
+          size: 14,
+          color: Color(AppColors.primaryColor),
+        ),
       );
     }
 
     final sel = selectedTeam;
     if (sel == null) {
       return Container(
-        width: 32,
-        height: 32,
+        width: 22,
+        height: 22,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: Colors.white.withValues(alpha: 0.2),
+          color: Color(AppColors.primaryColor).withValues(alpha: 0.1),
         ),
-        child: const Icon(Icons.filter_list, size: 18, color: Colors.white),
+        child: Icon(
+          Icons.filter_list,
+          size: 14,
+          color: Color(AppColors.primaryColor),
+        ),
       );
     }
 
     return Container(
-      width: 32,
-      height: 32,
+      width: 22,
+      height: 22,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: Colors.white.withValues(alpha: 0.2),
+        color: Color(AppColors.primaryColor).withValues(alpha: 0.1),
       ),
       child: sel.logo.isEmpty
-          ? const Icon(Icons.shield_outlined, size: 16, color: Colors.white)
+          ? Icon(
+              Icons.shield_outlined,
+              size: 14,
+              color: Color(AppColors.primaryColor),
+            )
           : ClipOval(
               child: Image.network(
                 sel.logo,
-                width: 32,
-                height: 32,
+                width: 22,
+                height: 22,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const Icon(
+                errorBuilder: (_, __, ___) => Icon(
                   Icons.shield_outlined,
-                  size: 16,
-                  color: Colors.white,
+                  size: 14,
+                  color: Color(AppColors.primaryColor),
                 ),
               ),
             ),

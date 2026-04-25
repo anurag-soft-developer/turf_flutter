@@ -10,18 +10,36 @@ import 'booking_reference_card.dart';
 
 /// Full-screen booking details for turf owners (proprietor mode).
 class BookingDetailsScreen extends StatelessWidget {
-  final TurfBookingModel booking;
+  final TurfBookingModel? booking;
 
-  const BookingDetailsScreen({super.key, required this.booking});
+  const BookingDetailsScreen({super.key, this.booking});
 
   static void open(TurfBookingModel booking) {
-    Get.to(() => BookingDetailsScreen(booking: booking));
+    Get.toNamed(
+      AppConstants.routes.bookingDetails,
+      arguments: {'booking': booking},
+    );
   }
 
   static const _primary = Color(AppColors.primaryColor);
 
+  TurfBookingModel _resolveBooking() {
+    if (booking != null) return booking!;
+
+    final args = Get.arguments;
+    if (args is Map<String, dynamic>) {
+      final routeBooking = args['booking'];
+      if (routeBooking is TurfBookingModel) {
+        return routeBooking;
+      }
+    }
+
+    throw Exception('Booking details requires a TurfBookingModel argument.');
+  }
+
   @override
   Widget build(BuildContext context) {
+    final booking = _resolveBooking();
     final h = booking.bookedByHelper;
     final theme = Theme.of(context);
     final localeName = Localizations.localeOf(context).toString();

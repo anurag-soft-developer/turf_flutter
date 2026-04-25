@@ -14,6 +14,8 @@ import '../../turf/my_turves/my_turfs_screen.dart';
 import '../../turf/my_turves/manage_turf_screen.dart';
 import '../../turf/create/create_turf_screen.dart';
 import '../../turf_booking/bookings_screen.dart';
+import '../../components/booking/booking_details_screen.dart';
+import '../../components/booking/booking_ticket_screen.dart';
 import '../views/splash_screen.dart';
 import '../views/access_denied_screen.dart';
 import '../binding/auth_binding.dart';
@@ -205,6 +207,18 @@ class AppRoutes {
       name: AppConstants.routes.myBookings,
       page: () => const BookingsScreen(),
       binding: TurfBookingBinding(),
+      transition: Transition.cupertino,
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppConstants.routes.bookingDetails,
+      page: () => const BookingDetailsScreen(),
+      transition: Transition.cupertino,
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppConstants.routes.bookingTicket,
+      page: () => const BookingTicketScreen(),
       transition: Transition.cupertino,
       middlewares: [AuthGuard()],
     ),

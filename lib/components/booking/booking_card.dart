@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../../turf_booking/model/turf_booking_model.dart';
 import '../../core/config/constants.dart';
 import 'booking_action_buttons.dart';
-import 'booking_details_screen.dart';
-import 'booking_ticket_dialog.dart';
 
 class BookingCard extends StatelessWidget {
   final TurfBookingModel booking;
@@ -24,7 +23,7 @@ class BookingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => _handleCardTap(context),
+      onTap: _handleCardTap,
       child: Card(
         elevation: 2,
         color: Colors.white,
@@ -196,11 +195,17 @@ class BookingCard extends StatelessWidget {
     );
   }
 
-  void _handleCardTap(BuildContext context) {
+  void _handleCardTap() {
     if (isOwnerView) {
-      BookingDetailsScreen.open(booking);
+      Get.toNamed(
+        AppConstants.routes.bookingDetails,
+        arguments: {'booking': booking},
+      );
     } else {
-      BookingTicketDialog.show(context, booking);
+      Get.toNamed(
+        AppConstants.routes.bookingTicket,
+        arguments: {'booking': booking},
+      );
     }
   }
 }
@@ -254,53 +259,3 @@ class _StatusChip extends StatelessWidget {
     );
   }
 }
-
-// class _PaymentStatusChip extends StatelessWidget {
-//   final PaymentStatus? paymentStatus;
-
-//   const _PaymentStatusChip({required this.paymentStatus});
-
-//   @override
-//   Widget build(BuildContext context) {
-//     Color backgroundColor;
-//     Color textColor;
-
-//     switch (paymentStatus) {
-//       case PaymentStatus.pending:
-//         backgroundColor = Colors.orange.withOpacity(0.2);
-//         textColor = Colors.orange[800]!;
-//         break;
-//       case PaymentStatus.paid:
-//         backgroundColor = Colors.green.withOpacity(0.2);
-//         textColor = Colors.green[800]!;
-//         break;
-//       case PaymentStatus.failed:
-//         backgroundColor = Colors.red.withOpacity(0.2);
-//         textColor = Colors.red[800]!;
-//         break;
-//       case PaymentStatus.refunded:
-//         backgroundColor = Colors.purple.withOpacity(0.2);
-//         textColor = Colors.purple[800]!;
-//         break;
-//       default:
-//         backgroundColor = Colors.grey.withOpacity(0.2);
-//         textColor = Colors.grey[800]!;
-//     }
-
-//     return Container(
-//       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-//       decoration: BoxDecoration(
-//         color: backgroundColor,
-//         borderRadius: BorderRadius.circular(12),
-//       ),
-//       child: Text(
-//         paymentStatus?.name.toUpperCase() ?? 'UNKNOWN',
-//         style: TextStyle(
-//           color: textColor,
-//           fontSize: 10,
-//           fontWeight: FontWeight.w500,
-//         ),
-//       ),
-//     );
-//   }
-// }
