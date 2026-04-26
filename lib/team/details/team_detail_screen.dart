@@ -137,16 +137,52 @@ class TeamDetailScreen extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: TeamSectionHeader(
                         title: 'Squad',
-                        trailing: Text(
-                          '${controller.members.length} members',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Color(AppColors.textSecondaryColor),
-                          ),
-                        ),
+                        trailing:
+                            controller.isMyTeamMode &&
+                                controller.isOwner &&
+                                t.id != null &&
+                                t.id!.isNotEmpty
+                            ? TextButton.icon(
+                                onPressed: () => Get.toNamed(
+                                  AppConstants.routes.teamRosterManage,
+                                  arguments: {'teamId': t.id!},
+                                ),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: const Color(
+                                    AppColors.primaryColor,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
+                                  ),
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                                icon: const Icon(
+                                  Icons.manage_accounts,
+                                  size: 16,
+                                ),
+                                label: const Text(
+                                  'Manage',
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              )
+                            : null,
                       ),
                     ),
                     const SizedBox(height: 12),
+                    if (controller.isMyTeamMode &&
+                        controller.isOwner &&
+                        t.id != null &&
+                        t.id!.isNotEmpty) ...[
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: _PendingRequestsNotifierCard(teamId: t.id!),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
                     _MembersHorizontalList(members: controller.members),
 
                     const SizedBox(height: 28),
@@ -415,54 +451,143 @@ class _MembersHorizontalList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (members.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (members.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 12,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.group_outlined,
+                    size: 40,
+                    color: const Color(
+                      AppColors.primaryColor,
+                    ).withValues(alpha: 0.3),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'No active members yet',
+                    style: TextStyle(
+                      color: Color(AppColors.textSecondaryColor),
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            SizedBox(
+              height: 140,
+              child: ListView.separated(
+                padding: EdgeInsets.zero,
+                scrollDirection: Axis.horizontal,
+                itemCount: members.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                itemBuilder: (_, i) => TeamMemberCard(member: members[i]),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PendingRequestsNotifierCard extends StatelessWidget {
+  const _PendingRequestsNotifierCard({required this.teamId});
+
+  final String teamId;
+
+  @override
+  Widget build(BuildContext context) {
+    const placeholderCount = '--';
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => Get.toNamed(
+          AppConstants.routes.teamJoinRequests,
+          arguments: {'teamId': teamId},
+        ),
         child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 32),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 12,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            color: const Color(AppColors.primaryColor).withValues(alpha: 0.07),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: const Color(
+                AppColors.primaryColor,
+              ).withValues(alpha: 0.22),
+            ),
           ),
-          child: Column(
+          child: Row(
             children: [
-              Icon(
-                Icons.group_outlined,
-                size: 40,
-                color: const Color(
-                  AppColors.primaryColor,
-                ).withValues(alpha: 0.3),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'No active members yet',
-                style: TextStyle(
-                  color: Color(AppColors.textSecondaryColor),
-                  fontSize: 14,
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: const Color(
+                    AppColors.primaryColor,
+                  ).withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(10),
                 ),
+                child: const Icon(
+                  Icons.notifications_active_outlined,
+                  size: 18,
+                  color: Color(AppColors.primaryColor),
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text(
+                  'Players applied to join: --',
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    color: Color(AppColors.textColor),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: const Text(
+                  placeholderCount,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: Color(AppColors.primaryColor),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              const Icon(
+                Icons.chevron_right,
+                size: 18,
+                color: Color(AppColors.textSecondaryColor),
               ),
             ],
           ),
         ),
-      );
-    }
-
-    return SizedBox(
-      height: 140,
-      child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        scrollDirection: Axis.horizontal,
-        itemCount: members.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder: (_, i) => TeamMemberCard(member: members[i]),
       ),
     );
   }

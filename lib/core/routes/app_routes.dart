@@ -39,7 +39,11 @@ import '../../team/add/add_team_screen.dart';
 import '../../team/my_teams/my_teams_screen.dart';
 import '../../team/members/player_profile_screen.dart';
 import '../../team/details/team_detail_screen.dart';
+import '../../team/management/team_join_requests_screen.dart';
+import '../../team/management/team_roster_manage_screen.dart';
 import '../../team/feed/teams_ranking_screen.dart';
+import '../../team/join_status/my_join_requests_screen.dart';
+import '../../team/openings/team_openings_screen.dart';
 import '../../match_up/match_challenges/match_challenges_screen.dart';
 import '../../match_up/match_up_screen.dart';
 import '../../rankings/player_ranking_screen.dart';
@@ -235,6 +239,20 @@ class AppRoutes {
       middlewares: [AuthGuard()],
     ),
     GetPage(
+      name: AppConstants.routes.teamOpenings,
+      page: () => const TeamOpeningsScreen(),
+      binding: TeamOpeningsBinding(),
+      transition: Transition.cupertino,
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppConstants.routes.myJoinRequests,
+      page: () => const MyJoinRequestsScreen(),
+      binding: MyJoinRequestsBinding(),
+      transition: Transition.cupertino,
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
       name: AppConstants.routes.addTeam,
       page: () => const AddTeamScreen(),
       binding: AddTeamBinding(),
@@ -252,6 +270,20 @@ class AppRoutes {
       name: AppConstants.routes.teamProfile,
       page: () => const TeamDetailScreen(),
       binding: TeamProfileBinding(),
+      transition: Transition.cupertino,
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppConstants.routes.teamJoinRequests,
+      page: () => const TeamJoinRequestsScreen(),
+      binding: TeamJoinRequestsBinding(),
+      transition: Transition.cupertino,
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppConstants.routes.teamRosterManage,
+      page: () => const TeamRosterManageScreen(),
+      binding: TeamRosterManageBinding(),
       transition: Transition.cupertino,
       middlewares: [AuthGuard()],
     ),

@@ -3,7 +3,11 @@ import 'package:get/get.dart';
 import '../team/add/add_team_controller.dart';
 import '../team/details/team_detail_controller.dart';
 import '../team/feed/teams_ranking_controller.dart';
+import '../team/join_status/my_join_requests_controller.dart';
+import '../team/management/team_join_requests_controller.dart';
+import '../team/management/team_roster_manage_controller.dart';
 import '../team/my_teams/my_teams_controller.dart';
+import '../team/openings/team_openings_controller.dart';
 
 class MyTeamsBinding extends Bindings {
   @override
@@ -25,6 +29,38 @@ class TeamsRankingBinding extends Bindings {
   @override
   void dependencies() {
     Get.lazyPut<TeamsRankingController>(() => TeamsRankingController());
+  }
+}
+
+class TeamOpeningsBinding extends Bindings {
+  @override
+  void dependencies() {
+    Get.lazyPut<TeamOpeningsController>(() => TeamOpeningsController());
+  }
+}
+
+class MyJoinRequestsBinding extends Bindings {
+  @override
+  void dependencies() {
+    Get.lazyPut<MyJoinRequestsController>(() => MyJoinRequestsController());
+  }
+}
+
+class TeamJoinRequestsBinding extends Bindings {
+  @override
+  void dependencies() {
+    Get.lazyPut<TeamJoinRequestsController>(
+      () => TeamJoinRequestsController(),
+    );
+  }
+}
+
+class TeamRosterManageBinding extends Bindings {
+  @override
+  void dependencies() {
+    Get.lazyPut<TeamRosterManageController>(
+      () => TeamRosterManageController(),
+    );
   }
 }
 

@@ -48,10 +48,14 @@ class Routes {
   // final String turfBookings = '/turf-bookings';
   final String myTeams = '/my-teams';
   final String myTeam = '/my-team';
+  final String teamOpenings = '/team-openings';
+  final String myJoinRequests = '/my-join-requests';
   final String teamsRanking = '/teams-ranking';
   final String addTeam = '/add-team';
   final String editTeam = '/edit-team';
   final String teamProfile = '/team-profile';
+  final String teamJoinRequests = '/team-join-requests';
+  final String teamRosterManage = '/team-roster-manage';
   final String teamMemberProfile = '/team-member-profile';
   final String editProfile = '/edit-profile';
   final String matchUp = '/match-up';

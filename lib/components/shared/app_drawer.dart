@@ -53,6 +53,16 @@ class AppDrawer extends StatelessWidget {
         },
       ),
       DrawerMenuItem(
+        title: 'Openings',
+        icon: Icons.group_add,
+        iconColor: const Color(AppColors.primaryColor),
+        onTap: () {
+          Get.back();
+          Get.toNamed(AppConstants.routes.teamOpenings);
+        },
+      ),
+
+      DrawerMenuItem(
         title: 'Challenges',
         icon: Icons.sports_soccer,
         iconColor: const Color(AppColors.primaryColor),
