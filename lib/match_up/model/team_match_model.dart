@@ -2,6 +2,8 @@ import 'package:json_annotation/json_annotation.dart';
 
 import '../../core/models/team/team_ref_converter.dart';
 import '../../core/models/team/team_ref_field_instance.dart';
+import '../../core/models/turf_booking/turf_booking_ref_converter.dart';
+import '../../core/models/turf_booking/turf_booking_ref_field_instance.dart';
 import '../../core/models/turf_field_converter.dart';
 import '../../core/models/turf_field_instance.dart';
 import '../../team/model/team_model.dart';
@@ -190,6 +192,11 @@ class TeamMatchModel {
   @TeamRefConverter()
   final dynamic winnerTeam;
   final String? notes;
+
+  /// Lean id or populated [TurfBookingModel] when backend populates `turfBookingId`.
+  @JsonKey(name: 'turfBookingId')
+  @TurfBookingRefConverter()
+  final dynamic turfBookingId;
   final DateTime? expiresAt;
   final DateTime? closedAt;
   final DateTime? createdAt;
@@ -210,6 +217,7 @@ class TeamMatchModel {
     this.selectedTurfProposalId,
     this.winnerTeam,
     this.notes,
+    this.turfBookingId,
     this.expiresAt,
     this.closedAt,
     this.createdAt,
@@ -226,6 +234,9 @@ class TeamMatchModel {
   TeamRefFieldInstance get toTeamHelper => TeamRefFieldInstance(toTeam);
 
   TeamRefFieldInstance get winnerTeamHelper => TeamRefFieldInstance(winnerTeam);
+
+  TurfBookingRefFieldInstance get turfBookingIdHelper =>
+      TurfBookingRefFieldInstance(turfBookingId);
 }
 
 // --- Query param objects ---
@@ -471,6 +482,31 @@ class CancelNegotiationRequest {
       _$CancelNegotiationRequestFromJson(json);
 
   Map<String, dynamic> toJson() => _$CancelNegotiationRequestToJson(this);
+}
+
+/// Body for `PATCH /matchmaking/requests/:id` ([UpdateTeamMatchDto] / `UpdateTeamMatchSchema`).
+@JsonSerializable(includeIfNull: false, explicitToJson: true)
+class UpdateTeamMatchRequest {
+  final String? turfBookingId;
+  final String? notes;
+  /// New accepted slot; server creates the proposal and `selectedSlotProposalId`.
+  final TeamMatchTimeSlot? slot;
+  /// Turf id for a new accepted proposal; server creates `selectedTurfProposalId`.
+  final String? turfId;
+  final String? selfAcceptTeamId;
+
+  const UpdateTeamMatchRequest({
+    this.turfBookingId,
+    this.notes,
+    this.slot,
+    this.turfId,
+    this.selfAcceptTeamId,
+  });
+
+  factory UpdateTeamMatchRequest.fromJson(Map<String, dynamic> json) =>
+      _$UpdateTeamMatchRequestFromJson(json);
+
+  Map<String, dynamic> toJson() => _$UpdateTeamMatchRequestToJson(this);
 }
 
 @JsonSerializable(includeIfNull: false)

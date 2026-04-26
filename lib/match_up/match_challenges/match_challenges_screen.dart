@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../components/challenges/match_challenge_respond_actions.dart';
 import '../../components/match_up/my_team_selector.dart';
 import '../../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
 import '../../core/config/constants.dart';
@@ -99,7 +100,9 @@ class _MatchChallengesScreenState extends State<MatchChallengesScreen>
             ),
             Expanded(
               child: Obx(() {
-                final receivedState = c.tabStateFor(MatchChallengesTab.received);
+                final receivedState = c.tabStateFor(
+                  MatchChallengesTab.received,
+                );
                 final sentState = c.tabStateFor(MatchChallengesTab.sent);
                 return AppSegmentedTabView(
                   controller: _tabController,
@@ -233,7 +236,9 @@ class _ReceivedChallengeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fromName = match.fromTeamHelper.getDisplayName();
-    final canAccept = match.status == TeamMatchStatus.requested;
+    final canRespond =
+        match.status == TeamMatchStatus.requested &&
+        !_matchShowsAsExpired(match);
 
     return Container(
       decoration: BoxDecoration(
@@ -251,9 +256,12 @@ class _ReceivedChallengeCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: () => Get.to(
-            () => MatchChallengeDetailScreen(match: match, isIncoming: true),
-          ),
+          onTap: () async {
+            await Get.to(
+              () => MatchChallengeDetailScreen(match: match, isIncoming: true),
+            );
+            await controller.refreshAllTabs();
+          },
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -271,7 +279,7 @@ class _ReceivedChallengeCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    _StatusChip(status: match.status),
+                    _StatusChip(match: match),
                   ],
                 ),
                 const SizedBox(height: 6),
@@ -305,39 +313,19 @@ class _ReceivedChallengeCard extends StatelessWidget {
                     style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                   ),
                 ],
-                if (canAccept) ...[
+                if (canRespond) ...[
                   const SizedBox(height: 14),
                   Obx(() {
-                    final busy = controller.acceptingMatchId.value == match.id;
-                    return SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: busy
-                            ? null
-                            : () => controller.acceptChallenge(match),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(AppColors.primaryColor),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: busy
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Text(
-                                'Accept challenge',
-                                style: TextStyle(fontWeight: FontWeight.w600),
-                              ),
-                      ),
+                    final id = match.id;
+                    final accepting =
+                        id != null && controller.acceptingMatchId.value == id;
+                    final rejecting =
+                        id != null && controller.rejectingMatchId.value == id;
+                    return MatchChallengeRespondActions(
+                      isRejecting: rejecting,
+                      isAccepting: accepting,
+                      onReject: () => controller.rejectChallenge(match),
+                      onAccept: () => controller.acceptChallenge(match),
                     );
                   }),
                 ],
@@ -376,9 +364,12 @@ class _SentChallengeCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: () => Get.to(
-            () => MatchChallengeDetailScreen(match: match, isIncoming: false),
-          ),
+          onTap: () async {
+            await Get.to(
+              () => MatchChallengeDetailScreen(match: match, isIncoming: false),
+            );
+            await controller.refreshAllTabs();
+          },
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -396,7 +387,7 @@ class _SentChallengeCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    _StatusChip(status: match.status),
+                    _StatusChip(match: match),
                   ],
                 ),
                 const SizedBox(height: 6),
@@ -440,9 +431,9 @@ class _SentChallengeCard extends StatelessWidget {
 }
 
 class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.status});
+  const _StatusChip({required this.match});
 
-  final TeamMatchStatus status;
+  final TeamMatchModel match;
 
   @override
   Widget build(BuildContext context) {
@@ -453,7 +444,7 @@ class _StatusChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
-        _statusLabel(status),
+        _statusDisplayForMatch(match),
         style: const TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,
@@ -513,8 +504,28 @@ String _statusLabel(TeamMatchStatus s) {
   return switch (s) {
     TeamMatchStatus.requested => 'Pending',
     TeamMatchStatus.scheduleFinalized => 'Scheduled',
+    TeamMatchStatus.expired => 'EXPIRED',
     _ => s.name.capitalizeFirst!,
   };
+}
+
+/// Backend [expired], or [expiresAt] passed while still negotiating.
+bool _matchShowsAsExpired(TeamMatchModel m) {
+  if (m.status == TeamMatchStatus.expired) return true;
+  final ex = m.expiresAt;
+  if (ex == null) return false;
+  if (!DateTime.now().isAfter(ex.toLocal())) return false;
+  return switch (m.status) {
+    TeamMatchStatus.requested => true,
+    TeamMatchStatus.accepted => true,
+    TeamMatchStatus.negotiating => true,
+    _ => false,
+  };
+}
+
+String _statusDisplayForMatch(TeamMatchModel m) {
+  if (_matchShowsAsExpired(m)) return 'EXPIRED';
+  return _statusLabel(m.status);
 }
 
 String _formatDate(DateTime d) {

@@ -51,6 +51,19 @@ class MatchmakingService {
     return TeamMatchModel.fromJson(response);
   }
 
+  /// `PATCH /matchmaking/requests/:id`
+  Future<TeamMatchModel?> updateRequest(
+    String matchId,
+    UpdateTeamMatchRequest body,
+  ) async {
+    final response = await _apiService.patch<Map<String, dynamic>>(
+      ApiConstants.matchmaking.updateById(matchId),
+      data: body.toJson(),
+    );
+    if (response == null) return null;
+    return TeamMatchModel.fromJson(response);
+  }
+
   /// `POST /matchmaking/requests/:id/propose-schedule`
   Future<TeamMatchModel?> proposeSchedule(
     String matchId,

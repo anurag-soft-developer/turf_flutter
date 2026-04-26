@@ -143,6 +143,8 @@ class MatchmakingEndpoints {
 
   String get requests => '/matchmaking/requests';
 
+  String updateById(String id) => '/matchmaking/requests/$id';
+
   String requestRespond(String id) => '/matchmaking/requests/$id/respond';
 
   String requestProposeSchedule(String id) =>

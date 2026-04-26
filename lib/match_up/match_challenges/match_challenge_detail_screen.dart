@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../components/challenges/challenge_messages_placeholder.dart';
+import '../../components/challenges/match_challenge_respond_actions.dart';
+import '../../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
 import '../../components/challenges/praposals/propose_time_slot_sheet.dart';
 import '../../components/challenges/praposals/propose_turf_sheet.dart';
 import '../../core/config/constants.dart';
@@ -10,6 +12,8 @@ import '../../turf/model/turf_model.dart';
 import '../../turf/turf_service.dart';
 import '../matchmaking_service.dart';
 import '../model/team_match_model.dart';
+import 'match_challenge_actions_card.dart';
+import 'match_challenge_versus_header.dart';
 
 class MatchChallengeDetailScreen extends StatefulWidget {
   final TeamMatchModel match;
@@ -32,9 +36,38 @@ class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
   late TeamMatchModel _match;
   final MatchmakingService _matchmakingService = MatchmakingService();
   final TurfService _turfService = TurfService();
-  bool _isSubmittingTimeProposal = false;
-  bool _isSubmittingTurfProposal = false;
+  bool _isUpdatingSlot = false;
+  bool _isUpdatingTurf = false;
+  bool _isRejectingChallenge = false;
+  bool _isAcceptingChallenge = false;
+
+  /// Busy while cancel/result API runs in [MatchChallengeActionsCard].
+  bool _actionsChildBusy = false;
   List<TurfModel> _myTurfs = const [];
+
+  bool get _actionBusy =>
+      _isUpdatingSlot ||
+      _isUpdatingTurf ||
+      _isRejectingChallenge ||
+      _isAcceptingChallenge ||
+      _actionsChildBusy;
+
+  /// Avoids [setState] while the build/layout lock is held (e.g. child
+  /// [dispose] or right after a nested [setState] in [MatchChallengeActionsCard]).
+  void _scheduleMatchUpdate(TeamMatchModel m) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() => _match = m);
+    });
+  }
+
+  void _scheduleActionsChildBusy(bool busy) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_actionsChildBusy == busy) return;
+      setState(() => _actionsChildBusy = busy);
+    });
+  }
 
   @override
   void initState() {
@@ -49,57 +82,120 @@ class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
     super.dispose();
   }
 
-  bool get _isSlotAccepted => _match.proposedSlots.any(
-    (slot) => slot.status == MatchProposalStatus.accepted,
-  );
-
-  bool get _isTurfAccepted => _match.proposedTurfs.any(
-    (turf) => turf.status == MatchProposalStatus.accepted,
-  );
+  /// Allow setting or changing time/turf while negotiating or after schedule is finalized
+  /// (e.g. correction before the match is live).
+  bool get _canEditSchedule {
+    return switch (_match.status) {
+      TeamMatchStatus.requested => true,
+      TeamMatchStatus.accepted => true,
+      TeamMatchStatus.negotiating => true,
+      TeamMatchStatus.scheduleFinalized => true,
+      _ => false,
+    };
+  }
 
   String get _myTeamId => widget.isIncoming
       ? (_match.toTeamHelper.getId() ?? '')
       : (_match.fromTeamHelper.getId() ?? '');
 
-  Future<void> _proposeTimeSlot() async {
-    if (_isSlotAccepted || _isSubmittingTimeProposal) return;
+  bool get _isExpiredByDeadline {
+    final expiresAt = _match.expiresAt;
+    return expiresAt != null && DateTime.now().isAfter(expiresAt.toLocal());
+  }
+
+  bool get _canRespondToChallenge {
+    return widget.isIncoming &&
+        _match.status == TeamMatchStatus.requested &&
+        !_isExpiredByDeadline;
+  }
+
+  Future<void> _respondToChallenge(MatchResponseAction action) async {
+    if (_isUpdatingSlot || _isUpdatingTurf || _actionsChildBusy) return;
+    if (_isRejectingChallenge || _isAcceptingChallenge) return;
+    if (!_canRespondToChallenge) return;
     if (_match.id == null || _match.id!.isEmpty || _myTeamId.isEmpty) return;
 
-    final selectedSlot = await showModalBottomSheet<ProposeScheduleTimeSlot>(
+    setState(() {
+      if (action == MatchResponseAction.reject) {
+        _isRejectingChallenge = true;
+      } else {
+        _isAcceptingChallenge = true;
+      }
+    });
+    final updated = await _matchmakingService.respond(
+      _match.id!,
+      RespondMatchRequest(actorTeamId: _myTeamId, action: action),
+    );
+    if (!mounted) return;
+    setState(() {
+      _isRejectingChallenge = false;
+      _isAcceptingChallenge = false;
+    });
+
+    if (updated == null) {
+      AppSnackbar.error(
+        title: action == MatchResponseAction.accept
+            ? 'Could not accept'
+            : 'Could not reject',
+        message: 'Try again later.',
+      );
+      return;
+    }
+    setState(() => _match = updated);
+    AppSnackbar.success(
+      title: action == MatchResponseAction.accept
+          ? 'Challenge accepted'
+          : 'Challenge rejected',
+      message: action == MatchResponseAction.accept
+          ? 'You can continue scheduling now.'
+          : 'The challenge was declined.',
+    );
+  }
+
+  /// Schedule edits (time/turf) while not running cancel/result actions.
+  bool get _canUseScheduleControls => _canEditSchedule && !_actionsChildBusy;
+
+  Future<void> _setTimeSlot() async {
+    if (_actionBusy) return;
+    if (_match.id == null || _match.id!.isEmpty || _myTeamId.isEmpty) return;
+
+    final selected = await showModalBottomSheet<ProposeScheduleTimeSlot>(
       context: context,
       isScrollControlled: true,
       builder: (_) => const ProposeTimeSlotSheet(),
     );
-    if (selectedSlot == null) return;
+    if (selected == null) return;
 
-    setState(() => _isSubmittingTimeProposal = true);
-    final updatedMatch = await _matchmakingService.proposeSchedule(
+    setState(() => _isUpdatingSlot = true);
+    final updated = await _matchmakingService.updateRequest(
       _match.id!,
-      ProposeScheduleRequest(
-        actorTeamId: _myTeamId,
-        proposedSlots: [selectedSlot],
+      UpdateTeamMatchRequest(
+        slot: TeamMatchTimeSlot(
+          startTime: selected.startTime,
+          endTime: selected.endTime,
+        ),
+        selfAcceptTeamId: _myTeamId,
       ),
     );
     if (!mounted) return;
-    setState(() => _isSubmittingTimeProposal = false);
+    setState(() => _isUpdatingSlot = false);
 
-    if (updatedMatch == null) {
+    if (updated == null) {
       AppSnackbar.error(
-        title: 'Proposal Failed',
-        message: 'Could not propose the time slot. Please try again.',
+        title: 'Update failed',
+        message: 'Could not set the time slot. Please try again.',
       );
       return;
     }
-
-    setState(() => _match = updatedMatch);
+    setState(() => _match = updated);
     AppSnackbar.success(
-      title: 'Proposal Sent',
-      message: 'Time slot proposal has been shared.',
+      title: 'Time updated',
+      message: 'The match time has been saved.',
     );
   }
 
-  Future<void> _proposeTurf() async {
-    if (_isTurfAccepted || _isSubmittingTurfProposal) return;
+  Future<void> _setTurf() async {
+    if (_actionBusy) return;
     if (_match.id == null || _match.id!.isEmpty || _myTeamId.isEmpty) return;
 
     if (_myTurfs.isEmpty) {
@@ -112,8 +208,8 @@ class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
 
     if (_myTurfs.isEmpty) {
       AppSnackbar.info(
-        title: 'No Turfs Found',
-        message: 'Create a turf first before proposing.',
+        title: 'No turfs found',
+        message: 'Create a turf first before choosing a venue.',
       );
       return;
     }
@@ -125,159 +221,90 @@ class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
     );
     if (selectedTurfId == null || selectedTurfId.isEmpty) return;
 
-    setState(() => _isSubmittingTurfProposal = true);
-    final updatedMatch = await _matchmakingService.proposeSchedule(
+    setState(() => _isUpdatingTurf = true);
+    final updated = await _matchmakingService.updateRequest(
       _match.id!,
-      ProposeScheduleRequest(
-        actorTeamId: _myTeamId,
-        proposedTurfIds: [selectedTurfId],
+      UpdateTeamMatchRequest(
+        turfId: selectedTurfId,
+        selfAcceptTeamId: _myTeamId,
       ),
     );
     if (!mounted) return;
-    setState(() => _isSubmittingTurfProposal = false);
+    setState(() => _isUpdatingTurf = false);
 
-    if (updatedMatch == null) {
+    if (updated == null) {
       AppSnackbar.error(
-        title: 'Proposal Failed',
-        message: 'Could not propose the turf. Please try again.',
+        title: 'Update failed',
+        message: 'Could not set the turf. Please try again.',
       );
       return;
     }
-
-    setState(() => _match = updatedMatch);
+    setState(() => _match = updated);
     AppSnackbar.success(
-      title: 'Proposal Sent',
-      message: 'Turf proposal has been shared.',
+      title: 'Turf updated',
+      message: 'The venue has been saved.',
     );
-  }
-
-  void _decideSlot(String proposalId, ProposalDecisionAction action) {
-    setState(() {
-      _match = TeamMatchModel(
-        id: _match.id,
-        source: _match.source,
-        fromTeam: _match.fromTeam,
-        toTeam: _match.toTeam,
-        sportType: _match.sportType,
-        status: _match.status,
-        statusUpdatedBy: _match.statusUpdatedBy,
-        statusUpdatedAt: _match.statusUpdatedAt,
-        proposedSlots: _match.proposedSlots.map((slot) {
-          if (slot.proposalId != proposalId) return slot;
-          return ProposedSlotModel(
-            proposalId: slot.proposalId,
-            slot: slot.slot,
-            proposedByTeamId: slot.proposedByTeamId,
-            status: action == ProposalDecisionAction.accept
-                ? MatchProposalStatus.accepted
-                : MatchProposalStatus.rejected,
-            decidedByTeamId: _myTeamId,
-            decidedAt: DateTime.now(),
-            reason: slot.reason,
-            createdAt: slot.createdAt,
-            updatedAt: DateTime.now(),
-          );
-        }).toList(),
-        proposedTurfs: _match.proposedTurfs,
-        selectedSlotProposalId: action == ProposalDecisionAction.accept
-            ? proposalId
-            : _match.selectedSlotProposalId,
-        selectedTurfProposalId: _match.selectedTurfProposalId,
-        winnerTeam: _match.winnerTeam,
-        notes: _match.notes,
-        expiresAt: _match.expiresAt,
-        closedAt: _match.closedAt,
-        createdAt: _match.createdAt,
-        updatedAt: _match.updatedAt,
-      );
-    });
-  }
-
-  void _decideTurf(String proposalId, ProposalDecisionAction action) {
-    setState(() {
-      _match = TeamMatchModel(
-        id: _match.id,
-        source: _match.source,
-        fromTeam: _match.fromTeam,
-        toTeam: _match.toTeam,
-        sportType: _match.sportType,
-        status: _match.status,
-        statusUpdatedBy: _match.statusUpdatedBy,
-        statusUpdatedAt: _match.statusUpdatedAt,
-        proposedSlots: _match.proposedSlots,
-        proposedTurfs: _match.proposedTurfs.map((turf) {
-          if (turf.proposalId != proposalId) return turf;
-          return ProposedTurfModel(
-            proposalId: turf.proposalId,
-            turfId: turf.turfId,
-            proposedByTeamId: turf.proposedByTeamId,
-            status: action == ProposalDecisionAction.accept
-                ? MatchProposalStatus.accepted
-                : MatchProposalStatus.rejected,
-            decidedByTeamId: _myTeamId,
-            decidedAt: DateTime.now(),
-            reason: turf.reason,
-            createdAt: turf.createdAt,
-            updatedAt: DateTime.now(),
-          );
-        }).toList(),
-        selectedSlotProposalId: _match.selectedSlotProposalId,
-        selectedTurfProposalId: action == ProposalDecisionAction.accept
-            ? proposalId
-            : _match.selectedTurfProposalId,
-        winnerTeam: _match.winnerTeam,
-        notes: _match.notes,
-        expiresAt: _match.expiresAt,
-        closedAt: _match.closedAt,
-        createdAt: _match.createdAt,
-        updatedAt: _match.updatedAt,
-      );
-    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(
-        title: const Text('Challenge Details'),
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: const Color(AppColors.primaryColor),
-          labelColor: const Color(AppColors.primaryColor),
-          unselectedLabelColor: const Color(AppColors.textSecondaryColor),
-          tabs: const [
-            Tab(text: 'Details'),
-            Tab(text: 'Messages'),
-          ],
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [_buildDetailsTab(), _buildMessagesTab()],
+      appBar: AppBar(title: const Text('Challenge Details')),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: AppSegmentedTabs(
+              controller: _tabController,
+              padding: EdgeInsets.zero,
+              items: const [
+                AppTabItem(label: 'Details'),
+                AppTabItem(label: 'Messages'),
+              ],
+            ),
+          ),
+          Expanded(
+            child: AppSegmentedTabView(
+              controller: _tabController,
+              children: [_buildDetailsTab(), _buildMessagesTab()],
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildDetailsTab() {
-    final fromTeam = _match.fromTeamHelper.getDisplayName();
-    final toTeam = _match.toTeamHelper.getDisplayName();
-    final fromTeamId = _match.fromTeamHelper.getId();
-    final toTeamId = _match.toTeamHelper.getId();
-    final fromLogo = _match.fromTeamHelper.getSubsetModel()?.logo;
-    final toLogo = _match.toTeamHelper.getSubsetModel()?.logo;
-    final acceptedSlot = _match.proposedSlots.where((slot) {
+    final acceptedSlotCandidates = _match.proposedSlots.where((slot) {
       if (_match.selectedSlotProposalId != null) {
         return slot.proposalId == _match.selectedSlotProposalId;
       }
       return slot.status == MatchProposalStatus.accepted;
-    }).firstOrNull;
-    final acceptedTurf = _match.proposedTurfs.where((turf) {
+    });
+    final acceptedSlot = acceptedSlotCandidates.isEmpty
+        ? null
+        : acceptedSlotCandidates.first;
+    final acceptedTurfCandidates = _match.proposedTurfs.where((turf) {
       if (_match.selectedTurfProposalId != null) {
         return turf.proposalId == _match.selectedTurfProposalId;
       }
       return turf.status == MatchProposalStatus.accepted;
-    }).firstOrNull;
+    });
+    final acceptedTurf = acceptedTurfCandidates.isEmpty
+        ? null
+        : acceptedTurfCandidates.first;
+
+    final hasSlot = acceptedSlot != null;
+    final hasTurf = acceptedTurf != null;
+    final timeSummary = acceptedSlot != null
+        ? '${_fmt(acceptedSlot.slot.startTime)} – ${_fmt(acceptedSlot.slot.endTime)}'
+        : 'Not set';
+    final turfSummary = acceptedTurf != null
+        ? acceptedTurf.turfIdHelper.getDisplayName()
+        : 'Not set';
+    final bookingRef = _match.turfBookingIdHelper;
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -288,45 +315,7 @@ class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
             const SizedBox(height: 6),
             _InfoCard(
               title: '',
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _TeamHeader(
-                      teamName: fromTeam,
-                      logoUrl: fromLogo,
-                      teamId: fromTeamId,
-                    ),
-                  ),
-                  Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 10),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(
-                        AppColors.primaryColor,
-                      ).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text(
-                      'VS',
-                      style: TextStyle(
-                        color: Color(AppColors.primaryColor),
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: _TeamHeader(
-                      teamName: toTeam,
-                      logoUrl: toLogo,
-                      teamId: toTeamId,
-                    ),
-                  ),
-                ],
-              ),
+              child: MatchChallengeVersusHeader(match: _match),
             ),
             const SizedBox(height: 16),
             LayoutBuilder(
@@ -346,18 +335,11 @@ class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
                         _match.status.name.capitalizeFirst ??
                         _match.status.name,
                   ),
-                  if (acceptedSlot != null)
+                  if (_match.turfBookingId != null)
                     _InfoTile(
-                      icon: Icons.schedule,
-                      label: 'Accepted time slot',
-                      value:
-                          '${_fmt(acceptedSlot.slot.startTime)} - ${_fmt(acceptedSlot.slot.endTime)}',
-                    ),
-                  if (acceptedTurf != null)
-                    _InfoTile(
-                      icon: Icons.grass,
-                      label: 'Accepted turf',
-                      value: acceptedTurf.turfIdHelper.getDisplayName(),
+                      icon: Icons.receipt_long_outlined,
+                      label: 'Turf booking',
+                      value: bookingRef.getDisplayName(),
                     ),
                 ];
                 final tileWidth = (constraints.maxWidth - 12) / 2;
@@ -372,120 +354,152 @@ class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
             ),
           ],
         ),
-
-        // const SizedBox(height: 12),
         const SizedBox(height: 12),
         _InfoCard(
-          title: 'Proposed Time Slots',
-          child: _match.proposedSlots.isEmpty
-              ? const Text(
-                  'No proposed time slots yet.',
-                  style: TextStyle(color: Color(AppColors.textSecondaryColor)),
-                )
-              : Column(
-                  children: _match.proposedSlots.map((slot) {
-                    final canDecide =
-                        slot.status == MatchProposalStatus.pending;
-                    return _ProposalTile(
-                      title:
-                          '${_fmt(slot.slot.startTime)} - ${_fmt(slot.slot.endTime)}',
-                      subtitle:
-                          'By ${slot.proposedByTeamId == _myTeamId ? 'You' : 'Opponent'}',
-                      status: slot.status.name,
-                      onAccept: canDecide
-                          ? () => _decideSlot(
-                              slot.proposalId,
-                              ProposalDecisionAction.accept,
-                            )
-                          : null,
-                      onReject: canDecide
-                          ? () => _decideSlot(
-                              slot.proposalId,
-                              ProposalDecisionAction.reject,
-                            )
-                          : null,
-                    );
-                  }).toList(),
-                ),
-        ),
-        const SizedBox(height: 12),
-        _InfoCard(
-          title: 'Proposed Turfs',
-          child: _match.proposedTurfs.isEmpty
-              ? const Text(
-                  'No proposed turfs yet.',
-                  style: TextStyle(color: Color(AppColors.textSecondaryColor)),
-                )
-              : Column(
-                  children: _match.proposedTurfs.map((turf) {
-                    final canDecide =
-                        turf.status == MatchProposalStatus.pending;
-                    return _ProposalTile(
-                      title: turf.turfIdHelper.getDisplayName(),
-                      subtitle:
-                          'By ${turf.proposedByTeamId == _myTeamId ? 'You' : 'Opponent'}',
-                      status: turf.status.name,
-                      onAccept: canDecide
-                          ? () => _decideTurf(
-                              turf.proposalId,
-                              ProposalDecisionAction.accept,
-                            )
-                          : null,
-                      onReject: canDecide
-                          ? () => _decideTurf(
-                              turf.proposalId,
-                              ProposalDecisionAction.reject,
-                            )
-                          : null,
-                    );
-                  }).toList(),
-                ),
-        ),
-        const SizedBox(height: 12),
-        _InfoCard(
-          title: '',
-          child: Row(
+          title: 'Schedule',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: _isSlotAccepted || _isSubmittingTimeProposal
-                      ? null
-                      : _proposeTimeSlot,
-                  icon: const Icon(Icons.schedule),
-                  label: Text(
-                    _isSlotAccepted
-                        ? 'Time Fixed'
-                        : _isSubmittingTimeProposal
-                        ? 'Sending...'
-                        : 'Propose Time',
-                  ),
-                ),
+              _ScheduleLine(
+                icon: Icons.schedule,
+                label: 'Time',
+                value: timeSummary,
+                canEdit: _canUseScheduleControls,
+                isLoading: _isUpdatingSlot,
+                otherFieldBusy: _isUpdatingTurf || _actionsChildBusy,
+                onEditPressed: _setTimeSlot,
+                editTooltip: hasSlot ? 'Edit time' : 'Set time',
+                editIcon: hasSlot
+                    ? Icons.edit_outlined
+                    : Icons.event_available_outlined,
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: _isTurfAccepted || _isSubmittingTurfProposal
-                      ? null
-                      : _proposeTurf,
-                  icon: const Icon(Icons.grass),
-                  label: Text(
-                    _isTurfAccepted
-                        ? 'Turf Fixed'
-                        : _isSubmittingTurfProposal
-                        ? 'Sending...'
-                        : 'Propose Turf',
-                  ),
-                ),
+              const SizedBox(height: 12),
+              _ScheduleLine(
+                icon: Icons.grass,
+                label: 'Turf',
+                value: turfSummary,
+                canEdit: _canUseScheduleControls,
+                isLoading: _isUpdatingTurf,
+                otherFieldBusy: _isUpdatingSlot || _actionsChildBusy,
+                onEditPressed: _setTurf,
+                editTooltip: hasTurf ? 'Edit turf' : 'Set turf',
+                editIcon: hasTurf
+                    ? Icons.edit_outlined
+                    : Icons.add_location_alt_outlined,
               ),
             ],
           ),
         ),
+        const SizedBox(height: 12),
+        MatchChallengeActionsCard(
+          match: _match,
+          myTeamId: _myTeamId,
+          onMatchUpdated: _scheduleMatchUpdate,
+          onInternalBusyChanged: _scheduleActionsChildBusy,
+        ),
+        if (_canRespondToChallenge) ...[
+          const SizedBox(height: 12),
+          MatchChallengeRespondActions(
+            isRejecting: _isRejectingChallenge,
+            isAccepting: _isAcceptingChallenge,
+            enabled: !_isUpdatingSlot && !_isUpdatingTurf && !_actionsChildBusy,
+            onReject: () => _respondToChallenge(MatchResponseAction.reject),
+            onAccept: () => _respondToChallenge(MatchResponseAction.accept),
+          ),
+        ],
       ],
     );
   }
 
   Widget _buildMessagesTab() {
     return const ChallengeMessagesPlaceholder();
+  }
+}
+
+class _ScheduleLine extends StatelessWidget {
+  const _ScheduleLine({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.canEdit,
+    required this.isLoading,
+    required this.otherFieldBusy,
+    required this.onEditPressed,
+    this.editTooltip,
+    this.editIcon = Icons.edit_outlined,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final bool canEdit;
+  final bool isLoading;
+  final bool otherFieldBusy;
+  final VoidCallback onEditPressed;
+  final String? editTooltip;
+  final IconData editIcon;
+
+  @override
+  Widget build(BuildContext context) {
+    final isUnset = value == 'Not set';
+    final canTap = canEdit && !isLoading && !otherFieldBusy;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 20, color: const Color(AppColors.primaryColor)),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Color(AppColors.textSecondaryColor),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: isUnset
+                      ? const Color(AppColors.textSecondaryColor)
+                      : const Color(AppColors.textColor),
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (canEdit)
+          IconButton(
+            onPressed: canTap ? onEditPressed : null,
+            icon: isLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(editIcon, size: 22),
+            tooltip: isLoading
+                ? 'Saving…'
+                : (otherFieldBusy ? 'Please wait' : editTooltip),
+            color: canTap
+                ? const Color(AppColors.primaryColor)
+                : const Color(AppColors.textSecondaryColor),
+            style: IconButton.styleFrom(
+              backgroundColor: const Color(
+                AppColors.primaryColor,
+              ).withValues(alpha: canTap && !isLoading ? 0.08 : 0.04),
+            ),
+            padding: const EdgeInsets.all(8),
+            constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+            visualDensity: VisualDensity.compact,
+          ),
+      ],
+    );
   }
 }
 
@@ -517,138 +531,6 @@ class _InfoCard extends StatelessWidget {
             const SizedBox(height: 10),
           ],
           child,
-        ],
-      ),
-    );
-  }
-}
-
-class _ProposalTile extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final String status;
-  final VoidCallback? onAccept;
-  final VoidCallback? onReject;
-
-  const _ProposalTile({
-    required this.title,
-    required this.subtitle,
-    required this.status,
-    this.onAccept,
-    this.onReject,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final readableStatus = status.capitalizeFirst ?? status;
-    final canDecide = onAccept != null || onReject != null;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: const Color(AppColors.backgroundColor),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 2),
-          Text(
-            subtitle,
-            style: const TextStyle(
-              color: Color(AppColors.textSecondaryColor),
-              fontSize: 12,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(
-                    AppColors.primaryColor,
-                  ).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  readableStatus,
-                  style: const TextStyle(
-                    color: Color(AppColors.primaryColor),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              const Spacer(),
-              if (canDecide) ...[
-                TextButton(onPressed: onReject, child: const Text('Reject')),
-                const SizedBox(width: 4),
-                ElevatedButton(
-                  onPressed: onAccept,
-                  // Theme uses full-width minimumSize; Row must not get infinite width.
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(0, 44),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  child: const Text('Accept'),
-                ),
-              ],
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TeamHeader extends StatelessWidget {
-  final String teamName;
-  final String? logoUrl;
-  final String? teamId;
-
-  const _TeamHeader({required this.teamName, this.logoUrl, this.teamId});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: teamId == null || teamId!.isEmpty
-          ? null
-          : () => Get.toNamed(
-              AppConstants.routes.teamProfile,
-              arguments: {'teamId': teamId},
-            ),
-      child: Column(
-        children: [
-          CircleAvatar(
-            radius: 40,
-            backgroundColor: const Color(
-              AppColors.primaryColor,
-            ).withValues(alpha: 0.12),
-            backgroundImage: logoUrl != null && logoUrl!.isNotEmpty
-                ? NetworkImage(logoUrl!)
-                : null,
-            child: logoUrl == null || logoUrl!.isEmpty
-                ? const Icon(
-                    Icons.groups_2_rounded,
-                    color: Color(AppColors.primaryColor),
-                  )
-                : null,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            teamName,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              color: Color(AppColors.textColor),
-            ),
-          ),
         ],
       ),
     );

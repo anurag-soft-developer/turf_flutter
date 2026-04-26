@@ -18,6 +18,7 @@ class MatchChallengesController extends GetxController
   final Rx<MatchChallengesTab> selectedTab = MatchChallengesTab.received.obs;
   final RxBool isLoadingMemberships = true.obs;
   final Rxn<String> acceptingMatchId = Rxn<String>();
+  final Rxn<String> rejectingMatchId = Rxn<String>();
 
   final RxList<TeamMemberModel> memberships = <TeamMemberModel>[].obs;
   final RxBool filterAllTeams = true.obs;
@@ -133,12 +134,11 @@ class MatchChallengesController extends GetxController
         if (mid != null && mid.isNotEmpty) merged[mid] = m;
       }
     }
-    return merged.values.toList()
-      ..sort((a, b) {
-        final da = a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-        final db = b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-        return db.compareTo(da);
-      });
+    return merged.values.toList()..sort((a, b) {
+      final da = a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final db = b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+      return db.compareTo(da);
+    });
   }
 
   @override
@@ -171,6 +171,7 @@ class MatchChallengesController extends GetxController
       return;
     }
     if (match.status != TeamMatchStatus.requested) return;
+    if (_isMatchExpiredByDeadline(match)) return;
 
     acceptingMatchId.value = matchId;
     try {
@@ -203,5 +204,55 @@ class MatchChallengesController extends GetxController
     } finally {
       acceptingMatchId.value = null;
     }
+  }
+
+  Future<void> rejectChallenge(TeamMatchModel match) async {
+    final matchId = match.id;
+    final actorId = match.toTeamHelper.getId();
+    if (matchId == null ||
+        matchId.isEmpty ||
+        actorId == null ||
+        actorId.isEmpty) {
+      return;
+    }
+    if (match.status != TeamMatchStatus.requested) return;
+    if (_isMatchExpiredByDeadline(match)) return;
+
+    rejectingMatchId.value = matchId;
+    try {
+      final updated = await _matchmakingService.respond(
+        matchId,
+        RespondMatchRequest(
+          actorTeamId: actorId,
+          action: MatchResponseAction.reject,
+        ),
+      );
+      if (updated != null) {
+        AppSnackbar.success(
+          title: 'Challenge rejected',
+          message: 'The match request was declined.',
+        );
+        final receivedState = tabStateFor(MatchChallengesTab.received);
+        setTabState(
+          MatchChallengesTab.received,
+          receivedState.copyWith(
+            items: receivedState.items.where((m) => m.id != matchId).toList(),
+          ),
+        );
+      } else {
+        AppSnackbar.error(
+          title: 'Could not reject',
+          message: 'Try again later.',
+        );
+      }
+    } finally {
+      rejectingMatchId.value = null;
+    }
+  }
+
+  static bool _isMatchExpiredByDeadline(TeamMatchModel m) {
+    final ex = m.expiresAt;
+    if (ex == null) return false;
+    return DateTime.now().isAfter(ex.toLocal());
   }
 }

@@ -121,6 +121,9 @@ TeamMatchModel _$TeamMatchModelFromJson(
   ),
   winnerTeam: const TeamRefConverter().fromJson(json['winnerTeam']),
   notes: json['notes'] as String?,
+  turfBookingId: const TurfBookingRefConverter().fromJson(
+    json['turfBookingId'],
+  ),
   expiresAt: json['expiresAt'] == null
       ? null
       : DateTime.parse(json['expiresAt'] as String),
@@ -151,6 +154,9 @@ Map<String, dynamic> _$TeamMatchModelToJson(TeamMatchModel instance) =>
       'selectedTurfProposalId': instance.selectedTurfProposalId,
       'winnerTeam': const TeamRefConverter().toJson(instance.winnerTeam),
       'notes': instance.notes,
+      'turfBookingId': const TurfBookingRefConverter().toJson(
+        instance.turfBookingId,
+      ),
       'expiresAt': instance.expiresAt?.toIso8601String(),
       'closedAt': instance.closedAt?.toIso8601String(),
       'createdAt': instance.createdAt?.toIso8601String(),
@@ -349,4 +355,26 @@ const _$MatchResultOutcomeEnumMap = {
   MatchResultOutcome.ongoing: 'ongoing',
   MatchResultOutcome.completed: 'completed',
   MatchResultOutcome.draw: 'draw',
+};
+
+UpdateTeamMatchRequest _$UpdateTeamMatchRequestFromJson(
+  Map<String, dynamic> json,
+) => UpdateTeamMatchRequest(
+  turfBookingId: json['turfBookingId'] as String?,
+  notes: json['notes'] as String?,
+  slot: json['slot'] == null
+      ? null
+      : TeamMatchTimeSlot.fromJson(json['slot'] as Map<String, dynamic>),
+  turfId: json['turfId'] as String?,
+  selfAcceptTeamId: json['selfAcceptTeamId'] as String?,
+);
+
+Map<String, dynamic> _$UpdateTeamMatchRequestToJson(
+  UpdateTeamMatchRequest instance,
+) => <String, dynamic>{
+  'turfBookingId': ?instance.turfBookingId,
+  'notes': ?instance.notes,
+  'slot': ?instance.slot?.toJson(),
+  'turfId': ?instance.turfId,
+  'selfAcceptTeamId': ?instance.selfAcceptTeamId,
 };
