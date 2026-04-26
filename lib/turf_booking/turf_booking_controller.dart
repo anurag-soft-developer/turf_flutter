@@ -119,31 +119,31 @@ class TurfBookingController extends GetxController
   }
 
   /// Cancel booking
-  Future<bool> cancelBooking(String bookingId, String? cancelReason) async {
-    try {
-      _isBookingLoading.value = true;
+  // Future<bool> cancelBooking(String bookingId, String? cancelReason) async {
+  //   try {
+  //     _isBookingLoading.value = true;
 
-      final updatedBooking = await _bookingService.cancelBooking(
-        bookingId,
-        cancelReason,
-      );
+  //     final updatedBooking = await _bookingService.cancelBooking(
+  //       bookingId,
+  //       cancelReason,
+  //     );
 
-      if (updatedBooking != null) {
-        // Update the booking in lists
-        _updateBookingInLists(updatedBooking);
-        ExceptionHandler.showSuccessToast('Booking cancelled successfully');
-        return true;
-      }
+  //     if (updatedBooking != null) {
+  //       // Update the booking in lists
+  //       _updateBookingInLists(updatedBooking);
+  //       ExceptionHandler.showSuccessToast('Booking cancelled successfully');
+  //       return true;
+  //     }
 
-      return false;
-    } catch (e) {
-      debugPrint('Error cancelling booking: $e');
-      ExceptionHandler.showErrorToast('Failed to cancel booking');
-      return false;
-    } finally {
-      _isBookingLoading.value = false;
-    }
-  }
+  //     return false;
+  //   } catch (e) {
+  //     debugPrint('Error cancelling booking: $e');
+  //     ExceptionHandler.showErrorToast('Failed to cancel booking');
+  //     return false;
+  //   } finally {
+  //     _isBookingLoading.value = false;
+  //   }
+  // }
 
   /// Confirm booking (for turf owners)
   Future<bool> confirmBooking(String bookingId) async {
@@ -298,7 +298,9 @@ class TurfBookingController extends GetxController
   }
 
   @override
-  Future<List<TurfBookingModel>> fetchTabItems(TurfBookingStatus? status) async {
+  Future<List<TurfBookingModel>> fetchTabItems(
+    TurfBookingStatus? status,
+  ) async {
     final response = await _bookingService.findBookings(
       settingController.currentMode.value,
       page: 1,

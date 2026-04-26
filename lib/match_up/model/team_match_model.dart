@@ -17,9 +17,7 @@ const int kMatchmakingListRequestsMaxLimit = 50;
 // --- Enums (backend string values) ---
 
 /// Backend [TeamMatchSource].
-enum TeamMatchSource {
-  feed,
-}
+enum TeamMatchSource { feed }
 
 /// Backend [TeamMatchStatus].
 enum TeamMatchStatus {
@@ -37,40 +35,19 @@ enum TeamMatchStatus {
 }
 
 /// Backend [MatchProposalStatus].
-enum MatchProposalStatus {
-  pending,
-  accepted,
-  rejected,
-  withdrawn,
-  expired,
-}
+enum MatchProposalStatus { pending, accepted, rejected, withdrawn, expired }
 
 /// Backend `ListNegotiationsFilterSchema.type`.
-enum NegotiationListType {
-  incoming,
-  outgoing,
-  all,
-}
+enum NegotiationListType { incoming, outgoing, all }
 
 /// Backend `matchResponseActionSchema`.
-enum MatchResponseAction {
-  accept,
-  reject,
-}
+enum MatchResponseAction { accept, reject }
 
 /// Backend `proposalDecisionActionSchema`.
-enum ProposalDecisionAction {
-  accept,
-  reject,
-  withdraw,
-}
+enum ProposalDecisionAction { accept, reject, withdraw }
 
 /// Backend `RecordMatchResultSchema.outcome`.
-enum MatchResultOutcome {
-  ongoing,
-  completed,
-  draw,
-}
+enum MatchResultOutcome { ongoing, completed, draw }
 
 // --- ObjectId helpers (lean refs vs populated docs) ---
 
@@ -143,6 +120,7 @@ class ProposedSlotModel {
 class ProposedTurfModel {
   @JsonKey(name: 'proposalId', fromJson: _objectIdFromJson)
   final String proposalId;
+
   /// Lean id or populated turf (see [turfIdHelper]).
   @JsonKey(name: 'turfId')
   @TurfConverter()
@@ -183,10 +161,12 @@ class TeamMatchModel {
   @JsonKey(name: '_id')
   final String? id;
   final TeamMatchSource source;
+
   /// Lean id or populated team subset ([TeamMemberFieldInstance] via [TeamRefConverter]).
   @JsonKey(name: 'fromTeam')
   @TeamRefConverter()
   final dynamic fromTeam;
+
   /// Lean id or populated team subset ([TeamMemberFieldInstance] via [TeamRefConverter]).
   @JsonKey(name: 'toTeam')
   @TeamRefConverter()
@@ -204,6 +184,7 @@ class TeamMatchModel {
   final String? selectedSlotProposalId;
   @JsonKey(name: 'selectedTurfProposalId', fromJson: _objectIdFromJsonNullable)
   final String? selectedTurfProposalId;
+
   /// Lean id or populated team subset when backend populates `winnerTeam`.
   @JsonKey(name: 'winnerTeam')
   @TeamRefConverter()
@@ -333,13 +314,13 @@ class SendMatchRequest {
   final String toTeamId;
   final String? notes;
   @JsonKey(name: 'expiresInMinutes', defaultValue: 120)
-  final int expiresInMinutes;
+  final int? expiresInMinutes;
 
   SendMatchRequest({
     required this.fromTeamId,
     required this.toTeamId,
     this.notes,
-    this.expiresInMinutes = 120,
+    this.expiresInMinutes,
   });
 
   factory SendMatchRequest.fromJson(Map<String, dynamic> json) =>

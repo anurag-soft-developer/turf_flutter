@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/core/utils/app_snackbar.dart';
 import 'package:get/get.dart';
 import '../../turf_booking/model/turf_booking_model.dart';
 import '../../core/config/constants.dart';
@@ -47,7 +48,10 @@ class BookingCard extends StatelessWidget {
                   Row(
                     children: [
                       _StatusChip(status: booking.status),
-                      if (!isOwnerView) ...[
+                      if (!isOwnerView &&
+                          (booking.status == TurfBookingStatus.confirmed ||
+                              booking.status ==
+                                  TurfBookingStatus.completed)) ...[
                         const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -202,10 +206,19 @@ class BookingCard extends StatelessWidget {
         arguments: {'booking': booking},
       );
     } else {
-      Get.toNamed(
-        AppConstants.routes.bookingTicket,
-        arguments: {'booking': booking},
-      );
+      if (booking.status == TurfBookingStatus.confirmed ||
+          booking.status == TurfBookingStatus.completed) {
+        Get.toNamed(
+          AppConstants.routes.bookingTicket,
+          arguments: {'booking': booking},
+        );
+      } else {
+        AppSnackbar.error(
+          title: 'Ticket is not generated yet',
+          message:
+              'Booking is ${booking.status?.name.capitalizeFirst ?? 'UNKNOWN'}',
+        );
+      }
     }
   }
 }

@@ -60,12 +60,12 @@ class BookingActionButtons extends StatelessWidget {
       }
     } else {
       if (booking.isPending || booking.isConfirmed) {
-        children.add(
-          _dangerOutlined(
-            label: 'Cancel',
-            onPressed: onCancel != null ? () => onCancel!(id) : null,
-          ),
-        );
+        // children.add(
+        //   _dangerOutlined(
+        //     label: 'Cancel',
+        //     onPressed: onCancel != null ? () => onCancel!(id) : null,
+        //   ),
+        // );
       }
     }
 

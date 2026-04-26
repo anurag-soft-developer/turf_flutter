@@ -20,7 +20,10 @@ class _BookingsScreenState extends State<BookingsScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
   late final List<AppTabItem> _tabItems;
-  final List<TurfBookingStatus?> _tabStatuses = [null, ...TurfBookingStatus.values];
+  final List<TurfBookingStatus?> _tabStatuses = [
+    null,
+    ...TurfBookingStatus.values,
+  ];
 
   @override
   void initState() {
@@ -53,7 +56,8 @@ class _BookingsScreenState extends State<BookingsScreen>
   }
 
   int _getInitialTabIndex() {
-    final selectedStatus = TurfBookingController.instance.selectedStatusTab.value;
+    final selectedStatus =
+        TurfBookingController.instance.selectedStatusTab.value;
     final matchedIndex = _tabStatuses.indexOf(selectedStatus);
     return matchedIndex == -1 ? 0 : matchedIndex;
   }
@@ -106,9 +110,11 @@ class _BookingsScreenState extends State<BookingsScreen>
                       final status = _tabStatuses[index];
                       final state = bookingController.tabStateFor(status);
                       final bookings = state.items;
-                      final isFirstLoad = !state.hasInitialized && bookings.isEmpty;
+                      final isFirstLoad =
+                          !state.hasInitialized && bookings.isEmpty;
 
-                      if (isFirstLoad || (state.isFetching && bookings.isEmpty)) {
+                      if (isFirstLoad ||
+                          (state.isFetching && bookings.isEmpty)) {
                         return const Center(
                           child: CircularProgressIndicator(
                             valueColor: AlwaysStoppedAnimation<Color>(
@@ -138,8 +144,8 @@ class _BookingsScreenState extends State<BookingsScreen>
                               ),
                               const SizedBox(height: 12),
                               ElevatedButton(
-                                onPressed: () =>
-                                    bookingController.ensureTabLoaded(status, force: true),
+                                onPressed: () => bookingController
+                                    .ensureTabLoaded(status, force: true),
                                 child: const Text('Retry'),
                               ),
                             ],
@@ -180,8 +186,10 @@ class _BookingsScreenState extends State<BookingsScreen>
                       }
 
                       return RefreshIndicator(
-                        onRefresh: () =>
-                            bookingController.ensureTabLoaded(status, force: true),
+                        onRefresh: () => bookingController.ensureTabLoaded(
+                          status,
+                          force: true,
+                        ),
                         child: NotificationListener<ScrollNotification>(
                           child: ListView.builder(
                             padding: const EdgeInsets.all(16),
@@ -193,8 +201,8 @@ class _BookingsScreenState extends State<BookingsScreen>
                                 child: BookingCard(
                                   booking: booking,
                                   isOwnerView: setting.isProprietorMode,
-                                  onCancel:
-                                      BookingActionDialogs.showCancelBooking,
+                                  // onCancel:
+                                  //     BookingActionDialogs.showCancelBooking,
                                   onComplete:
                                       BookingActionDialogs.showCompleteBooking,
                                   onConfirm:

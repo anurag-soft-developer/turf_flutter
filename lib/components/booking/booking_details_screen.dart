@@ -219,7 +219,7 @@ class BookingDetailsScreen extends StatelessWidget {
                   child: BookingActionButtons(
                     booking: booking,
                     isOwnerView: true,
-                    onCancel: BookingActionDialogs.showCancelBooking,
+                    // onCancel: BookingActionDialogs.showCancelBooking,
                     onConfirm: BookingActionDialogs.showConfirmBooking,
                     onComplete: BookingActionDialogs.showCompleteBooking,
                   ),

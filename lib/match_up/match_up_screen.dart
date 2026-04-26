@@ -511,15 +511,15 @@ class _ChallengeSheet extends StatelessWidget {
             );
           }),
           const SizedBox(height: 8),
-          const Text(
-            'Send a friendly match request?\nThey\'ll have 2 hours to respond.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              color: Color(AppColors.textSecondaryColor),
-              height: 1.4,
-            ),
-          ),
+          // const Text(
+          //   'Send a friendly match request?\nThey\'ll have 2 hours to respond.',
+          //   textAlign: TextAlign.center,
+          //   style: TextStyle(
+          //     fontSize: 14,
+          //     color: Color(AppColors.textSecondaryColor),
+          //     height: 1.4,
+          //   ),
+          // ),
           const SizedBox(height: 24),
           Row(
             children: [
