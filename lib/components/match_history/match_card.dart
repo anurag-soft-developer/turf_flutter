@@ -11,11 +11,13 @@ class MatchCard extends StatelessWidget {
     required this.match,
     required this.selectedTeamId,
     required this.isHistory,
+    this.onTap,
   });
 
   final TeamMatchModel match;
   final String? selectedTeamId;
   final bool isHistory;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -38,20 +40,10 @@ class MatchCard extends StatelessWidget {
 
     final selectedSlot = _getSelectedSlot();
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: const Color(AppColors.dividerColor).withValues(alpha: 0.5),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
             Row(
               children: [
                 TeamLogo(
@@ -177,9 +169,35 @@ class MatchCard extends StatelessWidget {
                 ],
               ),
             ],
-          ],
+      ],
+    );
+
+    final body = Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: const Color(AppColors.dividerColor).withValues(alpha: 0.5),
         ),
       ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: content,
+      ),
+    );
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: onTap == null
+          ? body
+          : Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: onTap,
+                borderRadius: BorderRadius.circular(14),
+                child: body,
+              ),
+            ),
     );
   }
 

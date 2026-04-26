@@ -53,12 +53,12 @@ class AppDrawer extends StatelessWidget {
         },
       ),
       DrawerMenuItem(
-        title: 'Match History',
-        icon: Icons.history,
+        title: 'Challenges',
+        icon: Icons.sports_soccer,
         iconColor: const Color(AppColors.primaryColor),
         onTap: () {
           Get.back();
-          Get.toNamed(AppConstants.routes.matchHistory);
+          Get.toNamed(AppConstants.routes.matchUpChallenges);
         },
       ),
     ];

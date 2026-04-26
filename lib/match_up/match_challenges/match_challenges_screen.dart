@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../components/challenges/match_challenge_respond_actions.dart';
+import '../../components/match_history/match_card.dart';
+import '../../components/match_history/match_history_placeholders.dart';
 import '../../components/match_up/my_team_selector.dart';
 import '../../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
 import '../../core/config/constants.dart';
@@ -21,12 +23,20 @@ class _MatchChallengesScreenState extends State<MatchChallengesScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
 
+  List<AppTabItem> _tabs = const [
+    AppTabItem(label: 'Received'),
+    AppTabItem(label: 'Sent'),
+    AppTabItem(label: 'Completed'),
+    AppTabItem(label: 'Upcoming'),
+    AppTabItem(label: 'Archive'),
+  ];
+
   @override
   void initState() {
     super.initState();
     final c = Get.find<MatchChallengesController>();
     _tabController = TabController(
-      length: 2,
+      length: _tabs.length,
       vsync: this,
       initialIndex: c.selectedTab.value.index,
     );
@@ -92,43 +102,165 @@ class _MatchChallengesScreenState extends State<MatchChallengesScreen>
                 controller: _tabController,
                 onTap: c.switchTab,
                 padding: EdgeInsets.zero,
-                items: const [
-                  AppTabItem(label: 'Received'),
-                  AppTabItem(label: 'Sent'),
-                ],
+                items: _tabs,
               ),
             ),
             Expanded(
-              child: Obx(() {
-                final receivedState = c.tabStateFor(
-                  MatchChallengesTab.received,
-                );
-                final sentState = c.tabStateFor(MatchChallengesTab.sent);
-                return AppSegmentedTabView(
-                  controller: _tabController,
-                  children: [
-                    _ChallengesTabView(
-                      state: receivedState,
+              child: AppSegmentedTabView(
+                controller: _tabController,
+                children: [
+                  Obx(() {
+                    final state = c.tabStateFor(MatchChallengesTab.received);
+                    return _ChallengesTabView(
+                      state: state,
                       emptyMessage: 'No challenges received yet.',
                       itemBuilder: (m) =>
                           _ReceivedChallengeCard(match: m, controller: c),
                       onRefresh: c.refreshCurrentTab,
-                    ),
-                    _ChallengesTabView(
-                      state: sentState,
+                    );
+                  }),
+                  Obx(() {
+                    final state = c.tabStateFor(MatchChallengesTab.sent);
+                    return _ChallengesTabView(
+                      state: state,
                       emptyMessage: 'No challenges sent yet.',
                       itemBuilder: (m) =>
                           _SentChallengeCard(match: m, controller: c),
                       onRefresh: c.refreshCurrentTab,
-                    ),
-                  ],
-                );
-              }),
+                    );
+                  }),
+                  const _HistoryListPane(
+                    tab: MatchChallengesTab.completed,
+                    isHistory: true,
+                    emptyIcon: Icons.history,
+                    emptyTitle: 'No match history',
+                    emptySubtitle:
+                        'Completed matches will appear here once your team finishes a game.',
+                  ),
+                  const _HistoryListPane(
+                    tab: MatchChallengesTab.upcoming,
+                    isHistory: false,
+                    emptyIcon: Icons.event_available,
+                    emptyTitle: 'No upcoming matches',
+                    emptySubtitle:
+                        'Scheduled or live matches show up here once a time is set.',
+                  ),
+                  const _HistoryListPane(
+                    tab: MatchChallengesTab.archive,
+                    isHistory: true,
+                    emptyIcon: Icons.inventory_2_outlined,
+                    emptyTitle: 'Nothing archived',
+                    emptySubtitle:
+                        'Rejected, cancelled, and expired requests appear here.',
+                  ),
+                ],
+              ),
             ),
           ],
         );
       }),
     );
+  }
+}
+
+class _HistoryListPane extends StatelessWidget {
+  const _HistoryListPane({
+    required this.tab,
+    required this.isHistory,
+    required this.emptyIcon,
+    required this.emptyTitle,
+    required this.emptySubtitle,
+  });
+
+  final MatchChallengesTab tab;
+  final bool isHistory;
+  final IconData emptyIcon;
+  final String emptyTitle;
+  final String emptySubtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = Get.find<MatchChallengesController>();
+
+    return Obx(() {
+      final state = c.tabStateFor(tab);
+      final selectedTeamId = c.filterAllTeams.value
+          ? null
+          : c.selectedMembershipTeam.value?.id;
+      final matches = state.items;
+      if ((state.isFetching && matches.isEmpty) ||
+          (!state.hasInitialized && matches.isEmpty)) {
+        return const Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(
+              Color(AppColors.primaryColor),
+            ),
+          ),
+        );
+      }
+
+      if (state.error != null && matches.isEmpty) {
+        return Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                size: 42,
+                color: Color(AppColors.textSecondaryColor),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                state.error!,
+                style: const TextStyle(
+                  color: Color(AppColors.textSecondaryColor),
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: () => c.resetAndRefetch(tab),
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        );
+      }
+
+      if (matches.isEmpty) {
+        return MatchHistoryEmptyPlaceholder(
+          icon: emptyIcon,
+          title: emptyTitle,
+          subtitle: emptySubtitle,
+        );
+      }
+
+      return RefreshIndicator(
+        onRefresh: c.refreshCurrentTab,
+        color: const Color(AppColors.primaryColor),
+        child: ListView.builder(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+          physics: const AlwaysScrollableScrollPhysics(),
+          itemCount: matches.length,
+          itemBuilder: (context, index) {
+            final m = matches[index];
+            return MatchCard(
+              match: m,
+              selectedTeamId: selectedTeamId,
+              isHistory: isHistory,
+              onTap: () async {
+                await Get.to(
+                  () => MatchChallengeDetailScreen(
+                    match: m,
+                    isIncoming: _isIncomingForMatch(m, c),
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      );
+    });
   }
 }
 
@@ -260,7 +392,6 @@ class _ReceivedChallengeCard extends StatelessWidget {
             await Get.to(
               () => MatchChallengeDetailScreen(match: match, isIncoming: true),
             );
-            await controller.refreshAllTabs();
           },
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -368,7 +499,6 @@ class _SentChallengeCard extends StatelessWidget {
             await Get.to(
               () => MatchChallengeDetailScreen(match: match, isIncoming: false),
             );
-            await controller.refreshAllTabs();
           },
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -532,4 +662,27 @@ String _formatDate(DateTime d) {
   final local = d.toLocal();
   return '${local.year}-${local.month.toString().padLeft(2, '0')}-${local.day.toString().padLeft(2, '0')} '
       '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+}
+
+/// Aligns with [MatchChallengeDetailScreen.isIncoming]: [to] is the side that received the request.
+bool _isIncomingForMatch(TeamMatchModel match, MatchChallengesController c) {
+  final toId = match.toTeamHelper.getId();
+  final fromId = match.fromTeamHelper.getId();
+  if (!c.filterAllTeams.value) {
+    final sel = c.selectedMembershipTeam.value?.id;
+    if (sel != null) {
+      if (sel == toId) return true;
+      if (sel == fromId) return false;
+    }
+  }
+  final myIds = <String>{};
+  for (final t in c.myTeams) {
+    if (t.id != null && t.id!.isNotEmpty) myIds.add(t.id!);
+  }
+  final onTo = toId != null && myIds.contains(toId);
+  final onFrom = fromId != null && myIds.contains(fromId);
+  if (onTo && !onFrom) return true;
+  if (onFrom && !onTo) return false;
+  if (onTo) return true;
+  return false;
 }

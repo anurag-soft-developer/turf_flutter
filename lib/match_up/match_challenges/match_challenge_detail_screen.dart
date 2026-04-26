@@ -12,6 +12,7 @@ import '../../turf/model/turf_model.dart';
 import '../../turf/turf_service.dart';
 import '../matchmaking_service.dart';
 import '../model/team_match_model.dart';
+import 'match_challenges_controller.dart';
 import 'match_challenge_actions_card.dart';
 import 'match_challenge_versus_header.dart';
 
@@ -58,7 +59,13 @@ class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       setState(() => _match = m);
+      _trySyncChallengesList(m);
     });
+  }
+
+  void _trySyncChallengesList(TeamMatchModel updated) {
+    if (!Get.isRegistered<MatchChallengesController>()) return;
+    Get.find<MatchChallengesController>().applyMatchUpdateFromDetail(updated);
   }
 
   void _scheduleActionsChildBusy(bool busy) {
@@ -142,6 +149,7 @@ class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
       return;
     }
     setState(() => _match = updated);
+    _trySyncChallengesList(updated);
     AppSnackbar.success(
       title: action == MatchResponseAction.accept
           ? 'Challenge accepted'
@@ -188,6 +196,7 @@ class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
       return;
     }
     setState(() => _match = updated);
+    _trySyncChallengesList(updated);
     AppSnackbar.success(
       title: 'Time updated',
       message: 'The match time has been saved.',
@@ -240,6 +249,7 @@ class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
       return;
     }
     setState(() => _match = updated);
+    _trySyncChallengesList(updated);
     AppSnackbar.success(
       title: 'Turf updated',
       message: 'The venue has been saved.',
