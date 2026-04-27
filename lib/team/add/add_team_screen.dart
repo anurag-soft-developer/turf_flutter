@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
+// import 'package:google_places_flutter/model/place_type.dart';
 import '../../components/shared/image_input.dart';
+import '../../components/shared/location_autocomplete_field.dart';
 import '../../components/create_turf/section_container.dart';
 import '../../core/models/media_upload_models.dart';
 import '../../components/create_turf/styled_text_field.dart';
@@ -50,8 +51,8 @@ class AddTeamScreen extends StatelessWidget {
               // const SizedBox(height: 24),
               // _PinnedNoticesSection(controller: controller),
               // const SizedBox(height: 24),
-              _RosterSection(controller: controller),
-              const SizedBox(height: 24),
+              // _RosterSection(controller: controller),
+              // const SizedBox(height: 24),
               ImageInput(
                 title: 'Team Logo',
                 icon: Icons.shield,
@@ -163,6 +164,19 @@ class _BasicInfoSection extends StatelessWidget {
           items: TeamGenderCategory.values,
           itemLabel: (g) => g.name.capitalizeFirst!,
           onChanged: (v) => controller.genderCategory.value = v,
+        ),
+        const SizedBox(height: 16),
+        LocationAutocompleteField(
+          controller: controller.addressController,
+          labelText: 'City',
+          hintText: 'Search your team location...',
+          countries: const ['in'],
+          // placeType: PlaceType.cities,
+          onLocationSelected: (address, latitude, longitude) {
+            controller.addressController.text = address;
+            controller.latController.text = latitude?.toString() ?? '';
+            controller.lngController.text = longitude?.toString() ?? '';
+          },
         ),
       ],
     );
@@ -485,34 +499,34 @@ class _SocialLinksSection extends StatelessWidget {
 
 // ── Join Requests ─────────────────────────────────────────────────────────────
 
-class _RosterSection extends StatelessWidget {
-  final AddTeamController controller;
+// class _RosterSection extends StatelessWidget {
+//   final AddTeamController controller;
 
-  const _RosterSection({required this.controller});
+//   const _RosterSection({required this.controller});
 
-  @override
-  Widget build(BuildContext context) {
-    return SectionContainer(
-      title: 'Join Requests',
-      icon: Icons.hourglass_empty_outlined,
-      children: [
-        TurfFormField(
-          controller: controller.maxPendingController,
-          labelText: 'Max pending join requests *',
-          hintText: '0–1000',
-          keyboardType: TextInputType.number,
-          validator: (v) {
-            final n = int.tryParse(v ?? '');
-            if (n == null || n < 0 || n > 1000) {
-              return 'Enter 0–1000';
-            }
-            return null;
-          },
-        ),
-      ],
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return SectionContainer(
+//       title: 'Join Requests',
+//       icon: Icons.hourglass_empty_outlined,
+//       children: [
+//         TurfFormField(
+//           controller: controller.maxPendingController,
+//           labelText: 'Max pending join requests *',
+//           hintText: '0–1000',
+//           keyboardType: TextInputType.number,
+//           validator: (v) {
+//             final n = int.tryParse(v ?? '');
+//             if (n == null || n < 0 || n > 1000) {
+//               return 'Enter 0–1000';
+//             }
+//             return null;
+//           },
+//         ),
+//       ],
+//     );
+//   }
+// }
 
 // ── Styled Dropdown (required value) ──────────────────────────────────────────
 

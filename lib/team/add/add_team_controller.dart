@@ -3,6 +3,7 @@ import 'package:flutter_application_1/core/services/media_upload_service.dart';
 import 'package:get/get.dart';
 
 import '../../core/config/constants.dart';
+import '../../core/models/location_model.dart';
 import '../../core/utils/app_snackbar.dart';
 import '../model/team_model.dart';
 import '../team_service.dart';
@@ -27,6 +28,9 @@ class AddTeamController extends GetxController {
 
   final tagInputController = TextEditingController();
   final noticeInputController = TextEditingController();
+  final addressController = TextEditingController();
+  final latController = TextEditingController();
+  final lngController = TextEditingController();
 
   // ── Reactive state ───────────────────────────────────────────────────────
 
@@ -110,6 +114,11 @@ class AddTeamController extends GetxController {
 
     tags.assignAll(t.tags);
     pinnedNotices.assignAll(t.pinnedNotices);
+    addressController.text = t.location?.address ?? '';
+    if (t.location != null) {
+      latController.text = t.location!.latitude.toString();
+      lngController.text = t.location!.longitude.toString();
+    }
 
     if (t.logo.isNotEmpty) logoImages.add(t.logo);
     coverImages.addAll(t.coverImages);
@@ -129,6 +138,9 @@ class AddTeamController extends GetxController {
     youtubeController.dispose();
     tagInputController.dispose();
     noticeInputController.dispose();
+    addressController.dispose();
+    latController.dispose();
+    lngController.dispose();
     super.onClose();
   }
 
@@ -198,6 +210,20 @@ class AddTeamController extends GetxController {
       ..sort((a, b) => a.index.compareTo(b.index));
   }
 
+  LocationModel? _collectLocation() {
+    final address = addressController.text.trim();
+    final latitude = double.tryParse(latController.text.trim());
+    final longitude = double.tryParse(lngController.text.trim());
+    if (address.isEmpty || latitude == null || longitude == null) return null;
+    return LocationModel(
+      address: address,
+      coordinates: GeoPointModel.fromLngLat(
+        longitude: longitude,
+        latitude: latitude,
+      ),
+    );
+  }
+
   // ── Submit ───────────────────────────────────────────────────────────────
 
   Future<void> submit() async {
@@ -232,6 +258,7 @@ class AddTeamController extends GetxController {
     final playDays = _collectPlayDays();
     final tagsVal = tags.isNotEmpty ? tags.toList() : null;
     final notices = pinnedNotices.isNotEmpty ? pinnedNotices.toList() : null;
+    final location = _collectLocation();
 
     isSubmitting.value = true;
     try {
@@ -256,6 +283,7 @@ class AddTeamController extends GetxController {
             pinnedNotices: notices,
             visibility: visibility.value,
             joinMode: joinMode.value,
+            location: location,
           ),
         );
         if (updated != null) {
@@ -292,6 +320,7 @@ class AddTeamController extends GetxController {
             sportType: sportType.value,
             visibility: visibility.value,
             joinMode: joinMode.value,
+            location: location,
           ),
         );
         if (created != null) {

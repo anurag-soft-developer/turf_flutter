@@ -226,6 +226,11 @@ class TeamDetailScreen extends StatelessWidget {
                                   team: st,
                                 ),
                                 const SizedBox(height: 18),
+                                TeamRecruitmentSettingsCard(
+                                  controller: controller,
+                                  team: st,
+                                ),
+                                const SizedBox(height: 18),
                               ],
                               TeamActionsCard(
                                 isOwner: isOwner,

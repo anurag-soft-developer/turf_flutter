@@ -150,7 +150,7 @@ class TeamInfoSection extends StatelessWidget {
         _InfoItem(
           icon: Icons.location_on_outlined,
           label: 'Location',
-          value: team.location!.address,
+          value: team.location?.address ?? '',
         ),
       );
     }

@@ -164,6 +164,7 @@ class TeamDetailController extends GetxController {
     TeamJoinMode? joinMode,
     bool? lookingForMembers,
     bool? teamOpenForMatch,
+    int? maxPendingJoinRequests,
   }) async {
     final id = _teamId;
     final t = team.value;
@@ -201,6 +202,7 @@ class TeamDetailController extends GetxController {
           joinMode: joinModePatch,
           lookingForMembers: lookingForMembers,
           teamOpenForMatch: teamOpenForMatch,
+          maxPendingJoinRequests: maxPendingJoinRequests,
         ),
       );
       if (updated != null) {
@@ -210,10 +212,7 @@ class TeamDetailController extends GetxController {
           message: 'Team preferences were updated.',
         );
       } else {
-        AppSnackbar.error(
-          title: 'Update failed',
-          message: 'Try again later.',
-        );
+        AppSnackbar.error(title: 'Update failed', message: 'Try again later.');
       }
     } finally {
       isUpdatingTeamSettings.value = false;

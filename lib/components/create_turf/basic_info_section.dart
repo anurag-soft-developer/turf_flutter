@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/components/create_turf/location_section.dart';
+import 'package:flutter_application_1/components/shared/location_autocomplete_field.dart';
 import '../../turf/create/create_turf_controller.dart';
 import 'section_container.dart';
 import 'styled_text_field.dart';
@@ -59,7 +59,14 @@ class BasicInfoSection extends StatelessWidget {
               controller.validateNumber(value, 'Base price', min: 1),
         ),
         const SizedBox(height: 16),
-        LocationSection(),
+        LocationAutocompleteField(
+          controller: controller.addressController,
+          onLocationSelected: (address, latitude, longitude) {
+            controller.addressController.text = address;
+            controller.latController.text = latitude?.toString() ?? '';
+            controller.lngController.text = longitude?.toString() ?? '';
+          },
+        ),
         const SizedBox(height: 16),
         Row(
           children: [
