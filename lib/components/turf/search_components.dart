@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../core/config/constants.dart';
 import '../../turf/feed/turf_list_controller.dart';
+import '../../core/components/bottom_sheets/city_picker_bottom_sheet.dart';
 import '../shared/custom_text_field.dart';
 
 class TurfSearchBar extends StatelessWidget {
@@ -74,20 +75,61 @@ class QuickFiltersRow extends StatelessWidget {
 
   const QuickFiltersRow({super.key, required this.controller});
 
+  void _showCityPickerBottomSheet(BuildContext context) {
+    CityPickerBottomSheet.show(
+      context: context,
+      settings: controller.settings,
+      onChanged: controller.searchTurfs,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      child: Obx(
-        () => Row(
+      child: Obx(() {
+        final city = controller.settings.selectedCityLabel.trim();
+        final firstPart = city.split(',').first.trim();
+        final cityLabel = firstPart.isNotEmpty
+            ? firstPart
+            : city.isNotEmpty
+            ? city
+            : 'Select city';
+
+        return Row(
           children: [
-            // QuickFilterChip(
-            //   label: '4+ Rating',
-            //   isSelected: controller.selectedRating >= 4.0,
-            //   onTap: () => controller.updateRating(
-            //     controller.selectedRating >= 4.0 ? 0.0 : 4.0,
-            //   ),
-            // ),
+            ActionChip(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+              avatar: const Icon(
+                Icons.location_city,
+                size: 16,
+                color: Color(AppColors.primaryColor),
+              ),
+              label: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 140),
+                    child: Text(
+                      cityLabel,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(AppColors.primaryColor),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  const Icon(
+                    Icons.arrow_drop_down,
+                    color: Color(AppColors.primaryColor),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.white,
+              side: const BorderSide(color: Color(AppColors.primaryColor)),
+              onPressed: () => _showCityPickerBottomSheet(context),
+            ),
             const SizedBox(width: 8),
             ...controller.availableSportTypes
                 .take(3)
@@ -102,8 +144,8 @@ class QuickFiltersRow extends StatelessWidget {
                   ),
                 ),
           ],
-        ),
-      ),
+        );
+      }),
     );
   }
 }

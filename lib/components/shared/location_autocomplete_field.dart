@@ -178,7 +178,6 @@ class _LocationAutocompleteFieldState extends State<LocationAutocompleteField> {
           });
         },
         itemClick: (prediction) {
-          _onPredictionSelected(prediction);
           _focusNode.unfocus();
         },
       ),

@@ -159,6 +159,8 @@ class TurfModel {
   final String? createdAt;
   @JsonKey(name: 'updatedAt')
   final String? updatedAt;
+  /// Optional distance from query location in meters.
+  final double? distance;
 
   TurfModel({
     this.id,
@@ -178,6 +180,7 @@ class TurfModel {
     this.totalReviews,
     this.createdAt,
     this.updatedAt,
+    this.distance,
   });
 
   factory TurfModel.fromJson(Map<String, dynamic> json) =>
@@ -203,6 +206,7 @@ class TurfModel {
     int? totalReviews,
     String? createdAt,
     String? updatedAt,
+    double? distance,
   }) {
     return TurfModel(
       id: id ?? this.id,
@@ -222,6 +226,7 @@ class TurfModel {
       totalReviews: totalReviews ?? this.totalReviews,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      distance: distance ?? this.distance,
     );
   }
 

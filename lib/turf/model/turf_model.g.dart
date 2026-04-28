@@ -73,6 +73,7 @@ TurfModel _$TurfModelFromJson(Map<String, dynamic> json) => TurfModel(
   totalReviews: (json['totalReviews'] as num?)?.toInt(),
   createdAt: json['createdAt'] as String?,
   updatedAt: json['updatedAt'] as String?,
+  distance: (json['distance'] as num?)?.toDouble(),
 );
 
 Map<String, dynamic> _$TurfModelToJson(TurfModel instance) => <String, dynamic>{
@@ -93,6 +94,7 @@ Map<String, dynamic> _$TurfModelToJson(TurfModel instance) => <String, dynamic>{
   'totalReviews': instance.totalReviews,
   'createdAt': instance.createdAt,
   'updatedAt': instance.updatedAt,
+  'distance': instance.distance,
 };
 
 CreateTurfRequest _$CreateTurfRequestFromJson(

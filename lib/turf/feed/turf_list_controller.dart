@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 import '../model/turf_model.dart';
 // import '../models/common/paginated_response.dart';
 import '../turf_service.dart';
+import '../../settings/settings_controller.dart';
 
 class TurfListController extends GetxController {
   static TurfListController get instance => Get.find();
 
   final TurfService _turfService = TurfService();
+  final SettingsController settings = Get.find();
 
   // Form controllers
   final TextEditingController searchController = TextEditingController();
@@ -23,7 +25,7 @@ class TurfListController extends GetxController {
   final RxDouble _maxPrice = 5000.0.obs;
   final RxDouble _selectedRating = 0.0.obs;
   // final RxBool _isAvailableOnly = true.obs;
-  final RxString _sortBy = 'averageRating'.obs;
+  final RxString _sortBy = 'distance:asc'.obs;
 
   // Pagination
   final RxInt _currentPage = 1.obs;
@@ -69,12 +71,12 @@ class TurfListController extends GetxController {
     'Food Court',
   ];
 
-  final List<String> sortOptions = [
-    'averageRating',
-    'name',
-    'pricing',
-    'createdAt',
-  ];
+  // final List<String> sortOptions = [
+  //   'distance:asc',
+  //   'name',
+  //   'pricing',
+  //   'createdAt',
+  // ];
 
   @override
   void onInit() {
@@ -130,6 +132,7 @@ class TurfListController extends GetxController {
             : null,
         sportTypes: _selectedSportTypes.isNotEmpty ? _selectedSportTypes : null,
         amenities: _selectedAmenities.isNotEmpty ? _selectedAmenities : null,
+        location: settings.selectedCityLocation.value,
         minPrice: _minPrice.value > 0 ? _minPrice.value : null,
         maxPrice: _maxPrice.value < 5000 ? _maxPrice.value : null,
         // isAvailable: _isAvailableOnly.value,
@@ -230,13 +233,14 @@ class TurfListController extends GetxController {
   // Clear all filters
   void clearFilters() {
     searchController.clear();
+    settings.clearCityLocation();
     _selectedSportTypes.clear();
     _selectedAmenities.clear();
     _minPrice.value = 0.0;
     _maxPrice.value = 5000.0;
     _selectedRating.value = 0.0;
     // _isAvailableOnly.value = true;
-    _sortBy.value = 'averageRating';
+    _sortBy.value = 'distance:asc';
     searchTurfs();
   }
 

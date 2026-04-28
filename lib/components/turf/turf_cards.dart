@@ -100,8 +100,17 @@ class TurfListCard extends StatelessWidget {
 
   const TurfListCard({super.key, required this.turf, required this.controller});
 
+  String _formatDistance(double meters) {
+    if (meters >= 1000) {
+      final km = meters / 1000;
+      return '${km.toStringAsFixed(km >= 10 ? 0 : 1)} km';
+    }
+    return '${meters.round()} m';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final distanceMeters = turf.distance;
     return Card(
       color: Colors.white,
       elevation: 2,
@@ -111,14 +120,14 @@ class TurfListCard extends StatelessWidget {
         onTap: () => controller.navigateToTurfDetail(turf),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(10),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Image
               Container(
-                width: 80,
-                height: 80,
+                width: 90,
+                height: 90,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
                   image: turf.mainImage != null
@@ -134,7 +143,7 @@ class TurfListCard extends StatelessWidget {
                     : null,
               ),
 
-              const SizedBox(width: 16),
+              const SizedBox(width: 8),
 
               // Content
               Expanded(
@@ -173,6 +182,28 @@ class TurfListCard extends StatelessWidget {
 
                     Row(
                       children: [
+                        if (distanceMeters != null) ...[
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.near_me,
+                                size: 14,
+                                color: Colors.grey[600],
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                _formatDistance(distanceMeters),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+
                         if (turf.averageRating != null) ...[
                           const Icon(Icons.star, color: Colors.amber, size: 14),
                           const SizedBox(width: 4),
@@ -187,7 +218,7 @@ class TurfListCard extends StatelessWidget {
                               color: Colors.grey[600],
                             ),
                           ),
-                          const SizedBox(width: 16),
+                          const SizedBox(width: 8),
                         ],
 
                         Text(
