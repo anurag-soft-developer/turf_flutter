@@ -15,47 +15,11 @@ class SplashScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(30),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: const Icon(
-                Icons.security,
-                size: 60,
-                color: Color(AppColors.primaryColor),
-              ),
+            Image.asset(
+              'assets/logos/splash_logo.png',
+              width: 220,
+              fit: BoxFit.contain,
             ),
-            const SizedBox(height: 30),
-
-            Text(
-              AppConstants.appName,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 10),
-
-            // Tagline
-            Text(
-              'Secure Authentication Made Simple',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.8),
-                fontSize: 16,
-              ),
-            ),
-            const SizedBox(height: 50),
 
             // Loading Indicator
             const CircularProgressIndicator(
