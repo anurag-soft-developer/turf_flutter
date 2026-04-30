@@ -17,49 +17,59 @@ class FeaturedTurfCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 4,
+      clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         onTap: () => controller.navigateToTurfDetail(turf),
         borderRadius: BorderRadius.circular(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image
-            Container(
-              height: 120,
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  image: turf.mainImage != null
+                      ? DecorationImage(
+                          image: NetworkImage(turf.mainImage!),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                  color: turf.mainImage == null ? Colors.grey[300] : null,
                 ),
-                image: turf.mainImage != null
-                    ? DecorationImage(
-                        image: NetworkImage(turf.mainImage!),
-                        fit: BoxFit.cover,
+                child: turf.mainImage == null
+                    ? const Center(
+                        child: Icon(
+                          Icons.sports_soccer,
+                          size: 44,
+                          color: Colors.grey,
+                        ),
                       )
                     : null,
-                color: turf.mainImage == null ? Colors.grey[300] : null,
               ),
-              child: turf.mainImage == null
-                  ? const Icon(
-                      Icons.sports_soccer,
-                      size: 40,
-                      color: Colors.grey,
-                    )
-                  : null,
             ),
-
-            // Content
-            Padding(
-              padding: const EdgeInsets.all(12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.92),
+                // boxShadow: [
+                //   BoxShadow(
+                //     color: Colors.black.withValues(alpha: 0.06),
+                //     blurRadius: 6,
+                //     offset: const Offset(0, -1),
+                //   ),
+                // ],
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     turf.displayName,
                     style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black87,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -67,22 +77,26 @@ class FeaturedTurfCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.star, color: Colors.amber, size: 16),
-                      const SizedBox(width: 4),
+                      const Icon(Icons.star, color: Colors.amber, size: 13),
+                      const SizedBox(width: 3),
                       Text(
                         turf.ratingDisplay,
-                        style: const TextStyle(fontSize: 12),
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.black87,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        '₹${turf.pricing?.basePricePerHour ?? 0}/hr',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Color(AppColors.primaryColor),
+                        ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '₹${turf.pricing?.basePricePerHour ?? 0}/hr',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Color(AppColors.primaryColor),
-                    ),
                   ),
                 ],
               ),

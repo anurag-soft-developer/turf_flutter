@@ -21,13 +21,23 @@ class PlayerTeamsSection extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Card(
+          color: Colors.white,
           clipBehavior: Clip.antiAlias,
           child: Column(
             children: [
               ListTile(
-                leading: const Icon(Icons.groups, color: Color(AppColors.primaryColor)),
-                title: const Text('My Teams'),
-                subtitle: const Text('View your teams, or create / join'),
+                leading: const Icon(
+                  Icons.groups,
+                  color: Color(AppColors.primaryColor),
+                ),
+                title: const Text(
+                  'My Teams',
+                  style: TextStyle(color: Color(AppColors.textColor)),
+                ),
+                subtitle: const Text(
+                  'View your teams, or create / join',
+                  style: TextStyle(color: Color(AppColors.textSecondaryColor)),
+                ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Get.toNamed(AppConstants.routes.myTeams),
               ),
@@ -37,8 +47,14 @@ class PlayerTeamsSection extends StatelessWidget {
                   Icons.leaderboard_outlined,
                   color: Color(AppColors.primaryColor),
                 ),
-                title: const Text('Team rankings'),
-                subtitle: const Text('Browse public teams (order is provisional)'),
+                title: const Text(
+                  'Team rankings',
+                  style: TextStyle(color: Color(AppColors.textColor)),
+                ),
+                subtitle: const Text(
+                  'Browse public teams (order is provisional)',
+                  style: TextStyle(color: Color(AppColors.textSecondaryColor)),
+                ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Get.toNamed(AppConstants.routes.teamsRanking),
               ),
