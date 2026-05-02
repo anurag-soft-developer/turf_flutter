@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/config/env_config.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 import '../models/user/user_model.dart';
 import '../config/constants.dart';
 import '../config/api_constants.dart';
 import '../utils/exception_handler.dart';
 import 'api_service.dart';
+import 'auth_storage_service.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthService {
@@ -15,25 +14,23 @@ class AuthService {
   AuthService._internal();
 
   final ApiService _apiService = ApiService();
+  final AuthStorageService _authStorageService = AuthStorageService();
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
 
   Future<UserModel?> getStoredUser() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final userJson = prefs.getString(AppConstants.storageKeys.userData);
-      final isLoggedIn =
-          prefs.getBool(AppConstants.storageKeys.isLoggedIn) ?? false;
-      final token = await _apiService.getStoredToken();
+      final user = await _authStorageService.getUserFromPreferences();
+      final isLoggedIn = await _authStorageService.isLoggedIn();
+      final accessToken = await _authStorageService.getAccessToken();
 
-      if (userJson != null && isLoggedIn && token != null) {
-        final userMap = json.decode(userJson);
-        return UserModel.fromJson(userMap);
+      if (user != null && isLoggedIn && accessToken != null) {
+        return user;
       } else {
-        await clearAuthData();
+        await _authStorageService.clearAuthData();
         return null;
       }
     } catch (e) {
-      await clearAuthData();
+      await _authStorageService.clearAuthData();
       return null;
     }
   }
@@ -62,7 +59,7 @@ class AuthService {
 
     final authResponse = AuthResponse.fromJson(response);
 
-    await _storeAuthData(authResponse);
+    await _authStorageService.storeAuthData(authResponse);
 
     ExceptionHandler.showSuccessToast(AppConstants.successMessages.signup);
     return authResponse.user;
@@ -91,7 +88,7 @@ class AuthService {
     }
 
     final authResponse = AuthResponse.fromJson(response);
-    await _storeAuthData(authResponse);
+    await _authStorageService.storeAuthData(authResponse);
     ExceptionHandler.showSuccessToast(AppConstants.successMessages.login);
     return LoginResult.authenticated(authResponse.user);
   }
@@ -107,7 +104,7 @@ class AuthService {
     );
     if (response == null) return null;
     final authResponse = AuthResponse.fromJson(response);
-    await _storeAuthData(authResponse);
+    await _authStorageService.storeAuthData(authResponse);
     ExceptionHandler.showSuccessToast(AppConstants.successMessages.login);
     return authResponse.user;
   }
@@ -131,7 +128,7 @@ class AuthService {
 
       final authResponse = AuthResponse.fromJson(response);
 
-      await _storeAuthData(authResponse);
+      await _authStorageService.storeAuthData(authResponse);
 
       ExceptionHandler.showSuccessToast('Google Sign-In successful');
       return authResponse.user;
@@ -144,7 +141,7 @@ class AuthService {
 
   Future<void> signOut() async {
     await _apiService.post(ApiConstants.auth.logout);
-    await clearAuthData();
+    await _authStorageService.clearAuthData();
     ExceptionHandler.showSuccessToast(AppConstants.successMessages.logout);
   }
 
@@ -199,7 +196,7 @@ class AuthService {
       return null;
     }
     final updatedUser = UserModel.fromJson(response);
-    await _saveUserToPreferences(updatedUser);
+    await _authStorageService.saveUser(updatedUser);
 
     ExceptionHandler.showSuccessToast(
       AppConstants.successMessages.profileUpdate,
@@ -254,7 +251,7 @@ class AuthService {
     );
     if (response == null) return null;
     final updatedUser = UserModel.fromJson(response);
-    await _saveUserToPreferences(updatedUser);
+    await _authStorageService.saveUser(updatedUser);
     return updatedUser;
   }
 
@@ -265,68 +262,14 @@ class AuthService {
 
     if (response != null) {
       final user = UserModel.fromJson(response);
-      await _saveUserToPreferences(user);
+      await _authStorageService.saveUser(user);
       return user;
     }
     return null;
   }
 
-  // Store authentication data
-  Future<void> _storeAuthData(AuthResponse authResponse) async {
-    await _apiService.storeToken(authResponse.accessToken);
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('refresh_token', authResponse.refreshToken);
-
-    await _saveUserToPreferences(authResponse.user);
-  }
-
   /// Persist user JSON after profile or settings PATCH responses.
   Future<void> persistUser(UserModel user) async {
-    await _saveUserToPreferences(user);
-  }
-
-  // Save user to preferences
-  Future<void> _saveUserToPreferences(UserModel user) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(
-        AppConstants.storageKeys.userData,
-        json.encode(user.toJson()),
-      );
-      await prefs.setBool(AppConstants.storageKeys.isLoggedIn, true);
-    } catch (e) {
-      // Handle preference save error
-    }
-  }
-
-  // Clear all authentication data
-  Future<void> clearAuthData() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(AppConstants.storageKeys.userData);
-      await prefs.remove('refresh_token');
-      await prefs.setBool(AppConstants.storageKeys.isLoggedIn, false);
-
-      await _apiService.removeToken();
-    } catch (e) {
-      // Handle clear error
-    }
-  }
-
-  // Get user from preferences
-  Future<UserModel?> getUserFromPreferences() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final userJson = prefs.getString(AppConstants.storageKeys.userData);
-
-      if (userJson != null) {
-        final userMap = json.decode(userJson);
-        return UserModel.fromJson(userMap);
-      }
-      return null;
-    } catch (e) {
-      return null;
-    }
+    await _authStorageService.saveUser(user);
   }
 }

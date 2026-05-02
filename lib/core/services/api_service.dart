@@ -1,9 +1,9 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/utils/exception_handler.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
 import '../config/api_constants.dart';
-import '../config/constants.dart';
+import 'auth_storage_service.dart';
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
@@ -13,6 +13,10 @@ class ApiService {
   // The 'late' keyword with an assignment acts lazily.
   // It won't run this code until someone calls 'ApiService().dio'
   late final Dio _dio = _setupDio();
+  late final Dio _refreshDio = _setupRefreshDio();
+  final AuthStorageService _authStorageService = AuthStorageService();
+  bool _isRefreshing = false;
+  Completer<bool>? _refreshCompleter;
 
   Dio _setupDio() {
     final dioInstance = Dio(
@@ -28,7 +32,7 @@ class ApiService {
       InterceptorsWrapper(
         onRequest: (options, handler) async {
           // Add authorization token
-          final token = await getStoredToken();
+          final token = await _authStorageService.getAccessToken();
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
           }
@@ -48,6 +52,45 @@ class ApiService {
 
           handler.next(options);
         },
+        onError: (err, handler) async {
+          final statusCode = err.response?.statusCode;
+          final requestOptions = err.requestOptions;
+          final isUnauthorized = statusCode == 401;
+          final isRefreshRequest =
+              requestOptions.path == ApiConstants.auth.refreshToken;
+          final hasRetried = requestOptions.extra['retryWithRefresh'] == true;
+
+          if (!isUnauthorized || isRefreshRequest || hasRetried) {
+            handler.next(err);
+            return;
+          }
+
+          final refreshSuccess = await _refreshTokenWithLock();
+          if (!refreshSuccess) {
+            handler.next(err);
+            return;
+          }
+
+          final newToken = await _authStorageService.getAccessToken();
+          if (newToken == null || newToken.isEmpty) {
+            handler.next(err);
+            return;
+          }
+
+          requestOptions.headers['Authorization'] = 'Bearer $newToken';
+          requestOptions.extra['retryWithRefresh'] = true;
+
+          try {
+            final retryResponse = await _dio.fetch<dynamic>(requestOptions);
+            handler.resolve(retryResponse);
+          } catch (retryError) {
+            if (retryError is DioException) {
+              handler.next(retryError);
+              return;
+            }
+            handler.next(err);
+          }
+        },
       ),
     );
 
@@ -63,6 +106,75 @@ class ApiService {
     );
 
     return dioInstance;
+  }
+
+  Dio _setupRefreshDio() {
+    return Dio(
+      BaseOptions(
+        baseUrl: ApiConstants.baseUrl,
+        connectTimeout: ApiConstants.connectTimeout,
+        receiveTimeout: ApiConstants.requestTimeout,
+        headers: ApiConstants.defaultHeaders,
+      ),
+    );
+  }
+
+  Future<bool> _refreshTokenWithLock() async {
+    if (_isRefreshing) {
+      final completer = _refreshCompleter;
+      if (completer == null) return false;
+      return completer.future;
+    }
+
+    _isRefreshing = true;
+    _refreshCompleter = Completer<bool>();
+
+    try {
+      final success = await _refreshAccessToken();
+      _refreshCompleter?.complete(success);
+      return success;
+    } catch (_) {
+      _refreshCompleter?.complete(false);
+      return false;
+    } finally {
+      _isRefreshing = false;
+      _refreshCompleter = null;
+    }
+  }
+
+  Future<bool> _refreshAccessToken() async {
+    try {
+      final refreshToken = await _authStorageService.getRefreshToken();
+
+      if (refreshToken == null || refreshToken.isEmpty) {
+        await _authStorageService.clearAuthData();
+        return false;
+      }
+
+      final response = await _refreshDio.post<Map<String, dynamic>>(
+        ApiConstants.auth.refreshToken,
+        data: {'refreshToken': refreshToken},
+      );
+
+      final data = response.data;
+      final newAccessToken = data?['accessToken'] as String?;
+      final newRefreshToken = data?['refreshToken'] as String?;
+
+      if (newAccessToken == null || newAccessToken.isEmpty) {
+        await _authStorageService.clearAuthData();
+        return false;
+      }
+
+      await _authStorageService.setAccessToken(newAccessToken);
+      if (newRefreshToken != null && newRefreshToken.isNotEmpty) {
+        await _authStorageService.setRefreshToken(newRefreshToken);
+      }
+
+      return true;
+    } catch (_) {
+      await _authStorageService.clearAuthData();
+      return false;
+    }
   }
 
   Future<T?> post<T>(
@@ -206,35 +318,6 @@ class ApiService {
     } else {
       // For primitive values, return as-is (including null)
       return data;
-    }
-  }
-
-  Future<String?> getStoredToken() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      return prefs.getString(AppConstants.storageKeys.userToken);
-    } catch (e) {
-      return null;
-    }
-  }
-
-  Future<bool> storeToken(String token) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(AppConstants.storageKeys.userToken, token);
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  Future<bool> removeToken() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(AppConstants.storageKeys.userToken);
-      return true;
-    } catch (e) {
-      return false;
     }
   }
 }

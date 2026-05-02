@@ -67,7 +67,8 @@ class Routes {
 class StorageKeys {
   const StorageKeys();
 
-  final String userToken = 'user_token';
+  final String accessToken = 'access_token';
+  final String refreshToken = 'refresh_token';
   final String userData = 'user_data';
   final String isLoggedIn = 'is_logged_in';
 }
