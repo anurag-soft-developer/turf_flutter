@@ -6,6 +6,80 @@ export 'player_stats_models.dart';
 
 part 'user_model.g.dart';
 
+/// Backend `NotificationModule` string values (`turfBooking`, `matchmaking`).
+enum NotificationModule {
+  turfBooking,
+  matchmaking,
+}
+
+extension NotificationModuleApi on NotificationModule {
+  /// JSON object key sent to the API for [notificationModules].
+  String get apiKey => switch (this) {
+        NotificationModule.turfBooking => 'turfBooking',
+        NotificationModule.matchmaking => 'matchmaking',
+      };
+}
+
+NotificationModule? notificationModuleFromApiString(String key) {
+  switch (key) {
+    case 'turfBooking':
+      return NotificationModule.turfBooking;
+    case 'matchmaking':
+      return NotificationModule.matchmaking;
+    default:
+      return null;
+  }
+}
+
+Map<NotificationModule, bool>? notificationModulesFromJson(Object? json) {
+  if (json == null) return null;
+  if (json is! Map) return null;
+  final out = <NotificationModule, bool>{};
+  json.forEach((key, value) {
+    final k = key?.toString();
+    if (k == null || value is! bool) return;
+    final mod = notificationModuleFromApiString(k);
+    if (mod != null) out[mod] = value;
+  });
+  return out;
+}
+
+Object? notificationModulesToJson(Map<NotificationModule, bool>? map) {
+  if (map == null) return null;
+  return {for (final e in map.entries) e.key.apiKey: e.value};
+}
+
+/// Registered FCM device entry (also used in [UserModel.fcmTokens]).
+@JsonSerializable()
+class FcmTokenEntry {
+  final String deviceKey;
+  final String token;
+  final String? platform;
+  @JsonKey(name: 'updatedAt')
+  final String? updatedAt;
+
+  const FcmTokenEntry({
+    required this.deviceKey,
+    required this.token,
+    this.platform,
+    this.updatedAt,
+  });
+
+  factory FcmTokenEntry.fromJson(Map<String, dynamic> json) =>
+      _$FcmTokenEntryFromJson(json);
+
+  Map<String, dynamic> toJson() => _$FcmTokenEntryToJson(this);
+
+  DateTime? get updatedAtDate {
+    if (updatedAt == null || updatedAt!.isEmpty) return null;
+    try {
+      return DateTime.parse(updatedAt!);
+    } catch (_) {
+      return null;
+    }
+  }
+}
+
 @JsonSerializable(explicitToJson: true)
 class UserModel {
   @JsonKey(name: '_id')
@@ -41,6 +115,12 @@ class UserModel {
   final bool? emailNotificationsEnabled;
   @JsonKey(name: 'smsNotificationsEnabled')
   final bool? smsNotificationsEnabled;
+  @JsonKey(name: 'notificationsEnabled')
+  final bool? notificationsEnabled;
+  @JsonKey(name: 'notificationModules', fromJson: notificationModulesFromJson, toJson: notificationModulesToJson)
+  final Map<NotificationModule, bool>? notificationModules;
+  @JsonKey(name: 'fcmTokens', defaultValue: [])
+  final List<FcmTokenEntry> fcmTokens;
 
   UserModel({
     this.id,
@@ -62,6 +142,9 @@ class UserModel {
     this.twoFactorEnabled,
     this.emailNotificationsEnabled,
     this.smsNotificationsEnabled,
+    this.notificationsEnabled,
+    this.notificationModules,
+    this.fcmTokens = const [],
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) =>
@@ -89,6 +172,9 @@ class UserModel {
     bool? twoFactorEnabled,
     bool? emailNotificationsEnabled,
     bool? smsNotificationsEnabled,
+    bool? notificationsEnabled,
+    Map<NotificationModule, bool>? notificationModules,
+    List<FcmTokenEntry>? fcmTokens,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -112,6 +198,8 @@ class UserModel {
           emailNotificationsEnabled ?? this.emailNotificationsEnabled,
       smsNotificationsEnabled:
           smsNotificationsEnabled ?? this.smsNotificationsEnabled,
+      notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+      notificationModules: notificationModules ?? this.notificationModules,
     );
   }
 
@@ -280,3 +368,4 @@ class GoogleSignInRequest {
 
   Map<String, dynamic> toJson() => _$GoogleSignInRequestToJson(this);
 }
+

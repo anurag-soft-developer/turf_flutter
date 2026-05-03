@@ -170,12 +170,16 @@ class AuthStateController extends GetxController {
   Future<bool> updateNotificationSettings({
     bool? emailNotificationsEnabled,
     bool? smsNotificationsEnabled,
+    bool? notificationsEnabled,
+    Map<NotificationModule, bool>? notificationModules,
   }) async {
     _updatingNotificationSettings.value = true;
     try {
       final updated = await _userService.updateNotificationSettings(
         emailNotificationsEnabled: emailNotificationsEnabled,
         smsNotificationsEnabled: smsNotificationsEnabled,
+        notificationsEnabled: notificationsEnabled,
+        notificationModules: notificationModules,
       );
       if (updated != null) {
         _user.value = updated;

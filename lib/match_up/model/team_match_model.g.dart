@@ -196,7 +196,7 @@ Map<String, dynamic> _$SendMatchRequestToJson(SendMatchRequest instance) =>
       'fromTeamId': instance.fromTeamId,
       'toTeamId': instance.toTeamId,
       'notes': ?instance.notes,
-      'expiresInMinutes': instance.expiresInMinutes,
+      'expiresInMinutes': ?instance.expiresInMinutes,
     };
 
 SetTeamOpenForMatchRequest _$SetTeamOpenForMatchRequestFromJson(
@@ -335,28 +335,6 @@ Map<String, dynamic> _$CancelNegotiationRequestToJson(
   'reason': ?instance.reason,
 };
 
-RecordMatchResultRequest _$RecordMatchResultRequestFromJson(
-  Map<String, dynamic> json,
-) => RecordMatchResultRequest(
-  actorTeamId: json['actorTeamId'] as String,
-  outcome: $enumDecode(_$MatchResultOutcomeEnumMap, json['outcome']),
-  winnerTeam: json['winnerTeam'] as String?,
-);
-
-Map<String, dynamic> _$RecordMatchResultRequestToJson(
-  RecordMatchResultRequest instance,
-) => <String, dynamic>{
-  'actorTeamId': instance.actorTeamId,
-  'outcome': _$MatchResultOutcomeEnumMap[instance.outcome]!,
-  'winnerTeam': ?instance.winnerTeam,
-};
-
-const _$MatchResultOutcomeEnumMap = {
-  MatchResultOutcome.ongoing: 'ongoing',
-  MatchResultOutcome.completed: 'completed',
-  MatchResultOutcome.draw: 'draw',
-};
-
 UpdateTeamMatchRequest _$UpdateTeamMatchRequestFromJson(
   Map<String, dynamic> json,
 ) => UpdateTeamMatchRequest(
@@ -377,4 +355,26 @@ Map<String, dynamic> _$UpdateTeamMatchRequestToJson(
   'slot': ?instance.slot?.toJson(),
   'turfId': ?instance.turfId,
   'selfAcceptTeamId': ?instance.selfAcceptTeamId,
+};
+
+RecordMatchResultRequest _$RecordMatchResultRequestFromJson(
+  Map<String, dynamic> json,
+) => RecordMatchResultRequest(
+  actorTeamId: json['actorTeamId'] as String,
+  outcome: $enumDecode(_$MatchResultOutcomeEnumMap, json['outcome']),
+  winnerTeam: json['winnerTeam'] as String?,
+);
+
+Map<String, dynamic> _$RecordMatchResultRequestToJson(
+  RecordMatchResultRequest instance,
+) => <String, dynamic>{
+  'actorTeamId': instance.actorTeamId,
+  'outcome': _$MatchResultOutcomeEnumMap[instance.outcome]!,
+  'winnerTeam': ?instance.winnerTeam,
+};
+
+const _$MatchResultOutcomeEnumMap = {
+  MatchResultOutcome.ongoing: 'ongoing',
+  MatchResultOutcome.completed: 'completed',
+  MatchResultOutcome.draw: 'draw',
 };

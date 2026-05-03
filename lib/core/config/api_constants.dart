@@ -12,6 +12,7 @@ class ApiConstants {
   static const teamMember = TeamMemberEndpoints();
   static const teamMembershipSelf = TeamMembershipSelfEndpoints();
   static const matchmaking = MatchmakingEndpoints();
+  static const notifications = NotificationEndpoints();
   static const storage = StorageEndpoints();
 
   // Headers
@@ -48,6 +49,7 @@ class UserEndpoints {
   String get profile => '/users/profile';
   String get updateProfile => '/users/profile';
   String get notificationSettings => '/users/notification-settings';
+  String get fcmTokens => '/users/fcm-tokens';
   String get publicProfiles => '/users/profiles';
   String publicProfileByIdentifier(String identifier) =>
       '/users/profile/$identifier';
@@ -131,6 +133,17 @@ class TeamMembershipSelfEndpoints {
   const TeamMembershipSelfEndpoints();
 
   String get myMemberships => '/team-members/me';
+}
+
+/// `GET/PATCH/DELETE /notifications/*` — JWT required.
+class NotificationEndpoints {
+  const NotificationEndpoints();
+
+  String get base => '/notifications';
+  String get markAllRead => '/notifications/mark-all-read';
+  String get deleteAll => '/notifications/all';
+  String byId(String id) => '/notifications/$id';
+  String markRead(String id) => '/notifications/$id/read';
 }
 
 /// `GET/POST /matchmaking/*` — JWT required.

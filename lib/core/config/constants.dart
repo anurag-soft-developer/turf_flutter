@@ -28,6 +28,8 @@ class Routes {
   final String dashboard = '/dashboard';
   final String profile = '/profile';
   final String settings = '/settings';
+  final String manageNotifications = '/manage-notifications';
+  final String notifications = '/notifications';
   final String about = '/about';
   final String helpSupport = '/help-support';
   final String termsOfService = '/terms-of-service';

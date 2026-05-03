@@ -220,9 +220,7 @@ class SettingsScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _NotificationsSettingsSection(
-                        authController: authController,
-                      ),
+                      _ManageNotificationsEntry(),
                       const SizedBox(height: 32),
                       // Loop through setting sections
                       ...settingSections.map(
@@ -371,101 +369,53 @@ class SettingsScreen extends StatelessWidget {
   }
 }
 
-class _NotificationsSettingsSection extends StatelessWidget {
-  const _NotificationsSettingsSection({required this.authController});
-
-  final AuthStateController authController;
-
+class _ManageNotificationsEntry extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Obx(() {
-      final user = authController.user;
-      final busy = authController.notificationSettingsUpdating.value;
-      final emailOn = user?.emailNotificationsEnabled ?? true;
-      final smsOn = user?.smsNotificationsEnabled ?? false;
-
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Notifications',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Color(AppColors.textColor),
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Notifications',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Color(AppColors.textColor),
           ),
-          const SizedBox(height: 16),
-          Card(
-            elevation: 1,
-            color: const Color(AppColors.surfaceColor),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              children: [
-                SwitchListTile(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 4,
-                  ),
-                  secondary: const Icon(
-                    Icons.email_outlined,
-                    color: Color(AppColors.primaryColor),
-                  ),
-                  title: const Text(
-                    'Email notifications',
-                    style: TextStyle(color: Color(AppColors.textColor)),
-                  ),
-                  subtitle: const Text(
-                    'Booking updates, reminders, and account alerts',
-                    style: TextStyle(
-                      color: Color(AppColors.textSecondaryColor),
-                    ),
-                  ),
-                  value: emailOn,
-                  onChanged: busy
-                      ? null
-                      : (enabled) {
-                          authController.updateNotificationSettings(
-                            emailNotificationsEnabled: enabled,
-                          );
-                        },
-                ),
-                const Divider(height: 1, color: Color(AppColors.dividerColor)),
-                SwitchListTile(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 4,
-                  ),
-                  secondary: const Icon(
-                    Icons.sms_outlined,
-                    color: Color(AppColors.primaryColor),
-                  ),
-                  title: const Text(
-                    'SMS notifications',
-                    style: TextStyle(color: Color(AppColors.textColor)),
-                  ),
-                  subtitle: const Text(
-                    'Text messages for important alerts',
-                    style: TextStyle(
-                      color: Color(AppColors.textSecondaryColor),
-                    ),
-                  ),
-                  value: smsOn,
-                  onChanged: busy
-                      ? null
-                      : (enabled) {
-                          authController.updateNotificationSettings(
-                            smsNotificationsEnabled: enabled,
-                          );
-                        },
-                ),
-              ],
-            ),
+        ),
+        const SizedBox(height: 16),
+        Card(
+          elevation: 1,
+          color: const Color(AppColors.surfaceColor),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
-        ],
-      );
-    });
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 8,
+            ),
+            leading: const Icon(
+              Icons.notifications_outlined,
+              color: Color(AppColors.primaryColor),
+            ),
+            title: const Text(
+              'Manage notifications',
+              style: TextStyle(color: Color(AppColors.textColor)),
+            ),
+            subtitle: const Text(
+              'Push, SMS, email, and alerts by topic',
+              style: TextStyle(color: Color(AppColors.textSecondaryColor)),
+            ),
+            trailing: const Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: Color(AppColors.textSecondaryColor),
+            ),
+            onTap: () => Get.toNamed(AppConstants.routes.manageNotifications),
+          ),
+        ),
+      ],
+    );
   }
 }

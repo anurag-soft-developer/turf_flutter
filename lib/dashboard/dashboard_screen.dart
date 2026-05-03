@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/core/utils/app_snackbar.dart';
 import 'package:get/get.dart';
 import '../settings/settings_controller.dart';
 import '../components/shared/app_drawer.dart';
@@ -48,13 +47,9 @@ class DashboardScreen extends StatelessWidget {
       elevation: 0,
       actions: [
         IconButton(
-          onPressed: () {
-            AppSnackbar.info(
-              title: 'Notifications',
-              message: 'Comming soon! Stay tuned for updates.',
-            );
-          },
+          onPressed: () => Get.toNamed(AppConstants.routes.notifications),
           icon: const Icon(Icons.notifications),
+          tooltip: 'Notifications',
         ),
       ],
     );

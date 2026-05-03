@@ -13,6 +13,8 @@ class UserService {
   Future<UserModel?> updateNotificationSettings({
     bool? emailNotificationsEnabled,
     bool? smsNotificationsEnabled,
+    bool? notificationsEnabled,
+    Map<NotificationModule, bool>? notificationModules,
   }) async {
     final data = <String, dynamic>{};
     if (emailNotificationsEnabled != null) {
@@ -21,11 +23,29 @@ class UserService {
     if (smsNotificationsEnabled != null) {
       data['smsNotificationsEnabled'] = smsNotificationsEnabled;
     }
+    if (notificationsEnabled != null) {
+      data['notificationsEnabled'] = notificationsEnabled;
+    }
+    if (notificationModules != null) {
+      data['notificationModules'] = {
+        for (final e in notificationModules.entries) e.key.apiKey: e.value,
+      };
+    }
     if (data.isEmpty) return null;
 
     final response = await _apiService.patch<Map<String, dynamic>>(
       ApiConstants.user.notificationSettings,
       data: data,
+    );
+    if (response == null) return null;
+    return UserModel.fromJson(response);
+  }
+
+  /// Merges or updates a single device by [FcmTokenEntry.deviceKey].
+  Future<UserModel?> upsertFcmDevice(FcmTokenEntry device) async {
+    final response = await _apiService.patch<Map<String, dynamic>>(
+      ApiConstants.user.fcmTokens,
+      data: device.toJson(),
     );
     if (response == null) return null;
     return UserModel.fromJson(response);

@@ -6,6 +6,22 @@ part of 'user_model.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
+FcmTokenEntry _$FcmTokenEntryFromJson(Map<String, dynamic> json) =>
+    FcmTokenEntry(
+      deviceKey: json['deviceKey'] as String,
+      token: json['token'] as String,
+      platform: json['platform'] as String?,
+      updatedAt: json['updatedAt'] as String?,
+    );
+
+Map<String, dynamic> _$FcmTokenEntryToJson(FcmTokenEntry instance) =>
+    <String, dynamic>{
+      'deviceKey': instance.deviceKey,
+      'token': instance.token,
+      'platform': instance.platform,
+      'updatedAt': instance.updatedAt,
+    };
+
 UserModel _$UserModelFromJson(Map<String, dynamic> json) => UserModel(
   id: json['_id'] as String?,
   email: json['email'] as String?,
@@ -34,6 +50,13 @@ UserModel _$UserModelFromJson(Map<String, dynamic> json) => UserModel(
   twoFactorEnabled: json['twoFactorEnabled'] as bool?,
   emailNotificationsEnabled: json['emailNotificationsEnabled'] as bool?,
   smsNotificationsEnabled: json['smsNotificationsEnabled'] as bool?,
+  notificationsEnabled: json['notificationsEnabled'] as bool?,
+  notificationModules: notificationModulesFromJson(json['notificationModules']),
+  fcmTokens:
+      (json['fcmTokens'] as List<dynamic>?)
+          ?.map((e) => FcmTokenEntry.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      [],
 );
 
 Map<String, dynamic> _$UserModelToJson(UserModel instance) => <String, dynamic>{
@@ -56,6 +79,11 @@ Map<String, dynamic> _$UserModelToJson(UserModel instance) => <String, dynamic>{
   'twoFactorEnabled': instance.twoFactorEnabled,
   'emailNotificationsEnabled': instance.emailNotificationsEnabled,
   'smsNotificationsEnabled': instance.smsNotificationsEnabled,
+  'notificationsEnabled': instance.notificationsEnabled,
+  'notificationModules': notificationModulesToJson(
+    instance.notificationModules,
+  ),
+  'fcmTokens': instance.fcmTokens.map((e) => e.toJson()).toList(),
 };
 
 AuthResponse _$AuthResponseFromJson(Map<String, dynamic> json) => AuthResponse(
