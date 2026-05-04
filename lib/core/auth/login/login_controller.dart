@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../config/constants.dart';
+import '../../routes/app_routes.dart';
 import '../auth_state_controller.dart';
 
 class LoginController extends GetxController {
@@ -47,7 +48,7 @@ class LoginController extends GetxController {
       if (result?.user != null) {
         _authStateController.setUser(result!.user!);
         _clearControllers();
-        Get.offAllNamed(AppConstants.routes.dashboard);
+        Get.offAllNamed(AppRoutes.mainRoute);
       } else if (result?.requiresOtp == true && result?.otpChallenge != null) {
         final challenge = result!.otpChallenge!;
         pendingOtpChallenge.value = challenge;
@@ -85,7 +86,7 @@ class LoginController extends GetxController {
         pendingOtpChallenge.value = null;
         _clearControllers();
         otpController.clear();
-        Get.offAllNamed(AppConstants.routes.dashboard);
+        Get.offAllNamed(AppRoutes.mainRoute);
       }
 
       _isLoading.value = false;

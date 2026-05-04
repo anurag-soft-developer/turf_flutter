@@ -40,9 +40,15 @@ final List<NavTab> kNavTabs = [
     activeIcon: Icons.dashboard,
     label: 'Dashboard',
     screenBuilder: () => const DashboardScreen(),
-    loadController: () =>
-        _ensure<SettingsController>(() => SettingsController()),
-    disposeController: () => _dispose<SettingsController>(),
+    loadController: () {
+      _ensure<SettingsController>(() => SettingsController());
+      // Player dashboard uses FeaturedTurfsSection → Get.find<TurfListController>()
+      _ensure<TurfListController>(() => TurfListController());
+    },
+    disposeController: () {
+      _dispose<SettingsController>();
+      _dispose<TurfListController>();
+    },
   ),
   NavTab(
     icon: Icons.grass_outlined,

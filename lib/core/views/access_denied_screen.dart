@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../config/constants.dart';
+import '../routes/app_routes.dart';
 import '../../components/shared/custom_button.dart';
 
 class AccessDeniedScreen extends StatelessWidget {
@@ -75,7 +76,7 @@ class AccessDeniedScreen extends StatelessWidget {
                           if (navigator != null && navigator.canPop()) {
                             Get.back();
                           } else {
-                            Get.offAllNamed(AppConstants.routes.dashboard);
+                            Get.offAllNamed(AppRoutes.mainRoute);
                           }
                         },
                       ),
@@ -88,7 +89,7 @@ class AccessDeniedScreen extends StatelessWidget {
                       width: double.infinity,
                       child: OutlinedButton(
                         onPressed: () {
-                          Get.offAllNamed(AppConstants.routes.dashboard);
+                          Get.offAllNamed(AppRoutes.mainRoute);
                         },
                         style: OutlinedButton.styleFrom(
                           foregroundColor: const Color(AppColors.primaryColor),

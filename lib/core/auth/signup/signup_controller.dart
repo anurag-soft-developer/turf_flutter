@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../config/constants.dart';
+import '../../routes/app_routes.dart';
 import '../auth_state_controller.dart';
 
 class SignupController extends GetxController {
@@ -52,7 +53,7 @@ class SignupController extends GetxController {
       if (result != null) {
         _authStateController.setUser(result);
         _clearControllers();
-        Get.offAllNamed(AppConstants.routes.dashboard);
+        Get.offAllNamed(AppRoutes.mainRoute);
       }
 
       _isLoading.value = false;

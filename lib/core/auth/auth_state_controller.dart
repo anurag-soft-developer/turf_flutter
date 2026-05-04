@@ -3,6 +3,7 @@ import '../services/auth_service.dart';
 import '../services/user_service.dart';
 import '../models/user/user_model.dart';
 import '../config/constants.dart';
+import '../routes/app_routes.dart';
 
 class AuthStateController extends GetxController {
   static AuthStateController get instance => Get.find();
@@ -36,7 +37,7 @@ class AuthStateController extends GetxController {
       _user.value = storedUser;
       _isLoggedIn.value = true;
       if (Get.currentRoute == '/') {
-        Get.offAllNamed(AppConstants.routes.dashboard);
+        Get.offAllNamed(AppRoutes.mainRoute);
       }
     }
 
@@ -119,7 +120,7 @@ class AuthStateController extends GetxController {
 
     if (result != null) {
       setUser(result);
-      Get.offAllNamed(AppConstants.routes.dashboard);
+      Get.offAllNamed(AppRoutes.mainRoute);
     }
 
     _isLoading.value = false;
