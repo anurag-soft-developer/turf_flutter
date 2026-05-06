@@ -36,21 +36,7 @@ class NavigationController extends GetxController {
   }
 
   void _loadControllerForCurrentTab() {
-    _cleanupPreviousControllers();
     activeTabs[_currentIndex.value].loadController?.call();
-  }
-
-  void _cleanupPreviousControllers() {
-    try {
-      for (final tab in kNavTabs) {
-        tab.disposeController?.call();
-      }
-      for (final tab in kProprietorNavTabs) {
-        tab.disposeController?.call();
-      }
-    } catch (e) {
-      // Controllers might already be disposed
-    }
   }
 
   @override

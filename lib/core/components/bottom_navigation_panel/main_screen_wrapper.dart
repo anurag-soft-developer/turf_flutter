@@ -17,7 +17,10 @@ class MainScreenWrapper extends StatelessWidget {
       body: Obx(() {
         final tabs = navTabsForMode(settingsController.currentMode.value);
         final safeIndex = navController.currentIndex.clamp(0, tabs.length - 1);
-        return tabs[safeIndex].screenBuilder();
+        return IndexedStack(
+          index: safeIndex,
+          children: tabs.map((tab) => tab.screenBuilder()).toList(),
+        );
       }),
       bottomNavigationBar: Obx(
         () {
