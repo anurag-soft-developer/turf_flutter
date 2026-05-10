@@ -21,6 +21,15 @@ class MatchmakingService {
     return TeamMatchModel.fromJson(response);
   }
 
+  /// `GET /matchmaking/requests/:id`
+  Future<TeamMatchModel?> getTeamMatchById(String matchId) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiConstants.matchmaking.requestById(matchId),
+    );
+    if (response == null) return null;
+    return TeamMatchModel.fromJson(response);
+  }
+
   /// `GET /matchmaking/requests`
   Future<PaginatedResponse<TeamMatchModel>?> listRequests(
     ListNegotiationsFilterQuery query,

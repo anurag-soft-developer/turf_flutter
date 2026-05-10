@@ -13,6 +13,7 @@ class ApiConstants {
   static const teamMembershipSelf = TeamMembershipSelfEndpoints();
   static const matchmaking = MatchmakingEndpoints();
   static const notifications = NotificationEndpoints();
+  static const scoring = ScoringEndpoints();
   static const storage = StorageEndpoints();
 
   // Headers
@@ -157,6 +158,9 @@ class MatchmakingEndpoints {
 
   String get requests => '/matchmaking/requests';
 
+  /// `GET` — single match (same populate shape as list entries).
+  String requestById(String id) => '/matchmaking/requests/$id';
+
   String updateById(String id) => '/matchmaking/requests/$id';
 
   String requestRespond(String id) => '/matchmaking/requests/$id/respond';
@@ -177,6 +181,43 @@ class MatchmakingEndpoints {
 
   String requestMatchResult(String id) =>
       '/matchmaking/requests/$id/match-result';
+
+  /// `GET ?actorTeamId=` / `POST` `PATCH` `DELETE` — same path; mutations send body.
+  String announcedPlayers(String matchId) =>
+      '/matchmaking/$matchId/announced-players';
+}
+
+/// `POST/GET /scoring/*` — JWT required.
+///
+/// Live updates flow over HTTP from Flutter → turf-services. The turf service
+/// then notifies realtime-turf-services over HTTP, which broadcasts via socket.
+class ScoringEndpoints {
+  const ScoringEndpoints();
+
+  // Cricket — scoring state lives on `TeamMatch`; id is team match id.
+  String cricketSession(String teamMatchId) =>
+      '/scoring/cricket/matches/$teamMatchId';
+  String cricketCreateSession(String teamMatchId) =>
+      '/scoring/cricket/matches/$teamMatchId/session';
+  /// Append one delivery (`POST`).
+  String cricketSessionBalls(String teamMatchId) =>
+      '/scoring/cricket/matches/$teamMatchId/balls';
+
+  /// Paginated over documents (`GET`).
+  String cricketSessionOvers(String teamMatchId) =>
+      '/scoring/cricket/matches/$teamMatchId/overs';
+  String cricketSessionPoints(String teamMatchId) =>
+      '/scoring/cricket/matches/$teamMatchId/points';
+
+  // Football
+  String footballSession(String teamMatchId) =>
+      '/scoring/football/matches/$teamMatchId';
+  String footballCreateSession(String teamMatchId) =>
+      '/scoring/football/matches/$teamMatchId/session';
+  String footballSessionEvents(String teamMatchId) =>
+      '/scoring/football/matches/$teamMatchId/events';
+  String footballSessionPoints(String teamMatchId) =>
+      '/scoring/football/matches/$teamMatchId/points';
 }
 
 /// Presigned uploads (DigitalOcean Spaces).

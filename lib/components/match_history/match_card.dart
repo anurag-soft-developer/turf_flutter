@@ -255,6 +255,8 @@ class MatchCard extends StatelessWidget {
         return 'Expired';
       case TeamMatchStatus.ongoing:
         return 'Ongoing';
+      case TeamMatchStatus.abandoned:
+        return 'Abandoned';
     }
   }
 

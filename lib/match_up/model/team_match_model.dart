@@ -2,11 +2,14 @@ import 'package:json_annotation/json_annotation.dart';
 
 import '../../core/models/team/team_ref_converter.dart';
 import '../../core/models/team/team_ref_field_instance.dart';
+import '../../core/models/user_field_converters.dart';
+import '../../core/models/user_field_instance.dart';
 import '../../core/models/turf_booking/turf_booking_ref_converter.dart';
 import '../../core/models/turf_booking/turf_booking_ref_field_instance.dart';
 import '../../core/models/turf_field_converter.dart';
 import '../../core/models/turf_field_instance.dart';
 import '../../team/model/team_model.dart';
+import '../announced_players/model/announced_player_model.dart';
 
 part 'team_match_model.g.dart';
 
@@ -34,6 +37,8 @@ enum TeamMatchStatus {
   ongoing,
   completed,
   draw,
+  @JsonValue('abandoned')
+  abandoned,
 }
 
 /// Backend [MatchProposalStatus].
@@ -157,6 +162,121 @@ class ProposedTurfModel {
   TurfFieldInstance get turfIdHelper => TurfFieldInstance(turfId);
 }
 
+/// Backend embedded `inningsSummaries[]` item ([CricketInningsSummary]).
+@JsonSerializable()
+class CricketInningsSummaryModel {
+  final int runs;
+  final int wickets;
+  final int legalBalls;
+
+  const CricketInningsSummaryModel({
+    required this.runs,
+    required this.wickets,
+    required this.legalBalls,
+  });
+
+  factory CricketInningsSummaryModel.fromJson(Map<String, dynamic> json) =>
+      _$CricketInningsSummaryModelFromJson(json);
+
+  Map<String, dynamic> toJson() => _$CricketInningsSummaryModelToJson(this);
+}
+
+/// Backend [FootballPeriod] on embedded football state.
+enum MatchFootballPeriod {
+  @JsonValue('first_half')
+  firstHalf,
+  @JsonValue('second_half')
+  secondHalf,
+  @JsonValue('extra_first')
+  extraFirst,
+  @JsonValue('extra_second')
+  extraSecond,
+  @JsonValue('penalties')
+  penalties,
+}
+
+/// Backend embedded [CricketState].
+@JsonSerializable(explicitToJson: true)
+class CricketStateModel {
+  final int maxOvers;
+  final int currentInnings;
+
+  /// Lean id or populated team subset ([TeamMemberFieldInstance]).
+  @JsonKey(name: 'battingTeamId')
+  @TeamRefConverter()
+  final dynamic battingTeamId;
+
+  /// Lean id or populated team subset ([TeamMemberFieldInstance]).
+  @JsonKey(name: 'bowlingTeamId')
+  @TeamRefConverter()
+  final dynamic bowlingTeamId;
+
+  @JsonKey(name: 'strikerUserId')
+  @UserConverter()
+  final dynamic strikerUserId;
+
+  @JsonKey(name: 'nonStrikerUserId')
+  @UserConverter()
+  final dynamic nonStrikerUserId;
+
+  @JsonKey(name: 'bowlerUserId')
+  @UserConverter()
+  final dynamic bowlerUserId;
+
+  @JsonKey(defaultValue: <CricketInningsSummaryModel>[])
+  final List<CricketInningsSummaryModel> inningsSummaries;
+
+  const CricketStateModel({
+    required this.maxOvers,
+    required this.currentInnings,
+    required this.battingTeamId,
+    required this.bowlingTeamId,
+    required this.inningsSummaries,
+    this.strikerUserId,
+    this.nonStrikerUserId,
+    this.bowlerUserId,
+  });
+
+  factory CricketStateModel.fromJson(Map<String, dynamic> json) =>
+      _$CricketStateModelFromJson(json);
+
+  Map<String, dynamic> toJson() => _$CricketStateModelToJson(this);
+
+  TeamRefFieldInstance get battingTeamHelper =>
+      TeamRefFieldInstance(battingTeamId);
+
+  TeamRefFieldInstance get bowlingTeamHelper =>
+      TeamRefFieldInstance(bowlingTeamId);
+
+  UserFieldInstance get strikerUserHelper => UserFieldInstance(strikerUserId);
+
+  UserFieldInstance get nonStrikerUserHelper =>
+      UserFieldInstance(nonStrikerUserId);
+
+  UserFieldInstance get bowlerUserHelper => UserFieldInstance(bowlerUserId);
+}
+
+/// Backend embedded [FootballState].
+@JsonSerializable(explicitToJson: true)
+class FootballStateModel {
+  final int scoreTeamOne;
+  final int scoreTeamTwo;
+  final MatchFootballPeriod currentPeriod;
+  final int? matchMinute;
+
+  const FootballStateModel({
+    required this.scoreTeamOne,
+    required this.scoreTeamTwo,
+    required this.currentPeriod,
+    this.matchMinute,
+  });
+
+  factory FootballStateModel.fromJson(Map<String, dynamic> json) =>
+      _$FootballStateModelFromJson(json);
+
+  Map<String, dynamic> toJson() => _$FootballStateModelToJson(this);
+}
+
 /// Backend [TeamMatch] document.
 @JsonSerializable(explicitToJson: true)
 class TeamMatchModel {
@@ -199,6 +319,12 @@ class TeamMatchModel {
   final dynamic turfBookingId;
   final DateTime? expiresAt;
   final DateTime? closedAt;
+
+  @JsonKey(defaultValue: <AnnouncedPlayerModel>[])
+  final List<AnnouncedPlayerModel> announcedPlayers;
+
+  final CricketStateModel? cricketState;
+  final FootballStateModel? footballState;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -220,6 +346,9 @@ class TeamMatchModel {
     this.turfBookingId,
     this.expiresAt,
     this.closedAt,
+    this.announcedPlayers = const [],
+    this.cricketState,
+    this.footballState,
     this.createdAt,
     this.updatedAt,
   });
@@ -312,6 +441,7 @@ class ListNegotiationsFilterQuery {
 
 String _$teamMatchStatusToApiString(TeamMatchStatus s) => switch (s) {
   TeamMatchStatus.scheduleFinalized => 'schedule_finalized',
+  TeamMatchStatus.abandoned => 'abandoned',
   _ => s.name,
 };
 
@@ -489,8 +619,10 @@ class CancelNegotiationRequest {
 class UpdateTeamMatchRequest {
   final String? turfBookingId;
   final String? notes;
+
   /// New accepted slot; server creates the proposal and `selectedSlotProposalId`.
   final TeamMatchTimeSlot? slot;
+
   /// Turf id for a new accepted proposal; server creates `selectedTurfProposalId`.
   final String? turfId;
   final String? selfAcceptTeamId;

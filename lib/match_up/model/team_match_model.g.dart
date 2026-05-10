@@ -90,6 +90,82 @@ Map<String, dynamic> _$ProposedTurfModelToJson(ProposedTurfModel instance) =>
       'updatedAt': instance.updatedAt?.toIso8601String(),
     };
 
+CricketInningsSummaryModel _$CricketInningsSummaryModelFromJson(
+  Map<String, dynamic> json,
+) => CricketInningsSummaryModel(
+  runs: (json['runs'] as num).toInt(),
+  wickets: (json['wickets'] as num).toInt(),
+  legalBalls: (json['legalBalls'] as num).toInt(),
+);
+
+Map<String, dynamic> _$CricketInningsSummaryModelToJson(
+  CricketInningsSummaryModel instance,
+) => <String, dynamic>{
+  'runs': instance.runs,
+  'wickets': instance.wickets,
+  'legalBalls': instance.legalBalls,
+};
+
+CricketStateModel _$CricketStateModelFromJson(
+  Map<String, dynamic> json,
+) => CricketStateModel(
+  maxOvers: (json['maxOvers'] as num).toInt(),
+  currentInnings: (json['currentInnings'] as num).toInt(),
+  battingTeamId: const TeamRefConverter().fromJson(json['battingTeamId']),
+  bowlingTeamId: const TeamRefConverter().fromJson(json['bowlingTeamId']),
+  inningsSummaries:
+      (json['inningsSummaries'] as List<dynamic>?)
+          ?.map(
+            (e) =>
+                CricketInningsSummaryModel.fromJson(e as Map<String, dynamic>),
+          )
+          .toList() ??
+      [],
+  strikerUserId: const UserConverter().fromJson(json['strikerUserId']),
+  nonStrikerUserId: const UserConverter().fromJson(json['nonStrikerUserId']),
+  bowlerUserId: const UserConverter().fromJson(json['bowlerUserId']),
+);
+
+Map<String, dynamic> _$CricketStateModelToJson(
+  CricketStateModel instance,
+) => <String, dynamic>{
+  'maxOvers': instance.maxOvers,
+  'currentInnings': instance.currentInnings,
+  'battingTeamId': const TeamRefConverter().toJson(instance.battingTeamId),
+  'bowlingTeamId': const TeamRefConverter().toJson(instance.bowlingTeamId),
+  'strikerUserId': const UserConverter().toJson(instance.strikerUserId),
+  'nonStrikerUserId': const UserConverter().toJson(instance.nonStrikerUserId),
+  'bowlerUserId': const UserConverter().toJson(instance.bowlerUserId),
+  'inningsSummaries': instance.inningsSummaries.map((e) => e.toJson()).toList(),
+};
+
+FootballStateModel _$FootballStateModelFromJson(Map<String, dynamic> json) =>
+    FootballStateModel(
+      scoreTeamOne: (json['scoreTeamOne'] as num).toInt(),
+      scoreTeamTwo: (json['scoreTeamTwo'] as num).toInt(),
+      currentPeriod: $enumDecode(
+        _$MatchFootballPeriodEnumMap,
+        json['currentPeriod'],
+      ),
+      matchMinute: (json['matchMinute'] as num?)?.toInt(),
+    );
+
+Map<String, dynamic> _$FootballStateModelToJson(FootballStateModel instance) =>
+    <String, dynamic>{
+      'scoreTeamOne': instance.scoreTeamOne,
+      'scoreTeamTwo': instance.scoreTeamTwo,
+      'currentPeriod': _$MatchFootballPeriodEnumMap[instance.currentPeriod]!,
+      'matchMinute': instance.matchMinute,
+    };
+
+const _$MatchFootballPeriodEnumMap = {
+  MatchFootballPeriod.firstHalf: 'first_half',
+  MatchFootballPeriod.secondHalf: 'second_half',
+  MatchFootballPeriod.extraFirst: 'extra_first',
+  MatchFootballPeriod.extraSecond: 'extra_second',
+  MatchFootballPeriod.penalties: 'penalties',
+};
+
 TeamMatchModel _$TeamMatchModelFromJson(
   Map<String, dynamic> json,
 ) => TeamMatchModel(
@@ -130,6 +206,21 @@ TeamMatchModel _$TeamMatchModelFromJson(
   closedAt: json['closedAt'] == null
       ? null
       : DateTime.parse(json['closedAt'] as String),
+  announcedPlayers:
+      (json['announcedPlayers'] as List<dynamic>?)
+          ?.map((e) => AnnouncedPlayerModel.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      [],
+  cricketState: json['cricketState'] == null
+      ? null
+      : CricketStateModel.fromJson(
+          json['cricketState'] as Map<String, dynamic>,
+        ),
+  footballState: json['footballState'] == null
+      ? null
+      : FootballStateModel.fromJson(
+          json['footballState'] as Map<String, dynamic>,
+        ),
   createdAt: json['createdAt'] == null
       ? null
       : DateTime.parse(json['createdAt'] as String),
@@ -138,30 +229,34 @@ TeamMatchModel _$TeamMatchModelFromJson(
       : DateTime.parse(json['updatedAt'] as String),
 );
 
-Map<String, dynamic> _$TeamMatchModelToJson(TeamMatchModel instance) =>
-    <String, dynamic>{
-      '_id': instance.id,
-      'source': _$TeamMatchSourceEnumMap[instance.source]!,
-      'fromTeam': const TeamRefConverter().toJson(instance.fromTeam),
-      'toTeam': const TeamRefConverter().toJson(instance.toTeam),
-      'sportType': _$TeamSportTypeEnumMap[instance.sportType]!,
-      'status': _$TeamMatchStatusEnumMap[instance.status]!,
-      'statusUpdatedBy': instance.statusUpdatedBy,
-      'statusUpdatedAt': instance.statusUpdatedAt?.toIso8601String(),
-      'proposedSlots': instance.proposedSlots.map((e) => e.toJson()).toList(),
-      'proposedTurfs': instance.proposedTurfs.map((e) => e.toJson()).toList(),
-      'selectedSlotProposalId': instance.selectedSlotProposalId,
-      'selectedTurfProposalId': instance.selectedTurfProposalId,
-      'winnerTeam': const TeamRefConverter().toJson(instance.winnerTeam),
-      'notes': instance.notes,
-      'turfBookingId': const TurfBookingRefConverter().toJson(
-        instance.turfBookingId,
-      ),
-      'expiresAt': instance.expiresAt?.toIso8601String(),
-      'closedAt': instance.closedAt?.toIso8601String(),
-      'createdAt': instance.createdAt?.toIso8601String(),
-      'updatedAt': instance.updatedAt?.toIso8601String(),
-    };
+Map<String, dynamic> _$TeamMatchModelToJson(
+  TeamMatchModel instance,
+) => <String, dynamic>{
+  '_id': instance.id,
+  'source': _$TeamMatchSourceEnumMap[instance.source]!,
+  'fromTeam': const TeamRefConverter().toJson(instance.fromTeam),
+  'toTeam': const TeamRefConverter().toJson(instance.toTeam),
+  'sportType': _$TeamSportTypeEnumMap[instance.sportType]!,
+  'status': _$TeamMatchStatusEnumMap[instance.status]!,
+  'statusUpdatedBy': instance.statusUpdatedBy,
+  'statusUpdatedAt': instance.statusUpdatedAt?.toIso8601String(),
+  'proposedSlots': instance.proposedSlots.map((e) => e.toJson()).toList(),
+  'proposedTurfs': instance.proposedTurfs.map((e) => e.toJson()).toList(),
+  'selectedSlotProposalId': instance.selectedSlotProposalId,
+  'selectedTurfProposalId': instance.selectedTurfProposalId,
+  'winnerTeam': const TeamRefConverter().toJson(instance.winnerTeam),
+  'notes': instance.notes,
+  'turfBookingId': const TurfBookingRefConverter().toJson(
+    instance.turfBookingId,
+  ),
+  'expiresAt': instance.expiresAt?.toIso8601String(),
+  'closedAt': instance.closedAt?.toIso8601String(),
+  'announcedPlayers': instance.announcedPlayers.map((e) => e.toJson()).toList(),
+  'cricketState': instance.cricketState?.toJson(),
+  'footballState': instance.footballState?.toJson(),
+  'createdAt': instance.createdAt?.toIso8601String(),
+  'updatedAt': instance.updatedAt?.toIso8601String(),
+};
 
 const _$TeamMatchSourceEnumMap = {TeamMatchSource.feed: 'feed'};
 
@@ -181,6 +276,7 @@ const _$TeamMatchStatusEnumMap = {
   TeamMatchStatus.ongoing: 'ongoing',
   TeamMatchStatus.completed: 'completed',
   TeamMatchStatus.draw: 'draw',
+  TeamMatchStatus.abandoned: 'abandoned',
 };
 
 SendMatchRequest _$SendMatchRequestFromJson(Map<String, dynamic> json) =>

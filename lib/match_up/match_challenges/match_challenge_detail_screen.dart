@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../components/challenges/challenge_messages_placeholder.dart';
+import '../../components/announced_players/match_announced_players_section.dart';
 import '../../components/challenges/match_challenge_respond_actions.dart';
 import '../../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
 import '../../components/challenges/praposals/propose_time_slot_sheet.dart';
 import '../../components/challenges/praposals/propose_turf_sheet.dart';
 import '../../core/config/constants.dart';
 import '../../core/utils/app_snackbar.dart';
+import '../../team/model/team_model.dart';
 import '../../turf/model/turf_model.dart';
 import '../../turf/turf_service.dart';
 import '../matchmaking_service.dart';
@@ -33,8 +34,8 @@ class MatchChallengeDetailScreen extends StatefulWidget {
 
 class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
     with SingleTickerProviderStateMixin {
-  late TabController _tabController;
   late TeamMatchModel _match;
+  late final TabController _detailTabController;
   final MatchmakingService _matchmakingService = MatchmakingService();
   final TurfService _turfService = TurfService();
   bool _isUpdatingSlot = false;
@@ -80,13 +81,20 @@ class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
   void initState() {
     super.initState();
     _match = widget.match;
-    _tabController = TabController(length: 2, vsync: this);
+    _detailTabController = TabController(length: 3, vsync: this);
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _detailTabController.dispose();
     super.dispose();
+  }
+
+  void _openMessages() {
+    Get.toNamed(
+      AppConstants.routes.matchChallengeMessages,
+      arguments: {'match': _match},
+    );
   }
 
   /// Allow setting or changing time/turf while negotiating or after schedule is finalized
@@ -114,6 +122,19 @@ class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
     return widget.isIncoming &&
         _match.status == TeamMatchStatus.requested &&
         !_isExpiredByDeadline;
+  }
+
+  bool get _isCricketMatch => _match.sportType == TeamSportType.cricket;
+
+  bool get _canStartCricketMatch {
+    if (!_isCricketMatch) return false;
+    return _match.status == TeamMatchStatus.accepted ||
+        _match.status == TeamMatchStatus.scheduleFinalized;
+  }
+
+  bool get _canOpenCricketScoreBoard {
+    if (!_isCricketMatch) return false;
+    return _match.status == TeamMatchStatus.ongoing;
   }
 
   Future<void> _respondToChallenge(MatchResponseAction action) async {
@@ -256,37 +277,67 @@ class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
     );
   }
 
+  Future<void> _startMatchAndOpenScoreBoard() async {
+    if (_actionBusy) return;
+    if (_match.id == null || _match.id!.isEmpty || _myTeamId.isEmpty) return;
+
+    setState(() => _actionsChildBusy = true);
+    final updated = await _matchmakingService.recordMatchResult(
+      _match.id!,
+      RecordMatchResultRequest(
+        actorTeamId: _myTeamId,
+        outcome: MatchResultOutcome.ongoing,
+      ),
+    );
+    if (!mounted) return;
+    setState(() => _actionsChildBusy = false);
+
+    if (updated == null) {
+      AppSnackbar.error(
+        title: 'Could not start match',
+        message: 'Please try again.',
+      );
+      return;
+    }
+    setState(() => _match = updated);
+    _trySyncChallengesList(updated);
+    _openCricketScoreBoard();
+  }
+
+  void _openCricketScoreBoard() {
+    final matchId = _match.id;
+    if (matchId == null || matchId.isEmpty) {
+      AppSnackbar.error(
+        title: 'Missing match id',
+        message: 'Unable to open scoreboard for this challenge.',
+      );
+      return;
+    }
+    Get.toNamed(
+      AppConstants.routes.cricketScoreBoard,
+      arguments: {'matchId': matchId},
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(title: const Text('Challenge Details')),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(
-            margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: AppSegmentedTabs(
-              controller: _tabController,
-              padding: EdgeInsets.zero,
-              items: const [
-                AppTabItem(label: 'Details'),
-                AppTabItem(label: 'Messages'),
-              ],
-            ),
-          ),
-          Expanded(
-            child: AppSegmentedTabView(
-              controller: _tabController,
-              children: [_buildDetailsTab(), _buildMessagesTab()],
-            ),
+      appBar: AppBar(
+        title: const Text('Challenge Details'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.message_outlined),
+            tooltip: 'Messages',
+            onPressed: _openMessages,
           ),
         ],
       ),
+      body: _buildDetailsBody(),
     );
   }
 
-  Widget _buildDetailsTab() {
+  Widget _buildDetailsBody() {
     final acceptedSlotCandidates = _match.proposedSlots.where((slot) {
       if (_match.selectedSlotProposalId != null) {
         return slot.proposalId == _match.selectedSlotProposalId;
@@ -314,115 +365,167 @@ class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
     final turfSummary = acceptedTurf != null
         ? acceptedTurf.turfIdHelper.getDisplayName()
         : 'Not set';
-    final bookingRef = _match.turfBookingIdHelper;
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    final showCricketBar = _canStartCricketMatch || _canOpenCricketScoreBoard;
+    final showFloatingBottom = showCricketBar || _canRespondToChallenge;
+
+    return Stack(
+      fit: StackFit.expand,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SizedBox(height: 6),
-            _InfoCard(
-              title: '',
-              child: MatchChallengeVersusHeader(match: _match),
-            ),
-            const SizedBox(height: 16),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final infoTiles = <Widget>[
-                  _InfoTile(
-                    icon: Icons.sports_soccer,
-                    label: 'Sport type',
-                    value:
-                        _match.sportType.name.capitalizeFirst ??
-                        _match.sportType.name,
-                  ),
-                  _InfoTile(
-                    icon: Icons.flag_outlined,
-                    label: 'Match status',
-                    value:
-                        _match.status.name.capitalizeFirst ??
-                        _match.status.name,
-                  ),
-                  if (_match.turfBookingId != null)
-                    _InfoTile(
-                      icon: Icons.receipt_long_outlined,
-                      label: 'Turf booking',
-                      value: bookingRef.getDisplayName(),
-                    ),
-                ];
-                final tileWidth = (constraints.maxWidth - 12) / 2;
-                return Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: infoTiles
-                      .map((tile) => SizedBox(width: tileWidth, child: tile))
-                      .toList(),
-                );
-              },
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        _InfoCard(
-          title: 'Schedule',
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            16,
+            16,
+            16,
+            _mainContentBottomPadding(showCricketBar),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _ScheduleLine(
-                icon: Icons.schedule,
-                label: 'Time',
-                value: timeSummary,
-                canEdit: _canUseScheduleControls,
-                isLoading: _isUpdatingSlot,
-                otherFieldBusy: _isUpdatingTurf || _actionsChildBusy,
-                onEditPressed: _setTimeSlot,
-                editTooltip: hasSlot ? 'Edit time' : 'Set time',
-                editIcon: hasSlot
-                    ? Icons.edit_outlined
-                    : Icons.event_available_outlined,
+              const SizedBox(height: 6),
+              _InfoCard(
+                title: '',
+                child: MatchChallengeVersusHeader(match: _match),
               ),
-              const SizedBox(height: 12),
-              _ScheduleLine(
-                icon: Icons.grass,
-                label: 'Turf',
-                value: turfSummary,
-                canEdit: _canUseScheduleControls,
-                isLoading: _isUpdatingTurf,
-                otherFieldBusy: _isUpdatingSlot || _actionsChildBusy,
-                onEditPressed: _setTurf,
-                editTooltip: hasTurf ? 'Edit turf' : 'Set turf',
-                editIcon: hasTurf
-                    ? Icons.edit_outlined
-                    : Icons.add_location_alt_outlined,
+              const SizedBox(height: 16),
+              AppSegmentedTabs(
+                controller: _detailTabController,
+                padding: const EdgeInsets.fromLTRB(0, 0, 0, 8),
+                items: const [
+                  AppTabItem(
+                    label: 'Details',
+                    icon: Icons.info_outline_rounded,
+                  ),
+                  AppTabItem(label: 'Players', icon: Icons.groups_outlined),
+                  AppTabItem(label: 'Actions', icon: Icons.bolt_outlined),
+                ],
+              ),
+              Expanded(
+                child: AppSegmentedTabView(
+                  controller: _detailTabController,
+                  children: [
+                    SingleChildScrollView(
+                      child: _InfoCard(
+                        title: 'Schedule',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _ScheduleLine(
+                              icon: Icons.schedule,
+                              label: 'Time',
+                              value: timeSummary,
+                              canEdit: _canUseScheduleControls,
+                              isLoading: _isUpdatingSlot,
+                              otherFieldBusy:
+                                  _isUpdatingTurf || _actionsChildBusy,
+                              onEditPressed: _setTimeSlot,
+                              editTooltip: hasSlot ? 'Edit time' : 'Set time',
+                              editIcon: hasSlot
+                                  ? Icons.edit_outlined
+                                  : Icons.event_available_outlined,
+                            ),
+                            const SizedBox(height: 12),
+                            _ScheduleLine(
+                              icon: Icons.grass,
+                              label: 'Turf',
+                              value: turfSummary,
+                              canEdit: _canUseScheduleControls,
+                              isLoading: _isUpdatingTurf,
+                              otherFieldBusy:
+                                  _isUpdatingSlot || _actionsChildBusy,
+                              onEditPressed: _setTurf,
+                              editTooltip: hasTurf ? 'Edit turf' : 'Set turf',
+                              editIcon: hasTurf
+                                  ? Icons.edit_outlined
+                                  : Icons.add_location_alt_outlined,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SingleChildScrollView(
+                      child: MatchAnnouncedPlayersSection(
+                        match: _match,
+                        myTeamId: _myTeamId,
+                        onMatchUpdated: _scheduleMatchUpdate,
+                      ),
+                    ),
+                    SingleChildScrollView(
+                      child: MatchChallengeActionsCard(
+                        match: _match,
+                        myTeamId: _myTeamId,
+                        onMatchUpdated: _scheduleMatchUpdate,
+                        onInternalBusyChanged: _scheduleActionsChildBusy,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 12),
-        MatchChallengeActionsCard(
-          match: _match,
-          myTeamId: _myTeamId,
-          onMatchUpdated: _scheduleMatchUpdate,
-          onInternalBusyChanged: _scheduleActionsChildBusy,
-        ),
-        if (_canRespondToChallenge) ...[
-          const SizedBox(height: 12),
-          MatchChallengeRespondActions(
-            isRejecting: _isRejectingChallenge,
-            isAccepting: _isAcceptingChallenge,
-            enabled: !_isUpdatingSlot && !_isUpdatingTurf && !_actionsChildBusy,
-            onReject: () => _respondToChallenge(MatchResponseAction.reject),
-            onAccept: () => _respondToChallenge(MatchResponseAction.accept),
+        if (showFloatingBottom)
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: MediaQuery.paddingOf(context).bottom + 16,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (showCricketBar) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _actionBusy
+                          ? null
+                          : (_canOpenCricketScoreBoard
+                                ? _openCricketScoreBoard
+                                : _startMatchAndOpenScoreBoard),
+                      icon: Icon(
+                        _canOpenCricketScoreBoard
+                            ? Icons.scoreboard_outlined
+                            : Icons.play_circle_outline,
+                      ),
+                      label: Text(
+                        _canOpenCricketScoreBoard
+                            ? 'Score Board'
+                            : 'Start Match',
+                      ),
+                    ),
+                  ),
+                ],
+                if (showCricketBar && _canRespondToChallenge)
+                  const SizedBox(height: 12),
+                if (_canRespondToChallenge)
+                  MatchChallengeRespondActions(
+                    isRejecting: _isRejectingChallenge,
+                    isAccepting: _isAcceptingChallenge,
+                    enabled:
+                        !_isUpdatingSlot &&
+                        !_isUpdatingTurf &&
+                        !_actionsChildBusy,
+                    onReject: () =>
+                        _respondToChallenge(MatchResponseAction.reject),
+                    onAccept: () =>
+                        _respondToChallenge(MatchResponseAction.accept),
+                  ),
+              ],
+            ),
           ),
-        ],
       ],
     );
   }
 
-  Widget _buildMessagesTab() {
-    return const ChallengeMessagesPlaceholder();
+  /// Keeps tab content clear of the floating bottom bar (approximate heights).
+  double _mainContentBottomPadding(bool showCricketBar) {
+    const base = 16.0;
+    if (!showCricketBar && !_canRespondToChallenge) return base;
+    double overlay = 0;
+    if (showCricketBar) overlay += 76;
+    if (showCricketBar && _canRespondToChallenge) overlay += 12;
+    if (_canRespondToChallenge) overlay += 56;
+    return base + overlay;
   }
 }
 

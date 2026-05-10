@@ -9,6 +9,9 @@ class EnvConfig {
       dotenv.env['GOOGLE_PLACES_API_KEY'] ?? '';
 
   static String get baseApiUrl => dotenv.env['BASE_API_URL'] ?? '';
+  static String get realtimeWsUrl => dotenv.env['REALTIME_WS_URL'] ?? '';
+  static String get realtimeSocketPath =>
+      dotenv.env['REALTIME_SOCKET_PATH'] ?? '/socket.io';
   static String get razorpayKeyId => dotenv.env['RAZORPAY_KEY_ID'] ?? '';
 
   static Future<void> initialize() async {

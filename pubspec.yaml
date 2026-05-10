@@ -54,6 +54,7 @@ dependencies:
   razorpay_flutter: ^1.4.4
   flutter_native_splash: ^2.4.7
   flutter_launcher_icons: ^0.14.4
+  socket_io_client: ^3.1.1
 
 dev_dependencies:
   flutter_test:
