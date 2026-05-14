@@ -31,6 +31,13 @@ class ScoringApiService {
     return CricketOverEvent.fromJson(response);
   }
 
+  /// `DELETE /scoring/cricket/matches/:teamMatchId/balls/last`
+  Future<bool> undoLastCricketBall({required String teamMatchId}) async {
+    return _apiService.deleteResource(
+      ApiConstants.scoring.cricketUndoLastBall(teamMatchId),
+    );
+  }
+
   /// `POST /scoring/football/matches/:teamMatchId/events`
   ///
   /// Football models are not yet typed in Flutter, so this accepts the raw
@@ -66,6 +73,30 @@ class ScoringApiService {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiConstants.scoring.cricketCreateSession(teamMatchId),
       data: request.toJson(),
+    );
+    if (response == null) return null;
+    return TeamMatchModel.fromJson(response);
+  }
+
+  /// `PATCH /scoring/cricket/matches/:teamMatchId/state`
+  Future<TeamMatchModel?> updateCricketState({
+    required String teamMatchId,
+    required UpdateCricketStateRequest request,
+  }) async {
+    final response = await _apiService.patch<Map<String, dynamic>>(
+      ApiConstants.scoring.cricketUpdateState(teamMatchId),
+      data: request.toJson(),
+    );
+    if (response == null) return null;
+    return TeamMatchModel.fromJson(response);
+  }
+
+  /// `POST /scoring/cricket/matches/:teamMatchId/inning/change`
+  Future<TeamMatchModel?> changeCricketInning({
+    required String teamMatchId,
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiConstants.scoring.cricketChangeInning(teamMatchId),
     );
     if (response == null) return null;
     return TeamMatchModel.fromJson(response);

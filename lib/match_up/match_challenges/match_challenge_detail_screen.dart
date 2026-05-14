@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../components/announced_players/match_announced_players_section.dart';
+import '../../components/scoring/cricket/scorecard/match_scorecard_tab.dart';
 import '../../components/challenges/match_challenge_respond_actions.dart';
 import '../../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
 import '../../components/challenges/praposals/propose_time_slot_sheet.dart';
@@ -81,7 +82,7 @@ class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
   void initState() {
     super.initState();
     _match = widget.match;
-    _detailTabController = TabController(length: 3, vsync: this);
+    _detailTabController = TabController(length: 4, vsync: this);
   }
 
   @override
@@ -130,11 +131,6 @@ class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
     if (!_isCricketMatch) return false;
     return _match.status == TeamMatchStatus.accepted ||
         _match.status == TeamMatchStatus.scheduleFinalized;
-  }
-
-  bool get _canOpenCricketScoreBoard {
-    if (!_isCricketMatch) return false;
-    return _match.status == TeamMatchStatus.ongoing;
   }
 
   Future<void> _respondToChallenge(MatchResponseAction action) async {
@@ -277,33 +273,6 @@ class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
     );
   }
 
-  Future<void> _startMatchAndOpenScoreBoard() async {
-    if (_actionBusy) return;
-    if (_match.id == null || _match.id!.isEmpty || _myTeamId.isEmpty) return;
-
-    setState(() => _actionsChildBusy = true);
-    final updated = await _matchmakingService.recordMatchResult(
-      _match.id!,
-      RecordMatchResultRequest(
-        actorTeamId: _myTeamId,
-        outcome: MatchResultOutcome.ongoing,
-      ),
-    );
-    if (!mounted) return;
-    setState(() => _actionsChildBusy = false);
-
-    if (updated == null) {
-      AppSnackbar.error(
-        title: 'Could not start match',
-        message: 'Please try again.',
-      );
-      return;
-    }
-    setState(() => _match = updated);
-    _trySyncChallengesList(updated);
-    _openCricketScoreBoard();
-  }
-
   void _openCricketScoreBoard() {
     final matchId = _match.id;
     if (matchId == null || matchId.isEmpty) {
@@ -366,7 +335,8 @@ class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
         ? acceptedTurf.turfIdHelper.getDisplayName()
         : 'Not set';
 
-    final showCricketBar = _canStartCricketMatch || _canOpenCricketScoreBoard;
+    final showCricketBar =
+        _canStartCricketMatch || _match.status == TeamMatchStatus.ongoing;
     final showFloatingBottom = showCricketBar || _canRespondToChallenge;
 
     return Stack(
@@ -395,6 +365,10 @@ class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
                   AppTabItem(
                     label: 'Details',
                     icon: Icons.info_outline_rounded,
+                  ),
+                  AppTabItem(
+                    label: 'Scorecard',
+                    icon: Icons.scoreboard_outlined,
                   ),
                   AppTabItem(label: 'Players', icon: Icons.groups_outlined),
                   AppTabItem(label: 'Actions', icon: Icons.bolt_outlined),
@@ -443,6 +417,10 @@ class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
                         ),
                       ),
                     ),
+                    MatchScorecardTab(
+                      match: _match,
+                      parentTabController: _detailTabController,
+                    ),
                     SingleChildScrollView(
                       child: MatchAnnouncedPlayersSection(
                         match: _match,
@@ -477,21 +455,9 @@ class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed: _actionBusy
-                          ? null
-                          : (_canOpenCricketScoreBoard
-                                ? _openCricketScoreBoard
-                                : _startMatchAndOpenScoreBoard),
-                      icon: Icon(
-                        _canOpenCricketScoreBoard
-                            ? Icons.scoreboard_outlined
-                            : Icons.play_circle_outline,
-                      ),
-                      label: Text(
-                        _canOpenCricketScoreBoard
-                            ? 'Score Board'
-                            : 'Start Match',
-                      ),
+                      onPressed: _actionBusy ? null : (_openCricketScoreBoard),
+                      icon: Icon(Icons.play_circle_outline),
+                      label: Text('Scoreboard'),
                     ),
                   ),
                 ],
@@ -644,70 +610,6 @@ class _InfoCard extends StatelessWidget {
             const SizedBox(height: 10),
           ],
           child,
-        ],
-      ),
-    );
-  }
-}
-
-class _InfoTile extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-
-  const _InfoTile({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: const Color(AppColors.backgroundColor),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            margin: const EdgeInsets.only(top: 1),
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: const Color(AppColors.primaryColor).withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              icon,
-              size: 16,
-              color: const Color(AppColors.primaryColor),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(AppColors.textSecondaryColor),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: Color(AppColors.textColor),
-                  ),
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );

@@ -129,6 +129,31 @@ class CreateCricketSessionRequest {
   };
 }
 
+/// Body for `PATCH /scoring/cricket/matches/:teamMatchId/state`.
+class UpdateCricketStateRequest {
+  final String actorTeamId;
+  final String? strikerUserId;
+  final String? nonStrikerUserId;
+  final String? bowlerUserId;
+
+  const UpdateCricketStateRequest({
+    required this.actorTeamId,
+    this.strikerUserId,
+    this.nonStrikerUserId,
+    this.bowlerUserId,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'actorTeamId': actorTeamId,
+    if (strikerUserId != null && strikerUserId!.isNotEmpty)
+      'strikerUserId': strikerUserId,
+    if (nonStrikerUserId != null && nonStrikerUserId!.isNotEmpty)
+      'nonStrikerUserId': nonStrikerUserId,
+    if (bowlerUserId != null && bowlerUserId!.isNotEmpty)
+      'bowlerUserId': bowlerUserId,
+  };
+}
+
 abstract class CricketOutcome {
   final CricketOutcomeKind kind;
   const CricketOutcome(this.kind);

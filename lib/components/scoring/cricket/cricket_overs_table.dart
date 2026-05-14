@@ -21,6 +21,8 @@ class CricketOversTable extends StatelessWidget {
     return Obx(() {
       final loading = controller.isFetchingOvers.value;
       final overs = controller.cricketOvers;
+      final currentOver = _currentOver(overs, controller.cricketMatch.value?.cricketState?.currentInnings);
+      final tableOvers = _oversForTable(overs, currentOver);
 
       return Container(
         decoration: BoxDecoration(
@@ -76,6 +78,11 @@ class CricketOversTable extends StatelessWidget {
             if (overs.isNotEmpty)
               LayoutBuilder(
                 builder: (context, constraints) {
+                  final breakdownWidth = _breakdownColumnWidth(
+                    currentOver,
+                    tableOvers,
+                  );
+
                   return SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: ConstrainedBox(
@@ -91,14 +98,13 @@ class CricketOversTable extends StatelessWidget {
                           ),
                           outside: BorderSide.none,
                         ),
-                        columnWidths: const {
-                          0: FlexColumnWidth(0.45),
-                          1: FlexColumnWidth(0.35),
-                          2: FlexColumnWidth(0.5),
-                          3: FlexColumnWidth(0.45),
-                          4: FlexColumnWidth(0.4),
-                          5: FlexColumnWidth(0.45),
-                          6: FlexColumnWidth(0.55),
+                        columnWidths: {
+                          0: const FixedColumnWidth(52),
+                          1: const FixedColumnWidth(56),
+                          2: const FixedColumnWidth(56),
+                          3: const FixedColumnWidth(56),
+                          4: const FixedColumnWidth(120),
+                          5: FixedColumnWidth(breakdownWidth),
                         },
                         children: [
                           TableRow(
@@ -113,21 +119,12 @@ class CricketOversTable extends StatelessWidget {
                               _OverTableCell('Runs', header: true),
                               _OverTableCell('Legal', header: true),
                               _OverTableCell('Bowler', header: true),
+                              _OverTableCell('Breakdown', header: true),
                             ],
                           ),
-                          ...overs.map(
-                            (o) => TableRow(
-                              children: [
-                                _OverTableCell('${o.sequence}'),
-                                _OverTableCell('${o.ballEvents.length}'),
-                                _OverTableCell('${_totalRunsInOver(o)}'),
-                                _OverTableCell(
-                                  '${o.ballEvents.where((b) => b.isLegalDelivery).length}',
-                                ),
-                                _OverTableCell(_bowlerCellLabel(o.bowlerUserId)),
-                              ],
-                            ),
-                          ),
+                          if (currentOver != null)
+                            _overTableRow(currentOver, isCurrent: true),
+                          ...tableOvers.map((o) => _overTableRow(o)),
                         ],
                       ),
                     ),
@@ -142,10 +139,88 @@ class CricketOversTable extends StatelessWidget {
   }
 }
 
-int _totalRunsInOver(CricketOverEvent o) {
+TableRow _overTableRow(CricketOverEvent over, {bool isCurrent = false}) {
+  return TableRow(
+    decoration: isCurrent
+        ? BoxDecoration(
+            color: const Color(AppColors.primaryColor).withValues(alpha: 0.08),
+          )
+        : null,
+    children: [
+      _OverTableCell(
+        isCurrent ? '${over.sequence} ·' : '${over.sequence}',
+        emphasized: isCurrent,
+      ),
+      _OverTableCell('${over.ballEvents.length}', emphasized: isCurrent),
+      _OverTableCell('${_totalRunsInOver(over)}', emphasized: isCurrent),
+      _OverTableCell(
+        '${over.ballEvents.where((b) => b.isLegalDelivery).length}',
+        emphasized: isCurrent,
+      ),
+      _OverTableCell(_bowlerCellLabel(over.bowlerUserId), emphasized: isCurrent),
+      _BallsBreakdownCell(over.ballEvents, emphasized: isCurrent),
+    ],
+  );
+}
+
+CricketOverEvent? _currentOver(List<CricketOverEvent> overs, int? currentInnings) {
+  if (currentInnings == null || currentInnings < 1) return null;
+
+  CricketOverEvent? latest;
+  for (final over in overs) {
+    if (over.innings != currentInnings) continue;
+    if (latest == null ||
+        over.overAfter > latest.overAfter ||
+        (over.overAfter == latest.overAfter && over.sequence > latest.sequence)) {
+      latest = over;
+    }
+  }
+  return latest;
+}
+
+List<CricketOverEvent> _oversForTable(
+  List<CricketOverEvent> overs,
+  CricketOverEvent? currentOver,
+) {
+  final sorted = List<CricketOverEvent>.from(overs)
+    ..sort((a, b) {
+      final bySequence = b.sequence.compareTo(a.sequence);
+      if (bySequence != 0) return bySequence;
+      return b.overAfter.compareTo(a.overAfter);
+    });
+
+  if (currentOver == null) return sorted;
+
+  return sorted
+      .where(
+        (over) =>
+            over.innings != currentOver.innings ||
+            over.overAfter != currentOver.overAfter ||
+            over.sequence != currentOver.sequence,
+      )
+      .toList();
+}
+
+double _breakdownColumnWidth(
+  CricketOverEvent? currentOver,
+  List<CricketOverEvent> tableOvers,
+) {
+  var maxBalls = 0;
+  for (final over in tableOvers) {
+    if (over.ballEvents.length > maxBalls) {
+      maxBalls = over.ballEvents.length;
+    }
+  }
+  if (currentOver != null && currentOver.ballEvents.length > maxBalls) {
+    maxBalls = currentOver.ballEvents.length;
+  }
+  return (maxBalls * 34.0 + 24).clamp(180.0, 420.0);
+}
+
+int _totalRunsInOver(CricketOverEvent over) {
   var sum = 0;
-  for (final b in o.ballEvents) {
-    sum += b.totalRunsOnDelivery;
+  for (final ball in over.ballEvents) {
+    sum += ball.totalRunsOnDelivery;
   }
   return sum;
 }
@@ -160,11 +235,38 @@ String _bowlerCellLabel(dynamic bowlerRef) {
   return '…${id.substring(id.length - 6)}';
 }
 
+String _ballDeliveryLabel(CricketBallEvent ball) {
+  if (ball.isWicket) return 'W';
+  if (ball.extrasNoBall) {
+    return ball.runsOffBat > 0 ? '${ball.runsOffBat}Nb' : 'Nb';
+  }
+  if (ball.extrasWide > 0) {
+    return ball.totalRunsOnDelivery > 1
+        ? '${ball.totalRunsOnDelivery}Wd'
+        : 'Wd';
+  }
+  if (ball.extrasBye > 0) {
+    return '${ball.extrasBye}B';
+  }
+  if (ball.extrasLegBye > 0) {
+    return '${ball.extrasLegBye}Lb';
+  }
+  if (ball.runsOffBat == 0 && ball.totalRunsOnDelivery == 0) {
+    return '·';
+  }
+  return '${ball.runsOffBat}';
+}
+
 class _OverTableCell extends StatelessWidget {
-  const _OverTableCell(this.text, {this.header = false});
+  const _OverTableCell(
+    this.text, {
+    this.header = false,
+    this.emphasized = false,
+  });
 
   final String text;
   final bool header;
+  final bool emphasized;
 
   @override
   Widget build(BuildContext context) {
@@ -174,11 +276,107 @@ class _OverTableCell extends StatelessWidget {
         text,
         textAlign: TextAlign.center,
         style: TextStyle(
-          fontWeight: header ? FontWeight.w700 : FontWeight.w500,
+          fontWeight: header || emphasized ? FontWeight.w700 : FontWeight.w500,
           fontSize: header ? 11 : 13,
           color: header
               ? const Color(AppColors.textSecondaryColor)
               : const Color(AppColors.textColor),
+        ),
+      ),
+    );
+  }
+}
+
+class _BallsBreakdownCell extends StatelessWidget {
+  const _BallsBreakdownCell(this.balls, {this.emphasized = false});
+
+  final List<CricketBallEvent> balls;
+  final bool emphasized;
+
+  @override
+  Widget build(BuildContext context) {
+    if (balls.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+        child: Text(
+          '—',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: emphasized ? FontWeight.w600 : FontWeight.w500,
+            color: const Color(AppColors.textSecondaryColor),
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Wrap(
+          spacing: 4,
+          runSpacing: 4,
+          children: [
+            for (final ball in balls)
+              _BallChip(
+                label: _ballDeliveryLabel(ball),
+                isWicket: ball.isWicket,
+                isExtra: !ball.isLegalDelivery,
+                emphasized: emphasized,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BallChip extends StatelessWidget {
+  const _BallChip({
+    required this.label,
+    required this.isWicket,
+    required this.isExtra,
+    this.emphasized = false,
+  });
+
+  final String label;
+  final bool isWicket;
+  final bool isExtra;
+  final bool emphasized;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color background;
+    final Color foreground;
+    if (isWicket) {
+      background = const Color(0xFFFFE8E8);
+      foreground = const Color(0xFFB42318);
+    } else if (isExtra) {
+      background = const Color(0xFFFFF4E5);
+      foreground = const Color(0xFFB54708);
+    } else {
+      background = const Color(AppColors.backgroundColor);
+      foreground = const Color(AppColors.textColor);
+    }
+
+    return Container(
+      constraints: const BoxConstraints(minWidth: 28),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: foreground.withValues(alpha: emphasized ? 0.35 : 0.2),
+        ),
+      ),
+      child: Text(
+        label,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: emphasized ? FontWeight.w700 : FontWeight.w600,
+          color: foreground,
         ),
       ),
     );

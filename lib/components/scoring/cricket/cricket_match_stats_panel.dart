@@ -5,13 +5,12 @@ import '../../../core/config/constants.dart';
 import '../../../core/models/team/team_ref_field_instance.dart';
 import '../../../match_up/model/team_match_model.dart';
 import '../../../scoring/scoring_controller.dart';
-import 'info_chip.dart';
 import 'match_stats_error_card.dart';
 import 'match_stats_loading_card.dart';
 import 'match_status_chip.dart';
 
-/// Hero panel that shows the current cricket score, overs, innings and
-/// batting / bowling team labels.
+/// Hero panel: batting side above the score, runs/wickets, then overs as
+/// current/max (e.g. `2.1 / 20 ov`) and innings index.
 ///
 /// Self-observes [ScoringController] so the parent does not need to wrap it
 /// in [Obx].
@@ -62,14 +61,13 @@ class CricketMatchStatsPanel extends StatelessWidget {
         return const SizedBox.shrink();
       }
 
-      final summary = _currentInningsSummary(cs);
+      final summary = currentInningsSummary(cs);
       final runs = summary?.runs ?? 0;
       final wickets = summary?.wickets ?? 0;
       final legalBalls = summary?.legalBalls ?? 0;
       final oversStr = oversFromBalls(legalBalls);
 
       final battingName = _teamLabel(cs.battingTeamId, teamLabelForId);
-      final bowlingName = _teamLabel(cs.bowlingTeamId, teamLabelForId);
 
       return Container(
         decoration: BoxDecoration(
@@ -113,8 +111,8 @@ class CricketMatchStatsPanel extends StatelessWidget {
                         ).withValues(alpha: 0.9),
                       ),
                       const SizedBox(width: 8),
-                      const Text(
-                        'Match state',
+                      Text(
+                        battingName,
                         style: TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 16,
@@ -138,7 +136,19 @@ class CricketMatchStatsPanel extends StatelessWidget {
                       ],
                     ],
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 8),
+                  // Text(
+                  //   battingName,
+                  //   maxLines: 2,
+                  //   overflow: TextOverflow.ellipsis,
+                  //   style: const TextStyle(
+                  //     fontSize: 16,
+                  //     fontWeight: FontWeight.w600,
+                  //     height: 1.25,
+                  //     color: Color(AppColors.textColor),
+                  //   ),
+                  // ),
+                  // const SizedBox(height: 6),
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
@@ -153,33 +163,15 @@ class CricketMatchStatsPanel extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   Text(
-                    '$oversStr ov · Innings ${cs.currentInnings}/${cs.inningsSummaries.length}',
+                    '$oversStr / ${cs.maxOvers} ov · Innings '
+                    '${cs.currentInnings}/${cs.inningsSummaries.length}',
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
                       color: Color(AppColors.textSecondaryColor),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      InfoChip(
-                        icon: Icons.flag_outlined,
-                        label: 'Max ${cs.maxOvers} overs',
-                      ),
-                      InfoChip(
-                        icon: Icons.groups_outlined,
-                        label: 'Batting: $battingName',
-                      ),
-                      InfoChip(
-                        icon: Icons.sports_handball_outlined,
-                        label: 'Bowling: $bowlingName',
-                      ),
-                    ],
                   ),
                 ],
               ),
@@ -193,12 +185,33 @@ class CricketMatchStatsPanel extends StatelessWidget {
 
 /// Returns the summary for the currently-active innings, or the last one
 /// available if the index is out of range.
-CricketInningsSummaryModel? _currentInningsSummary(CricketStateModel cs) {
+CricketInningsSummaryModel? currentInningsSummary(CricketStateModel cs) {
   final list = cs.inningsSummaries;
   if (list.isEmpty) return null;
   final idx = cs.currentInnings >= 1 ? cs.currentInnings - 1 : 0;
   if (idx >= 0 && idx < list.length) return list[idx];
   return list.last;
+}
+
+/// Mirrors backend `isInningsComplete` (wickets, overs, chase target).
+bool isCricketInningsComplete(CricketStateModel cs) {
+  final summary = currentInningsSummary(cs);
+  if (summary == null) return false;
+
+  final maxLegal = cs.maxOvers * 6;
+  if (summary.wickets >= 10 || summary.legalBalls >= maxLegal) {
+    return true;
+  }
+
+  final innIdx = cs.currentInnings - 1;
+  if (innIdx > 0 && cs.inningsSummaries.isNotEmpty) {
+    final firstInningsRuns = cs.inningsSummaries.first.runs;
+    if (summary.runs > firstInningsRuns) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 /// Formats a count of legal balls into a cricket-style "overs.balls" string,

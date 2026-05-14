@@ -203,11 +203,23 @@ class ScoringEndpoints {
   String cricketSessionBalls(String teamMatchId) =>
       '/scoring/cricket/matches/$teamMatchId/balls';
 
+  /// Remove the latest delivery (`DELETE`).
+  String cricketUndoLastBall(String teamMatchId) =>
+      '/scoring/cricket/matches/$teamMatchId/balls/last';
+
   /// Paginated over documents (`GET`).
   String cricketSessionOvers(String teamMatchId) =>
       '/scoring/cricket/matches/$teamMatchId/overs';
   String cricketSessionPoints(String teamMatchId) =>
       '/scoring/cricket/matches/$teamMatchId/points';
+
+  /// `PATCH /scoring/cricket/matches/:teamMatchId/state`
+  String cricketUpdateState(String teamMatchId) =>
+      '/scoring/cricket/matches/$teamMatchId/state';
+
+  /// `POST /scoring/cricket/matches/:teamMatchId/inning/change`
+  String cricketChangeInning(String teamMatchId) =>
+      '/scoring/cricket/matches/$teamMatchId/inning/change';
 
   // Football
   String footballSession(String teamMatchId) =>

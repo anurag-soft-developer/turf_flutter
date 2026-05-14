@@ -15,13 +15,9 @@ import 'scoring_api_service.dart';
 /// echo for the writer's own action) come back over a websocket subscribed
 /// to `scoring:match:<teamMatchId>` on the realtime service.
 class ScoringController extends GetxController {
-  ScoringController({
-    // ScoringSocketService? socketService,
-    ScoringApiService? apiService,
-  }) : // _socketService = socketService ?? ScoringSocketService(),
-       _apiService = apiService ?? ScoringApiService();
+  ScoringController({ScoringApiService? apiService})
+    : _apiService = apiService ?? ScoringApiService();
 
-  // final ScoringSocketService _socketService;
   final ScoringApiService _apiService;
 
   final RxBool isConnected = false.obs;
@@ -37,44 +33,22 @@ class ScoringController extends GetxController {
 
   final RxBool isCreatingCricketSession = false.obs;
 
+  final RxBool isUpdatingCricketLineup = false.obs;
+
+  final RxBool isChangingCricketInning = false.obs;
+
   /// Overs loaded from `GET .../overs` and updated after each `append_ball`.
   final RxList<CricketOverEvent> cricketOvers = <CricketOverEvent>[].obs;
   final RxBool isFetchingOvers = false.obs;
 
-  // StreamSubscription<ScoringUpdatePayload>? _updatesSub;
+  final List<AppendCricketBallRequest> _ballRequestHistory =
+      <AppendCricketBallRequest>[];
+  final List<AppendCricketBallRequest> _redoBallRequests =
+      <AppendCricketBallRequest>[];
+  final RxBool canRedoCricketBall = false.obs;
 
-  // @override
-  // void onInit() {
-  //   super.onInit();
-  //   _updatesSub = _socketService.updatesStream.listen((update) {
-  //     _addOrReplaceEvent(update);
-  //   });
-  // }
-
-  // Future<void> connectAndJoin(String sessionId) async {
-  //   if (sessionId.isEmpty) return;
-  //   if (isConnected.value && currentSessionId.value == sessionId) return;
-  //   errorMessage.value = null;
-  //   isJoiningSession.value = true;
-
-  //   try {
-  //     if (currentSessionId.value.isNotEmpty &&
-  //         currentSessionId.value != sessionId) {
-  //       await leaveSession();
-  //     }
-  //     await _socketService.connect();
-  //     isConnected.value = _socketService.isConnected;
-  //     await _socketService.joinSession(sessionId);
-  //     currentSessionId.value = sessionId;
-  //     timeline.clear();
-  //     debugPrint('[ScoringController] joined session=$sessionId');
-  //   } catch (error) {
-  //     errorMessage.value = error.toString();
-  //     rethrow;
-  //   } finally {
-  //     isJoiningSession.value = false;
-  //   }
-  // }
+  bool get canUndoCricketBall =>
+      cricketOvers.any((over) => over.ballEvents.isNotEmpty);
 
   /// Loads scoring state and embedded [CricketStateModel] from turf-services.
   Future<void> fetchCricketMatch(String teamMatchId) async {
@@ -84,22 +58,20 @@ class ScoringController extends GetxController {
     }
     isFetchingCricketMatch.value = true;
     errorMessage.value = null;
-    // try {
     final match = await _apiService.getCricketSession(teamMatchId);
     cricketMatch.value = match;
     if (match == null) {
       errorMessage.value = 'Could not load match.';
     }
-    // } catch (error) {
-    //   cricketMatch.value = null;
-    //   errorMessage.value = error.toString();
-    // } finally {
+
     isFetchingCricketMatch.value = false;
-    // }
   }
 
   /// Loads all overs for the match.
-  Future<void> fetchCricketOvers(String teamMatchId) async {
+  Future<void> fetchCricketOvers(
+    String teamMatchId, {
+    bool resetBallHistory = false,
+  }) async {
     if (teamMatchId.isEmpty) return;
     isFetchingOvers.value = true;
     errorMessage.value = null;
@@ -108,6 +80,9 @@ class ScoringController extends GetxController {
       final sorted = List<CricketOverEvent>.from(res)
         ..sort((a, b) => a.sequence.compareTo(b.sequence));
       cricketOvers.assignAll(sorted);
+      if (resetBallHistory) {
+        _resetCricketBallHistory();
+      }
     } catch (error) {
       errorMessage.value = error.toString();
     } finally {
@@ -129,6 +104,22 @@ class ScoringController extends GetxController {
     cricketOvers.refresh();
   }
 
+  void removeCricketOver(String overId) {
+    if (overId.isEmpty) return;
+    cricketOvers.removeWhere((over) => over.id == overId);
+    cricketOvers.refresh();
+  }
+
+  void _resetCricketBallHistory() {
+    _ballRequestHistory.clear();
+    _redoBallRequests.clear();
+    canRedoCricketBall.value = false;
+  }
+
+  void _syncRedoAvailability() {
+    canRedoCricketBall.value = _redoBallRequests.isNotEmpty;
+  }
+
   /// `POST /scoring/cricket/matches/:id/session` — initializes cricket scoring.
   Future<bool> createCricketSession(CreateCricketSessionRequest request) async {
     final sessionId = currentSessionId.value;
@@ -139,7 +130,6 @@ class ScoringController extends GetxController {
 
     errorMessage.value = null;
     isCreatingCricketSession.value = true;
-    // try {
     final match = await _apiService.createCricketSession(
       teamMatchId: sessionId,
       request: request,
@@ -150,13 +140,55 @@ class ScoringController extends GetxController {
       return false;
     }
     cricketMatch.value = match;
-    await fetchCricketOvers(sessionId);
+    await fetchCricketOvers(sessionId, resetBallHistory: true);
     return true;
-    // } catch (error) {
-    //   errorMessage.value = error.toString();
-    //   return false;
-    // } finally {
-    // }
+  }
+
+  /// `PATCH /scoring/cricket/matches/:id/state` — striker / non-striker / bowler.
+  Future<bool> updateCricketState(UpdateCricketStateRequest request) async {
+    final sessionId = currentSessionId.value;
+    if (sessionId.isEmpty) {
+      errorMessage.value = 'No match selected.';
+      return false;
+    }
+    errorMessage.value = null;
+    isUpdatingCricketLineup.value = true;
+    final match = await _apiService.updateCricketState(
+      teamMatchId: sessionId,
+      request: request,
+    );
+    if (match != null) {
+      cricketMatch.value = match;
+    }
+    isUpdatingCricketLineup.value = false;
+    return match != null;
+  }
+
+  /// `POST /scoring/cricket/matches/:id/inning/change`
+  Future<bool> changeCricketInning() async {
+    final sessionId = currentSessionId.value;
+    if (sessionId.isEmpty) {
+      errorMessage.value = 'No match selected.';
+      return false;
+    }
+
+    errorMessage.value = null;
+    isChangingCricketInning.value = true;
+    try {
+      final match = await _apiService.changeCricketInning(teamMatchId: sessionId);
+      if (match == null) {
+        errorMessage.value = 'Could not change innings.';
+        return false;
+      }
+      cricketMatch.value = match;
+      _resetCricketBallHistory();
+      return true;
+    } catch (error) {
+      errorMessage.value = error.toString();
+      return false;
+    } finally {
+      isChangingCricketInning.value = false;
+    }
   }
 
   /// Persists a cricket ball over HTTP and merges the returned over into
@@ -182,6 +214,9 @@ class ScoringController extends GetxController {
         errorMessage.value = 'Could not send ball event.';
         return null;
       }
+      _ballRequestHistory.add(request);
+      _redoBallRequests.clear();
+      _syncRedoAvailability();
       upsertCricketOver(response);
       debugPrint('[ScoringController] appended over id=${response.id}');
       final match = await _apiService.getCricketSession(sessionId);
@@ -197,39 +232,62 @@ class ScoringController extends GetxController {
     }
   }
 
-  // Future<void> leaveSession() async {
-  //   final sessionId = currentSessionId.value;
-  //   if (sessionId.isEmpty) return;
+  /// Removes the latest delivery on the server and keeps redoable requests
+  /// locally for [redoLastCricketBall].
+  Future<bool> undoLastCricketBall() async {
+    final sessionId = currentSessionId.value;
+    if (sessionId.isEmpty) {
+      errorMessage.value = 'No scoring session selected.';
+      return false;
+    }
+    if (!canUndoCricketBall) {
+      errorMessage.value = 'No ball to undo.';
+      return false;
+    }
 
-  //   try {
-  //     await _socketService.leaveSession(sessionId);
-  //     debugPrint('[ScoringController] left session=$sessionId');
-  //   } catch (error) {
-  //     errorMessage.value = error.toString();
-  //   } finally {
-  //     currentSessionId.value = '';
-  //   }
-  // }
+    errorMessage.value = null;
+    isSendingUpdate.value = true;
+    try {
+      final ok = await _apiService.undoLastCricketBall(teamMatchId: sessionId);
+      if (!ok) {
+        errorMessage.value = 'Could not undo the last ball.';
+        return false;
+      }
+      if (_ballRequestHistory.isNotEmpty) {
+        _redoBallRequests.add(_ballRequestHistory.removeLast());
+        _syncRedoAvailability();
+      }
+      await fetchCricketOvers(sessionId);
+      final match = await _apiService.getCricketSession(sessionId);
+      if (match != null) {
+        cricketMatch.value = match;
+      }
+      return true;
+    } catch (error) {
+      errorMessage.value = error.toString();
+      return false;
+    } finally {
+      isSendingUpdate.value = false;
+    }
+  }
 
-  // Future<void> disconnect() async {
-  //   await leaveSession();
-  //   await _socketService.disconnect();
-  //   isConnected.value = false;
-  // }
+  /// Replays the most recently undone delivery using the existing append API.
+  Future<bool> redoLastCricketBall() async {
+    if (_redoBallRequests.isEmpty) {
+      errorMessage.value = 'Nothing to redo.';
+      return false;
+    }
 
-  // @override
-  // void onClose() {
-  //   _updatesSub?.cancel();
-  //   _socketService.dispose();
-  //   super.onClose();
-  // }
+    final request = _redoBallRequests.removeLast();
+    _syncRedoAvailability();
+    final over = await appendCricketBall(request);
+    if (over != null) {
+      return true;
+    }
 
-  // void _addOrReplaceEvent(ScoringUpdatePayload event) {
-  //   final index = timeline.indexWhere((item) => item.eventId == event.eventId);
-  //   if (index >= 0) {
-  //     timeline[index] = event;
-  //     return;
-  //   }
-  //   timeline.add(event);
-  // }
+    _redoBallRequests.add(request);
+    _syncRedoAvailability();
+    return false;
+  }
+
 }
