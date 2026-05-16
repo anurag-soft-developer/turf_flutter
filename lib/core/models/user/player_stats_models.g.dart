@@ -134,6 +134,7 @@ Map<String, dynamic> _$CricketFieldingStatsToJson(
 CricketPlayerStats _$CricketPlayerStatsFromJson(Map<String, dynamic> json) =>
     CricketPlayerStats(
       matchesPlayed: (json['matchesPlayed'] as num?)?.toInt() ?? 0,
+      matchesWon: (json['matchesWon'] as num?)?.toInt() ?? 0,
       batting: json['batting'] == null
           ? const CricketBattingStats()
           : _battingFromJson(json['batting']),
@@ -148,6 +149,7 @@ CricketPlayerStats _$CricketPlayerStatsFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$CricketPlayerStatsToJson(CricketPlayerStats instance) =>
     <String, dynamic>{
       'matchesPlayed': instance.matchesPlayed,
+      'matchesWon': instance.matchesWon,
       'batting': instance.batting.toJson(),
       'bowling': instance.bowling.toJson(),
       'fielding': instance.fielding.toJson(),

@@ -12,17 +12,25 @@ import '../../../scoring/scoring_controller.dart';
 /// [ScoringController.isFetchingOvers] so the parent does not need to wrap
 /// it with its own [Obx].
 class CricketOversTable extends StatelessWidget {
-  const CricketOversTable({super.key, required this.controller});
+  const CricketOversTable({
+    super.key,
+    required this.controller,
+    required this.innings,
+  });
 
   final ScoringController controller;
+
+  /// 1-based innings index; only overs for this innings are listed.
+  final int innings;
 
   @override
   Widget build(BuildContext context) {
     return Obx(() {
       final loading = controller.isFetchingOvers.value;
-      final overs = controller.cricketOvers;
-      final currentOver = _currentOver(overs, controller.cricketMatch.value?.cricketState?.currentInnings);
-      final tableOvers = _oversForTable(overs, currentOver);
+      final inningsOvers =
+          controller.cricketOvers.where((o) => o.innings == innings).toList();
+      final currentOver = _currentOver(inningsOvers, innings);
+      final tableOvers = _oversForTable(inningsOvers, currentOver);
 
       return Container(
         decoration: BoxDecoration(
@@ -46,9 +54,9 @@ class CricketOversTable extends StatelessWidget {
                     ).withValues(alpha: 0.85),
                   ),
                   const SizedBox(width: 8),
-                  const Text(
-                    'Overs',
-                    style: TextStyle(
+                  Text(
+                    'Overs · Inn. $innings',
+                    style: const TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 15,
                       color: Color(AppColors.textColor),
@@ -64,18 +72,18 @@ class CricketOversTable extends StatelessWidget {
                 ],
               ),
             ),
-            if (overs.isEmpty && !loading)
-              const Padding(
-                padding: EdgeInsets.fromLTRB(14, 0, 14, 14),
+            if (inningsOvers.isEmpty && !loading)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
                 child: Text(
-                  'No overs recorded yet.',
-                  style: TextStyle(
+                  'No overs recorded yet for innings $innings.',
+                  style: const TextStyle(
                     color: Color(AppColors.textSecondaryColor),
                     fontSize: 13,
                   ),
                 ),
               ),
-            if (overs.isNotEmpty)
+            if (inningsOvers.isNotEmpty)
               LayoutBuilder(
                 builder: (context, constraints) {
                   final breakdownWidth = _breakdownColumnWidth(

@@ -102,6 +102,19 @@ class ScoringApiService {
     return TeamMatchModel.fromJson(response);
   }
 
+  /// `POST /scoring/cricket/matches/:teamMatchId/complete`
+  Future<TeamMatchModel?> completeCricketMatch({
+    required String teamMatchId,
+    required CompleteCricketMatchRequest request,
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiConstants.scoring.cricketCompleteMatch(teamMatchId),
+      data: request.toJson(),
+    );
+    if (response == null) return null;
+    return TeamMatchModel.fromJson(response);
+  }
+
   /// `GET /scoring/football/matches/:teamMatchId`
   Future<TeamMatchModel?> getFootballSession(String teamMatchId) async {
     final response = await _apiService.get<Map<String, dynamic>>(

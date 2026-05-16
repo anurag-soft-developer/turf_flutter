@@ -228,6 +228,8 @@ CricketFieldingStats _fieldingFromJson(dynamic json) =>
 class CricketPlayerStats {
   @JsonKey(defaultValue: 0)
   final int matchesPlayed;
+  @JsonKey(defaultValue: 0)
+  final int matchesWon;
   @JsonKey(fromJson: _battingFromJson)
   final CricketBattingStats batting;
   @JsonKey(fromJson: _bowlingFromJson)
@@ -237,6 +239,7 @@ class CricketPlayerStats {
 
   const CricketPlayerStats({
     this.matchesPlayed = 0,
+    this.matchesWon = 0,
     this.batting = const CricketBattingStats(),
     this.bowling = const CricketBowlingStats(),
     this.fielding = const CricketFieldingStats(),

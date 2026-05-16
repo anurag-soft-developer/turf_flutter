@@ -52,7 +52,13 @@ class TeamDetailScreen extends StatelessWidget {
       ),
       bottomNavigationBar: controller.isMyTeamMode
           ? null
-          : _BottomJoinBar(controller: controller),
+          : Obx(() {
+              final t = controller.team.value;
+              if (t == null || !t.lookingForMembers) {
+                return const SizedBox.shrink();
+              }
+              return _BottomJoinBar(controller: controller);
+            }),
       body: Stack(
         children: [
           Obx(() {

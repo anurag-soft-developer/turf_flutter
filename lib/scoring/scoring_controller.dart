@@ -37,6 +37,8 @@ class ScoringController extends GetxController {
 
   final RxBool isChangingCricketInning = false.obs;
 
+  final RxBool isCompletingCricketMatch = false.obs;
+
   /// Overs loaded from `GET .../overs` and updated after each `append_ball`.
   final RxList<CricketOverEvent> cricketOvers = <CricketOverEvent>[].obs;
   final RxBool isFetchingOvers = false.obs;
@@ -162,6 +164,36 @@ class ScoringController extends GetxController {
     }
     isUpdatingCricketLineup.value = false;
     return match != null;
+  }
+
+  /// `POST /scoring/cricket/matches/:id/complete`
+  Future<bool> completeCricketMatch(CompleteCricketMatchRequest request) async {
+    final sessionId = currentSessionId.value;
+    if (sessionId.isEmpty) {
+      errorMessage.value = 'No match selected.';
+      return false;
+    }
+
+    errorMessage.value = null;
+    isCompletingCricketMatch.value = true;
+    try {
+      final match = await _apiService.completeCricketMatch(
+        teamMatchId: sessionId,
+        request: request,
+      );
+      if (match == null) {
+        errorMessage.value = 'Could not complete match.';
+        return false;
+      }
+      cricketMatch.value = match;
+      _resetCricketBallHistory();
+      return true;
+    } catch (error) {
+      errorMessage.value = error.toString();
+      return false;
+    } finally {
+      isCompletingCricketMatch.value = false;
+    }
   }
 
   /// `POST /scoring/cricket/matches/:id/inning/change`

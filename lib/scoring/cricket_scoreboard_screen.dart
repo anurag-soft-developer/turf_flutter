@@ -107,8 +107,7 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
       _battingTeamId == _fromTeamId ? _toTeamId : _fromTeamId;
 
   /// Any match team id for scoring API `actorTeamId` (must be on the fixture).
-  String get _actorTeamId =>
-      _fromTeamId.isNotEmpty ? _fromTeamId : _toTeamId;
+  String get _actorTeamId => _fromTeamId.isNotEmpty ? _fromTeamId : _toTeamId;
 
   Future<void> _initialize() async {
     await Future.wait([
@@ -192,11 +191,33 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
     );
   }
 
+  Future<void> _completeMatch() async {
+    final ok = await _scoringController.completeCricketMatch(
+      CompleteCricketMatchRequest(actorTeamId: _actorTeamId),
+    );
+    if (!mounted || ok) return;
+    AppSnackbar.error(
+      title: 'Could not end match',
+      message:
+          _scoringController.errorMessage.value ?? 'Could not complete match.',
+    );
+  }
+
+  Future<void> _onInningsCompletedAction(CricketStateModel cs) async {
+    final hasNextInnings = cs.currentInnings < cs.inningsSummaries.length;
+    if (hasNextInnings) {
+      await _startNextInning();
+    } else {
+      await _completeMatch();
+    }
+  }
+
   Widget _buildInningsCompletedFooter(CricketStateModel cs) {
     final hasNextInnings = cs.currentInnings < cs.inningsSummaries.length;
-    final busy = _scoringController.isChangingCricketInning.value;
-    final buttonLabel =
-        hasNextInnings ? 'Start next innings' : 'End match';
+    final busy = hasNextInnings
+        ? _scoringController.isChangingCricketInning.value
+        : _scoringController.isCompletingCricketMatch.value;
+    final buttonLabel = hasNextInnings ? 'Start next innings' : 'End match';
 
     return Container(
       decoration: BoxDecoration(
@@ -239,8 +260,9 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
                     Icon(
                       Icons.flag_rounded,
                       size: 22,
-                      color: const Color(AppColors.primaryColor)
-                          .withValues(alpha: 0.9),
+                      color: const Color(
+                        AppColors.primaryColor,
+                      ).withValues(alpha: 0.9),
                     ),
                     const SizedBox(width: 10),
                     const Expanded(
@@ -268,7 +290,7 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
                 ),
                 const SizedBox(height: 14),
                 FilledButton(
-                  onPressed: busy ? null : _startNextInning,
+                  onPressed: busy ? null : () => _onInningsCompletedAction(cs),
                   style: FilledButton.styleFrom(
                     minimumSize: const Size.fromHeight(48),
                     backgroundColor: const Color(AppColors.primaryColor),
@@ -308,7 +330,10 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
       child: const Row(
         children: [
-          Icon(Icons.emoji_events_rounded, color: Color(AppColors.primaryColor)),
+          Icon(
+            Icons.emoji_events_rounded,
+            color: Color(AppColors.primaryColor),
+          ),
           SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -327,7 +352,8 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
 
   Widget _buildScoringFooter(TeamMatchModel match) {
     final cs = match.cricketState!;
-    if (match.status == TeamMatchStatus.completed) {
+    if (match.status == TeamMatchStatus.completed ||
+        match.status == TeamMatchStatus.draw) {
       return _buildMatchCompletedFooter();
     }
 
@@ -433,14 +459,10 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
       _scoringController.cricketOvers.toList(),
       cs.currentInnings,
     );
-    final candidates = playingXiForTeam(match, battingId)
-        .where((p) {
-          final id = p.userIdHelper.getId() ?? '';
-          return id.isNotEmpty &&
-              id != dismissedUserId &&
-              !dismissed.contains(id);
-        })
-        .toList();
+    final candidates = playingXiForTeam(match, battingId).where((p) {
+      final id = p.userIdHelper.getId() ?? '';
+      return id.isNotEmpty && id != dismissedUserId && !dismissed.contains(id);
+    }).toList();
     if (candidates.isEmpty) {
       AppSnackbar.info(
         title: 'No batsman available',
@@ -469,8 +491,8 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
               for (final player in candidates)
                 ListTile(
                   leading: CircleAvatar(
-                    backgroundImage: player.avatar != null &&
-                            player.avatar!.isNotEmpty
+                    backgroundImage:
+                        player.avatar != null && player.avatar!.isNotEmpty
                         ? NetworkImage(player.avatar!)
                         : null,
                     child: player.avatar == null || player.avatar!.isEmpty
@@ -534,8 +556,8 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
               for (final player in candidates)
                 ListTile(
                   leading: CircleAvatar(
-                    backgroundImage: player.avatar != null &&
-                            player.avatar!.isNotEmpty
+                    backgroundImage:
+                        player.avatar != null && player.avatar!.isNotEmpty
                         ? NetworkImage(player.avatar!)
                         : null,
                     child: player.avatar == null || player.avatar!.isEmpty
@@ -657,7 +679,7 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
             announcedPlayerForUserId(match, strikerId)?.name ?? 'Striker';
         final nonName =
             announcedPlayerForUserId(match, nonStrikerId)?.name ??
-                'Non-striker';
+            'Non-striker';
         final dismissed = await showModalBottomSheet<String>(
           context: context,
           backgroundColor: Colors.white,
@@ -883,7 +905,10 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
                     actorTeamId: _actorTeamId,
                   ),
                   const SizedBox(height: 10),
-                  CricketOversTable(controller: _scoringController),
+                  CricketOversTable(
+                    controller: _scoringController,
+                    innings: match.cricketState!.currentInnings,
+                  ),
                 ],
               ),
             ),

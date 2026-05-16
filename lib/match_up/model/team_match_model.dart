@@ -163,22 +163,38 @@ class ProposedTurfModel {
 }
 
 /// Backend embedded `inningsSummaries[]` item ([CricketInningsSummary]).
-@JsonSerializable()
+@JsonSerializable(explicitToJson: true)
 class CricketInningsSummaryModel {
   final int runs;
   final int wickets;
   final int legalBalls;
 
+  @JsonKey(name: 'battingTeamId')
+  @TeamRefConverter()
+  final dynamic battingTeamId;
+
+  @JsonKey(name: 'bowlingTeamId')
+  @TeamRefConverter()
+  final dynamic bowlingTeamId;
+
   const CricketInningsSummaryModel({
     required this.runs,
     required this.wickets,
     required this.legalBalls,
+    this.battingTeamId,
+    this.bowlingTeamId,
   });
 
   factory CricketInningsSummaryModel.fromJson(Map<String, dynamic> json) =>
       _$CricketInningsSummaryModelFromJson(json);
 
   Map<String, dynamic> toJson() => _$CricketInningsSummaryModelToJson(this);
+
+  TeamRefFieldInstance get battingTeamHelper =>
+      TeamRefFieldInstance(battingTeamId);
+
+  TeamRefFieldInstance get bowlingTeamHelper =>
+      TeamRefFieldInstance(bowlingTeamId);
 }
 
 /// Backend [FootballPeriod] on embedded football state.

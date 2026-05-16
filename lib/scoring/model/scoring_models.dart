@@ -154,6 +154,15 @@ class UpdateCricketStateRequest {
   };
 }
 
+/// Body for `POST /scoring/cricket/matches/:teamMatchId/complete`.
+class CompleteCricketMatchRequest {
+  final String actorTeamId;
+
+  const CompleteCricketMatchRequest({required this.actorTeamId});
+
+  Map<String, dynamic> toJson() => {'actorTeamId': actorTeamId};
+}
+
 abstract class CricketOutcome {
   final CricketOutcomeKind kind;
   const CricketOutcome(this.kind);

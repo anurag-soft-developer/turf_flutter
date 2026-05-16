@@ -224,6 +224,10 @@ class ScoringEndpoints {
   String cricketChangeInning(String teamMatchId) =>
       '/scoring/cricket/matches/$teamMatchId/inning/change';
 
+  /// `POST /scoring/cricket/matches/:teamMatchId/complete`
+  String cricketCompleteMatch(String teamMatchId) =>
+      '/scoring/cricket/matches/$teamMatchId/complete';
+
   // Football
   String footballSession(String teamMatchId) =>
       '/scoring/football/matches/$teamMatchId';

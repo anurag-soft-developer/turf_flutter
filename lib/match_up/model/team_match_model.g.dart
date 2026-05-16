@@ -96,6 +96,8 @@ CricketInningsSummaryModel _$CricketInningsSummaryModelFromJson(
   runs: (json['runs'] as num).toInt(),
   wickets: (json['wickets'] as num).toInt(),
   legalBalls: (json['legalBalls'] as num).toInt(),
+  battingTeamId: const TeamRefConverter().fromJson(json['battingTeamId']),
+  bowlingTeamId: const TeamRefConverter().fromJson(json['bowlingTeamId']),
 );
 
 Map<String, dynamic> _$CricketInningsSummaryModelToJson(
@@ -104,6 +106,8 @@ Map<String, dynamic> _$CricketInningsSummaryModelToJson(
   'runs': instance.runs,
   'wickets': instance.wickets,
   'legalBalls': instance.legalBalls,
+  'battingTeamId': const TeamRefConverter().toJson(instance.battingTeamId),
+  'bowlingTeamId': const TeamRefConverter().toJson(instance.bowlingTeamId),
 };
 
 CricketStateModel _$CricketStateModelFromJson(
