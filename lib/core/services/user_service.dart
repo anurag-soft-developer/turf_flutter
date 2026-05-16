@@ -1,3 +1,4 @@
+import '../../rankings/model/player_leaderboard_model.dart';
 import '../config/api_constants.dart';
 import '../models/paginated_response.dart';
 import '../models/user/user_model.dart';
@@ -75,5 +76,22 @@ class UserService {
     );
     if (response == null) return null;
     return UserModel.fromJson(response);
+  }
+
+  /// Public leaderboard sorted by sport ranking points (`GET /users/leaderboard`).
+  Future<PaginatedResponse<PlayerLeaderboardRow>?> getLeaderboard(
+    PlayerLeaderboardQuery query,
+  ) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiConstants.user.leaderboard,
+      queryParameters: query.toQueryParameters(),
+    );
+    if (response == null) {
+      return EmptyPaginatedResponse<PlayerLeaderboardRow>();
+    }
+    return PaginatedResponse.fromJson(
+      response,
+      (json) => PlayerLeaderboardRow.fromJson(json as Map<String, dynamic>),
+    );
   }
 }

@@ -17,11 +17,14 @@ class TeamMemberCard extends StatelessWidget {
     final role = leadershipRoleLabel(member.leadershipRole);
     final hasRole = role.isNotEmpty;
 
+    final userId = helper.getId();
     return InkWell(
-      onTap: () => Get.toNamed(
-        AppConstants.routes.teamMemberProfile,
-        arguments: {'user': member.user},
-      ),
+      onTap: userId == null || userId.isEmpty
+          ? null
+          : () => Get.toNamed(
+              AppConstants.routes.teamMemberProfile,
+              arguments: {'userId': userId},
+            ),
       borderRadius: BorderRadius.circular(14),
       child: Container(
         width: 110,

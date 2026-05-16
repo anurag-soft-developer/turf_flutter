@@ -314,7 +314,7 @@ class _OpponentCard extends StatelessWidget {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  Expanded(child: TeamStatsRow(team: team)),
+                  Expanded(child: TeamStatsRow.fromTeam(team)),
                   const SizedBox(width: 12),
                   _ChallengeButton(onTap: onChallenge),
                 ],

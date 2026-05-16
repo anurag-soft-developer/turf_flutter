@@ -155,6 +155,20 @@ Map<String, dynamic> _$CricketPlayerStatsToJson(CricketPlayerStats instance) =>
       'fielding': instance.fielding.toJson(),
     };
 
+SportRankingPointsEntry _$SportRankingPointsEntryFromJson(
+  Map<String, dynamic> json,
+) => SportRankingPointsEntry(
+  sportType: json['sportType'] as String,
+  points: (json['points'] as num?)?.toInt() ?? 0,
+);
+
+Map<String, dynamic> _$SportRankingPointsEntryToJson(
+  SportRankingPointsEntry instance,
+) => <String, dynamic>{
+  'sportType': instance.sportType,
+  'points': instance.points,
+};
+
 EarnedBadge _$EarnedBadgeFromJson(Map<String, dynamic> json) => EarnedBadge(
   badgeId: json['badgeId'] as String,
   earnedAt: DateTime.parse(json['earnedAt'] as String),

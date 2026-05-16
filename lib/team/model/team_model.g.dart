@@ -343,6 +343,9 @@ TeamModel _$TeamModelFromJson(Map<String, dynamic> json) => TeamModel(
   losses: json['losses'] == null ? 0 : _intFromJson(json['losses']),
   draws: json['draws'] == null ? 0 : _intFromJson(json['draws']),
   winRate: json['winRate'] == null ? 0.0 : _doubleFromJson(json['winRate']),
+  rankingPoints: json['rankingPoints'] == null
+      ? 0
+      : _intFromJson(json['rankingPoints']),
   sportStats: _sportStatsMapFromJson(json['sportStats']),
   badges:
       (json['badges'] as List<dynamic>?)
@@ -385,6 +388,7 @@ Map<String, dynamic> _$TeamModelToJson(TeamModel instance) => <String, dynamic>{
   'losses': instance.losses,
   'draws': instance.draws,
   'winRate': instance.winRate,
+  'rankingPoints': instance.rankingPoints,
   'sportStats': _sportStatsMapToJson(instance.sportStats),
   'badges': instance.badges.map((e) => e.toJson()).toList(),
   'createdAt': instance.createdAt,

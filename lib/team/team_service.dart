@@ -2,6 +2,7 @@ import '../core/config/api_constants.dart';
 import '../core/models/paginated_response.dart';
 import '../core/services/api_service.dart';
 import 'members/team_member_service.dart';
+import 'model/team_leaderboard_model.dart';
 import 'model/team_model.dart';
 
 class TeamService {
@@ -75,5 +76,22 @@ class TeamService {
     );
     if (response == null) return null;
     return TeamModel.fromJson(response);
+  }
+
+  /// Public leaderboard sorted by [rankingPoints] (`GET /teams/leaderboard`).
+  Future<PaginatedResponse<TeamLeaderboardRow>?> getLeaderboard(
+    TeamLeaderboardQuery query,
+  ) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiConstants.team.leaderboard,
+      queryParameters: query.toQueryParameters(),
+    );
+    if (response == null) {
+      return EmptyPaginatedResponse<TeamLeaderboardRow>();
+    }
+    return PaginatedResponse.fromJson(
+      response,
+      (json) => TeamLeaderboardRow.fromJson(json as Map<String, dynamic>),
+    );
   }
 }

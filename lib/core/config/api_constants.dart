@@ -52,6 +52,7 @@ class UserEndpoints {
   String get notificationSettings => '/users/notification-settings';
   String get fcmTokens => '/users/fcm-tokens';
   String get publicProfiles => '/users/profiles';
+  String get leaderboard => '/users/leaderboard';
   String publicProfileByIdentifier(String identifier) =>
       '/users/profile/$identifier';
 }
@@ -100,6 +101,8 @@ class TeamEndpoints {
 
   String demoteOwner(String teamId, String userId) =>
       '/teams/$teamId/owners/$userId';
+
+  String get leaderboard => '/teams/leaderboard';
 }
 
 class TeamMemberEndpoints {

@@ -105,6 +105,8 @@ class UserModel {
   final String? updatedAt;
   @JsonKey(name: 'playerSportStats', defaultValue: [])
   final List<PlayerSportEntry> playerSportStats;
+  @JsonKey(name: 'sportRankingPoints', defaultValue: [])
+  final List<SportRankingPointsEntry> sportRankingPoints;
   @JsonKey(name: 'badges', defaultValue: [])
   final List<EarnedBadge> badges;
   @JsonKey(name: 'isPasswordExists')
@@ -137,6 +139,7 @@ class UserModel {
     this.createdAt,
     this.updatedAt,
     this.playerSportStats = const [],
+    this.sportRankingPoints = const [],
     this.badges = const [],
     this.isPasswordExists,
     this.twoFactorEnabled,
@@ -167,6 +170,7 @@ class UserModel {
     String? createdAt,
     String? updatedAt,
     List<PlayerSportEntry>? playerSportStats,
+    List<SportRankingPointsEntry>? sportRankingPoints,
     List<EarnedBadge>? badges,
     bool? isPasswordExists,
     bool? twoFactorEnabled,
@@ -191,6 +195,7 @@ class UserModel {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       playerSportStats: playerSportStats ?? this.playerSportStats,
+      sportRankingPoints: sportRankingPoints ?? this.sportRankingPoints,
       badges: badges ?? this.badges,
       isPasswordExists: isPasswordExists ?? this.isPasswordExists,
       twoFactorEnabled: twoFactorEnabled ?? this.twoFactorEnabled,

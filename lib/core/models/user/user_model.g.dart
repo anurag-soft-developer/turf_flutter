@@ -41,6 +41,13 @@ UserModel _$UserModelFromJson(Map<String, dynamic> json) => UserModel(
           ?.map((e) => PlayerSportEntry.fromJson(e as Map<String, dynamic>))
           .toList() ??
       [],
+  sportRankingPoints:
+      (json['sportRankingPoints'] as List<dynamic>?)
+          ?.map(
+            (e) => SportRankingPointsEntry.fromJson(e as Map<String, dynamic>),
+          )
+          .toList() ??
+      [],
   badges:
       (json['badges'] as List<dynamic>?)
           ?.map((e) => EarnedBadge.fromJson(e as Map<String, dynamic>))
@@ -74,6 +81,8 @@ Map<String, dynamic> _$UserModelToJson(UserModel instance) => <String, dynamic>{
   'createdAt': instance.createdAt,
   'updatedAt': instance.updatedAt,
   'playerSportStats': instance.playerSportStats.map((e) => e.toJson()).toList(),
+  'sportRankingPoints':
+      instance.sportRankingPoints.map((e) => e.toJson()).toList(),
   'badges': instance.badges.map((e) => e.toJson()).toList(),
   'isPasswordExists': instance.isPasswordExists,
   'twoFactorEnabled': instance.twoFactorEnabled,

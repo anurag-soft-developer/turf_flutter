@@ -468,6 +468,8 @@ class TeamModel {
   final int draws;
   @JsonKey(fromJson: _doubleFromJson, defaultValue: 0.0)
   final double winRate;
+  @JsonKey(name: 'rankingPoints', fromJson: _intFromJson, defaultValue: 0)
+  final int rankingPoints;
   @JsonKey(
     name: 'sportStats',
     fromJson: _sportStatsMapFromJson,
@@ -512,6 +514,7 @@ class TeamModel {
     this.losses = 0,
     this.draws = 0,
     this.winRate = 0.0,
+    this.rankingPoints = 0,
     TeamSportStatsMap? sportStats,
     this.badges = const [],
     this.createdAt,

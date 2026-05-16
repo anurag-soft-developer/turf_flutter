@@ -1,11 +1,12 @@
 import 'package:get/get.dart';
 
 import '../../components/shared/app_segmented_tabs/segmented_tab_cache_controller.dart';
+import '../model/team_leaderboard_model.dart';
 import '../model/team_model.dart';
 import '../team_service.dart';
 
 class TeamsRankingController extends GetxController
-    with SegmentedTabCacheController<TeamSportType, TeamModel> {
+    with SegmentedTabCacheController<TeamSportType, TeamLeaderboardRow> {
   final TeamService _teamService = TeamService();
 
   final Rx<TeamSportType> selectedSport = TeamSportType.cricket.obs;
@@ -25,7 +26,7 @@ class TeamsRankingController extends GetxController
     ensureSportLoaded(sport);
   }
 
-  SegmentedTabDataState<TeamModel> stateForSport(TeamSportType sport) {
+  SegmentedTabDataState<TeamLeaderboardRow> stateForSport(TeamSportType sport) {
     return tabStateFor(sport);
   }
 
@@ -38,17 +39,11 @@ class TeamsRankingController extends GetxController
   }
 
   @override
-  Future<List<TeamModel>> fetchTabItems(TeamSportType sport) async {
-    final page = await _teamService.findMany(
-      TeamFilterQuery(
-        status: TeamStatus.active,
-        visibility: TeamVisibility.public,
-        sportType: sport,
-        page: 1,
-        limit: 50,
-      ),
+  Future<List<TeamLeaderboardRow>> fetchTabItems(TeamSportType sport) async {
+    final page = await _teamService.getLeaderboard(
+      TeamLeaderboardQuery(sportType: sport, page: 1, limit: 50),
     );
-    return page?.data ?? <TeamModel>[];
+    return page?.data ?? <TeamLeaderboardRow>[];
   }
 
   @override

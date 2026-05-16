@@ -8,8 +8,9 @@ import '../../components/player/profile/sport_stats_view.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/user_field_instance.dart';
 import '../../core/models/user/player_stats_models.dart';
+import '../../core/services/user_service.dart';
 
-/// Arguments: `{'user': dynamic}` — populated [UserModel] or user id string.
+/// Route arguments: `{'userId': String}` — public profile user id.
 class PlayerProfileScreen extends StatefulWidget {
   const PlayerProfileScreen({super.key});
 
@@ -19,67 +20,120 @@ class PlayerProfileScreen extends StatefulWidget {
 
 class _PlayerProfileScreenState extends State<PlayerProfileScreen>
     with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+  TabController? _tabController;
   UserFieldInstance? helper;
+  bool _isLoading = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-
-    final raw = Get.arguments;
-    dynamic userField;
-    if (raw is Map<String, dynamic>) {
-      userField = raw['user'];
+    final userId = _parseUserId(Get.arguments);
+    if (userId == null || userId.isEmpty) {
+      _isLoading = false;
+      _error = 'Player not found';
+    } else {
+      _loadProfile(userId);
     }
-    helper = UserFieldInstance(userField);
+  }
 
-    // Get available sports from player stats
-    final availableSports = _getAvailableSports();
-    _tabController = TabController(length: availableSports.length, vsync: this);
+  String? _parseUserId(dynamic raw) {
+    if (raw is String && raw.isNotEmpty) return raw;
+    if (raw is Map) {
+      final id = raw['userId'];
+      if (id is String && id.isNotEmpty) return id;
+    }
+    return null;
+  }
+
+  Future<void> _loadProfile(String userId) async {
+    try {
+      final user = await UserService().getPublicProfile(userId);
+      if (!mounted) return;
+      if (user == null) {
+        setState(() {
+          _isLoading = false;
+          _error = 'Player not found';
+        });
+        return;
+      }
+
+      if (!mounted) return;
+
+      helper = UserFieldInstance(user);
+      final availableSports = _getAvailableSports();
+      _tabController?.dispose();
+      _tabController = TabController(
+        length: availableSports.length,
+        vsync: this,
+      );
+      setState(() {
+        _isLoading = false;
+        _error = null;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _error = 'Failed to load profile';
+      });
+    }
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _tabController?.dispose();
     super.dispose();
   }
 
   List<SportType> _getAvailableSports() {
     final model = helper?.getModel();
     if (model?.playerSportStats.isEmpty ?? true) {
-      return [SportType.football, SportType.cricket]; // Default sports
+      return [SportType.football, SportType.cricket];
     }
 
     return model!.playerSportStats
-            .map((entry) => entry.sportType)
-            .toSet()
-            .toList()
-        as List<SportType>;
+        .map((entry) {
+          return entry.sportType == 'cricket'
+              ? SportType.cricket
+              : SportType.football;
+        })
+        .toSet()
+        .toList();
   }
 
   PlayerSportEntry? _getStatsForSport(SportType sport) {
     final model = helper?.getModel();
     if (model?.playerSportStats.isEmpty ?? true) return null;
 
+    final sportStr = sport == SportType.cricket ? 'cricket' : 'football';
     try {
       return model!.playerSportStats.firstWhere(
-        (entry) => entry.sportType == sport,
+        (entry) => entry.sportType == sportStr,
       );
-    } catch (e) {
+    } catch (_) {
       return null;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (helper == null) {
+    if (_isLoading) {
       return Scaffold(
         appBar: AppBar(title: const Text('Player Profile')),
-        body: const Center(child: Text('Player not found')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_error != null || helper == null || _tabController == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Player Profile')),
+        body: Center(child: Text(_error ?? 'Player not found')),
       );
     }
 
     final availableSports = _getAvailableSports();
+    final tabController = _tabController!;
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
@@ -98,10 +152,8 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Quick Stats Bar
                   const SizedBox(height: 24),
                   PlayerQuickStats(helper: helper!),
-
                   const SizedBox(height: 24),
                   PlayerBadgesSection(badges: helper?.getModel()?.badges ?? []),
                 ],
@@ -112,12 +164,11 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen>
         body: Column(
           children: [
             const SizedBox(height: 24),
-            // Sport Stats Tabs
             if (availableSports.isNotEmpty) ...[
               Container(
                 color: Colors.white,
                 child: TabBar(
-                  controller: _tabController,
+                  controller: tabController,
                   labelColor: const Color(AppColors.primaryColor),
                   unselectedLabelColor: const Color(
                     AppColors.textSecondaryColor,
@@ -138,10 +189,9 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen>
                   }).toList(),
                 ),
               ),
-
               Expanded(
                 child: TabBarView(
-                  controller: _tabController,
+                  controller: tabController,
                   children: availableSports.map((sport) {
                     final stats = _getStatsForSport(sport);
                     return SportStatsView(sport: sport, stats: stats);

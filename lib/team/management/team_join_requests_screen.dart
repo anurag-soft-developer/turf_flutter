@@ -80,10 +80,14 @@ class TeamJoinRequestsScreen extends StatelessWidget {
               final m = c.pending[i];
               return _PendingApplicantRow(
                 member: m,
-                onOpenProfile: () => Get.toNamed(
-                  AppConstants.routes.teamMemberProfile,
-                  arguments: {'user': m.user},
-                ),
+                onOpenProfile: () {
+                  final userId = m.userHelper.getId();
+                  if (userId == null || userId.isEmpty) return;
+                  Get.toNamed(
+                    AppConstants.routes.teamMemberProfile,
+                    arguments: {'userId': userId},
+                  );
+                },
                 isProcessing:
                     c.actionMembershipId.value != null &&
                     c.actionMembershipId.value == m.id,

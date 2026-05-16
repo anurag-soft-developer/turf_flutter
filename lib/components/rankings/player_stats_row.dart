@@ -1,37 +1,30 @@
 import 'package:flutter/material.dart';
 
 import '../../core/config/constants.dart';
-import '../../team/model/team_leaderboard_model.dart';
-import '../../team/model/team_model.dart';
+import '../../rankings/model/player_leaderboard_model.dart';
 
-class TeamStatsRow extends StatelessWidget {
-  const TeamStatsRow({
+class PlayerStatsRow extends StatelessWidget {
+  const PlayerStatsRow({
     super.key,
-    required this.wins,
-    required this.losses,
-    required this.draws,
+    required this.matchesWon,
+    required this.matchesLost,
     required this.matchesPlayed,
+    required this.winRate,
     this.compact = false,
   });
 
-  TeamStatsRow.fromTeam(TeamModel team, {this.compact = false})
-      : wins = team.wins,
-        losses = team.losses,
-        draws = team.draws,
-        matchesPlayed = team.matchesPlayed;
-
-  TeamStatsRow.fromLeaderboard(
-    TeamLeaderboardRow entry, {
+  PlayerStatsRow.fromLeaderboard(
+    PlayerLeaderboardRow entry, {
     this.compact = false,
-  })  : wins = entry.stats.wins,
-        losses = entry.stats.losses,
-        draws = entry.stats.draws,
-        matchesPlayed = entry.stats.matchesPlayed;
+  })  : matchesWon = entry.stats.matchesWon,
+        matchesLost = entry.stats.matchesLost,
+        matchesPlayed = entry.stats.matchesPlayed,
+        winRate = entry.stats.winRate;
 
-  final int wins;
-  final int losses;
-  final int draws;
+  final int matchesWon;
+  final int matchesLost;
   final int matchesPlayed;
+  final double winRate;
   final bool compact;
 
   @override
@@ -50,21 +43,30 @@ class TeamStatsRow extends StatelessWidget {
       spacing: 0,
       runSpacing: 4,
       children: [
-        _chip('W', '$wins', valueStyle, labelStyle),
+        _chip('W', '$matchesWon', valueStyle, labelStyle),
         _dot(),
-        _chip('L', '$losses', valueStyle, labelStyle),
-        _dot(),
-        _chip('D', '$draws', valueStyle, labelStyle),
+        _chip('L', '$matchesLost', valueStyle, labelStyle),
         if (!compact) ...[
           _dot(),
           _chip('Played', '$matchesPlayed', valueStyle, labelStyle),
+          _dot(),
+          _chip('WR', _winRateLabel(), valueStyle, labelStyle),
         ],
       ],
     );
   }
 
+  String _winRateLabel() {
+    if (matchesPlayed <= 0) return '0%';
+    return '${(winRate * 100).round()}%';
+  }
+
   Widget _chip(
-      String label, String value, TextStyle vStyle, TextStyle lStyle) {
+    String label,
+    String value,
+    TextStyle vStyle,
+    TextStyle lStyle,
+  ) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [

@@ -251,6 +251,26 @@ class CricketPlayerStats {
 }
 
 // ---------------------------------------------------------------------------
+// Ranking points (per sport)
+// ---------------------------------------------------------------------------
+
+@JsonSerializable()
+class SportRankingPointsEntry {
+  final String sportType;
+  @JsonKey(defaultValue: 0)
+  final int points;
+
+  const SportRankingPointsEntry({
+    required this.sportType,
+    this.points = 0,
+  });
+
+  factory SportRankingPointsEntry.fromJson(Map<String, dynamic> json) =>
+      _$SportRankingPointsEntryFromJson(json);
+  Map<String, dynamic> toJson() => _$SportRankingPointsEntryToJson(this);
+}
+
+// ---------------------------------------------------------------------------
 // Player sport entry (polymorphic stats — manual serialization)
 // ---------------------------------------------------------------------------
 

@@ -103,9 +103,11 @@ class TeamRosterManageController extends GetxController {
   }
 
   void openProfile(TeamMemberModel m) {
+    final userId = m.userHelper.getId();
+    if (userId == null || userId.isEmpty) return;
     Get.toNamed(
       AppConstants.routes.teamMemberProfile,
-      arguments: {'user': m.user},
+      arguments: {'userId': userId},
     );
   }
 

@@ -10,6 +10,7 @@ import '../../../turf_booking/bookings_screen.dart';
 import '../../../turf_booking/turf_booking_controller.dart';
 import '../../../turf/feed/turf_list_screen.dart';
 import '../../../team/feed/teams_ranking_screen.dart';
+import '../../../rankings/player_ranking_controller.dart';
 import '../../../rankings/player_ranking_screen.dart';
 import '../../../profile/profile_screen.dart';
 import '../../../turf/feed/turf_list_controller.dart';
@@ -81,6 +82,9 @@ final List<NavTab> kNavTabs = [
     activeIcon: Icons.emoji_events,
     label: 'Players',
     screenBuilder: () => const PlayerRankingScreen(),
+    loadController: () =>
+        _ensure<PlayerRankingController>(() => PlayerRankingController()),
+    disposeController: () => _dispose<PlayerRankingController>(),
   ),
   NavTab(
     icon: Icons.person_outline,
