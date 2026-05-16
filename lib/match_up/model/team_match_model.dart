@@ -411,15 +411,27 @@ class MatchFeedFilterQuery {
 /// Backend [ListNegotiationsFilterDto] / `ListNegotiationsFilterSchema`.
 class ListNegotiationsFilterQuery {
   final String? teamId;
+
+  /// When non-empty, sent as `teamIds=id1,id2` (preferred over [teamId] for batches).
+  final List<String>? teamIds;
   final NegotiationListType type;
   final TeamMatchStatus? status;
+
+  /// When non-empty, sent as `statuses=a,b` (preferred over [status] for multiple).
+  final List<TeamMatchStatus>? statuses;
+
+  /// Same format as turf search: `createdAt:desc`, optional multi: `a:asc,b:desc`.
+  final String? sort;
   final int page;
   final int limit;
 
   const ListNegotiationsFilterQuery({
     this.teamId,
+    this.teamIds,
     this.type = NegotiationListType.all,
     this.status,
+    this.statuses,
+    this.sort,
     this.page = 1,
     this.limit = 10,
   });
@@ -431,9 +443,67 @@ class ListNegotiationsFilterQuery {
       'page': page.toString(),
       'limit': clampedLimit.toString(),
     };
-    if (teamId != null) params['teamId'] = teamId!;
-    if (status != null) {
+    final ids = teamIds?.where((id) => id.isNotEmpty).toList();
+    if (ids != null && ids.isNotEmpty) {
+      params['teamIds'] = ids.join(',');
+    } else if (teamId != null) {
+      params['teamId'] = teamId!;
+    }
+    final statusList = statuses
+        ?.map(_$teamMatchStatusToApiString)
+        .where((s) => s.isNotEmpty)
+        .toList();
+    if (statusList != null && statusList.isNotEmpty) {
+      params['statuses'] = statusList.join(',');
+    } else if (status != null) {
       params['status'] = _$teamMatchStatusToApiString(status!);
+    }
+    final sortParam = sort;
+    if (sortParam != null && sortParam.isNotEmpty) {
+      params['sort'] = sortParam;
+    }
+    return params;
+  }
+}
+
+/// Backend [ListPreMatchInboxFilterDto] — received / sent challenge tabs.
+class ListPreMatchInboxFilterQuery {
+  final NegotiationListType type;
+  final String? teamId;
+  final List<String>? teamIds;
+  final String? sort;
+  final int page;
+  final int limit;
+
+  const ListPreMatchInboxFilterQuery({
+    required this.type,
+    this.teamId,
+    this.teamIds,
+    this.sort,
+    this.page = 1,
+    this.limit = 10,
+  }) : assert(
+         type == NegotiationListType.incoming ||
+             type == NegotiationListType.outgoing,
+         'inbox type must be incoming or outgoing',
+       );
+
+  Map<String, dynamic> toQueryParameters() {
+    final clampedLimit = limit.clamp(1, kMatchmakingListRequestsMaxLimit);
+    final params = <String, dynamic>{
+      'type': type.name,
+      'page': page.toString(),
+      'limit': clampedLimit.toString(),
+    };
+    final ids = teamIds?.where((id) => id.isNotEmpty).toList();
+    if (ids != null && ids.isNotEmpty) {
+      params['teamIds'] = ids.join(',');
+    } else if (teamId != null) {
+      params['teamId'] = teamId!;
+    }
+    final sortParam = sort;
+    if (sortParam != null && sortParam.isNotEmpty) {
+      params['sort'] = sortParam;
     }
     return params;
   }

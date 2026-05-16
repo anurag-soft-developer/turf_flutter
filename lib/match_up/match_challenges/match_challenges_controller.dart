@@ -103,16 +103,67 @@ class MatchChallengesController extends GetxController
 
   @override
   Future<List<TeamMatchModel>> fetchTabItems(MatchChallengesTab tab) async {
+    final teamIds = _activeTeamIdsForList();
+    if (teamIds.isEmpty) return <TeamMatchModel>[];
+
     switch (tab) {
       case MatchChallengesTab.received:
       case MatchChallengesTab.sent:
-        return _fetchNegotiationItems(tab);
+        final type = tab == MatchChallengesTab.received
+            ? NegotiationListType.incoming
+            : NegotiationListType.outgoing;
+        final res = await _matchmakingService.listInbox(
+          ListPreMatchInboxFilterQuery(
+            type: type,
+            teamIds: teamIds,
+            limit: 50,
+            sort: 'createdAt:desc',
+          ),
+        );
+        return res?.data ?? [];
       case MatchChallengesTab.completed:
-        return _fetchCompletedItems();
+        final res = await _matchmakingService.listRequests(
+          ListNegotiationsFilterQuery(
+            teamIds: teamIds,
+            type: NegotiationListType.all,
+            statuses: const [TeamMatchStatus.completed, TeamMatchStatus.draw],
+            page: 1,
+            limit: _historyPageLimit,
+            sort: 'updatedAt:desc',
+          ),
+        );
+        return res?.data ?? [];
       case MatchChallengesTab.upcoming:
-        return _fetchUpcomingItems();
+        final res = await _matchmakingService.listRequests(
+          ListNegotiationsFilterQuery(
+            teamIds: teamIds,
+            type: NegotiationListType.all,
+            statuses: const [
+              TeamMatchStatus.scheduleFinalized,
+              TeamMatchStatus.ongoing,
+            ],
+            page: 1,
+            limit: _historyPageLimit,
+            sort: 'createdAt:asc',
+          ),
+        );
+        return res?.data ?? [];
       case MatchChallengesTab.archive:
-        return _fetchArchiveItems();
+        final res = await _matchmakingService.listRequests(
+          ListNegotiationsFilterQuery(
+            teamIds: teamIds,
+            type: NegotiationListType.all,
+            statuses: const [
+              TeamMatchStatus.rejected,
+              TeamMatchStatus.cancelled,
+              TeamMatchStatus.expired,
+            ],
+            page: 1,
+            limit: _historyPageLimit,
+            sort: 'updatedAt:desc',
+          ),
+        );
+        return res?.data ?? [];
     }
   }
 
@@ -126,223 +177,21 @@ class MatchChallengesController extends GetxController
         m.status == TeamMatchStatus.negotiating;
   }
 
-  Future<List<TeamMatchModel>> _fetchNegotiationItems(
-    MatchChallengesTab tab,
-  ) async {
-    final type = tab == MatchChallengesTab.received
-        ? NegotiationListType.incoming
-        : NegotiationListType.outgoing;
-
+  /// Team ids for list endpoints: one selected team or all distinct [myTeams] ids.
+  List<String> _activeTeamIdsForList() {
     if (!filterAllTeams.value) {
       final tid = selectedMembershipTeam.value?.id;
-      if (tid == null || tid.isEmpty) {
-        return <TeamMatchModel>[];
-      }
-      final res = await _matchmakingService.listRequests(
-        ListNegotiationsFilterQuery(teamId: tid, type: type, limit: 50),
-      );
-      final items = (res?.data ?? []).where(_isPreMatchInbox).toList()
-        ..sort((a, b) {
-          final da = a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-          final db = b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-          return db.compareTo(da);
-        });
-      return items;
+      if (tid == null || tid.isEmpty) return <String>[];
+      return <String>[tid];
     }
-
-    final merged = <String, TeamMatchModel>{};
+    final ids = <String>[];
+    final seen = <String>{};
     for (final t in myTeams) {
       final tid = t.id;
       if (tid == null || tid.isEmpty) continue;
-      final res = await _matchmakingService.listRequests(
-        ListNegotiationsFilterQuery(teamId: tid, type: type, limit: 50),
-      );
-      for (final m in res?.data ?? []) {
-        if (!_isPreMatchInbox(m)) continue;
-        final mid = m.id;
-        if (mid != null && mid.isNotEmpty) merged[mid] = m;
-      }
+      if (seen.add(tid)) ids.add(tid);
     }
-    return merged.values.toList()..sort((a, b) {
-      final da = a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-      final db = b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-      return db.compareTo(da);
-    });
-  }
-
-  /// Finished results: [TeamMatchStatus.completed] and [TeamMatchStatus.draw].
-  Future<List<TeamMatchModel>> _fetchCompletedForTeam(String teamId) async {
-    final result = await _matchmakingService.listRequests(
-      ListNegotiationsFilterQuery(
-        teamId: teamId,
-        type: NegotiationListType.all,
-        status: TeamMatchStatus.completed,
-        page: 1,
-        limit: _historyPageLimit,
-      ),
-    );
-    final drawResult = await _matchmakingService.listRequests(
-      ListNegotiationsFilterQuery(
-        teamId: teamId,
-        type: NegotiationListType.all,
-        status: TeamMatchStatus.draw,
-        page: 1,
-        limit: _historyPageLimit,
-      ),
-    );
-    final matches = <TeamMatchModel>[
-      ...(result?.data ?? []),
-      ...(drawResult?.data ?? []),
-    ];
-    matches.sort(
-      (a, b) => (b.updatedAt ?? b.createdAt ?? DateTime(2000)).compareTo(
-        a.updatedAt ?? a.createdAt ?? DateTime(2000),
-      ),
-    );
-    return matches;
-  }
-
-  Future<List<TeamMatchModel>> _fetchCompletedItems() async {
-    if (!filterAllTeams.value) {
-      final tid = selectedMembershipTeam.value?.id;
-      if (tid == null || tid.isEmpty) return <TeamMatchModel>[];
-      return _fetchCompletedForTeam(tid);
-    }
-    final merged = <String, TeamMatchModel>{};
-    for (final t in myTeams) {
-      final tid = t.id;
-      if (tid == null || tid.isEmpty) continue;
-      final list = await _fetchCompletedForTeam(tid);
-      for (final m in list) {
-        final mid = m.id;
-        if (mid != null && mid.isNotEmpty) merged[mid] = m;
-      }
-    }
-    return merged.values.toList()..sort(
-      (a, b) => (b.updatedAt ?? b.createdAt ?? DateTime(2000)).compareTo(
-        a.updatedAt ?? a.createdAt ?? DateTime(2000),
-      ),
-    );
-  }
-
-  /// Scheduled or in progress (excludes [accepted] / [negotiating] — those stay
-  /// in Received/Sent as pre-match).
-  Future<List<TeamMatchModel>> _fetchUpcomingForTeam(String teamId) async {
-    final scheduled = await _matchmakingService.listRequests(
-      ListNegotiationsFilterQuery(
-        teamId: teamId,
-        type: NegotiationListType.all,
-        status: TeamMatchStatus.scheduleFinalized,
-        page: 1,
-        limit: _historyPageLimit,
-      ),
-    );
-    final live = await _matchmakingService.listRequests(
-      ListNegotiationsFilterQuery(
-        teamId: teamId,
-        type: NegotiationListType.all,
-        status: TeamMatchStatus.ongoing,
-        page: 1,
-        limit: _historyPageLimit,
-      ),
-    );
-    final matches = <TeamMatchModel>[
-      ...(scheduled?.data ?? []),
-      ...(live?.data ?? []),
-    ];
-    matches.sort(
-      (a, b) => (a.createdAt ?? DateTime(2099)).compareTo(
-        b.createdAt ?? DateTime(2099),
-      ),
-    );
-    return matches;
-  }
-
-  Future<List<TeamMatchModel>> _fetchUpcomingItems() async {
-    if (!filterAllTeams.value) {
-      final tid = selectedMembershipTeam.value?.id;
-      if (tid == null || tid.isEmpty) return <TeamMatchModel>[];
-      return _fetchUpcomingForTeam(tid);
-    }
-    final merged = <String, TeamMatchModel>{};
-    for (final t in myTeams) {
-      final tid = t.id;
-      if (tid == null || tid.isEmpty) continue;
-      final list = await _fetchUpcomingForTeam(tid);
-      for (final m in list) {
-        final mid = m.id;
-        if (mid != null && mid.isNotEmpty) merged[mid] = m;
-      }
-    }
-    return merged.values.toList()..sort(
-      (a, b) => (a.createdAt ?? DateTime(2099)).compareTo(
-        b.createdAt ?? DateTime(2099),
-      ),
-    );
-  }
-
-  Future<List<TeamMatchModel>> _fetchArchiveForTeam(String teamId) async {
-    final rejected = await _matchmakingService.listRequests(
-      ListNegotiationsFilterQuery(
-        teamId: teamId,
-        type: NegotiationListType.all,
-        status: TeamMatchStatus.rejected,
-        page: 1,
-        limit: _historyPageLimit,
-      ),
-    );
-    final cancelled = await _matchmakingService.listRequests(
-      ListNegotiationsFilterQuery(
-        teamId: teamId,
-        type: NegotiationListType.all,
-        status: TeamMatchStatus.cancelled,
-        page: 1,
-        limit: _historyPageLimit,
-      ),
-    );
-    final expired = await _matchmakingService.listRequests(
-      ListNegotiationsFilterQuery(
-        teamId: teamId,
-        type: NegotiationListType.all,
-        status: TeamMatchStatus.expired,
-        page: 1,
-        limit: _historyPageLimit,
-      ),
-    );
-    final matches = <TeamMatchModel>[
-      ...(rejected?.data ?? []),
-      ...(cancelled?.data ?? []),
-      ...(expired?.data ?? []),
-    ];
-    matches.sort(
-      (a, b) => (b.updatedAt ?? b.createdAt ?? DateTime(2000)).compareTo(
-        a.updatedAt ?? a.createdAt ?? DateTime(2000),
-      ),
-    );
-    return matches;
-  }
-
-  Future<List<TeamMatchModel>> _fetchArchiveItems() async {
-    if (!filterAllTeams.value) {
-      final tid = selectedMembershipTeam.value?.id;
-      if (tid == null || tid.isEmpty) return <TeamMatchModel>[];
-      return _fetchArchiveForTeam(tid);
-    }
-    final merged = <String, TeamMatchModel>{};
-    for (final t in myTeams) {
-      final tid = t.id;
-      if (tid == null || tid.isEmpty) continue;
-      final list = await _fetchArchiveForTeam(tid);
-      for (final m in list) {
-        final mid = m.id;
-        if (mid != null && mid.isNotEmpty) merged[mid] = m;
-      }
-    }
-    return merged.values.toList()..sort(
-      (a, b) => (b.updatedAt ?? b.createdAt ?? DateTime(2000)).compareTo(
-        a.updatedAt ?? a.createdAt ?? DateTime(2000),
-      ),
-    );
+    return ids;
   }
 
   @override

@@ -158,6 +158,9 @@ class MatchmakingEndpoints {
 
   String get requests => '/matchmaking/requests';
 
+  /// Pre-match challenge inbox (`?type=incoming|outgoing`).
+  String get inbox => '/matchmaking/inbox';
+
   /// `GET` — single match (same populate shape as list entries).
   String requestById(String id) => '/matchmaking/requests/$id';
 

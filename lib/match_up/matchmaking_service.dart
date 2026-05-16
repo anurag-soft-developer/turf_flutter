@@ -47,6 +47,23 @@ class MatchmakingService {
     );
   }
 
+  /// `GET /matchmaking/inbox?type=incoming|outgoing`
+  Future<PaginatedResponse<TeamMatchModel>?> listInbox(
+    ListPreMatchInboxFilterQuery query,
+  ) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiConstants.matchmaking.inbox,
+      queryParameters: query.toQueryParameters(),
+    );
+    if (response == null) {
+      return EmptyPaginatedResponse<TeamMatchModel>();
+    }
+    return PaginatedResponse.fromJson(
+      response,
+      (json) => TeamMatchModel.fromJson(json as Map<String, dynamic>),
+    );
+  }
+
   /// `POST /matchmaking/requests/:id/respond`
   Future<TeamMatchModel?> respond(
     String matchId,
