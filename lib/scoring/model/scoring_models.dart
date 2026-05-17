@@ -97,7 +97,6 @@ class AppendCricketBallRequest {
 
 /// Body for `POST /scoring/cricket/matches/:teamMatchId/session`.
 class CreateCricketSessionRequest {
-  final String actorTeamId;
   final String battingTeamId;
   final String bowlingTeamId;
   final int maxOvers;
@@ -106,7 +105,6 @@ class CreateCricketSessionRequest {
   final String? bowlerUserId;
 
   const CreateCricketSessionRequest({
-    required this.actorTeamId,
     required this.battingTeamId,
     required this.bowlingTeamId,
     this.maxOvers = 20,
@@ -116,7 +114,6 @@ class CreateCricketSessionRequest {
   });
 
   Map<String, dynamic> toJson() => {
-    'actorTeamId': actorTeamId,
     'battingTeamId': battingTeamId,
     'bowlingTeamId': bowlingTeamId,
     'maxOvers': maxOvers,
@@ -131,20 +128,17 @@ class CreateCricketSessionRequest {
 
 /// Body for `PATCH /scoring/cricket/matches/:teamMatchId/state`.
 class UpdateCricketStateRequest {
-  final String actorTeamId;
   final String? strikerUserId;
   final String? nonStrikerUserId;
   final String? bowlerUserId;
 
   const UpdateCricketStateRequest({
-    required this.actorTeamId,
     this.strikerUserId,
     this.nonStrikerUserId,
     this.bowlerUserId,
   });
 
   Map<String, dynamic> toJson() => {
-    'actorTeamId': actorTeamId,
     if (strikerUserId != null && strikerUserId!.isNotEmpty)
       'strikerUserId': strikerUserId,
     if (nonStrikerUserId != null && nonStrikerUserId!.isNotEmpty)
@@ -152,15 +146,6 @@ class UpdateCricketStateRequest {
     if (bowlerUserId != null && bowlerUserId!.isNotEmpty)
       'bowlerUserId': bowlerUserId,
   };
-}
-
-/// Body for `POST /scoring/cricket/matches/:teamMatchId/complete`.
-class CompleteCricketMatchRequest {
-  final String actorTeamId;
-
-  const CompleteCricketMatchRequest({required this.actorTeamId});
-
-  Map<String, dynamic> toJson() => {'actorTeamId': actorTeamId};
 }
 
 abstract class CricketOutcome {

@@ -167,7 +167,7 @@ class ScoringController extends GetxController {
   }
 
   /// `POST /scoring/cricket/matches/:id/complete`
-  Future<bool> completeCricketMatch(CompleteCricketMatchRequest request) async {
+  Future<bool> completeCricketMatch() async {
     final sessionId = currentSessionId.value;
     if (sessionId.isEmpty) {
       errorMessage.value = 'No match selected.';
@@ -179,7 +179,6 @@ class ScoringController extends GetxController {
     try {
       final match = await _apiService.completeCricketMatch(
         teamMatchId: sessionId,
-        request: request,
       );
       if (match == null) {
         errorMessage.value = 'Could not complete match.';

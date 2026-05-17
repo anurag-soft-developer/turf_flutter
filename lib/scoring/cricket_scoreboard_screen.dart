@@ -106,9 +106,6 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
   String get _bowlingTeamIdResolved =>
       _battingTeamId == _fromTeamId ? _toTeamId : _fromTeamId;
 
-  /// Any match team id for scoring API `actorTeamId` (must be on the fixture).
-  String get _actorTeamId => _fromTeamId.isNotEmpty ? _fromTeamId : _toTeamId;
-
   Future<void> _initialize() async {
     await Future.wait([
       _loadTeamMatchMeta(),
@@ -192,9 +189,7 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
   }
 
   Future<void> _completeMatch() async {
-    final ok = await _scoringController.completeCricketMatch(
-      CompleteCricketMatchRequest(actorTeamId: _actorTeamId),
-    );
+    final ok = await _scoringController.completeCricketMatch();
     if (!mounted || ok) return;
     AppSnackbar.error(
       title: 'Could not end match',
@@ -808,7 +803,6 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
 
     await _scoringController.createCricketSession(
       CreateCricketSessionRequest(
-        actorTeamId: _battingTeamId,
         battingTeamId: _battingTeamId,
         bowlingTeamId: _bowlingTeamIdResolved,
         maxOvers: overs,
@@ -900,10 +894,7 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
                     onRetry: _retryFetchMatch,
                   ),
                   const SizedBox(height: 10),
-                  CricketLineupCard(
-                    controller: _scoringController,
-                    actorTeamId: _actorTeamId,
-                  ),
+                  CricketLineupCard(controller: _scoringController),
                   const SizedBox(height: 10),
                   CricketOversTable(
                     controller: _scoringController,

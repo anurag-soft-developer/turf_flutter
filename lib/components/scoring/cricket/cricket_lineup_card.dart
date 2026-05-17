@@ -138,11 +138,9 @@ class CricketLineupCard extends StatefulWidget {
   const CricketLineupCard({
     super.key,
     required this.controller,
-    required this.actorTeamId,
   });
 
   final ScoringController controller;
-  final String actorTeamId;
 
   @override
   State<CricketLineupCard> createState() => _CricketLineupCardState();
@@ -178,7 +176,6 @@ class _CricketLineupCardState extends State<CricketLineupCard> {
 
     final ok = await widget.controller.updateCricketState(
       UpdateCricketStateRequest(
-        actorTeamId: widget.actorTeamId,
         strikerUserId: s,
         nonStrikerUserId: n,
         bowlerUserId: b,
