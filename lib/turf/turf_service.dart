@@ -9,26 +9,11 @@ class TurfService {
 
   final ApiService _apiService = ApiService();
 
-  Future<TurfModel?> createTurf(CreateTurfRequest request) async {
-    final response = await _apiService.post<Map<String, dynamic>>(
-      '/turf',
-      data: request.toJson(),
-    );
-
-    if (response == null) {
-      return null;
-    }
-
-    final turf = TurfModel.fromJson(response);
-    return turf;
-  }
-
   Future<PaginatedResponse<TurfModel>?> searchTurfs({
     String? globalSearchText,
     List<String>? sportTypes,
     List<String>? amenities,
     LocationModel? location,
-    /// Radius in km; omit to use [kDefaultNearbyRadiusKm].
     double? nearbyRadiusKm,
     double? minPrice,
     double? maxPrice,
@@ -101,12 +86,6 @@ class TurfService {
     );
   }
 
-  Future<Map<String, dynamic>?> getTurfStats() async {
-    final response = await _apiService.get<Map<String, dynamic>>('/turf/stats');
-
-    return response;
-  }
-
   Future<TurfModel?> getTurfById(String turfId) async {
     final response = await _apiService.get<Map<String, dynamic>>(
       '/turf/$turfId',
@@ -120,29 +99,6 @@ class TurfService {
     return turf;
   }
 
-  Future<TurfModel?> updateTurf(
-    String turfId,
-    UpdateTurfRequest request,
-  ) async {
-    final response = await _apiService.patch<Map<String, dynamic>>(
-      '/turf/$turfId',
-      data: request.toJson(),
-    );
-
-    if (response == null) {
-      return null;
-    }
-
-    final updatedTurf = TurfModel.fromJson(response);
-    return updatedTurf;
-  }
-
-  Future<bool> deleteTurf(String turfId) async {
-    final response = await _apiService.delete('/turf/$turfId');
-    return response != null;
-  }
-
-  /// Get featured/recommended turfs
   Future<List<TurfModel>?> getFeaturedTurfs({int limit = 5}) async {
     final result = await searchTurfs(
       sort: 'averageRating',
@@ -152,7 +108,7 @@ class TurfService {
     return result?.data;
   }
 
-  /// Get turfs owned by the current user
+  /// Turfs owned by the current user (e.g. match-up propose turf).
   Future<PaginatedResponse<TurfModel>?> getMyTurfs({
     int page = 1,
     int limit = 10,
@@ -180,12 +136,5 @@ class TurfService {
       response,
       (json) => TurfModel.fromJson(json as Map<String, dynamic>),
     );
-  }
-
-  /// Get turf statistics for the current user
-  Future<Map<String, dynamic>?> getMyTurfStats() async {
-    final response = await _apiService.get<Map<String, dynamic>>('/turf/stats');
-
-    return response;
   }
 }

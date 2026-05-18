@@ -10,7 +10,6 @@ import '../core/auth/auth_state_controller.dart';
 import '../core/config/constants.dart';
 import '../core/models/user/player_stats_models.dart';
 import '../core/models/user_field_instance.dart';
-import '../settings/settings_controller.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -70,25 +69,20 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
-  List<Widget> _buildProfileHeaderSlivers(
-    UserFieldInstance helper, {
-    required bool isPlayerMode,
-  }) {
+  List<Widget> _buildProfileHeaderSlivers(UserFieldInstance helper) {
     return [
       SliverToBoxAdapter(child: PlayerHeroSection(helper: helper)),
-      if (isPlayerMode) ...[
-        SliverToBoxAdapter(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 24),
-              PlayerQuickStats(helper: helper),
-              const SizedBox(height: 24),
-              PlayerBadgesSection(badges: helper.getModel()?.badges ?? []),
-            ],
-          ),
+      SliverToBoxAdapter(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: 24),
+            PlayerQuickStats(helper: helper),
+            const SizedBox(height: 24),
+            PlayerBadgesSection(badges: helper.getModel()?.badges ?? []),
+          ],
         ),
-      ],
+      ),
     ];
   }
 
@@ -143,7 +137,6 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   @override
   Widget build(BuildContext context) {
-    final settingsController = Get.find<SettingsController>();
     return Obx(() {
       final user = authController.user;
       final helper = UserFieldInstance(user);
@@ -165,19 +158,12 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
           ],
         ),
-        body: settingsController.isPlayerMode
-            ? NestedScrollView(
-                headerSliverBuilder: (context, innerBoxIsScrolled) {
-                  return _buildProfileHeaderSlivers(helper, isPlayerMode: true);
-                },
-                body: _buildPlayerSportStatsBody(availableSports),
-              )
-            : CustomScrollView(
-                slivers: _buildProfileHeaderSlivers(
-                  helper,
-                  isPlayerMode: false,
-                ),
-              ),
+        body: NestedScrollView(
+          headerSliverBuilder: (context, innerBoxIsScrolled) {
+            return _buildProfileHeaderSlivers(helper);
+          },
+          body: _buildPlayerSportStatsBody(availableSports),
+        ),
       );
     });
   }

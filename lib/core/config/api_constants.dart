@@ -65,8 +65,6 @@ class TurfBookingEndpoints {
   String get createOrder => '/turf-bookings/create-order';
   String get verifyPayment => '/turf-bookings/verify-payment';
   String get playerBookings => '/turf-bookings/player-bookings';
-  String get ownerBookings => '/turf-bookings/owner-bookings';
-  String get ownerBookingStats => '/turf-bookings/owner-bookings/stats';
   String get checkAvailability => '/turf-bookings/check-availability';
 
   /// Day listing for booking UI (`GET` with `?date=`).

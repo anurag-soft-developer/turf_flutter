@@ -1,15 +1,13 @@
 import 'package:get/get.dart';
-import '../../../settings/settings_controller.dart';
 import 'nav_tabs.dart';
 
 class NavigationController extends GetxController {
   final RxInt _currentIndex = 0.obs;
   final RxDouble _slideValue = 0.0.obs;
-  final SettingsController _settingsController = Get.find<SettingsController>();
 
   int get currentIndex => _currentIndex.value;
   double get slideValue => _slideValue.value;
-  List<NavTab> get activeTabs => navTabsForMode(_settingsController.currentMode.value);
+  List<NavTab> get activeTabs => kNavTabs;
   int get tabCount => activeTabs.length;
 
   void changeTab(int index) {
@@ -43,11 +41,5 @@ class NavigationController extends GetxController {
   void onInit() {
     super.onInit();
     _loadControllerForCurrentTab();
-    ever<UserMode>(_settingsController.currentMode, (_) {
-      if (_currentIndex.value >= tabCount) {
-        _currentIndex.value = 0;
-      }
-      _loadControllerForCurrentTab();
-    });
   }
 }

@@ -3,23 +3,11 @@ import 'package:flutter_application_1/core/utils/app_snackbar.dart';
 import 'package:get/get.dart';
 import '../../turf_booking/model/turf_booking_model.dart';
 import '../../core/config/constants.dart';
-import 'booking_action_buttons.dart';
 
 class BookingCard extends StatelessWidget {
   final TurfBookingModel booking;
-  final bool isOwnerView;
-  final Function(String)? onCancel;
-  final Function(String)? onConfirm;
-  final Function(String)? onComplete;
 
-  const BookingCard({
-    super.key,
-    required this.booking,
-    required this.isOwnerView,
-    this.onCancel,
-    this.onConfirm,
-    this.onComplete,
-  });
+  const BookingCard({super.key, required this.booking});
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +21,6 @@ class BookingCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header with booking ID and status
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -48,10 +35,8 @@ class BookingCard extends StatelessWidget {
                   Row(
                     children: [
                       _StatusChip(status: booking.status),
-                      if (!isOwnerView &&
-                          (booking.status == TurfBookingStatus.confirmed ||
-                              booking.status ==
-                                  TurfBookingStatus.completed)) ...[
+                      if (booking.status == TurfBookingStatus.confirmed ||
+                          booking.status == TurfBookingStatus.completed) ...[
                         const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -87,10 +72,7 @@ class BookingCard extends StatelessWidget {
                   ),
                 ],
               ),
-
               const SizedBox(height: 12),
-
-              // Turf information
               Row(
                 children: [
                   const Icon(Icons.grass, size: 18, color: Colors.green),
@@ -107,10 +89,7 @@ class BookingCard extends StatelessWidget {
                   ),
                 ],
               ),
-
               const SizedBox(height: 8),
-
-              // Time information
               Row(
                 children: [
                   const Icon(Icons.access_time, size: 18, color: Colors.blue),
@@ -138,60 +117,25 @@ class BookingCard extends StatelessWidget {
                   ),
                 ],
               ),
-
               const SizedBox(height: 8),
-
-              // Player information (for owner view) or amount (for player view)
-              if (isOwnerView) ...[
-                Row(
-                  children: [
-                    const Icon(Icons.person, size: 18, color: Colors.purple),
-                    const SizedBox(width: 8),
-                    Text(
-                      booking.bookedByHelper.getDisplayName(),
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Color(AppColors.textSecondaryColor),
-                      ),
-                    ),
-                  ],
-                ),
-              ] else ...[
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.currency_rupee,
-                      size: 18,
-                      color: Colors.green,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '₹${booking.totalAmount?.toStringAsFixed(2) ?? '0.00'}',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Color(AppColors.textSecondaryColor),
-                      ),
-                    ),
-                    // const SizedBox(width: 16),
-                    // _PaymentStatusChip(paymentStatus: booking.paymentStatus),
-                  ],
-                ),
-              ],
-
-              if (BookingActionButtons.shouldShow(booking)) ...[
-                const SizedBox(height: 16),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: BookingActionButtons(
-                    booking: booking,
-                    isOwnerView: isOwnerView,
-                    onCancel: onCancel,
-                    onConfirm: onConfirm,
-                    onComplete: onComplete,
+              Row(
+                children: [
+                  const Icon(
+                    Icons.currency_rupee,
+                    size: 18,
+                    color: Colors.green,
                   ),
-                ),
-              ],
+                  const SizedBox(width: 8),
+                  Text(
+                    '₹${booking.totalAmount?.toStringAsFixed(2) ?? '0.00'}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Color(AppColors.textSecondaryColor),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
@@ -200,25 +144,18 @@ class BookingCard extends StatelessWidget {
   }
 
   void _handleCardTap() {
-    if (isOwnerView) {
+    if (booking.status == TurfBookingStatus.confirmed ||
+        booking.status == TurfBookingStatus.completed) {
       Get.toNamed(
-        AppConstants.routes.bookingDetails,
+        AppConstants.routes.bookingTicket,
         arguments: {'booking': booking},
       );
     } else {
-      if (booking.status == TurfBookingStatus.confirmed ||
-          booking.status == TurfBookingStatus.completed) {
-        Get.toNamed(
-          AppConstants.routes.bookingTicket,
-          arguments: {'booking': booking},
-        );
-      } else {
-        AppSnackbar.error(
-          title: 'Ticket is not generated yet',
-          message:
-              'Booking is ${booking.status?.name.capitalizeFirst ?? 'UNKNOWN'}',
-        );
-      }
+      AppSnackbar.error(
+        title: 'Ticket is not generated yet',
+        message:
+            'Booking is ${booking.status?.name.capitalizeFirst ?? 'UNKNOWN'}',
+      );
     }
   }
 }

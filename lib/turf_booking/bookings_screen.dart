@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/settings/settings_controller.dart';
 import 'package:get/get.dart';
 import 'model/turf_booking_model.dart';
 import 'turf_booking_controller.dart';
 import '../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
-import '../components/booking/booking_action_dialogs.dart';
 import '../components/booking/booking_card.dart';
-import '../components/booking/qr_scanner_screen.dart';
 import '../core/config/constants.dart';
 
 class BookingsScreen extends StatefulWidget {
@@ -65,31 +62,18 @@ class _BookingsScreenState extends State<BookingsScreen>
   @override
   Widget build(BuildContext context) {
     final bookingController = TurfBookingController.instance;
-    final SettingsController setting = Get.find<SettingsController>();
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
       appBar: AppBar(
-        title: Obx(
-          () => Text(
-            setting.isPlayerMode ? 'My Bookings' : "Turf Bookings",
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
+        title: const Text(
+          'My Bookings',
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: const Color(AppColors.primaryColor),
         foregroundColor: Colors.white,
         elevation: 0,
-        actions: [
-          // Scanner button for proprietor mode
-          if (setting.isProprietorMode)
-            IconButton(
-              onPressed: () => Get.to(() => const QRScannerScreen()),
-              icon: const Icon(Icons.qr_code_scanner),
-              tooltip: 'Scan QR Code',
-            ),
-        ],
       ),
-      // drawer: const AppDrawer(),
       body: Stack(
         children: [
           Column(
@@ -154,7 +138,7 @@ class _BookingsScreenState extends State<BookingsScreen>
                       }
 
                       if (bookings.isEmpty) {
-                        return Center(
+                        return const Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -174,9 +158,7 @@ class _BookingsScreenState extends State<BookingsScreen>
                               ),
                               SizedBox(height: 8),
                               Text(
-                                setting.isPlayerMode
-                                    ? 'You haven\'t made any turf bookings yet.\nStart by browsing available turfs.'
-                                    : 'No customers have booked your turfs yet.\nMake sure your turfs are properly listed.',
+                                'You haven\'t made any turf bookings yet.\nStart by browsing available turfs.',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(color: Colors.grey),
                               ),
@@ -190,27 +172,16 @@ class _BookingsScreenState extends State<BookingsScreen>
                           status,
                           force: true,
                         ),
-                        child: NotificationListener<ScrollNotification>(
-                          child: ListView.builder(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: bookings.length,
-                            itemBuilder: (context, index) {
-                              final booking = bookings[index];
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 12),
-                                child: BookingCard(
-                                  booking: booking,
-                                  isOwnerView: setting.isProprietorMode,
-                                  // onCancel:
-                                  //     BookingActionDialogs.showCancelBooking,
-                                  onComplete:
-                                      BookingActionDialogs.showCompleteBooking,
-                                  onConfirm:
-                                      BookingActionDialogs.showConfirmBooking,
-                                ),
-                              );
-                            },
-                          ),
+                        child: ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: bookings.length,
+                          itemBuilder: (context, index) {
+                            final booking = bookings[index];
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: BookingCard(booking: booking),
+                            );
+                          },
                         ),
                       );
                     }),

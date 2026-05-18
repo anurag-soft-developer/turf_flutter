@@ -39,12 +39,7 @@ class Routes {
   final String accessDenied = '/access-denied';
   final String turfList = '/turf-list';
   final String turfDetail = '/turf-detail';
-  final String manageTurf = '/manage-turf';
-  final String myTurfs = '/my-turfs';
-  final String createTurf = '/create-turf';
-  final String editTurf = '/edit-turf';
   final String myBookings = '/my-bookings';
-  final String bookingDetails = '/booking-details';
   final String bookingTicket = '/booking-ticket';
   final String turfReviews = '/turf-reviews';
   // final String turfBookings = '/turf-bookings';

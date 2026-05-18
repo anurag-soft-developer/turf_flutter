@@ -7,31 +7,20 @@ import 'dart:convert';
 import '../core/utils/app_snackbar.dart';
 import '../core/models/location_model.dart';
 
-enum UserMode { player, proprietor }
-
 class SettingsController extends GetxController {
-  // Observable variables
   final RxBool _notificationsEnabled = true.obs;
-  final Rx<UserMode> _currentMode = UserMode.player.obs;
   final Rxn<LocationModel> _selectedCityLocation = Rxn<LocationModel>();
   final RxBool _isDetectingCityLocation = false.obs;
 
-  // Controllers (shared across screens)
   final TextEditingController cityController = TextEditingController();
 
-  // Getters
   bool get notificationsEnabled => _notificationsEnabled.value;
-  Rx<UserMode> get currentMode => _currentMode;
-  bool get isPlayerMode => _currentMode.value == UserMode.player;
-  bool get isProprietorMode => _currentMode.value == UserMode.proprietor;
   Rxn<LocationModel> get selectedCityLocation => _selectedCityLocation;
   RxBool get isDetectingCityLocation => _isDetectingCityLocation;
 
   String get selectedCityLabel => _selectedCityLocation.value?.address ?? '';
 
-  // Settings keys
   static const String _notificationsKey = 'notifications_enabled';
-  static const String _modeKey = 'user_mode';
   static const String _cityLocationKey = 'selected_city_location';
 
   @override
@@ -46,13 +35,6 @@ class SettingsController extends GetxController {
 
       _notificationsEnabled.value = prefs.getBool(_notificationsKey) ?? true;
 
-      // Load mode
-      final modeString = prefs.getString(_modeKey) ?? 'player';
-      _currentMode.value = modeString == 'proprietor'
-          ? UserMode.proprietor
-          : UserMode.player;
-
-      // Load persisted city location (if any)
       final raw = prefs.getString(_cityLocationKey);
       if (raw != null && raw.isNotEmpty) {
         try {
@@ -194,65 +176,8 @@ class SettingsController extends GetxController {
     }
   }
 
-  // Mode management methods
-  void switchToPlayerMode() {
-    _currentMode.value = UserMode.player;
-    _saveMode();
-  }
-
-  void switchToProprietorMode() {
-    _currentMode.value = UserMode.proprietor;
-    _saveMode();
-  }
-
-  void toggleMode() {
-    debugPrint(
-      'SettingsController: Before toggle - currentMode = ${_currentMode.value}',
-    );
-    if (_currentMode.value == UserMode.player) {
-      _currentMode.value = UserMode.proprietor;
-    } else {
-      _currentMode.value = UserMode.player;
-    }
-    debugPrint(
-      'SettingsController: After toggle - currentMode = ${_currentMode.value}',
-    );
-    _saveMode();
-  }
-
-  Future<void> _saveMode() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(
-        _modeKey,
-        _currentMode.value.toString().split('.').last,
-      );
-    } catch (e) {
-      // Handle save error
-    }
-  }
-
-  String get currentModeDisplay {
-    switch (_currentMode.value) {
-      case UserMode.player:
-        return 'Player Mode';
-      case UserMode.proprietor:
-        return 'Proprietor Mode';
-    }
-  }
-
-  String get alternateModeDisplay {
-    switch (_currentMode.value) {
-      case UserMode.player:
-        return 'Proprietor Mode';
-      case UserMode.proprietor:
-        return 'Player Mode';
-    }
-  }
-
   Future<void> clearCache() async {
     try {
-      // Implement cache clearing logic here
       AppSnackbar.success(
         title: 'Cache Cleared',
         message: 'Application cache has been cleared successfully',

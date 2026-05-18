@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/settings/settings_controller.dart';
 import 'package:get/get.dart';
 import 'model/turf_booking_model.dart';
 import '../components/shared/app_segmented_tabs/segmented_tab_cache_controller.dart';
@@ -9,7 +8,6 @@ import '../core/utils/exception_handler.dart';
 class TurfBookingController extends GetxController
     with SegmentedTabCacheController<TurfBookingStatus?, TurfBookingModel> {
   static TurfBookingController get instance => Get.find();
-  final settingController = Get.find<SettingsController>();
   final TurfBookingService _bookingService = TurfBookingService();
 
   // Observable variables
@@ -145,50 +143,6 @@ class TurfBookingController extends GetxController
   //   }
   // }
 
-  /// Confirm booking (for turf owners)
-  Future<bool> confirmBooking(String bookingId) async {
-    try {
-      _isBookingLoading.value = true;
-
-      final updatedBooking = await _bookingService.confirmBooking(bookingId);
-
-      if (updatedBooking != null) {
-        _updateBookingInLists(updatedBooking);
-        ExceptionHandler.showSuccessToast('Booking confirmed successfully');
-        return true;
-      }
-
-      return false;
-    } catch (e) {
-      ExceptionHandler.showErrorToast('Failed to confirm booking');
-      return false;
-    } finally {
-      _isBookingLoading.value = false;
-    }
-  }
-
-  /// Complete booking
-  Future<bool> completeBooking(String bookingId) async {
-    try {
-      _isBookingLoading.value = true;
-
-      final updatedBooking = await _bookingService.completeBooking(bookingId);
-
-      if (updatedBooking != null) {
-        _updateBookingInLists(updatedBooking);
-        ExceptionHandler.showSuccessToast('Booking completed successfully');
-        return true;
-      }
-
-      return false;
-    } catch (e) {
-      ExceptionHandler.showErrorToast('Failed to complete booking');
-      return false;
-    } finally {
-      _isBookingLoading.value = false;
-    }
-  }
-
   /// Update payment status
   Future<bool> updatePaymentStatus(
     String bookingId,
@@ -270,7 +224,6 @@ class TurfBookingController extends GetxController
   }) async {
     try {
       final response = await _bookingService.findBookings(
-        settingController.currentMode.value,
         turf: turfId,
         status: status != null ? [status] : null,
         paymentStatus: paymentStatus,
@@ -302,7 +255,6 @@ class TurfBookingController extends GetxController
     TurfBookingStatus? status,
   ) async {
     final response = await _bookingService.findBookings(
-      settingController.currentMode.value,
       page: 1,
       limit: _limitPerPage,
       status: status == null ? null : [status],
@@ -313,51 +265,4 @@ class TurfBookingController extends GetxController
 
   @override
   String mapFetchError(Object error) => 'Failed to load bookings';
-
-  /// Validate booking for check-in (scanner functionality)
-  Future<TurfBookingModel?> validateBookingForCheckIn(String bookingId) async {
-    try {
-      final booking = await _bookingService.findById(bookingId);
-
-      if (booking == null) {
-        return null;
-      }
-
-      // Check if booking is valid for check-in (confirmed status)
-      if (booking.status != TurfBookingStatus.confirmed) {
-        throw Exception('Booking is not in confirmed status');
-      }
-
-      // Additional validation can be added here
-      // For example, check if booking is for today or future date
-
-      return booking;
-    } catch (e) {
-      debugPrint('Error validating booking for check-in: $e');
-      throw Exception('Invalid booking or not eligible for check-in');
-    }
-  }
-
-  /// Check-in booking (for proprietors)
-  Future<bool> checkInBooking(String bookingId) async {
-    try {
-      _isBookingLoading.value = true;
-
-      // For now, we'll mark booking as completed when checked in
-      // You can add a specific "checked-in" status if needed in the backend
-      final updatedBooking = await _bookingService.completeBooking(bookingId);
-
-      if (updatedBooking != null) {
-        _updateBookingInLists(updatedBooking);
-        return true;
-      }
-
-      return false;
-    } catch (e) {
-      debugPrint('Error checking in booking: $e');
-      throw Exception('Failed to check in booking');
-    } finally {
-      _isBookingLoading.value = false;
-    }
-  }
 }

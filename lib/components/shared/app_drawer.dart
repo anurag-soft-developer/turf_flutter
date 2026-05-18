@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../core/auth/auth_state_controller.dart';
-import '../../settings/settings_controller.dart';
 import '../../core/config/constants.dart';
 
 class DrawerMenuItem {
@@ -61,7 +60,6 @@ class AppDrawer extends StatelessWidget {
           Get.toNamed(AppConstants.routes.teamOpenings);
         },
       ),
-
       DrawerMenuItem(
         title: 'Challenges',
         icon: Icons.sports_soccer,
@@ -69,38 +67,6 @@ class AppDrawer extends StatelessWidget {
         onTap: () {
           Get.back();
           Get.toNamed(AppConstants.routes.matchUpChallenges);
-        },
-      ),
-    ];
-  }
-
-  List<DrawerMenuItem> _getProprietorModeItems() {
-    return [
-      DrawerMenuItem(
-        title: 'Add New Turf',
-        icon: Icons.add_business,
-        iconColor: const Color(AppColors.primaryColor),
-        onTap: () {
-          Get.back();
-          Get.toNamed(AppConstants.routes.createTurf);
-        },
-      ),
-      DrawerMenuItem(
-        title: 'My Turfs',
-        icon: Icons.grass,
-        iconColor: const Color(AppColors.primaryColor),
-        onTap: () {
-          Get.back();
-          Get.toNamed(AppConstants.routes.myTurfs);
-        },
-      ),
-      DrawerMenuItem(
-        title: 'Turf Bookings',
-        icon: Icons.calendar_today,
-        iconColor: const Color(AppColors.primaryColor),
-        onTap: () {
-          Get.back();
-          Get.toNamed(AppConstants.routes.myBookings);
         },
       ),
     ];
@@ -129,87 +95,6 @@ class AppDrawer extends StatelessWidget {
     ];
   }
 
-  Widget _buildModeSwitchCard(SettingsController settingsController) {
-    return Obx(() {
-      final Color primary = const Color(AppColors.primaryColor);
-      final bool isPlayer = settingsController.isPlayerMode;
-      final String title = isPlayer ? 'Become a host' : 'Become a player';
-      final String subtitle = isPlayer
-          ? 'List turfs and take bookings'
-          : 'Book venues and play';
-
-      return Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(14),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: () {
-            settingsController.toggleMode();
-            Get.back();
-          },
-          borderRadius: BorderRadius.circular(14),
-          splashColor: primary.withValues(alpha: 0.12),
-          highlightColor: primary.withValues(alpha: 0.06),
-          child: Ink(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              color: primary.withValues(alpha: 0.06),
-              border: Border.all(color: primary.withValues(alpha: 0.18)),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              child: Row(
-                children: [
-                  Icon(
-                    isPlayer
-                        ? Icons.storefront_outlined
-                        : Icons.sports_soccer_outlined,
-                    color: primary,
-                    size: 22,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          title,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: -0.2,
-                            height: 1.2,
-                            color: Color(AppColors.textColor),
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          subtitle,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w400,
-                            height: 1.25,
-                            color: Color(AppColors.textSecondaryColor),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    color: primary.withValues(alpha: 0.55),
-                    size: 22,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-    });
-  }
-
   Widget _buildMenuItem(DrawerMenuItem item) {
     return ListTile(
       leading: Icon(
@@ -229,7 +114,6 @@ class AppDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AuthStateController authController = Get.find();
-    final SettingsController settingsController = Get.find();
     final String? avatar = authController.user?.avatar;
     return Drawer(
       backgroundColor: const Color(AppColors.surfaceColor),
@@ -241,7 +125,6 @@ class AppDrawer extends StatelessWidget {
           child: IntrinsicHeight(
             child: Column(
               children: [
-                // User Header
                 Obx(
                   () => UserAccountsDrawerHeader(
                     decoration: const BoxDecoration(
@@ -270,43 +153,11 @@ class AppDrawer extends StatelessWidget {
                     ),
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
-                  child: _buildModeSwitchCard(settingsController),
-                ),
                 const Divider(color: Color(AppColors.dividerColor)),
-                // Navigation Items
-                // ListTile(
-                //   leading: const Icon(
-                //     Icons.dashboard,
-                //     color: Color(AppColors.primaryColor),
-                //   ),
-                //   title: const Text(
-                //     'Dashboard',
-                //     style: TextStyle(color: Color(AppColors.textColor)),
-                //   ),
-                //   onTap: () => Get.back(),
-                // ),
-
-                // Mode Specific Items
-                Obx(() {
-                  final List<DrawerMenuItem> modeItems =
-                      settingsController.currentMode.value == UserMode.player
-                      ? _getPlayerModeItems()
-                      : _getProprietorModeItems();
-
-                  return Column(
-                    children: modeItems.map(_buildMenuItem).toList(),
-                  );
-                }),
-
+                ..._getPlayerModeItems().map(_buildMenuItem),
                 const Divider(color: Color(AppColors.dividerColor)),
-
-                // Common Items (Profile, Settings)
-                ..._getCommonItems().map((item) => _buildMenuItem(item)),
-
+                ..._getCommonItems().map(_buildMenuItem),
                 const Spacer(),
-
                 ListTile(
                   leading: const Icon(
                     Icons.help_outline_rounded,
@@ -335,8 +186,6 @@ class AppDrawer extends StatelessWidget {
                     Get.toNamed(AppConstants.routes.about);
                   },
                 ),
-
-                // Logout Section
                 const Divider(color: Color(AppColors.dividerColor)),
                 ListTile(
                   leading: const Icon(Icons.logout, color: Colors.red),

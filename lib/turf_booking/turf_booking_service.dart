@@ -1,72 +1,7 @@
-import 'package:flutter_application_1/settings/settings_controller.dart';
-
 import 'model/turf_booking_model.dart';
 import '../core/models/paginated_response.dart';
 import '../core/config/api_constants.dart';
 import '../core/services/api_service.dart';
-
-class BookingMetric {
-  final num count;
-  final String? trend;
-  final String? trendInterval;
-
-  BookingMetric({required this.count, this.trend, this.trendInterval});
-
-  factory BookingMetric.fromJson(Map<String, dynamic> json) {
-    return BookingMetric(
-      count: (json['count'] as num?) ?? 0,
-      trend: json['trend'] as String?,
-      trendInterval: json['trendInterval'] as String?,
-    );
-  }
-}
-
-class TurfOwnerBookingStats {
-  final BookingMetric totalBookings;
-  final BookingMetric todaysBookings;
-  final BookingMetric thisWeekBookings;
-  final BookingMetric totalRevenue;
-  final BookingMetric completionRate;
-  final Map<String, int> bookingStatusStats;
-
-  TurfOwnerBookingStats({
-    required this.totalBookings,
-    required this.todaysBookings,
-    required this.thisWeekBookings,
-    required this.totalRevenue,
-    required this.completionRate,
-    required this.bookingStatusStats,
-  });
-
-  factory TurfOwnerBookingStats.fromJson(Map<String, dynamic> json) {
-    final rawStatusStats = json['bookingStatusStats'];
-    final statusStats = <String, int>{};
-    if (rawStatusStats is Map<String, dynamic>) {
-      rawStatusStats.forEach((key, value) {
-        statusStats[key] = (value as num?)?.toInt() ?? 0;
-      });
-    }
-
-    return TurfOwnerBookingStats(
-      totalBookings: BookingMetric.fromJson(
-        (json['totalBookings'] as Map<String, dynamic>?) ?? {},
-      ),
-      todaysBookings: BookingMetric.fromJson(
-        (json['todaysBookings'] as Map<String, dynamic>?) ?? {},
-      ),
-      thisWeekBookings: BookingMetric.fromJson(
-        (json['thisWeekBookings'] as Map<String, dynamic>?) ?? {},
-      ),
-      totalRevenue: BookingMetric.fromJson(
-        (json['totalRevenue'] as Map<String, dynamic>?) ?? {},
-      ),
-      completionRate: BookingMetric.fromJson(
-        (json['completionRate'] as Map<String, dynamic>?) ?? {},
-      ),
-      bookingStatusStats: statusStats,
-    );
-  }
-}
 
 class TurfBookingService {
   static final TurfBookingService _instance = TurfBookingService._internal();
@@ -108,8 +43,7 @@ class TurfBookingService {
   }
 
   /// Get current user's bookings
-  Future<PaginatedResponse<TurfBookingModel>?> findBookings(
-    UserMode mode, {
+  Future<PaginatedResponse<TurfBookingModel>?> findBookings({
     String? turf,
     List<TurfBookingStatus>? status,
     PaymentStatus? paymentStatus,
@@ -138,9 +72,7 @@ class TurfBookingService {
     queryParams['sortOrder'] = sortOrder;
 
     final response = await _apiService.get<Map<String, dynamic>>(
-      mode == UserMode.player
-          ? ApiConstants.turfBooking.playerBookings
-          : ApiConstants.turfBooking.ownerBookings,
+      ApiConstants.turfBooking.playerBookings,
       queryParameters: queryParams,
     );
 
@@ -152,27 +84,6 @@ class TurfBookingService {
       response,
       (json) => TurfBookingModel.fromJson(json),
     );
-  }
-
-  /// Get turf owner booking analytics stats.
-  Future<TurfOwnerBookingStats?> getTurfOwnerBookingStats({
-    List<String>? turfIds,
-  }) async {
-    final queryParams = <String, dynamic>{};
-    if (turfIds != null && turfIds.isNotEmpty) {
-      queryParams['turfIds'] = turfIds.join(',');
-    }
-
-    final response = await _apiService.get<Map<String, dynamic>>(
-      ApiConstants.turfBooking.ownerBookingStats,
-      queryParameters: queryParams,
-    );
-
-    if (response == null) {
-      return null;
-    }
-
-    return TurfOwnerBookingStats.fromJson(response);
   }
 
   /// Hourly slots for a turf on a calendar day (availability, overlap, pricing).
@@ -275,24 +186,6 @@ class TurfBookingService {
     return await updateBooking(bookingId, request);
   }
 
-  /// Confirm a booking (convenient method for turf owners)
-  Future<TurfBookingModel?> confirmBooking(String bookingId) async {
-    final request = UpdateTurfBookingRequest(
-      status: TurfBookingStatus.confirmed,
-    );
-
-    return await updateBooking(bookingId, request);
-  }
-
-  /// Complete a booking (convenient method)
-  Future<TurfBookingModel?> completeBooking(String bookingId) async {
-    final request = UpdateTurfBookingRequest(
-      status: TurfBookingStatus.completed,
-    );
-
-    return await updateBooking(bookingId, request);
-  }
-
   /// Update payment status (convenient method)
   Future<TurfBookingModel?> updatePaymentStatus(
     String bookingId,
@@ -308,13 +201,11 @@ class TurfBookingService {
   }
 
   /// Get booking history for current user
-  Future<List<TurfBookingModel>> getBookingHistory(
-    UserMode mode, {
+  Future<List<TurfBookingModel>> getBookingHistory({
     int page = 1,
     int limit = 10,
   }) async {
     final response = await findBookings(
-      mode,
       page: page,
       limit: limit,
       sortBy: 'createdAt',
