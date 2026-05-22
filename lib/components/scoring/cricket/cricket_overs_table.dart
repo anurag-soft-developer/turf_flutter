@@ -3,13 +3,13 @@ import 'package:get/get.dart';
 
 import '../../../core/config/constants.dart';
 import '../../../core/models/user_field_instance.dart';
-import '../../../scoring/model/cricket_ball_event_model.dart';
-import '../../../scoring/scoring_controller.dart';
+import '../../../scoring/cricket/cricket_scoring_controller.dart';
+import '../../../scoring/cricket/model/cricket_ball_event_model.dart';
 
 /// Table that lists every recorded over with a small per-row summary.
 ///
-/// Observes [ScoringController.cricketOvers] and
-/// [ScoringController.isFetchingOvers] so the parent does not need to wrap
+/// Observes [CricketScoringController.cricketOvers] and
+/// [CricketScoringController.isFetchingOvers] so the parent does not need to wrap
 /// it with its own [Obx].
 class CricketOversTable extends StatelessWidget {
   const CricketOversTable({
@@ -18,7 +18,7 @@ class CricketOversTable extends StatelessWidget {
     required this.innings,
   });
 
-  final ScoringController controller;
+  final CricketScoringController controller;
 
   /// 1-based innings index; only overs for this innings are listed.
   final int innings;

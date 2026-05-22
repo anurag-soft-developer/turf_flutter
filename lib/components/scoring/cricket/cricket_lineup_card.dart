@@ -5,9 +5,9 @@ import '../../../core/config/constants.dart';
 import '../../../core/models/user_field_instance.dart';
 import '../../../match_up/announced_players/model/announced_player_model.dart';
 import '../../../match_up/model/team_match_model.dart';
-import '../../../scoring/model/cricket_ball_event_model.dart';
-import '../../../scoring/model/scoring_models.dart';
-import '../../../scoring/scoring_controller.dart';
+import '../../../scoring/cricket/cricket_scoring_controller.dart';
+import '../../../scoring/cricket/model/cricket_ball_event_model.dart';
+import '../../../scoring/cricket/model/cricket_scoring_models.dart';
 
 /// User ids dismissed (out) in [innings], from over event ball data.
 Set<String> dismissedBatsmanUserIds(List<CricketOverEvent> overs, int innings) {
@@ -140,7 +140,7 @@ class CricketLineupCard extends StatefulWidget {
     required this.controller,
   });
 
-  final ScoringController controller;
+  final CricketScoringController controller;
 
   @override
   State<CricketLineupCard> createState() => _CricketLineupCardState();

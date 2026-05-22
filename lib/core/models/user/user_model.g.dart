@@ -81,8 +81,9 @@ Map<String, dynamic> _$UserModelToJson(UserModel instance) => <String, dynamic>{
   'createdAt': instance.createdAt,
   'updatedAt': instance.updatedAt,
   'playerSportStats': instance.playerSportStats.map((e) => e.toJson()).toList(),
-  'sportRankingPoints':
-      instance.sportRankingPoints.map((e) => e.toJson()).toList(),
+  'sportRankingPoints': instance.sportRankingPoints
+      .map((e) => e.toJson())
+      .toList(),
   'badges': instance.badges.map((e) => e.toJson()).toList(),
   'isPasswordExists': instance.isPasswordExists,
   'twoFactorEnabled': instance.twoFactorEnabled,

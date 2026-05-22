@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-
 import '../../core/config/constants.dart';
 import '../../core/utils/app_snackbar.dart';
-import '../../scoring/scoring_controller.dart';
 import '../../team/model/team_model.dart';
 import '../matchmaking_service.dart';
 import '../model/team_match_model.dart';
@@ -32,10 +29,6 @@ class MatchChallengeActionsCard extends StatefulWidget {
 
 class _MatchChallengeActionsCardState extends State<MatchChallengeActionsCard> {
   final MatchmakingService _matchmaking = MatchmakingService();
-  final ScoringController? _scoringController =
-      Get.isRegistered<ScoringController>()
-      ? Get.find<ScoringController>()
-      : null;
   bool _isCancelling = false;
   bool _isRecordingResult = false;
 
@@ -267,15 +260,15 @@ class _MatchChallengeActionsCardState extends State<MatchChallengeActionsCard> {
     widget.onMatchUpdated(updated);
 
     if (outcome == MatchResultOutcome.ongoing &&
-        updated.sportType == TeamSportType.cricket &&
         updated.id != null &&
         updated.id!.isNotEmpty) {
       try {
-        // await _scoringController?.connectAndJoin(updated.id!);
         if (mounted) {
+          final sportLabel =
+              updated.sportType == TeamSportType.cricket ? 'Cricket' : 'Football';
           AppSnackbar.success(
             title: 'Live scoring connected',
-            message: 'Cricket scoring session is ready.',
+            message: '$sportLabel scoring session is ready.',
           );
         }
       } catch (_) {

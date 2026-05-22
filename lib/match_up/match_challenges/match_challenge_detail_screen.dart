@@ -127,8 +127,10 @@ class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
 
   bool get _isCricketMatch => _match.sportType == TeamSportType.cricket;
 
-  bool get _canStartCricketMatch {
-    if (!_isCricketMatch) return false;
+  bool get _isFootballMatch => _match.sportType == TeamSportType.football;
+
+  bool get _canStartScoring {
+    if (!_isCricketMatch && !_isFootballMatch) return false;
     return _match.status == TeamMatchStatus.accepted ||
         _match.status == TeamMatchStatus.scheduleFinalized;
   }
@@ -273,7 +275,7 @@ class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
     );
   }
 
-  void _openCricketScoreBoard() {
+  void _openScoreboard() {
     final matchId = _match.id;
     if (matchId == null || matchId.isEmpty) {
       AppSnackbar.error(
@@ -282,10 +284,10 @@ class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
       );
       return;
     }
-    Get.toNamed(
-      AppConstants.routes.cricketScoreBoard,
-      arguments: {'matchId': matchId},
-    );
+    final route = _isFootballMatch
+        ? AppConstants.routes.footballScoreBoard
+        : AppConstants.routes.cricketScoreBoard;
+    Get.toNamed(route, arguments: {'matchId': matchId});
   }
 
   @override
@@ -335,9 +337,9 @@ class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
         ? acceptedTurf.turfIdHelper.getDisplayName()
         : 'Not set';
 
-    final showCricketBar =
-        _canStartCricketMatch || _match.status == TeamMatchStatus.ongoing;
-    final showFloatingBottom = showCricketBar || _canRespondToChallenge;
+    final showScoreboardBar = (_isCricketMatch || _isFootballMatch) &&
+        (_canStartScoring || _match.status == TeamMatchStatus.ongoing);
+    final showFloatingBottom = showScoreboardBar || _canRespondToChallenge;
 
     return Stack(
       fit: StackFit.expand,
@@ -347,7 +349,7 @@ class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
             16,
             16,
             16,
-            _mainContentBottomPadding(showCricketBar),
+            _mainContentBottomPadding(showScoreboardBar),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -451,17 +453,17 @@ class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (showCricketBar) ...[
+                if (showScoreboardBar) ...[
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed: _actionBusy ? null : (_openCricketScoreBoard),
+                      onPressed: _actionBusy ? null : _openScoreboard,
                       icon: Icon(Icons.play_circle_outline),
                       label: Text('Scoreboard'),
                     ),
                   ),
                 ],
-                if (showCricketBar && _canRespondToChallenge)
+                if (showScoreboardBar && _canRespondToChallenge)
                   const SizedBox(height: 12),
                 if (_canRespondToChallenge)
                   MatchChallengeRespondActions(
@@ -484,12 +486,12 @@ class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
   }
 
   /// Keeps tab content clear of the floating bottom bar (approximate heights).
-  double _mainContentBottomPadding(bool showCricketBar) {
+  double _mainContentBottomPadding(bool showScoreboardBar) {
     const base = 16.0;
-    if (!showCricketBar && !_canRespondToChallenge) return base;
+    if (!showScoreboardBar && !_canRespondToChallenge) return base;
     double overlay = 0;
-    if (showCricketBar) overlay += 76;
-    if (showCricketBar && _canRespondToChallenge) overlay += 12;
+    if (showScoreboardBar) overlay += 76;
+    if (showScoreboardBar && _canRespondToChallenge) overlay += 12;
     if (_canRespondToChallenge) overlay += 56;
     return base + overlay;
   }

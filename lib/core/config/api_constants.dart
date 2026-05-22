@@ -238,6 +238,12 @@ class ScoringEndpoints {
       '/scoring/football/matches/$teamMatchId/events';
   String footballSessionPoints(String teamMatchId) =>
       '/scoring/football/matches/$teamMatchId/points';
+
+  String footballUndoLastEvent(String teamMatchId) =>
+      '/scoring/football/matches/$teamMatchId/events/last';
+
+  String footballCompleteMatch(String teamMatchId) =>
+      '/scoring/football/matches/$teamMatchId/complete';
 }
 
 /// Presigned uploads (DigitalOcean Spaces).

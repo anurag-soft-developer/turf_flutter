@@ -3,22 +3,17 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
-import '../match_up/model/team_match_model.dart';
+import '../../match_up/model/team_match_model.dart';
+import 'cricket_scoring_api_service.dart';
 import 'model/cricket_ball_event_model.dart';
-import 'model/scoring_models.dart';
-import 'scoring_api_service.dart';
-// import 'scoring_socket_service.dart';
+import 'model/cricket_scoring_models.dart';
 
-/// Coordinates live scoring for the current session.
-///
-/// Writes go to turf-services over HTTP. Real-time updates (including the
-/// echo for the writer's own action) come back over a websocket subscribed
-/// to `scoring:match:<teamMatchId>` on the realtime service.
-class ScoringController extends GetxController {
-  ScoringController({ScoringApiService? apiService})
-    : _apiService = apiService ?? ScoringApiService();
+/// Coordinates live cricket scoring for the current session.
+class CricketScoringController extends GetxController {
+  CricketScoringController({CricketScoringApiService? apiService})
+    : _apiService = apiService ?? CricketScoringApiService();
 
-  final ScoringApiService _apiService;
+  final CricketScoringApiService _apiService;
 
   final RxBool isConnected = false.obs;
   final RxBool isJoiningSession = false.obs;
@@ -26,20 +21,14 @@ class ScoringController extends GetxController {
   final RxString currentSessionId = ''.obs;
   final RxnString errorMessage = RxnString();
 
-  /// Latest cricket match document from `GET /scoring/cricket/matches/:id`.
   final Rxn<TeamMatchModel> cricketMatch = Rxn<TeamMatchModel>();
 
   final RxBool isFetchingCricketMatch = false.obs;
-
   final RxBool isCreatingCricketSession = false.obs;
-
   final RxBool isUpdatingCricketLineup = false.obs;
-
   final RxBool isChangingCricketInning = false.obs;
-
   final RxBool isCompletingCricketMatch = false.obs;
 
-  /// Overs loaded from `GET .../overs` and updated after each `append_ball`.
   final RxList<CricketOverEvent> cricketOvers = <CricketOverEvent>[].obs;
   final RxBool isFetchingOvers = false.obs;
 
@@ -52,7 +41,6 @@ class ScoringController extends GetxController {
   bool get canUndoCricketBall =>
       cricketOvers.any((over) => over.ballEvents.isNotEmpty);
 
-  /// Loads scoring state and embedded [CricketStateModel] from turf-services.
   Future<void> fetchCricketMatch(String teamMatchId) async {
     if (teamMatchId.isEmpty) {
       errorMessage.value = 'Missing match id.';
@@ -65,11 +53,9 @@ class ScoringController extends GetxController {
     if (match == null) {
       errorMessage.value = 'Could not load match.';
     }
-
     isFetchingCricketMatch.value = false;
   }
 
-  /// Loads all overs for the match.
   Future<void> fetchCricketOvers(
     String teamMatchId, {
     bool resetBallHistory = false,
@@ -122,7 +108,6 @@ class ScoringController extends GetxController {
     canRedoCricketBall.value = _redoBallRequests.isNotEmpty;
   }
 
-  /// `POST /scoring/cricket/matches/:id/session` — initializes cricket scoring.
   Future<bool> createCricketSession(CreateCricketSessionRequest request) async {
     final sessionId = currentSessionId.value;
     if (sessionId.isEmpty) {
@@ -146,7 +131,6 @@ class ScoringController extends GetxController {
     return true;
   }
 
-  /// `PATCH /scoring/cricket/matches/:id/state` — striker / non-striker / bowler.
   Future<bool> updateCricketState(UpdateCricketStateRequest request) async {
     final sessionId = currentSessionId.value;
     if (sessionId.isEmpty) {
@@ -166,7 +150,6 @@ class ScoringController extends GetxController {
     return match != null;
   }
 
-  /// `POST /scoring/cricket/matches/:id/complete`
   Future<bool> completeCricketMatch() async {
     final sessionId = currentSessionId.value;
     if (sessionId.isEmpty) {
@@ -195,7 +178,6 @@ class ScoringController extends GetxController {
     }
   }
 
-  /// `POST /scoring/cricket/matches/:id/inning/change`
   Future<bool> changeCricketInning() async {
     final sessionId = currentSessionId.value;
     if (sessionId.isEmpty) {
@@ -222,12 +204,10 @@ class ScoringController extends GetxController {
     }
   }
 
-  /// Persists a cricket ball over HTTP and merges the returned over into
-  /// [cricketOvers].
   Future<CricketOverEvent?> appendCricketBall(
     AppendCricketBallRequest request,
   ) async {
-    debugPrint('[ScoringController] appendCricketBall: $request');
+    debugPrint('[CricketScoringController] appendCricketBall: $request');
     final sessionId = currentSessionId.value;
     if (sessionId.isEmpty) {
       errorMessage.value = 'No scoring session selected.';
@@ -249,7 +229,6 @@ class ScoringController extends GetxController {
       _redoBallRequests.clear();
       _syncRedoAvailability();
       upsertCricketOver(response);
-      debugPrint('[ScoringController] appended over id=${response.id}');
       final match = await _apiService.getCricketSession(sessionId);
       if (match != null) {
         cricketMatch.value = match;
@@ -263,8 +242,6 @@ class ScoringController extends GetxController {
     }
   }
 
-  /// Removes the latest delivery on the server and keeps redoable requests
-  /// locally for [redoLastCricketBall].
   Future<bool> undoLastCricketBall() async {
     final sessionId = currentSessionId.value;
     if (sessionId.isEmpty) {
@@ -302,7 +279,6 @@ class ScoringController extends GetxController {
     }
   }
 
-  /// Replays the most recently undone delivery using the existing append API.
   Future<bool> redoLastCricketBall() async {
     if (_redoBallRequests.isEmpty) {
       errorMessage.value = 'Nothing to redo.';
@@ -320,5 +296,4 @@ class ScoringController extends GetxController {
     _syncRedoAvailability();
     return false;
   }
-
 }

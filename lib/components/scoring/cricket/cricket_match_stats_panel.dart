@@ -4,7 +4,7 @@ import 'package:get/get.dart';
 import '../../../core/config/constants.dart';
 import '../../../core/models/team/team_ref_field_instance.dart';
 import '../../../match_up/model/team_match_model.dart';
-import '../../../scoring/scoring_controller.dart';
+import '../../../scoring/cricket/cricket_scoring_controller.dart';
 import 'match_stats_error_card.dart';
 import 'match_stats_loading_card.dart';
 import 'match_status_chip.dart';
@@ -12,7 +12,7 @@ import 'match_status_chip.dart';
 /// Hero panel: batting side above the score, runs/wickets, then overs as
 /// current/max (e.g. `2.1 / 20 ov`) and innings index.
 ///
-/// Self-observes [ScoringController] so the parent does not need to wrap it
+/// Self-observes [CricketScoringController] so the parent does not need to wrap it
 /// in [Obx].
 String _teamLabel(dynamic ref, String Function(String teamId) teamLabelForId) {
   final h = TeamRefFieldInstance(ref);
@@ -30,7 +30,7 @@ class CricketMatchStatsPanel extends StatelessWidget {
     required this.onRetry,
   });
 
-  final ScoringController controller;
+  final CricketScoringController controller;
   final String Function(String teamId) teamLabelForId;
   final VoidCallback onRetry;
 

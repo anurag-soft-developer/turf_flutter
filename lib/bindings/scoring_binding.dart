@@ -1,21 +1,30 @@
 import 'package:get/get.dart';
 
-import '../scoring/scoring_api_service.dart';
-import '../scoring/scoring_controller.dart';
-// import '../scoring/scoring_socket_service.dart';
+import '../scoring/cricket/cricket_scoring_api_service.dart';
+import '../scoring/cricket/cricket_scoring_controller.dart';
+import '../scoring/football/football_scoring_api_service.dart';
+import '../scoring/football/football_scoring_controller.dart';
 
 class ScoringBinding extends Bindings {
   @override
   void dependencies() {
-    // Get.lazyPut<ScoringSocketService>(
-    //   () => ScoringSocketService(),
-    //   fenix: true,
-    // );
-    Get.lazyPut<ScoringApiService>(() => ScoringApiService(), fenix: true);
-    Get.lazyPut<ScoringController>(
-      () => ScoringController(
-        // socketService: Get.find<ScoringSocketService>(),
-        apiService: Get.find<ScoringApiService>(),
+    Get.lazyPut<CricketScoringApiService>(
+      () => CricketScoringApiService(),
+      fenix: true,
+    );
+    Get.lazyPut<CricketScoringController>(
+      () => CricketScoringController(
+        apiService: Get.find<CricketScoringApiService>(),
+      ),
+      fenix: true,
+    );
+    Get.lazyPut<FootballScoringApiService>(
+      () => FootballScoringApiService(),
+      fenix: true,
+    );
+    Get.lazyPut<FootballScoringController>(
+      () => FootballScoringController(
+        apiService: Get.find<FootballScoringApiService>(),
       ),
       fenix: true,
     );

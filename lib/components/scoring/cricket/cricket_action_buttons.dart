@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../core/config/constants.dart';
-import '../../../scoring/scoring_controller.dart';
+import '../../../scoring/cricket/cricket_scoring_controller.dart';
 
 /// Bottom action panel with the per-delivery outcome buttons
 /// (Dot / Run / Wide / No-ball / Wicket).
 ///
-/// Self-observes [ScoringController.isSendingUpdate] to disable the buttons
+/// Self-observes [CricketScoringController.isSendingUpdate] to disable the buttons
 /// while a request is in flight.
 class CricketActionButtons extends StatefulWidget {
   const CricketActionButtons({
@@ -22,7 +22,7 @@ class CricketActionButtons extends StatefulWidget {
     required this.onRedo,
   });
 
-  final ScoringController controller;
+  final CricketScoringController controller;
   final VoidCallback onDot;
   final VoidCallback onRun;
   final VoidCallback onWide;

@@ -1,7 +1,7 @@
 import 'package:json_annotation/json_annotation.dart';
 
-import '../../core/models/team_match/team_match_ref_converter.dart';
-import '../../core/models/user_field_converters.dart';
+import '../../../core/models/team_match/team_match_ref_converter.dart';
+import '../../../core/models/user_field_converters.dart';
 
 part 'cricket_ball_event_model.g.dart';
 

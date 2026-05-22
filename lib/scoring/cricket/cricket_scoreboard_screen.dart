@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../components/scoring/cricket/cricket_components.dart';
-import '../core/config/constants.dart';
-import '../core/utils/app_snackbar.dart';
-import '../match_up/matchmaking_service.dart';
-import '../match_up/announced_players/model/announced_player_model.dart';
-import '../match_up/model/team_match_model.dart';
-import 'model/scoring_models.dart';
-import 'scoring_controller.dart';
+import '../../components/scoring/cricket/cricket_components.dart';
+import '../../core/config/constants.dart';
+import '../../core/utils/app_snackbar.dart';
+import '../../match_up/matchmaking_service.dart';
+import '../../match_up/announced_players/model/announced_player_model.dart';
+import '../../match_up/model/team_match_model.dart';
+import 'cricket_scoring_controller.dart';
+import 'model/cricket_scoring_models.dart';
 
 enum _WicketUiKind { bowled, caught, lbw, runOut, stumped, hitWicket }
 
@@ -21,7 +21,7 @@ class CricketScoreBoardScreen extends StatefulWidget {
 }
 
 class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
-  late final ScoringController _scoringController;
+  late final CricketScoringController _scoringController;
   final MatchmakingService _matchmakingService = MatchmakingService();
 
   late final String _teamMatchId;
@@ -45,7 +45,7 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
   void initState() {
     super.initState();
     _maxOversController = TextEditingController(text: '20');
-    _scoringController = Get.find<ScoringController>();
+    _scoringController = Get.find<CricketScoringController>();
     final args = (Get.arguments as Map?)?.cast<String, dynamic>() ?? const {};
     _teamMatchId = args['matchId']?.toString() ?? '';
     _scoringController.currentSessionId.value = _teamMatchId;

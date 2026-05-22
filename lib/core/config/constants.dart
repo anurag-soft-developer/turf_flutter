@@ -59,6 +59,7 @@ class Routes {
   final String matchUpChallenges = '/match-up/challenges';
   final String matchChallengeMessages = '/match-up/challenge-messages';
   final String cricketScoreBoard = '/match-up/cricket-scoreboard';
+  final String footballScoreBoard = '/match-up/football-scoreboard';
   final String matchHistory = '/match-history';
   final String playerRanking = '/player-ranking';
 }
