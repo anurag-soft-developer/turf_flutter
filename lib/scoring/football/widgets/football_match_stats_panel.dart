@@ -52,7 +52,7 @@ class FootballMatchStatsPanel extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              periodLabel(fs.currentPeriod),
+              'Innings ${fs.currentInnings}/${fs.inningsSummaries.length} · ${periodLabel(fs.currentPeriod)}',
               style: const TextStyle(
                 fontSize: 13,
                 color: Color(AppColors.textSecondaryColor),
@@ -67,6 +67,25 @@ class FootballMatchStatsPanel extends StatelessWidget {
                   color: Color(AppColors.textSecondaryColor),
                 ),
               ),
+            ],
+            if (fs.inningsSummaries.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              ...List.generate(fs.inningsSummaries.length, (i) {
+                final inn = fs.inningsSummaries[i];
+                final p = inn.period;
+                final periodText =
+                    p != null ? ' · ${periodLabel(p)}' : '';
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: Text(
+                    'Inn ${i + 1}$periodText: ${inn.scoreTeamOne}–${inn.scoreTeamTwo}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(AppColors.textSecondaryColor),
+                    ),
+                  ),
+                );
+              }),
             ],
             const SizedBox(height: 12),
             Row(

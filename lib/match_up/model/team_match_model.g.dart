@@ -143,23 +143,63 @@ Map<String, dynamic> _$CricketStateModelToJson(
   'inningsSummaries': instance.inningsSummaries.map((e) => e.toJson()).toList(),
 };
 
+FootballInningsSummaryModel _$FootballInningsSummaryModelFromJson(
+  Map<String, dynamic> json,
+) => FootballInningsSummaryModel(
+  scoreTeamOne: (json['scoreTeamOne'] as num?)?.toInt() ?? 0,
+  scoreTeamTwo: (json['scoreTeamTwo'] as num?)?.toInt() ?? 0,
+  period: $enumDecodeNullable(
+    _$MatchFootballPeriodEnumMap,
+    json['period'],
+  ),
+);
+
+Map<String, dynamic> _$FootballInningsSummaryModelToJson(
+  FootballInningsSummaryModel instance,
+) => <String, dynamic>{
+  'scoreTeamOne': instance.scoreTeamOne,
+  'scoreTeamTwo': instance.scoreTeamTwo,
+  'period': _$MatchFootballPeriodEnumMap[instance.period],
+};
+
 FootballStateModel _$FootballStateModelFromJson(Map<String, dynamic> json) =>
     FootballStateModel(
-      scoreTeamOne: (json['scoreTeamOne'] as num).toInt(),
-      scoreTeamTwo: (json['scoreTeamTwo'] as num).toInt(),
+      scoreTeamOne: (json['scoreTeamOne'] as num?)?.toInt() ?? 0,
+      scoreTeamTwo: (json['scoreTeamTwo'] as num?)?.toInt() ?? 0,
+      currentInnings: (json['currentInnings'] as num?)?.toInt() ?? 1,
       currentPeriod: $enumDecode(
         _$MatchFootballPeriodEnumMap,
         json['currentPeriod'],
       ),
       matchMinute: (json['matchMinute'] as num?)?.toInt(),
+      inningsSummaries:
+          (json['inningsSummaries'] as List<dynamic>?)
+              ?.map(
+                (e) => FootballInningsSummaryModel.fromJson(
+                  e as Map<String, dynamic>,
+                ),
+              )
+              .toList() ??
+          [],
+      timerElapsedMs: (json['timerElapsedMs'] as num?)?.toInt() ?? 0,
+      timerStartedAt: json['timerStartedAt'] == null
+          ? null
+          : DateTime.parse(json['timerStartedAt'] as String),
+      isTimerPaused: json['isTimerPaused'] as bool? ?? true,
     );
 
 Map<String, dynamic> _$FootballStateModelToJson(FootballStateModel instance) =>
     <String, dynamic>{
       'scoreTeamOne': instance.scoreTeamOne,
       'scoreTeamTwo': instance.scoreTeamTwo,
+      'currentInnings': instance.currentInnings,
       'currentPeriod': _$MatchFootballPeriodEnumMap[instance.currentPeriod]!,
       'matchMinute': instance.matchMinute,
+      'inningsSummaries':
+          instance.inningsSummaries.map((e) => e.toJson()).toList(),
+      'timerElapsedMs': instance.timerElapsedMs,
+      'timerStartedAt': instance.timerStartedAt?.toIso8601String(),
+      'isTimerPaused': instance.isTimerPaused,
     };
 
 const _$MatchFootballPeriodEnumMap = {

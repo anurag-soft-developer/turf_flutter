@@ -65,6 +65,38 @@ class FootballScoringApiService {
     );
   }
 
+  Future<TeamMatchModel?> changeFootballInning({
+    required String teamMatchId,
+    ChangeFootballInningRequest request = const ChangeFootballInningRequest(),
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiConstants.scoring.footballChangeInning(teamMatchId),
+      data: request.toJson(),
+    );
+    if (response == null) return null;
+    return TeamMatchModel.fromJson(response);
+  }
+
+  Future<TeamMatchModel?> pauseFootballTimer({
+    required String teamMatchId,
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiConstants.scoring.footballPauseTimer(teamMatchId),
+    );
+    if (response == null) return null;
+    return TeamMatchModel.fromJson(response);
+  }
+
+  Future<TeamMatchModel?> resumeFootballTimer({
+    required String teamMatchId,
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiConstants.scoring.footballResumeTimer(teamMatchId),
+    );
+    if (response == null) return null;
+    return TeamMatchModel.fromJson(response);
+  }
+
   Future<TeamMatchModel?> completeFootballMatch({
     required String teamMatchId,
   }) async {

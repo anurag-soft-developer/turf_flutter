@@ -176,6 +176,34 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
     );
   }
 
+  Future<void> _changeInning() async {
+    final fs = _controller.footballMatch.value?.footballState;
+    if (fs == null) return;
+
+    MatchFootballPeriod? nextPeriod;
+    if (fs.currentInnings < fs.inningsSummaries.length) {
+      nextPeriod = switch (fs.currentInnings + 1) {
+        2 => MatchFootballPeriod.secondHalf,
+        3 => MatchFootballPeriod.extraFirst,
+        4 => MatchFootballPeriod.extraSecond,
+        _ => MatchFootballPeriod.penalties,
+      };
+      setState(() => _selectedPeriod = nextPeriod!);
+    }
+
+    final ok = await _controller.changeFootballInning(
+      ChangeFootballInningRequest(
+        period: nextPeriod,
+        matchMinute: _parsedMatchMinute(),
+      ),
+    );
+    if (!mounted || ok) return;
+    AppSnackbar.error(
+      title: 'Could not change innings',
+      message: _controller.errorMessage.value ?? 'Could not start next innings.',
+    );
+  }
+
   Future<void> _completeMatch() async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -339,6 +367,11 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
                     onRetry: _retryFetchMatch,
                   ),
                   const SizedBox(height: 10),
+                  FootballMatchTimer(
+                    controller: _controller,
+                    enabled: !completed,
+                  ),
+                  const SizedBox(height: 10),
                   if (!completed) ...[
                     _buildPeriodToolbar(),
                     const SizedBox(height: 10),
@@ -362,6 +395,7 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
                       onUndo: _undo,
                       onRedo: _redo,
                       onComplete: _completeMatch,
+                      onChangeInning: _changeInning,
                     ),
                   ),
                 ),

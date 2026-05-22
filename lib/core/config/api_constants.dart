@@ -244,6 +244,15 @@ class ScoringEndpoints {
 
   String footballCompleteMatch(String teamMatchId) =>
       '/scoring/football/matches/$teamMatchId/complete';
+
+  String footballChangeInning(String teamMatchId) =>
+      '/scoring/football/matches/$teamMatchId/inning/change';
+
+  String footballPauseTimer(String teamMatchId) =>
+      '/scoring/football/matches/$teamMatchId/timer/pause';
+
+  String footballResumeTimer(String teamMatchId) =>
+      '/scoring/football/matches/$teamMatchId/timer/resume';
 }
 
 /// Presigned uploads (DigitalOcean Spaces).

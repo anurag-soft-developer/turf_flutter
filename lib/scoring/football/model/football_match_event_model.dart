@@ -53,6 +53,7 @@ class FootballMatchEvent {
   final dynamic teamMatchId;
 
   final int sequence;
+  final int innings;
 
   @JsonKey(fromJson: _kindFromApi, unknownEnumValue: FootballEventKind.goal)
   final FootballEventKind kind;
@@ -84,6 +85,7 @@ class FootballMatchEvent {
     this.id = '',
     required this.teamMatchId,
     required this.sequence,
+    this.innings = 1,
     required this.kind,
     required this.period,
     required this.beneficiaryTeamId,

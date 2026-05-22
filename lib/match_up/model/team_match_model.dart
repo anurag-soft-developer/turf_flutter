@@ -272,19 +272,51 @@ class CricketStateModel {
   UserFieldInstance get bowlerUserHelper => UserFieldInstance(bowlerUserId);
 }
 
+/// Backend embedded `inningsSummaries[]` item ([FootballInningsSummary]).
+@JsonSerializable(explicitToJson: true)
+class FootballInningsSummaryModel {
+  final int scoreTeamOne;
+  final int scoreTeamTwo;
+  final MatchFootballPeriod? period;
+
+  const FootballInningsSummaryModel({
+    required this.scoreTeamOne,
+    required this.scoreTeamTwo,
+    this.period,
+  });
+
+  factory FootballInningsSummaryModel.fromJson(Map<String, dynamic> json) =>
+      _$FootballInningsSummaryModelFromJson(json);
+
+  Map<String, dynamic> toJson() => _$FootballInningsSummaryModelToJson(this);
+}
+
 /// Backend embedded [FootballState].
 @JsonSerializable(explicitToJson: true)
 class FootballStateModel {
   final int scoreTeamOne;
   final int scoreTeamTwo;
+  final int currentInnings;
   final MatchFootballPeriod currentPeriod;
   final int? matchMinute;
+
+  @JsonKey(defaultValue: <FootballInningsSummaryModel>[])
+  final List<FootballInningsSummaryModel> inningsSummaries;
+
+  final int timerElapsedMs;
+  final DateTime? timerStartedAt;
+  final bool isTimerPaused;
 
   const FootballStateModel({
     required this.scoreTeamOne,
     required this.scoreTeamTwo,
+    this.currentInnings = 1,
     required this.currentPeriod,
     this.matchMinute,
+    required this.inningsSummaries,
+    this.timerElapsedMs = 0,
+    this.timerStartedAt,
+    this.isTimerPaused = true,
   });
 
   factory FootballStateModel.fromJson(Map<String, dynamic> json) =>

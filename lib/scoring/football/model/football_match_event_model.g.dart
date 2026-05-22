@@ -11,6 +11,7 @@ FootballMatchEvent _$FootballMatchEventFromJson(Map<String, dynamic> json) =>
       id: json['_id'] == null ? '' : _mongoIdFromJson(json['_id']),
       teamMatchId: const TeamMatchRefConverter().fromJson(json['teamMatchId']),
       sequence: (json['sequence'] as num).toInt(),
+      innings: (json['innings'] as num?)?.toInt() ?? 1,
       kind: _kindFromApi(json['kind'] as String?),
       period: _periodFromJson(json['period']),
       beneficiaryTeamId: const TeamMatchRefConverter().fromJson(
@@ -34,6 +35,7 @@ Map<String, dynamic> _$FootballMatchEventToJson(FootballMatchEvent instance) =>
       '_id': instance.id,
       'teamMatchId': const TeamMatchRefConverter().toJson(instance.teamMatchId),
       'sequence': instance.sequence,
+      'innings': instance.innings,
       'kind': _$FootballEventKindEnumMap[instance.kind]!,
       'period': _$MatchFootballPeriodEnumMap[instance.period]!,
       'matchMinute': instance.matchMinute,

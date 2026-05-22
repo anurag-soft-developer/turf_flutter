@@ -21,6 +21,8 @@ class FootballScoringController extends GetxController {
   final RxBool isFetchingFootballMatch = false.obs;
   final RxBool isCreatingFootballSession = false.obs;
   final RxBool isCompletingFootballMatch = false.obs;
+  final RxBool isChangingInning = false.obs;
+  final RxBool isUpdatingTimer = false.obs;
 
   final RxList<FootballMatchEvent> footballEvents = <FootballMatchEvent>[].obs;
   final RxBool isFetchingEvents = false.obs;
@@ -115,6 +117,91 @@ class FootballScoringController extends GetxController {
     footballMatch.value = match;
     await fetchFootballEvents(sessionId, resetEventHistory: true);
     return true;
+  }
+
+  bool get canChangeFootballInning {
+    final fs = footballMatch.value?.footballState;
+    if (fs == null) return false;
+    return fs.currentInnings < fs.inningsSummaries.length;
+  }
+
+  Future<bool> changeFootballInning([
+    ChangeFootballInningRequest request = const ChangeFootballInningRequest(),
+  ]) async {
+    final sessionId = currentSessionId.value;
+    if (sessionId.isEmpty) {
+      errorMessage.value = 'No match selected.';
+      return false;
+    }
+    if (!canChangeFootballInning) {
+      errorMessage.value = 'All innings are finished.';
+      return false;
+    }
+
+    errorMessage.value = null;
+    isChangingInning.value = true;
+    try {
+      final match = await _apiService.changeFootballInning(
+        teamMatchId: sessionId,
+        request: request,
+      );
+      if (match == null) {
+        errorMessage.value = 'Could not change innings.';
+        return false;
+      }
+      footballMatch.value = match;
+      return true;
+    } catch (error) {
+      errorMessage.value = error.toString();
+      return false;
+    } finally {
+      isChangingInning.value = false;
+    }
+  }
+
+  Future<bool> pauseFootballTimer() async {
+    final sessionId = currentSessionId.value;
+    if (sessionId.isEmpty) return false;
+    final fs = footballMatch.value?.footballState;
+    if (fs == null || fs.isTimerPaused) return true;
+
+    errorMessage.value = null;
+    isUpdatingTimer.value = true;
+    try {
+      final match = await _apiService.pauseFootballTimer(teamMatchId: sessionId);
+      if (match != null) {
+        footballMatch.value = match;
+      }
+      return match != null;
+    } catch (error) {
+      errorMessage.value = error.toString();
+      return false;
+    } finally {
+      isUpdatingTimer.value = false;
+    }
+  }
+
+  Future<bool> resumeFootballTimer() async {
+    final sessionId = currentSessionId.value;
+    if (sessionId.isEmpty) return false;
+    final fs = footballMatch.value?.footballState;
+    if (fs == null || !fs.isTimerPaused) return true;
+
+    errorMessage.value = null;
+    isUpdatingTimer.value = true;
+    try {
+      final match =
+          await _apiService.resumeFootballTimer(teamMatchId: sessionId);
+      if (match != null) {
+        footballMatch.value = match;
+      }
+      return match != null;
+    } catch (error) {
+      errorMessage.value = error.toString();
+      return false;
+    } finally {
+      isUpdatingTimer.value = false;
+    }
   }
 
   Future<bool> completeFootballMatch() async {

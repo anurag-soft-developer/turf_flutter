@@ -4,14 +4,30 @@ import '../../../match_up/model/team_match_model.dart';
 class CreateFootballSessionRequest {
   final MatchFootballPeriod period;
   final int? matchMinute;
+  final int inningsPerMatch;
 
   const CreateFootballSessionRequest({
     this.period = MatchFootballPeriod.firstHalf,
     this.matchMinute,
+    this.inningsPerMatch = 2,
   });
 
   Map<String, dynamic> toJson() => {
     'period': _periodToApi(period),
+    if (matchMinute != null) 'matchMinute': matchMinute,
+    'inningsPerMatch': inningsPerMatch,
+  };
+}
+
+/// Body for `POST /scoring/football/matches/:teamMatchId/inning/change`.
+class ChangeFootballInningRequest {
+  final MatchFootballPeriod? period;
+  final int? matchMinute;
+
+  const ChangeFootballInningRequest({this.period, this.matchMinute});
+
+  Map<String, dynamic> toJson() => {
+    if (period != null) 'period': _periodToApi(period!),
     if (matchMinute != null) 'matchMinute': matchMinute,
   };
 }

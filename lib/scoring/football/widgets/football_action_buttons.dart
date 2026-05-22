@@ -16,6 +16,7 @@ class FootballActionButtons extends StatelessWidget {
     required this.onUndo,
     required this.onRedo,
     required this.onComplete,
+    this.onChangeInning,
   });
 
   final FootballScoringController controller;
@@ -23,6 +24,7 @@ class FootballActionButtons extends StatelessWidget {
   final VoidCallback onUndo;
   final VoidCallback onRedo;
   final VoidCallback onComplete;
+  final VoidCallback? onChangeInning;
 
   static const List<FootballEventKind> _kinds = [
     FootballEventKind.goal,
@@ -41,6 +43,8 @@ class FootballActionButtons extends StatelessWidget {
       final canUndo = controller.canUndoFootballEvent;
       final canRedo = controller.canRedoFootballEvent.value;
       final completing = controller.isCompletingFootballMatch.value;
+      final changingInning = controller.isChangingInning.value;
+      final canChangeInning = controller.canChangeFootballInning;
 
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -79,6 +83,22 @@ class FootballActionButtons extends StatelessWidget {
               ),
             ],
           ),
+          if (onChangeInning != null && canChangeInning) ...[
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: busy || changingInning ? null : onChangeInning,
+              icon: changingInning
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.swap_horiz),
+              label: Text(
+                changingInning ? 'Starting innings…' : 'Start next innings',
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
           FilledButton.icon(
             onPressed: busy || completing ? null : onComplete,
