@@ -2,18 +2,15 @@ import '../../../match_up/model/team_match_model.dart';
 
 /// Body for `POST /scoring/football/matches/:teamMatchId/session`.
 class CreateFootballSessionRequest {
-  final MatchFootballPeriod period;
   final int? matchMinute;
   final int inningsPerMatch;
 
   const CreateFootballSessionRequest({
-    this.period = MatchFootballPeriod.firstHalf,
     this.matchMinute,
     this.inningsPerMatch = 2,
   });
 
   Map<String, dynamic> toJson() => {
-    'period': _periodToApi(period),
     if (matchMinute != null) 'matchMinute': matchMinute,
     'inningsPerMatch': inningsPerMatch,
   };
@@ -34,21 +31,11 @@ class ChangeFootballInningRequest {
 
 /// Body for `POST /scoring/football/matches/:teamMatchId/events`.
 class AppendFootballEventRequest {
-  final MatchFootballPeriod period;
-  final int? matchMinute;
   final FootballEventPayload payload;
 
-  const AppendFootballEventRequest({
-    required this.period,
-    required this.payload,
-    this.matchMinute,
-  });
+  const AppendFootballEventRequest({required this.payload});
 
-  Map<String, dynamic> toJson() => {
-    'period': _periodToApi(period),
-    if (matchMinute != null) 'matchMinute': matchMinute,
-    'payload': payload.toJson(),
-  };
+  Map<String, dynamic> toJson() => {'payload': payload.toJson()};
 }
 
 abstract class FootballEventPayload {

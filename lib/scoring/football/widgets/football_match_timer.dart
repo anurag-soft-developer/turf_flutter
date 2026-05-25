@@ -23,19 +23,43 @@ class FootballMatchTimer extends StatefulWidget {
 
 class _FootballMatchTimerState extends State<FootballMatchTimer> {
   Timer? _tick;
+  int _trackedInnings = 0;
+  bool _autoPauseInFlight = false;
 
   @override
   void initState() {
     super.initState();
-    _tick = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() {});
-    });
+    _tick = Timer.periodic(const Duration(seconds: 1), (_) => _onTick());
   }
 
   @override
   void dispose() {
     _tick?.cancel();
     super.dispose();
+  }
+
+  void _onTick() {
+    if (!mounted) return;
+    final fs = widget.controller.footballMatch.value?.footballState;
+    if (fs == null) return;
+
+    if (fs.currentInnings != _trackedInnings) {
+      _trackedInnings = fs.currentInnings;
+      _autoPauseInFlight = false;
+    }
+
+    if (widget.enabled &&
+        !_autoPauseInFlight &&
+        shouldAutoPauseFootballTimer(fs)) {
+      _autoPauseInFlight = true;
+      unawaited(
+        widget.controller.pauseFootballTimer().whenComplete(() {
+          if (mounted) _autoPauseInFlight = false;
+        }),
+      );
+    }
+
+    setState(() {});
   }
 
   @override
@@ -46,10 +70,15 @@ class _FootballMatchTimerState extends State<FootballMatchTimer> {
         return const SizedBox.shrink();
       }
 
-      final elapsed = footballTimerElapsedMs(fs);
-      final label = formatFootballTimer(elapsed);
+      _trackedInnings = fs.currentInnings;
+
+      final inningElapsed = footballTimerElapsedMs(fs);
+      final totalElapsed = footballTotalTimerElapsedMs(fs);
+      final inningLabel = formatFootballTimer(inningElapsed);
+      final totalLabel = formatFootballTimer(totalElapsed);
       final paused = fs.isTimerPaused;
       final busy = widget.controller.isUpdatingTimer.value;
+      final showTotal = fs.totalTimerElapsedMs > 0 || fs.currentInnings > 1;
 
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -70,21 +99,33 @@ class _FootballMatchTimerState extends State<FootballMatchTimer> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Match timer',
-                    style: TextStyle(
+                  Text(
+                    footballInningsTimerLabel(fs),
+                    style: const TextStyle(
                       fontSize: 12,
                       color: Color(AppColors.textSecondaryColor),
                     ),
                   ),
                   Text(
-                    label,
+                    inningLabel,
                     style: const TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.w800,
                       fontFeatures: [FontFeature.tabularFigures()],
                     ),
                   ),
+                  if (showTotal) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Total $totalLabel',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: Color(AppColors.textSecondaryColor),
+                        fontFeatures: [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

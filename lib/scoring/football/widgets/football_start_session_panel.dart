@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/config/constants.dart';
-import '../../../match_up/model/team_match_model.dart';
-import '../model/football_scoring_models.dart';
 
 class FootballStartSessionPanel extends StatelessWidget {
   const FootballStartSessionPanel({
@@ -11,8 +9,6 @@ class FootballStartSessionPanel extends StatelessWidget {
     required this.metaPending,
     required this.fromTeamName,
     required this.toTeamName,
-    required this.selectedPeriod,
-    required this.onPeriodChanged,
     required this.matchMinuteController,
     required this.isStarting,
     required this.errorText,
@@ -22,8 +18,6 @@ class FootballStartSessionPanel extends StatelessWidget {
   final bool metaPending;
   final String fromTeamName;
   final String toTeamName;
-  final MatchFootballPeriod selectedPeriod;
-  final ValueChanged<MatchFootballPeriod> onPeriodChanged;
   final TextEditingController matchMinuteController;
   final bool isStarting;
   final String? errorText;
@@ -64,33 +58,16 @@ class FootballStartSessionPanel extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
                 const Text(
-                  'Starting period',
+                  'Total match minutes (optional)',
                   style: TextStyle(fontWeight: FontWeight.w600),
                 ),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<MatchFootballPeriod>(
-                  value: selectedPeriod,
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  items: MatchFootballPeriod.values
-                      .map(
-                        (p) => DropdownMenuItem(
-                          value: p,
-                          child: Text(periodLabel(p)),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (v) {
-                    if (v != null) onPeriodChanged(v);
-                  },
-                ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 4),
                 const Text(
-                  'Match minute (optional)',
-                  style: TextStyle(fontWeight: FontWeight.w600),
+                  'Both halves combined, e.g. 90. Each half auto-pauses at half of this.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Color(AppColors.textSecondaryColor),
+                  ),
                 ),
                 const SizedBox(height: 8),
                 TextField(
@@ -98,7 +75,7 @@ class FootballStartSessionPanel extends StatelessWidget {
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   decoration: InputDecoration(
-                    hintText: '0–130',
+                    hintText: 'e.g. 90',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),

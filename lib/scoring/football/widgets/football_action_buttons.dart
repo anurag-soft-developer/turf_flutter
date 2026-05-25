@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -8,7 +10,7 @@ import '../util/football_scoring_helpers.dart';
 
 typedef FootballEventTap = void Function(FootballEventKind kind);
 
-class FootballActionButtons extends StatelessWidget {
+class FootballActionButtons extends StatefulWidget {
   const FootballActionButtons({
     super.key,
     required this.controller,
@@ -37,14 +39,39 @@ class FootballActionButtons extends StatelessWidget {
   ];
 
   @override
+  State<FootballActionButtons> createState() => _FootballActionButtonsState();
+}
+
+class _FootballActionButtonsState extends State<FootballActionButtons> {
+  Timer? _timerTick;
+
+  @override
+  void initState() {
+    super.initState();
+    _timerTick = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _timerTick?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final busy = controller.isSendingUpdate.value;
-      final canUndo = controller.canUndoFootballEvent;
-      final canRedo = controller.canRedoFootballEvent.value;
-      final completing = controller.isCompletingFootballMatch.value;
-      final changingInning = controller.isChangingInning.value;
-      final canChangeInning = controller.canChangeFootballInning;
+      final busy = widget.controller.isSendingUpdate.value;
+      final canUndo = widget.controller.canUndoFootballEvent;
+      final canRedo = widget.controller.canRedoFootballEvent.value;
+      final completing = widget.controller.isCompletingFootballMatch.value;
+      final changingInning = widget.controller.isChangingInning.value;
+      final fs = widget.controller.footballMatch.value?.footballState;
+      final showStartNextInning = fs != null &&
+          widget.onChangeInning != null &&
+          shouldShowFootballStartNextInning(fs);
+      final showEndMatch = fs != null && canEndFootballMatch(fs);
 
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -54,12 +81,12 @@ class FootballActionButtons extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              for (final kind in _kinds)
+              for (final kind in FootballActionButtons._kinds)
                 _EventChip(
                   label: eventKindLabel(kind),
                   icon: eventKindIcon(kind),
                   enabled: !busy,
-                  onTap: () => onEventTap(kind),
+                  onTap: () => widget.onEventTap(kind),
                 ),
             ],
           ),
@@ -68,7 +95,7 @@ class FootballActionButtons extends StatelessWidget {
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: busy || !canUndo ? null : onUndo,
+                  onPressed: busy || !canUndo ? null : widget.onUndo,
                   icon: const Icon(Icons.undo, size: 18),
                   label: const Text('Undo'),
                 ),
@@ -76,17 +103,17 @@ class FootballActionButtons extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: busy || !canRedo ? null : onRedo,
+                  onPressed: busy || !canRedo ? null : widget.onRedo,
                   icon: const Icon(Icons.redo, size: 18),
                   label: const Text('Redo'),
                 ),
               ),
             ],
           ),
-          if (onChangeInning != null && canChangeInning) ...[
+          if (showStartNextInning) ...[
             const SizedBox(height: 8),
             OutlinedButton.icon(
-              onPressed: busy || changingInning ? null : onChangeInning,
+              onPressed: busy || changingInning ? null : widget.onChangeInning,
               icon: changingInning
                   ? const SizedBox(
                       width: 18,
@@ -99,25 +126,27 @@ class FootballActionButtons extends StatelessWidget {
               ),
             ),
           ],
-          const SizedBox(height: 8),
-          FilledButton.icon(
-            onPressed: busy || completing ? null : onComplete,
-            style: FilledButton.styleFrom(
-              minimumSize: const Size.fromHeight(44),
-              backgroundColor: const Color(AppColors.primaryColor),
+          if (showEndMatch) ...[
+            const SizedBox(height: 8),
+            FilledButton.icon(
+              onPressed: busy || completing ? null : widget.onComplete,
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(44),
+                backgroundColor: const Color(AppColors.primaryColor),
+              ),
+              icon: completing
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.flag_outlined),
+              label: Text(completing ? 'Ending…' : 'End match'),
             ),
-            icon: completing
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : const Icon(Icons.flag_outlined),
-            label: Text(completing ? 'Ending…' : 'End match'),
-          ),
+          ],
         ],
       );
     });

@@ -304,6 +304,7 @@ class FootballStateModel {
   final List<FootballInningsSummaryModel> inningsSummaries;
 
   final int timerElapsedMs;
+  final int totalTimerElapsedMs;
   final DateTime? timerStartedAt;
   final bool isTimerPaused;
 
@@ -315,6 +316,7 @@ class FootballStateModel {
     this.matchMinute,
     required this.inningsSummaries,
     this.timerElapsedMs = 0,
+    this.totalTimerElapsedMs = 0,
     this.timerStartedAt,
     this.isTimerPaused = true,
   });

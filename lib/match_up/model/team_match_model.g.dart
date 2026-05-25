@@ -182,6 +182,7 @@ FootballStateModel _$FootballStateModelFromJson(Map<String, dynamic> json) =>
               .toList() ??
           [],
       timerElapsedMs: (json['timerElapsedMs'] as num?)?.toInt() ?? 0,
+      totalTimerElapsedMs: (json['totalTimerElapsedMs'] as num?)?.toInt() ?? 0,
       timerStartedAt: json['timerStartedAt'] == null
           ? null
           : DateTime.parse(json['timerStartedAt'] as String),
@@ -198,6 +199,7 @@ Map<String, dynamic> _$FootballStateModelToJson(FootballStateModel instance) =>
       'inningsSummaries':
           instance.inningsSummaries.map((e) => e.toJson()).toList(),
       'timerElapsedMs': instance.timerElapsedMs,
+      'totalTimerElapsedMs': instance.totalTimerElapsedMs,
       'timerStartedAt': instance.timerStartedAt?.toIso8601String(),
       'isTimerPaused': instance.isTimerPaused,
     };

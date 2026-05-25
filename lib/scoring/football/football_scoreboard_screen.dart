@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import '../../components/scoring/cricket/match_stats_error_card.dart';
@@ -33,7 +32,6 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
   String _toTeamId = '';
   bool _isLoadingMeta = true;
 
-  MatchFootballPeriod _selectedPeriod = MatchFootballPeriod.firstHalf;
   final TextEditingController _matchMinuteController = TextEditingController();
 
   @override
@@ -87,11 +85,8 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
       setState(() => _applyTeamLabelsFromMatch(fm));
     }
     final fs = fm?.footballState;
-    if (fs != null) {
-      _selectedPeriod = fs.currentPeriod;
-      if (fs.matchMinute != null) {
-        _matchMinuteController.text = '${fs.matchMinute}';
-      }
+    if (fs != null && fs.matchMinute != null) {
+      _matchMinuteController.text = '${fs.matchMinute}';
     }
     if (_teamMatchId.isNotEmpty && fs != null) {
       await _controller.fetchFootballEvents(_teamMatchId);
@@ -104,14 +99,6 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
     final n = int.tryParse(t);
     if (n == null || n < 0 || n > 130) return null;
     return n;
-  }
-
-  AppendFootballEventRequest _buildEventRequest(FootballEventPayload payload) {
-    return AppendFootballEventRequest(
-      period: _selectedPeriod,
-      matchMinute: _parsedMatchMinute(),
-      payload: payload,
-    );
   }
 
   Future<void> _onEventTap(FootballEventKind kind) async {
@@ -129,7 +116,7 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
     if (!mounted || payload == null) return;
 
     final event = await _controller.appendFootballEvent(
-      _buildEventRequest(payload),
+      AppendFootballEventRequest(payload: payload),
     );
     if (!mounted) return;
     if (event == null) {
@@ -143,10 +130,7 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
   Future<void> _startFootballSession() async {
     final minute = _parsedMatchMinute();
     await _controller.createFootballSession(
-      CreateFootballSessionRequest(
-        period: _selectedPeriod,
-        matchMinute: minute,
-      ),
+      CreateFootballSessionRequest(matchMinute: minute),
     );
     if (!mounted) return;
     if (_controller.footballMatch.value?.footballState == null) {
@@ -188,14 +172,10 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
         4 => MatchFootballPeriod.extraSecond,
         _ => MatchFootballPeriod.penalties,
       };
-      setState(() => _selectedPeriod = nextPeriod!);
     }
 
     final ok = await _controller.changeFootballInning(
-      ChangeFootballInningRequest(
-        period: nextPeriod,
-        matchMinute: _parsedMatchMinute(),
-      ),
+      ChangeFootballInningRequest(period: nextPeriod),
     );
     if (!mounted || ok) return;
     AppSnackbar.error(
@@ -242,56 +222,6 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
   }
 
   void _retryFetchMatch() => _controller.fetchFootballMatch(_teamMatchId);
-
-  Widget _buildPeriodToolbar() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(AppColors.dividerColor)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text(
-            'Current period & minute',
-            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-          ),
-          const SizedBox(height: 8),
-          DropdownButtonFormField<MatchFootballPeriod>(
-            value: _selectedPeriod,
-            decoration: InputDecoration(
-              isDense: true,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            items: MatchFootballPeriod.values
-                .map(
-                  (p) => DropdownMenuItem(
-                    value: p,
-                    child: Text(periodLabel(p)),
-                  ),
-                )
-                .toList(),
-            onChanged: (v) {
-              if (v != null) setState(() => _selectedPeriod = v);
-            },
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _matchMinuteController,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: InputDecoration(
-              isDense: true,
-              labelText: 'Minute (optional)',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -341,8 +271,6 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
             metaPending: metaPending,
             fromTeamName: _fromTeamName,
             toTeamName: _toTeamName,
-            selectedPeriod: _selectedPeriod,
-            onPeriodChanged: (p) => setState(() => _selectedPeriod = p),
             matchMinuteController: _matchMinuteController,
             isStarting: _controller.isCreatingFootballSession.value,
             errorText: err,
@@ -372,10 +300,6 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
                     enabled: !completed,
                   ),
                   const SizedBox(height: 10),
-                  if (!completed) ...[
-                    _buildPeriodToolbar(),
-                    const SizedBox(height: 10),
-                  ],
                   FootballEventsTimeline(controller: _controller),
                 ],
               ),
