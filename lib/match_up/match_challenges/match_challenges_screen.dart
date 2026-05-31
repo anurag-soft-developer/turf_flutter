@@ -23,7 +23,7 @@ class _MatchChallengesScreenState extends State<MatchChallengesScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
 
-  List<AppTabItem> _tabs = const [
+  final List<AppTabItem> _tabs = const [
     AppTabItem(label: 'Received'),
     AppTabItem(label: 'Sent'),
     AppTabItem(label: 'Completed'),
@@ -249,11 +249,9 @@ class _HistoryListPane extends StatelessWidget {
               selectedTeamId: selectedTeamId,
               isHistory: isHistory,
               onTap: () async {
-                await Get.to(
-                  () => MatchChallengeDetailScreen(
-                    match: m,
-                    isIncoming: _isIncomingForMatch(m, c),
-                  ),
+                await openMatchChallengeDetail(
+                  match: m,
+                  isIncoming: _isIncomingForMatch(m, c),
                 );
               },
             );
@@ -389,9 +387,7 @@ class _ReceivedChallengeCard extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: () async {
-            await Get.to(
-              () => MatchChallengeDetailScreen(match: match, isIncoming: true),
-            );
+            await openMatchChallengeDetail(match: match, isIncoming: true);
           },
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -496,9 +492,7 @@ class _SentChallengeCard extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: () async {
-            await Get.to(
-              () => MatchChallengeDetailScreen(match: match, isIncoming: false),
-            );
+            await openMatchChallengeDetail(match: match, isIncoming: false);
           },
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -664,7 +658,7 @@ String _formatDate(DateTime d) {
       '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
 }
 
-/// Aligns with [MatchChallengeDetailScreen.isIncoming]: [to] is the side that received the request.
+/// Aligns with [MatchChallengeDetailController.isIncoming]: [to] is the side that received the request.
 bool _isIncomingForMatch(TeamMatchModel match, MatchChallengesController c) {
   final toId = match.toTeamHelper.getId();
   final fromId = match.fromTeamHelper.getId();

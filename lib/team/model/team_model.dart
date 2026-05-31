@@ -234,6 +234,15 @@ class TeamFilterQuery {
 
   /// Serialized as `'true'` / `'false'` (Zod enum).
   final bool? teamOpenForMatch;
+
+  /// When true, backend excludes opponents already challenged by [fromTeamId].
+  final bool? skipTeamsWithSentRequest;
+
+  /// Required when [skipTeamsWithSentRequest] is true.
+  final String? fromTeamId;
+
+  /// Case-insensitive search on name, short name, tagline, description, location.
+  final String? search;
   final int page;
   final int limit;
   final double? nearbyLat;
@@ -247,6 +256,9 @@ class TeamFilterQuery {
     this.genderCategory,
     this.lookingForMembers,
     this.teamOpenForMatch,
+    this.skipTeamsWithSentRequest,
+    this.fromTeamId,
+    this.search,
     this.page = 1,
     this.limit = 10,
     this.nearbyLat,
@@ -271,6 +283,14 @@ class TeamFilterQuery {
     }
     if (teamOpenForMatch != null) {
       params['teamOpenForMatch'] = teamOpenForMatch! ? 'true' : 'false';
+    }
+    if (skipTeamsWithSentRequest == true && fromTeamId != null) {
+      params['skipTeamsWithSentRequest'] = 'true';
+      params['fromTeamId'] = fromTeamId;
+    }
+    final trimmedSearch = search?.trim();
+    if (trimmedSearch != null && trimmedSearch.isNotEmpty) {
+      params['search'] = trimmedSearch;
     }
     if (nearbyLat != null && nearbyLng != null) {
       params.addAll(

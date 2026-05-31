@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../core/config/constants.dart';
 import '../../turf/feed/turf_list_controller.dart';
+import 'search_components.dart';
 
 class FilterBottomSheet extends StatelessWidget {
   final TurfListController controller;
@@ -12,6 +13,7 @@ class FilterBottomSheet extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -27,6 +29,7 @@ class FilterBottomSheet extends StatelessWidget {
       minChildSize: 0.5,
       expand: false,
       builder: (context, scrollController) => Container(
+        color: Colors.white,
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -77,14 +80,21 @@ class FilterBottomSheet extends StatelessWidget {
           children: [
             const Text(
               'Filters',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Color(AppColors.textColor),
+              ),
             ),
             TextButton(
               onPressed: () {
                 controller.clearFilters();
                 Get.back();
               },
-              child: const Text('Clear All'),
+              child: const Text(
+                'Clear All',
+                style: TextStyle(color: Color(AppColors.primaryColor)),
+              ),
             ),
           ],
         ),
@@ -98,7 +108,11 @@ class FilterBottomSheet extends StatelessWidget {
       children: [
         const Text(
           'Sport Types',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Color(AppColors.textColor),
+          ),
         ),
         const SizedBox(height: 12),
         Obx(
@@ -107,10 +121,10 @@ class FilterBottomSheet extends StatelessWidget {
             runSpacing: 8,
             children: controller.availableSportTypes
                 .map(
-                  (sport) => FilterChip(
-                    label: Text(sport),
-                    selected: controller.selectedSportTypes.contains(sport),
-                    onSelected: (_) => controller.toggleSportType(sport),
+                  (sport) => QuickFilterChip(
+                    label: sport,
+                    isSelected: controller.selectedSportTypes.contains(sport),
+                    onTap: () => controller.toggleSportType(sport),
                   ),
                 )
                 .toList(),
@@ -126,7 +140,11 @@ class FilterBottomSheet extends StatelessWidget {
       children: [
         const Text(
           'Amenities',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Color(AppColors.textColor),
+          ),
         ),
         const SizedBox(height: 12),
         Obx(
@@ -135,10 +153,10 @@ class FilterBottomSheet extends StatelessWidget {
             runSpacing: 8,
             children: controller.availableAmenities
                 .map(
-                  (amenity) => FilterChip(
-                    label: Text(amenity),
-                    selected: controller.selectedAmenities.contains(amenity),
-                    onSelected: (_) => controller.toggleAmenity(amenity),
+                  (amenity) => QuickFilterChip(
+                    label: amenity,
+                    isSelected: controller.selectedAmenities.contains(amenity),
+                    onTap: () => controller.toggleAmenity(amenity),
                   ),
                 )
                 .toList(),
@@ -155,7 +173,11 @@ class FilterBottomSheet extends StatelessWidget {
         children: [
           Text(
             'Price Range: ₹${controller.minPrice.toInt()} - ₹${controller.maxPrice.toInt()}',
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Color(AppColors.textColor),
+            ),
           ),
           RangeSlider(
             values: RangeValues(
@@ -184,7 +206,11 @@ class FilterBottomSheet extends StatelessWidget {
         children: [
           Text(
             'Minimum Rating: ${controller.selectedRating == 0 ? 'Any' : '${controller.selectedRating.toStringAsFixed(1)}+'}',
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Color(AppColors.textColor),
+            ),
           ),
           Slider(
             value: controller.selectedRating.value,

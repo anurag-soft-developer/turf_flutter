@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../../../core/config/constants.dart';
 import '../../../core/models/user/player_stats_models.dart';
 import 'stats_grid.dart';

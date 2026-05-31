@@ -14,12 +14,19 @@ class MatchUpController extends GetxController
   final TeamService _teamService = TeamService();
   final MatchmakingService _matchmakingService = MatchmakingService();
 
+  final TextEditingController searchController = TextEditingController();
+
   final Rx<TeamSportType> selectedSport = TeamSportType.cricket.obs;
   final RxBool isLoadingMyTeams = true.obs;
+  final RxBool isSearching = false.obs;
   final RxBool isSendingRequest = false.obs;
   final RxList<TeamMemberModel> myMemberships = <TeamMemberModel>[].obs;
   final Rx<TeamMemberFieldInstance?> selectedTeam =
       Rx<TeamMemberFieldInstance?>(null);
+
+  /// Opponent team ids challenged by the current [selectedTeam] (immediate UI).
+  final RxMap<String, Set<String>> challengedOpponentsByFromTeam =
+      <String, Set<String>>{}.obs;
 
   @override
   List<TeamSportType> get tabKeys => TeamSportType.values;
@@ -44,6 +51,26 @@ class MatchUpController extends GetxController
     _loadMyTeams();
   }
 
+  @override
+  void onClose() {
+    searchController.dispose();
+    super.onClose();
+  }
+
+  String? get _searchQuery {
+    final text = searchController.text.trim();
+    return text.isEmpty ? null : text;
+  }
+
+  Future<void> searchTeams() async {
+    isSearching.value = true;
+    try {
+      await ensureTabLoaded(selectedSport.value, force: true);
+    } finally {
+      isSearching.value = false;
+    }
+  }
+
   void switchSport(TeamSportType sport) {
     if (selectedSport.value == sport) return;
     selectedSport.value = sport;
@@ -54,6 +81,25 @@ class MatchUpController extends GetxController
   void selectTeam(TeamMemberFieldInstance team) {
     if (selectedTeam.value?.id == team.id) return;
     selectedTeam.value = team;
+    ensureTabLoaded(selectedSport.value, force: true);
+  }
+
+  bool isTeamChallenged(String? opponentTeamId) {
+    final fromTeamId = selectedTeam.value?.id;
+    if (fromTeamId == null ||
+        opponentTeamId == null ||
+        opponentTeamId.isEmpty) {
+      return false;
+    }
+    return challengedOpponentsByFromTeam[fromTeamId]?.contains(
+          opponentTeamId,
+        ) ??
+        false;
+  }
+
+  void _markTeamChallenged(String fromTeamId, String opponentTeamId) {
+    final existing = challengedOpponentsByFromTeam[fromTeamId] ?? <String>{};
+    challengedOpponentsByFromTeam[fromTeamId] = {...existing, opponentTeamId};
   }
 
   Future<void> _loadMyTeams() async {
@@ -93,6 +139,7 @@ class MatchUpController extends GetxController
 
   @override
   Future<List<TeamModel>> fetchTabItems(TeamSportType sport) async {
+    final fromTeamId = selectedTeam.value?.id;
     final result = await _teamService.findMany(
       TeamFilterQuery(
         sportType: sport,
@@ -100,6 +147,9 @@ class MatchUpController extends GetxController
         status: TeamStatus.active,
         visibility: TeamVisibility.public,
         limit: 50,
+        skipTeamsWithSentRequest: fromTeamId != null,
+        fromTeamId: fromTeamId,
+        search: _searchQuery,
       ),
     );
     final serverTeams = result?.data ?? const <TeamModel>[];
@@ -132,6 +182,7 @@ class MatchUpController extends GetxController
         SendMatchRequest(fromTeamId: myTeam!.id!, toTeamId: opponent.id!),
       );
       if (match != null) {
+        _markTeamChallenged(myTeam.id!, opponent.id!);
         Get.snackbar(
           'Challenge Sent!',
           'Match request sent to ${opponent.name}',
@@ -142,7 +193,7 @@ class MatchUpController extends GetxController
           borderRadius: 12,
           duration: const Duration(seconds: 3),
         );
-        ensureTabLoaded(selectedSport.value, force: true);
+        // ensureTabLoaded(selectedSport.value, force: true);
       }
     } catch (e) {
       Get.snackbar(

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import '../model/turf_model.dart';
@@ -32,6 +34,10 @@ class TurfListController extends GetxController {
   final RxBool _hasMoreData = true.obs;
   final RxInt _totalItems = 0.obs;
   final int _limitPerPage = 10;
+
+  Timer? _sliderFilterDebounce;
+  static const Duration _sliderFilterDebounceDuration =
+      Duration(milliseconds: 400);
 
   // Getters - Return observables for reactivity
   RxBool get isLoading => _isLoading;
@@ -97,6 +103,7 @@ class TurfListController extends GetxController {
 
   @override
   void onClose() {
+    _sliderFilterDebounce?.cancel();
     searchController.dispose();
     super.onClose();
   }
@@ -164,9 +171,17 @@ class TurfListController extends GetxController {
 
   // Search turfs
   Future<void> searchTurfs() async {
+    _sliderFilterDebounce?.cancel();
     _isSearching.value = true;
     await loadTurfs(isRefresh: true);
     _isSearching.value = false;
+  }
+
+  void _scheduleSliderFilterSearch() {
+    _sliderFilterDebounce?.cancel();
+    _sliderFilterDebounce = Timer(_sliderFilterDebounceDuration, () {
+      searchTurfs();
+    });
   }
 
   // Load more turfs for pagination
@@ -212,12 +227,12 @@ class TurfListController extends GetxController {
   void updatePriceRange(double min, double max) {
     _minPrice.value = min;
     _maxPrice.value = max;
-    searchTurfs();
+    _scheduleSliderFilterSearch();
   }
 
   void updateRating(double rating) {
     _selectedRating.value = rating;
-    searchTurfs();
+    _scheduleSliderFilterSearch();
   }
 
   // void toggleAvailabilityFilter() {

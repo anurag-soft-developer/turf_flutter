@@ -3,8 +3,8 @@ import 'package:flutter_application_1/components/player/profile/player_badges_se
 import 'package:get/get.dart';
 
 import '../../components/player/profile/player_hero_section.dart';
-import '../../components/player/profile/player_quick_stats.dart';
 import '../../components/player/profile/sport_stats_view.dart';
+import '../../core/auth/auth_state_controller.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/user_field_instance.dart';
 import '../../core/models/user/player_stats_models.dart';
@@ -20,20 +20,24 @@ class PlayerProfileScreen extends StatefulWidget {
 
 class _PlayerProfileScreenState extends State<PlayerProfileScreen>
     with SingleTickerProviderStateMixin {
+  late final AuthStateController _authController;
   TabController? _tabController;
+  int _tabsKey = 0;
   UserFieldInstance? helper;
   bool _isLoading = true;
   String? _error;
+  String? _userId;
 
   @override
   void initState() {
     super.initState();
-    final userId = _parseUserId(Get.arguments);
-    if (userId == null || userId.isEmpty) {
+    _authController = Get.find<AuthStateController>();
+    _userId = _parseUserId(Get.arguments);
+    if (_userId == null || _userId!.isEmpty) {
       _isLoading = false;
       _error = 'Player not found';
     } else {
-      _loadProfile(userId);
+      _loadProfile(_userId!);
     }
   }
 
@@ -46,9 +50,18 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen>
     return null;
   }
 
-  Future<void> _loadProfile(String userId) async {
+  Future<void> _loadProfile(String userId, {bool isRefresh = false}) async {
+    if (!isRefresh) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+    }
+
     try {
-      final user = await UserService().getPublicProfile(userId);
+      final user = isRefresh
+          ? await _authController.refreshPublicProfile(userId)
+          : await UserService().getPublicProfile(userId);
       if (!mounted) return;
       if (user == null) {
         setState(() {
@@ -61,12 +74,7 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen>
       if (!mounted) return;
 
       helper = UserFieldInstance(user);
-      final availableSports = _getAvailableSports();
-      _tabController?.dispose();
-      _tabController = TabController(
-        length: availableSports.length,
-        vsync: this,
-      );
+      _syncTabController(_getAvailableSports());
       setState(() {
         _isLoading = false;
         _error = null;
@@ -80,10 +88,49 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen>
     }
   }
 
+  Future<void> _refreshProfile() async {
+    final userId = _userId;
+    if (userId == null ||
+        userId.isEmpty ||
+        _authController.isRefreshingPublicProfile) {
+      return;
+    }
+    await _loadProfile(userId, isRefresh: true);
+  }
+
+  Widget _buildRefreshAction({Color? iconColor}) {
+    return Obx(() {
+      final isRefreshing = _authController.isRefreshingPublicProfile;
+
+      return IconButton(
+        onPressed: isRefreshing ? null : _refreshProfile,
+        icon: isRefreshing
+            ? SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: iconColor ?? Theme.of(context).iconTheme.color,
+                ),
+              )
+            : const Icon(Icons.refresh),
+      );
+    });
+  }
+
   @override
   void dispose() {
     _tabController?.dispose();
     super.dispose();
+  }
+
+  void _syncTabController(List<SportType> sports) {
+    if (_tabController != null && _tabController!.length == sports.length) {
+      return;
+    }
+    _tabController?.dispose();
+    _tabController = TabController(length: sports.length, vsync: this);
+    _tabsKey++;
   }
 
   List<SportType> _getAvailableSports() {
@@ -120,14 +167,20 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen>
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Player Profile')),
+        appBar: AppBar(
+          title: const Text('Player Profile'),
+          actions: [_buildRefreshAction()],
+        ),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     if (_error != null || helper == null || _tabController == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Player Profile')),
+        appBar: AppBar(
+          title: const Text('Player Profile'),
+          actions: [_buildRefreshAction()],
+        ),
         body: Center(child: Text(_error ?? 'Player not found')),
       );
     }
@@ -143,6 +196,7 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen>
         elevation: 0,
         foregroundColor: Colors.white,
         title: const Text('Player Profile'),
+        actions: [_buildRefreshAction(iconColor: Colors.white)],
       ),
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) {
@@ -153,8 +207,6 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen>
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: 24),
-                  PlayerQuickStats(helper: helper!),
-                  const SizedBox(height: 24),
                   PlayerBadgesSection(badges: helper?.getModel()?.badges ?? []),
                 ],
               ),
@@ -162,6 +214,7 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen>
           ];
         },
         body: Column(
+          key: ValueKey(_tabsKey),
           children: [
             const SizedBox(height: 24),
             if (availableSports.isNotEmpty) ...[

@@ -25,15 +25,6 @@ class AppDrawer extends StatelessWidget {
   List<DrawerMenuItem> _getPlayerModeItems() {
     return [
       DrawerMenuItem(
-        title: 'Browse Turfs',
-        icon: Icons.sports,
-        iconColor: const Color(AppColors.primaryColor),
-        onTap: () {
-          Get.back();
-          Get.toNamed(AppConstants.routes.turfList);
-        },
-      ),
-      DrawerMenuItem(
         title: 'My Bookings',
         icon: Icons.book_online,
         iconColor: const Color(AppColors.primaryColor),
@@ -74,15 +65,6 @@ class AppDrawer extends StatelessWidget {
 
   List<DrawerMenuItem> _getCommonItems() {
     return [
-      DrawerMenuItem(
-        title: 'Profile',
-        icon: Icons.person,
-        iconColor: const Color(AppColors.primaryColor),
-        onTap: () {
-          Get.back();
-          Get.toNamed(AppConstants.routes.profile);
-        },
-      ),
       DrawerMenuItem(
         title: 'Settings',
         icon: Icons.settings,
@@ -153,11 +135,9 @@ class AppDrawer extends StatelessWidget {
                     ),
                   ),
                 ),
-                const Divider(color: Color(AppColors.dividerColor)),
                 ..._getPlayerModeItems().map(_buildMenuItem),
                 const Divider(color: Color(AppColors.dividerColor)),
                 ..._getCommonItems().map(_buildMenuItem),
-                const Spacer(),
                 ListTile(
                   leading: const Icon(
                     Icons.help_outline_rounded,

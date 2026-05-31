@@ -22,6 +22,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     with SingleTickerProviderStateMixin {
   late final AuthStateController authController;
   TabController? _tabController;
+  int _tabsKey = 0;
 
   @override
   void initState() {
@@ -38,7 +39,22 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   void _initTabs() {
     final sports = _getAvailableSports();
+    _tabController?.dispose();
     _tabController = TabController(length: sports.length, vsync: this);
+    _tabsKey++;
+  }
+
+  Future<void> _onRefreshProfile() async {
+    await authController.refreshUserProfile();
+    if (!mounted) return;
+
+    final sports = _getAvailableSports();
+    if (_tabController?.length != sports.length) {
+      _tabController?.dispose();
+      _tabController = TabController(length: sports.length, vsync: this);
+      _tabsKey++;
+      setState(() {});
+    }
   }
 
   List<SportType> _getAvailableSports() {
@@ -77,8 +93,6 @@ class _ProfileScreenState extends State<ProfileScreen>
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const SizedBox(height: 24),
-            PlayerQuickStats(helper: helper),
-            const SizedBox(height: 24),
             PlayerBadgesSection(badges: helper.getModel()?.badges ?? []),
           ],
         ),
@@ -88,6 +102,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Widget _buildPlayerSportStatsBody(List<SportType> availableSports) {
     return Column(
+      key: ValueKey(_tabsKey),
       children: [
         const SizedBox(height: 24),
         if (availableSports.isNotEmpty && _tabController != null) ...[
@@ -139,6 +154,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   Widget build(BuildContext context) {
     return Obx(() {
       final user = authController.user;
+      final isRefreshing = authController.isRefreshingUserProfile;
       final helper = UserFieldInstance(user);
       final availableSports = _getAvailableSports();
 
@@ -152,6 +168,19 @@ class _ProfileScreenState extends State<ProfileScreen>
           foregroundColor: Colors.white,
           title: const Text('My Profile'),
           actions: [
+            IconButton(
+              onPressed: isRefreshing ? null : _onRefreshProfile,
+              icon: isRefreshing
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.refresh),
+            ),
             IconButton(
               onPressed: () => Get.toNamed(AppConstants.routes.editProfile),
               icon: const Icon(Icons.edit_outlined),

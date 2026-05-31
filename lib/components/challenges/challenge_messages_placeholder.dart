@@ -7,41 +7,64 @@ class ChallengeMessagesPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          Expanded(
-            child: Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(AppColors.dividerColor)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
               ),
-              child: const Center(
-                child: Text(
-                  'Chat messages will appear here.\n(Placeholder for now)',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Color(AppColors.textSecondaryColor),
-                    height: 1.4,
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: const Color(AppColors.primaryColor).withValues(
+                    alpha: 0.1,
                   ),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.forum_outlined,
+                  size: 36,
+                  color: Color(AppColors.primaryColor),
                 ),
               ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            enabled: false,
-            decoration: InputDecoration(
-              hintText: 'Type a message (coming soon)',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+              const SizedBox(height: 20),
+              const Text(
+                'Coming Soon',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: Color(AppColors.textColor),
+                ),
               ),
-              suffixIcon: const Icon(Icons.send),
-            ),
+              const SizedBox(height: 10),
+              const Text(
+                'Challenge messaging is on the way. You will be able to chat with the other team right here.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Color(AppColors.textSecondaryColor),
+                  height: 1.5,
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

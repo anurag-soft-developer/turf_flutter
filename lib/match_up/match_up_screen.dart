@@ -3,6 +3,7 @@ import 'package:flutter_application_1/components/shared/app_drawer.dart';
 import 'package:get/get.dart';
 
 import '../components/match_up/my_team_selector.dart';
+import '../components/match_up/team_search_components.dart';
 import '../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
 import '../components/match_up/team_logo.dart';
 import '../components/match_up/team_stats_row.dart';
@@ -86,6 +87,7 @@ class _MatchUpScreenState extends State<MatchUpScreen>
 
         return Column(
           children: [
+            TeamSearchSection(controller: c),
             AppSegmentedTabs(
               controller: _tabController,
               onTap: (index) => c.switchSport(sports[index]),
@@ -114,6 +116,7 @@ class _MatchUpScreenState extends State<MatchUpScreen>
                     sport: sport,
                     hasTeams: teamsForSport.isNotEmpty,
                     feedState: feedState,
+                    controller: c,
                     onRefresh: () => c.reloadSport(sport),
                     onChallenge: (team) => _confirmChallenge(context, c, team),
                   );
@@ -173,6 +176,7 @@ class _SportFeedSection extends StatelessWidget {
     required this.sport,
     required this.hasTeams,
     required this.feedState,
+    required this.controller,
     required this.onRefresh,
     required this.onChallenge,
   });
@@ -180,6 +184,7 @@ class _SportFeedSection extends StatelessWidget {
   final TeamSportType sport;
   final bool hasTeams;
   final SegmentedTabDataState<TeamModel> feedState;
+  final MatchUpController controller;
   final Future<void> Function() onRefresh;
   final ValueChanged<TeamModel> onChallenge;
 
@@ -217,10 +222,14 @@ class _SportFeedSection extends StatelessWidget {
               itemCount: feedState.items.length,
               itemBuilder: (context, index) {
                 final team = feedState.items[index];
-                return _OpponentCard(
-                  team: team,
-                  onChallenge: () => onChallenge(team),
-                );
+                return Obx(() {
+                  final isSent = controller.isTeamChallenged(team.id);
+                  return _OpponentCard(
+                    team: team,
+                    isSent: isSent,
+                    onChallenge: isSent ? null : () => onChallenge(team),
+                  );
+                });
               },
             ),
     );
@@ -232,10 +241,15 @@ class _SportFeedSection extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _OpponentCard extends StatelessWidget {
-  const _OpponentCard({required this.team, required this.onChallenge});
+  const _OpponentCard({
+    required this.team,
+    required this.isSent,
+    required this.onChallenge,
+  });
 
   final TeamModel team;
-  final VoidCallback onChallenge;
+  final bool isSent;
+  final VoidCallback? onChallenge;
 
   @override
   Widget build(BuildContext context) {
@@ -316,7 +330,7 @@ class _OpponentCard extends StatelessWidget {
                 children: [
                   Expanded(child: TeamStatsRow.fromTeam(team)),
                   const SizedBox(width: 12),
-                  _ChallengeButton(onTap: onChallenge),
+                  _ChallengeButton(isSent: isSent, onTap: onChallenge),
                 ],
               ),
             ],
@@ -328,31 +342,44 @@ class _OpponentCard extends StatelessWidget {
 }
 
 class _ChallengeButton extends StatelessWidget {
-  const _ChallengeButton({required this.onTap});
+  const _ChallengeButton({required this.isSent, this.onTap});
 
-  final VoidCallback onTap;
+  final bool isSent;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    final enabled = !isSent && onTap != null;
+    final backgroundColor = enabled
+        ? const Color(AppColors.primaryColor)
+        : const Color(AppColors.dividerColor);
+    final foregroundColor = enabled
+        ? Colors.white
+        : const Color(AppColors.textSecondaryColor);
+
     return Material(
-      color: const Color(AppColors.primaryColor),
+      color: backgroundColor,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        onTap: enabled ? onTap : null,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.sports_mma, size: 16, color: Colors.white),
-              SizedBox(width: 6),
+              Icon(
+                isSent ? Icons.check_circle_outline : Icons.sports_mma,
+                size: 16,
+                color: foregroundColor,
+              ),
+              const SizedBox(width: 6),
               Text(
-                'Challenge',
+                isSent ? 'Sent' : 'Challenge',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: Colors.white,
+                  color: foregroundColor,
                 ),
               ),
             ],

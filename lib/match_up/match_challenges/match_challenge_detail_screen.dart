@@ -5,290 +5,31 @@ import '../../components/announced_players/match_announced_players_section.dart'
 import '../../components/scoring/cricket/scorecard/match_scorecard_tab.dart';
 import '../../components/challenges/match_challenge_respond_actions.dart';
 import '../../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
-import '../../components/challenges/praposals/propose_time_slot_sheet.dart';
-import '../../components/challenges/praposals/propose_turf_sheet.dart';
 import '../../core/config/constants.dart';
-import '../../core/utils/app_snackbar.dart';
-import '../../team/model/team_model.dart';
-import '../../turf/model/turf_model.dart';
-import '../../turf/turf_service.dart';
-import '../matchmaking_service.dart';
 import '../model/team_match_model.dart';
-import 'match_challenges_controller.dart';
 import 'match_challenge_actions_card.dart';
+import 'match_challenge_detail_controller.dart';
 import 'match_challenge_versus_header.dart';
 
-class MatchChallengeDetailScreen extends StatefulWidget {
-  final TeamMatchModel match;
-  final bool isIncoming;
-
-  const MatchChallengeDetailScreen({
-    super.key,
-    required this.match,
-    required this.isIncoming,
-  });
-
-  @override
-  State<MatchChallengeDetailScreen> createState() =>
-      _MatchChallengeDetailScreenState();
+Future<T?>? openMatchChallengeDetail<T>({
+  required TeamMatchModel match,
+  required bool isIncoming,
+}) {
+  return Get.to<T>(
+    () => const MatchChallengeDetailScreen(),
+    binding: BindingsBuilder(
+      () => Get.lazyPut(
+        () => MatchChallengeDetailController(
+          initialMatch: match,
+          isIncoming: isIncoming,
+        ),
+      ),
+    ),
+  );
 }
 
-class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
-    with SingleTickerProviderStateMixin {
-  late TeamMatchModel _match;
-  late final TabController _detailTabController;
-  final MatchmakingService _matchmakingService = MatchmakingService();
-  final TurfService _turfService = TurfService();
-  bool _isUpdatingSlot = false;
-  bool _isUpdatingTurf = false;
-  bool _isRejectingChallenge = false;
-  bool _isAcceptingChallenge = false;
-
-  /// Busy while cancel/result API runs in [MatchChallengeActionsCard].
-  bool _actionsChildBusy = false;
-  List<TurfModel> _myTurfs = const [];
-
-  bool get _actionBusy =>
-      _isUpdatingSlot ||
-      _isUpdatingTurf ||
-      _isRejectingChallenge ||
-      _isAcceptingChallenge ||
-      _actionsChildBusy;
-
-  /// Avoids [setState] while the build/layout lock is held (e.g. child
-  /// [dispose] or right after a nested [setState] in [MatchChallengeActionsCard]).
-  void _scheduleMatchUpdate(TeamMatchModel m) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      setState(() => _match = m);
-      _trySyncChallengesList(m);
-    });
-  }
-
-  void _trySyncChallengesList(TeamMatchModel updated) {
-    if (!Get.isRegistered<MatchChallengesController>()) return;
-    Get.find<MatchChallengesController>().applyMatchUpdateFromDetail(updated);
-  }
-
-  void _scheduleActionsChildBusy(bool busy) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (_actionsChildBusy == busy) return;
-      setState(() => _actionsChildBusy = busy);
-    });
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _match = widget.match;
-    _detailTabController = TabController(length: 4, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _detailTabController.dispose();
-    super.dispose();
-  }
-
-  void _openMessages() {
-    Get.toNamed(
-      AppConstants.routes.matchChallengeMessages,
-      arguments: {'match': _match},
-    );
-  }
-
-  /// Allow setting or changing time/turf while negotiating or after schedule is finalized
-  /// (e.g. correction before the match is live).
-  bool get _canEditSchedule {
-    return switch (_match.status) {
-      TeamMatchStatus.requested => true,
-      TeamMatchStatus.accepted => true,
-      TeamMatchStatus.negotiating => true,
-      TeamMatchStatus.scheduleFinalized => true,
-      _ => false,
-    };
-  }
-
-  String get _myTeamId => widget.isIncoming
-      ? (_match.toTeamHelper.getId() ?? '')
-      : (_match.fromTeamHelper.getId() ?? '');
-
-  bool get _isExpiredByDeadline {
-    final expiresAt = _match.expiresAt;
-    return expiresAt != null && DateTime.now().isAfter(expiresAt.toLocal());
-  }
-
-  bool get _canRespondToChallenge {
-    return widget.isIncoming &&
-        _match.status == TeamMatchStatus.requested &&
-        !_isExpiredByDeadline;
-  }
-
-  bool get _isCricketMatch => _match.sportType == TeamSportType.cricket;
-
-  bool get _isFootballMatch => _match.sportType == TeamSportType.football;
-
-  bool get _canStartScoring {
-    if (!_isCricketMatch && !_isFootballMatch) return false;
-    return _match.status == TeamMatchStatus.accepted ||
-        _match.status == TeamMatchStatus.scheduleFinalized;
-  }
-
-  Future<void> _respondToChallenge(MatchResponseAction action) async {
-    if (_isUpdatingSlot || _isUpdatingTurf || _actionsChildBusy) return;
-    if (_isRejectingChallenge || _isAcceptingChallenge) return;
-    if (!_canRespondToChallenge) return;
-    if (_match.id == null || _match.id!.isEmpty || _myTeamId.isEmpty) return;
-
-    setState(() {
-      if (action == MatchResponseAction.reject) {
-        _isRejectingChallenge = true;
-      } else {
-        _isAcceptingChallenge = true;
-      }
-    });
-    final updated = await _matchmakingService.respond(
-      _match.id!,
-      RespondMatchRequest(actorTeamId: _myTeamId, action: action),
-    );
-    if (!mounted) return;
-    setState(() {
-      _isRejectingChallenge = false;
-      _isAcceptingChallenge = false;
-    });
-
-    if (updated == null) {
-      AppSnackbar.error(
-        title: action == MatchResponseAction.accept
-            ? 'Could not accept'
-            : 'Could not reject',
-        message: 'Try again later.',
-      );
-      return;
-    }
-    setState(() => _match = updated);
-    _trySyncChallengesList(updated);
-    AppSnackbar.success(
-      title: action == MatchResponseAction.accept
-          ? 'Challenge accepted'
-          : 'Challenge rejected',
-      message: action == MatchResponseAction.accept
-          ? 'You can continue scheduling now.'
-          : 'The challenge was declined.',
-    );
-  }
-
-  /// Schedule edits (time/turf) while not running cancel/result actions.
-  bool get _canUseScheduleControls => _canEditSchedule && !_actionsChildBusy;
-
-  Future<void> _setTimeSlot() async {
-    if (_actionBusy) return;
-    if (_match.id == null || _match.id!.isEmpty || _myTeamId.isEmpty) return;
-
-    final selected = await showModalBottomSheet<ProposeScheduleTimeSlot>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => const ProposeTimeSlotSheet(),
-    );
-    if (selected == null) return;
-
-    setState(() => _isUpdatingSlot = true);
-    final updated = await _matchmakingService.updateRequest(
-      _match.id!,
-      UpdateTeamMatchRequest(
-        slot: TeamMatchTimeSlot(
-          startTime: selected.startTime,
-          endTime: selected.endTime,
-        ),
-        selfAcceptTeamId: _myTeamId,
-      ),
-    );
-    if (!mounted) return;
-    setState(() => _isUpdatingSlot = false);
-
-    if (updated == null) {
-      AppSnackbar.error(
-        title: 'Update failed',
-        message: 'Could not set the time slot. Please try again.',
-      );
-      return;
-    }
-    setState(() => _match = updated);
-    _trySyncChallengesList(updated);
-    AppSnackbar.success(
-      title: 'Time updated',
-      message: 'The match time has been saved.',
-    );
-  }
-
-  Future<void> _setTurf() async {
-    if (_actionBusy) return;
-    if (_match.id == null || _match.id!.isEmpty || _myTeamId.isEmpty) return;
-
-    if (_myTurfs.isEmpty) {
-      final response = await _turfService.getMyTurfs(limit: 100);
-      if (!mounted) return;
-      setState(() {
-        _myTurfs = response?.data ?? const [];
-      });
-    }
-
-    if (_myTurfs.isEmpty) {
-      AppSnackbar.info(
-        title: 'No turfs found',
-        message: 'Create a turf first before choosing a venue.',
-      );
-      return;
-    }
-
-    final selectedTurfId = await showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => ProposeTurfSheet(turfs: _myTurfs),
-    );
-    if (selectedTurfId == null || selectedTurfId.isEmpty) return;
-
-    setState(() => _isUpdatingTurf = true);
-    final updated = await _matchmakingService.updateRequest(
-      _match.id!,
-      UpdateTeamMatchRequest(
-        turfId: selectedTurfId,
-        selfAcceptTeamId: _myTeamId,
-      ),
-    );
-    if (!mounted) return;
-    setState(() => _isUpdatingTurf = false);
-
-    if (updated == null) {
-      AppSnackbar.error(
-        title: 'Update failed',
-        message: 'Could not set the turf. Please try again.',
-      );
-      return;
-    }
-    setState(() => _match = updated);
-    _trySyncChallengesList(updated);
-    AppSnackbar.success(
-      title: 'Turf updated',
-      message: 'The venue has been saved.',
-    );
-  }
-
-  void _openScoreboard() {
-    final matchId = _match.id;
-    if (matchId == null || matchId.isEmpty) {
-      AppSnackbar.error(
-        title: 'Missing match id',
-        message: 'Unable to open scoreboard for this challenge.',
-      );
-      return;
-    }
-    final route = _isFootballMatch
-        ? AppConstants.routes.footballScoreBoard
-        : AppConstants.routes.cricketScoreBoard;
-    Get.toNamed(route, arguments: {'matchId': matchId});
-  }
+class MatchChallengeDetailScreen extends GetView<MatchChallengeDetailController> {
+  const MatchChallengeDetailScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -300,27 +41,28 @@ class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
           IconButton(
             icon: const Icon(Icons.message_outlined),
             tooltip: 'Messages',
-            onPressed: _openMessages,
+            onPressed: controller.openMessages,
           ),
         ],
       ),
-      body: _buildDetailsBody(),
+      body: Obx(() => _buildDetailsBody(context)),
     );
   }
 
-  Widget _buildDetailsBody() {
-    final acceptedSlotCandidates = _match.proposedSlots.where((slot) {
-      if (_match.selectedSlotProposalId != null) {
-        return slot.proposalId == _match.selectedSlotProposalId;
+  Widget _buildDetailsBody(BuildContext context) {
+    final currentMatch = controller.match.value;
+    final acceptedSlotCandidates = currentMatch.proposedSlots.where((slot) {
+      if (currentMatch.selectedSlotProposalId != null) {
+        return slot.proposalId == currentMatch.selectedSlotProposalId;
       }
       return slot.status == MatchProposalStatus.accepted;
     });
     final acceptedSlot = acceptedSlotCandidates.isEmpty
         ? null
         : acceptedSlotCandidates.first;
-    final acceptedTurfCandidates = _match.proposedTurfs.where((turf) {
-      if (_match.selectedTurfProposalId != null) {
-        return turf.proposalId == _match.selectedTurfProposalId;
+    final acceptedTurfCandidates = currentMatch.proposedTurfs.where((turf) {
+      if (currentMatch.selectedTurfProposalId != null) {
+        return turf.proposalId == currentMatch.selectedTurfProposalId;
       }
       return turf.status == MatchProposalStatus.accepted;
     });
@@ -337,9 +79,12 @@ class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
         ? acceptedTurf.turfIdHelper.getDisplayName()
         : 'Not set';
 
-    final showScoreboardBar = (_isCricketMatch || _isFootballMatch) &&
-        (_canStartScoring || _match.status == TeamMatchStatus.ongoing);
-    final showFloatingBottom = showScoreboardBar || _canRespondToChallenge;
+    final showScoreboardBar = (controller.isCricketMatch ||
+            controller.isFootballMatch) &&
+        (controller.canStartScoring ||
+            currentMatch.status == TeamMatchStatus.ongoing);
+    final showFloatingBottom =
+        showScoreboardBar || controller.canRespondToChallenge;
 
     return Stack(
       fit: StackFit.expand,
@@ -357,11 +102,11 @@ class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
               const SizedBox(height: 6),
               _InfoCard(
                 title: '',
-                child: MatchChallengeVersusHeader(match: _match),
+                child: MatchChallengeVersusHeader(match: currentMatch),
               ),
               const SizedBox(height: 16),
               AppSegmentedTabs(
-                controller: _detailTabController,
+                controller: controller.detailTabController,
                 padding: const EdgeInsets.fromLTRB(0, 0, 0, 8),
                 items: const [
                   AppTabItem(
@@ -378,7 +123,7 @@ class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
               ),
               Expanded(
                 child: AppSegmentedTabView(
-                  controller: _detailTabController,
+                  controller: controller.detailTabController,
                   children: [
                     SingleChildScrollView(
                       child: _InfoCard(
@@ -386,56 +131,62 @@ class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            _ScheduleLine(
-                              icon: Icons.schedule,
-                              label: 'Time',
-                              value: timeSummary,
-                              canEdit: _canUseScheduleControls,
-                              isLoading: _isUpdatingSlot,
-                              otherFieldBusy:
-                                  _isUpdatingTurf || _actionsChildBusy,
-                              onEditPressed: _setTimeSlot,
-                              editTooltip: hasSlot ? 'Edit time' : 'Set time',
-                              editIcon: hasSlot
-                                  ? Icons.edit_outlined
-                                  : Icons.event_available_outlined,
+                            Obx(
+                              () => _ScheduleLine(
+                                icon: Icons.schedule,
+                                label: 'Time',
+                                value: timeSummary,
+                                canEdit: controller.canUseScheduleControls,
+                                isLoading: controller.isUpdatingSlot.value,
+                                otherFieldBusy: controller.isUpdatingTurf.value ||
+                                    controller.actionsChildBusy.value,
+                                onEditPressed: () =>
+                                    controller.setTimeSlot(context),
+                                editTooltip: hasSlot ? 'Edit time' : 'Set time',
+                                editIcon: hasSlot
+                                    ? Icons.edit_outlined
+                                    : Icons.event_available_outlined,
+                              ),
                             ),
                             const SizedBox(height: 12),
-                            _ScheduleLine(
-                              icon: Icons.grass,
-                              label: 'Turf',
-                              value: turfSummary,
-                              canEdit: _canUseScheduleControls,
-                              isLoading: _isUpdatingTurf,
-                              otherFieldBusy:
-                                  _isUpdatingSlot || _actionsChildBusy,
-                              onEditPressed: _setTurf,
-                              editTooltip: hasTurf ? 'Edit turf' : 'Set turf',
-                              editIcon: hasTurf
-                                  ? Icons.edit_outlined
-                                  : Icons.add_location_alt_outlined,
+                            Obx(
+                              () => _ScheduleLine(
+                                icon: Icons.grass,
+                                label: 'Turf',
+                                value: turfSummary,
+                                canEdit: controller.canUseScheduleControls,
+                                isLoading: controller.isUpdatingTurf.value,
+                                otherFieldBusy: controller.isUpdatingSlot.value ||
+                                    controller.actionsChildBusy.value,
+                                onEditPressed: () =>
+                                    controller.setTurf(context),
+                                editTooltip: hasTurf ? 'Edit turf' : 'Set turf',
+                                editIcon: hasTurf
+                                    ? Icons.edit_outlined
+                                    : Icons.add_location_alt_outlined,
+                              ),
                             ),
                           ],
                         ),
                       ),
                     ),
                     MatchScorecardTab(
-                      match: _match,
-                      parentTabController: _detailTabController,
+                      match: currentMatch,
+                      parentTabController: controller.detailTabController,
                     ),
                     SingleChildScrollView(
                       child: MatchAnnouncedPlayersSection(
-                        match: _match,
-                        myTeamId: _myTeamId,
-                        onMatchUpdated: _scheduleMatchUpdate,
+                        match: currentMatch,
+                        myTeamId: controller.myTeamId,
+                        onMatchUpdated: controller.scheduleMatchUpdate,
                       ),
                     ),
                     SingleChildScrollView(
                       child: MatchChallengeActionsCard(
-                        match: _match,
-                        myTeamId: _myTeamId,
-                        onMatchUpdated: _scheduleMatchUpdate,
-                        onInternalBusyChanged: _scheduleActionsChildBusy,
+                        match: currentMatch,
+                        myTeamId: controller.myTeamId,
+                        onMatchUpdated: controller.scheduleMatchUpdate,
+                        onInternalBusyChanged: controller.scheduleActionsChildBusy,
                       ),
                     ),
                   ],
@@ -454,29 +205,36 @@ class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (showScoreboardBar) ...[
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _actionBusy ? null : _openScoreboard,
-                      icon: Icon(Icons.play_circle_outline),
-                      label: Text('Scoreboard'),
+                  Obx(
+                    () => SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: controller.actionBusy
+                            ? null
+                            : controller.openScoreboard,
+                        icon: const Icon(Icons.play_circle_outline),
+                        label: const Text('Scoreboard'),
+                      ),
                     ),
                   ),
                 ],
-                if (showScoreboardBar && _canRespondToChallenge)
+                if (showScoreboardBar && controller.canRespondToChallenge)
                   const SizedBox(height: 12),
-                if (_canRespondToChallenge)
-                  MatchChallengeRespondActions(
-                    isRejecting: _isRejectingChallenge,
-                    isAccepting: _isAcceptingChallenge,
-                    enabled:
-                        !_isUpdatingSlot &&
-                        !_isUpdatingTurf &&
-                        !_actionsChildBusy,
-                    onReject: () =>
-                        _respondToChallenge(MatchResponseAction.reject),
-                    onAccept: () =>
-                        _respondToChallenge(MatchResponseAction.accept),
+                if (controller.canRespondToChallenge)
+                  Obx(
+                    () => MatchChallengeRespondActions(
+                      isRejecting: controller.isRejectingChallenge.value,
+                      isAccepting: controller.isAcceptingChallenge.value,
+                      enabled: !controller.isUpdatingSlot.value &&
+                          !controller.isUpdatingTurf.value &&
+                          !controller.actionsChildBusy.value,
+                      onReject: () => controller.respondToChallenge(
+                        MatchResponseAction.reject,
+                      ),
+                      onAccept: () => controller.respondToChallenge(
+                        MatchResponseAction.accept,
+                      ),
+                    ),
                   ),
               ],
             ),
@@ -485,14 +243,13 @@ class _MatchChallengeDetailScreenState extends State<MatchChallengeDetailScreen>
     );
   }
 
-  /// Keeps tab content clear of the floating bottom bar (approximate heights).
   double _mainContentBottomPadding(bool showScoreboardBar) {
     const base = 16.0;
-    if (!showScoreboardBar && !_canRespondToChallenge) return base;
+    if (!showScoreboardBar && !controller.canRespondToChallenge) return base;
     double overlay = 0;
     if (showScoreboardBar) overlay += 76;
-    if (showScoreboardBar && _canRespondToChallenge) overlay += 12;
-    if (_canRespondToChallenge) overlay += 56;
+    if (showScoreboardBar && controller.canRespondToChallenge) overlay += 12;
+    if (controller.canRespondToChallenge) overlay += 56;
     return base + overlay;
   }
 }

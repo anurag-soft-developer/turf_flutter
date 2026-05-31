@@ -49,18 +49,14 @@ class MyJoinRequestsBinding extends Bindings {
 class TeamJoinRequestsBinding extends Bindings {
   @override
   void dependencies() {
-    Get.lazyPut<TeamJoinRequestsController>(
-      () => TeamJoinRequestsController(),
-    );
+    Get.lazyPut<TeamJoinRequestsController>(() => TeamJoinRequestsController());
   }
 }
 
 class TeamRosterManageBinding extends Bindings {
   @override
   void dependencies() {
-    Get.lazyPut<TeamRosterManageController>(
-      () => TeamRosterManageController(),
-    );
+    Get.lazyPut<TeamRosterManageController>(() => TeamRosterManageController());
   }
 }
 
