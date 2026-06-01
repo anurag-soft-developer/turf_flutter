@@ -10,15 +10,20 @@ DimensionsModel _$DimensionsModelFromJson(Map<String, dynamic> json) =>
     DimensionsModel(
       length: (json['length'] as num?)?.toDouble(),
       width: (json['width'] as num?)?.toDouble(),
-      unit: json['unit'] as String,
+      unit: $enumDecode(_$DimensionUnitEnumMap, json['unit']),
     );
 
 Map<String, dynamic> _$DimensionsModelToJson(DimensionsModel instance) =>
     <String, dynamic>{
       'length': instance.length,
       'width': instance.width,
-      'unit': instance.unit,
+      'unit': _$DimensionUnitEnumMap[instance.unit]!,
     };
+
+const _$DimensionUnitEnumMap = {
+  DimensionUnit.meters: 'meters',
+  DimensionUnit.feet: 'feet',
+};
 
 PricingModel _$PricingModelFromJson(Map<String, dynamic> json) => PricingModel(
   basePricePerHour: (json['basePricePerHour'] as num).toDouble(),

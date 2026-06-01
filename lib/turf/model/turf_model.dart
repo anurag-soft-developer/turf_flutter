@@ -8,11 +8,18 @@ export '../../core/models/location_model.dart';
 
 part 'turf_model.g.dart';
 
+enum DimensionUnit {
+  @JsonValue('meters')
+  meters,
+  @JsonValue('feet')
+  feet,
+}
+
 @JsonSerializable()
 class DimensionsModel {
   final double? length;
   final double? width;
-  final String unit;
+  final DimensionUnit unit;
 
   DimensionsModel({this.length, this.width, required this.unit});
 
@@ -21,7 +28,11 @@ class DimensionsModel {
 
   Map<String, dynamic> toJson() => _$DimensionsModelToJson(this);
 
-  DimensionsModel copyWith({double? length, double? width, String? unit}) {
+  DimensionsModel copyWith({
+    double? length,
+    double? width,
+    DimensionUnit? unit,
+  }) {
     return DimensionsModel(
       length: length ?? this.length,
       width: width ?? this.width,
@@ -159,6 +170,7 @@ class TurfModel {
   final String? createdAt;
   @JsonKey(name: 'updatedAt')
   final String? updatedAt;
+
   /// Optional distance from query location in meters.
   final double? distance;
 
@@ -370,29 +382,3 @@ class UpdateTurfRequest {
 
   Map<String, dynamic> toJson() => _$UpdateTurfRequestToJson(this);
 }
-
-// @JsonSerializable()
-// class TurfSearchRequest {
-//   final String? query;
-//   final List<String>? sportType;
-//   final double? minPrice;
-//   final double? maxPrice;
-//   final LocationModel? location;
-//   final double? radius; // in kilometers
-//   final bool? isAvailable;
-
-//   TurfSearchRequest({
-//     this.query,
-//     this.sportType,
-//     this.minPrice,
-//     this.maxPrice,
-//     this.location,
-//     this.radius,
-//     this.isAvailable,
-//   });
-
-//   factory TurfSearchRequest.fromJson(Map<String, dynamic> json) =>
-//       _$TurfSearchRequestFromJson(json);
-
-//   Map<String, dynamic> toJson() => _$TurfSearchRequestToJson(this);
-// }
