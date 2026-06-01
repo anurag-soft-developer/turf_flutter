@@ -56,7 +56,7 @@ class PlayerTeamsSection extends StatelessWidget {
                   style: TextStyle(color: Color(AppColors.textSecondaryColor)),
                 ),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () => Get.toNamed(AppConstants.routes.teamsRanking),
+                onTap: () => Get.toNamed(AppConstants.routes.rank),
               ),
             ],
           ),

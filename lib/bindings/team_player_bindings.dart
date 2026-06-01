@@ -2,7 +2,6 @@ import 'package:get/get.dart';
 
 import '../team/add/add_team_controller.dart';
 import '../team/details/team_detail_controller.dart';
-import '../team/feed/teams_ranking_controller.dart';
 import '../team/join_status/my_join_requests_controller.dart';
 import '../team/management/team_join_requests_controller.dart';
 import '../team/management/team_roster_manage_controller.dart';
@@ -22,13 +21,6 @@ class MyTeamBinding extends Bindings {
     Get.lazyPut<TeamDetailController>(
       () => TeamDetailController(isMyTeamMode: true),
     );
-  }
-}
-
-class TeamsRankingBinding extends Bindings {
-  @override
-  void dependencies() {
-    Get.lazyPut<TeamsRankingController>(() => TeamsRankingController());
   }
 }
 

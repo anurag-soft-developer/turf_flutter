@@ -5,12 +5,12 @@ import 'package:get/get.dart';
 import '../../../dashboard/dashboard_screen.dart';
 import '../../../settings/settings_controller.dart';
 import '../../../turf/feed/turf_list_screen.dart';
-import '../../../team/feed/teams_ranking_screen.dart';
-import '../../../rankings/player_ranking_controller.dart';
-import '../../../rankings/player_ranking_screen.dart';
+import '../../../rankings/rank_screen.dart';
+import '../../../rankings/rank_controller.dart';
 import '../../../profile/profile_screen.dart';
 import '../../../turf/feed/turf_list_controller.dart';
 import '../../../team/feed/teams_ranking_controller.dart';
+import '../../../rankings/player_ranking_controller.dart';
 import '../../../profile/profile_controller.dart';
 
 class NavTab {
@@ -64,22 +64,20 @@ final List<NavTab> kNavTabs = [
     disposeController: () => _dispose<MatchUpController>(),
   ),
   NavTab(
-    icon: Icons.groups_outlined,
-    activeIcon: Icons.groups,
-    label: 'Teams',
-    screenBuilder: () => const TeamsRankingScreen(),
-    loadController: () =>
-        _ensure<TeamsRankingController>(() => TeamsRankingController()),
-    disposeController: () => _dispose<TeamsRankingController>(),
-  ),
-  NavTab(
     icon: Icons.emoji_events_outlined,
     activeIcon: Icons.emoji_events,
-    label: 'Players',
-    screenBuilder: () => const PlayerRankingScreen(),
-    loadController: () =>
-        _ensure<PlayerRankingController>(() => PlayerRankingController()),
-    disposeController: () => _dispose<PlayerRankingController>(),
+    label: 'Rank',
+    screenBuilder: () => const RankScreen(),
+    loadController: () {
+      _ensure<TeamsRankingController>(() => TeamsRankingController());
+      _ensure<PlayerRankingController>(() => PlayerRankingController());
+      _ensure<RankController>(() => RankController());
+    },
+    disposeController: () {
+      _dispose<RankController>();
+      _dispose<TeamsRankingController>();
+      _dispose<PlayerRankingController>();
+    },
   ),
   NavTab(
     icon: Icons.person_outline,

@@ -8,6 +8,8 @@ import '../../core/utils/app_snackbar.dart';
 
 class TeamOpeningsController extends GetxController
     with SegmentedTabCacheController<TeamSportType, TeamModel> {
+  static const int _pageSize = 20;
+
   final TeamService _teamService = TeamService();
 
   final Rx<TeamSportType> selectedSport = TeamSportType.cricket.obs;
@@ -43,6 +45,11 @@ class TeamOpeningsController extends GetxController
   Future<void> reloadSport(TeamSportType sport) async {
     await ensureTabLoaded(sport, force: true);
   }
+
+  Future<void> loadMoreSport(TeamSportType sport) => loadMoreTab(sport);
+
+  @override
+  bool get paginatedTabs => true;
 
   Future<void> refreshMyMemberships() async {
     myMembershipsLoaded.value = false;
@@ -132,17 +139,29 @@ class TeamOpeningsController extends GetxController
 
   @override
   Future<List<TeamModel>> fetchTabItems(TeamSportType sport) async {
-    final page = await _teamService.findMany(
+    return (await fetchTabPage(sport, 1)).items;
+  }
+
+  @override
+  Future<SegmentedTabPageResult<TeamModel>> fetchTabPage(
+    TeamSportType sport,
+    int page,
+  ) async {
+    final result = await _teamService.findMany(
       TeamFilterQuery(
         status: TeamStatus.active,
         visibility: TeamVisibility.public,
         sportType: sport,
         lookingForMembers: true,
-        page: 1,
-        limit: 50,
+        page: page,
+        limit: _pageSize,
       ),
     );
-    return page?.data ?? <TeamModel>[];
+    return SegmentedTabPageResult(
+      items: result?.data ?? <TeamModel>[],
+      page: result?.page ?? page,
+      hasMore: result?.hasNextPage ?? false,
+    );
   }
 
   @override

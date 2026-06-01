@@ -117,6 +117,7 @@ class _MatchChallengesScreenState extends State<MatchChallengesScreen>
                       itemBuilder: (m) =>
                           _ReceivedChallengeCard(match: m, controller: c),
                       onRefresh: c.refreshCurrentTab,
+                      onLoadMore: () => c.loadMore(MatchChallengesTab.received),
                     );
                   }),
                   Obx(() {
@@ -127,6 +128,7 @@ class _MatchChallengesScreenState extends State<MatchChallengesScreen>
                       itemBuilder: (m) =>
                           _SentChallengeCard(match: m, controller: c),
                       onRefresh: c.refreshCurrentTab,
+                      onLoadMore: () => c.loadMore(MatchChallengesTab.sent),
                     );
                   }),
                   const _HistoryListPane(
@@ -238,24 +240,50 @@ class _HistoryListPane extends StatelessWidget {
       return RefreshIndicator(
         onRefresh: c.refreshCurrentTab,
         color: const Color(AppColors.primaryColor),
-        child: ListView.builder(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-          physics: const AlwaysScrollableScrollPhysics(),
-          itemCount: matches.length,
-          itemBuilder: (context, index) {
-            final m = matches[index];
-            return MatchCard(
-              match: m,
-              selectedTeamId: selectedTeamId,
-              isHistory: isHistory,
-              onTap: () async {
-                await openMatchChallengeDetail(
-                  match: m,
-                  isIncoming: _isIncomingForMatch(m, c),
-                );
-              },
-            );
+        child: NotificationListener<ScrollNotification>(
+          onNotification: (notification) {
+            if (notification.metrics.pixels >=
+                notification.metrics.maxScrollExtent - 200) {
+              c.loadMore(tab);
+            }
+            return false;
           },
+          child: ListView.builder(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+            physics: const AlwaysScrollableScrollPhysics(),
+            itemCount: matches.length + (state.isLoadingMore ? 1 : 0),
+            itemBuilder: (context, index) {
+              if (index == matches.length) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Color(AppColors.primaryColor),
+                      ),
+                    ),
+                  ),
+                );
+              }
+              final m = matches[index];
+              return Padding(
+                padding: EdgeInsets.only(
+                  bottom: index < matches.length - 1 ? 12 : 0,
+                ),
+                child: MatchCard(
+                  match: m,
+                  selectedTeamId: selectedTeamId,
+                  isHistory: isHistory,
+                  onTap: () async {
+                    await openMatchChallengeDetail(
+                      match: m,
+                      isIncoming: _isIncomingForMatch(m, c),
+                    );
+                  },
+                ),
+              );
+            },
+          ),
         ),
       );
     });
@@ -268,12 +296,14 @@ class _ChallengesTabView extends StatelessWidget {
     required this.emptyMessage,
     required this.itemBuilder,
     required this.onRefresh,
+    this.onLoadMore,
   });
 
   final SegmentedTabDataState<TeamMatchModel> state;
   final String emptyMessage;
   final Widget Function(TeamMatchModel match) itemBuilder;
   final Future<void> Function() onRefresh;
+  final VoidCallback? onLoadMore;
 
   @override
   Widget build(BuildContext context) {
@@ -346,12 +376,40 @@ class _ChallengesTabView extends StatelessWidget {
                 ),
               ],
             )
-          : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-              physics: const AlwaysScrollableScrollPhysics(),
-              itemCount: list.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, i) => itemBuilder(list[i]),
+          : NotificationListener<ScrollNotification>(
+              onNotification: (notification) {
+                if (onLoadMore != null &&
+                    notification.metrics.pixels >=
+                        notification.metrics.maxScrollExtent - 200) {
+                  onLoadMore!();
+                }
+                return false;
+              },
+              child: ListView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                physics: const AlwaysScrollableScrollPhysics(),
+                itemCount: list.length + (state.isLoadingMore ? 1 : 0),
+                itemBuilder: (context, i) {
+                  if (i == list.length) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(16),
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Color(AppColors.primaryColor),
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+                  return Padding(
+                    padding: EdgeInsets.only(
+                      bottom: i < list.length - 1 ? 12 : 0,
+                    ),
+                    child: itemBuilder(list[i]),
+                  );
+                },
+              ),
             ),
     );
   }

@@ -118,6 +118,7 @@ class _MatchUpScreenState extends State<MatchUpScreen>
                     feedState: feedState,
                     controller: c,
                     onRefresh: () => c.reloadSport(sport),
+                    onLoadMore: () => c.loadMoreSport(sport),
                     onChallenge: (team) => _confirmChallenge(context, c, team),
                   );
                 }),
@@ -178,6 +179,7 @@ class _SportFeedSection extends StatelessWidget {
     required this.feedState,
     required this.controller,
     required this.onRefresh,
+    required this.onLoadMore,
     required this.onChallenge,
   });
 
@@ -186,6 +188,7 @@ class _SportFeedSection extends StatelessWidget {
   final SegmentedTabDataState<TeamModel> feedState;
   final MatchUpController controller;
   final Future<void> Function() onRefresh;
+  final Future<void> Function() onLoadMore;
   final ValueChanged<TeamModel> onChallenge;
 
   @override
@@ -216,21 +219,48 @@ class _SportFeedSection extends StatelessWidget {
     return RefreshIndicator(
       onRefresh: onRefresh,
       child: feedState.items.isEmpty
-          ? ListView(children: [_EmptyFeedPlaceholder(sport: sport)])
-          : ListView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-              itemCount: feedState.items.length,
-              itemBuilder: (context, index) {
-                final team = feedState.items[index];
-                return Obx(() {
-                  final isSent = controller.isTeamChallenged(team.id);
-                  return _OpponentCard(
-                    team: team,
-                    isSent: isSent,
-                    onChallenge: isSent ? null : () => onChallenge(team),
-                  );
-                });
+          ? ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [_EmptyFeedPlaceholder(sport: sport)],
+            )
+          : NotificationListener<ScrollNotification>(
+              onNotification: (notification) {
+                if (notification.metrics.pixels >=
+                    notification.metrics.maxScrollExtent - 200) {
+                  onLoadMore();
+                }
+                return false;
               },
+              child: ListView.builder(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                itemCount: feedState.items.length +
+                    (feedState.isLoadingMore ? 1 : 0),
+                itemBuilder: (context, index) {
+                  if (index == feedState.items.length) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(16),
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Color(AppColors.primaryColor),
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+
+                  final team = feedState.items[index];
+                  return Obx(() {
+                    final isSent = controller.isTeamChallenged(team.id);
+                    return _OpponentCard(
+                      team: team,
+                      isSent: isSent,
+                      onChallenge: isSent ? null : () => onChallenge(team),
+                    );
+                  });
+                },
+              ),
             ),
     );
   }

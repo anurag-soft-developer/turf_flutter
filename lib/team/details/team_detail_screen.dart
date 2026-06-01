@@ -77,7 +77,7 @@ class TeamDetailScreen extends StatelessWidget {
             if (t == null && controller.isMyTeamMode) {
               return _NoTeamBody(
                 onAddTeam: () => Get.toNamed(AppConstants.routes.addTeam),
-                onJoinTeam: () => Get.toNamed(AppConstants.routes.teamsRanking),
+                onJoinTeam: () => Get.toNamed(AppConstants.routes.rank),
               );
             }
 

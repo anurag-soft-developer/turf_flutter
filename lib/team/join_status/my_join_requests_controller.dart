@@ -9,6 +9,8 @@ enum JoinRequestStatusTab { pending, accepted, rejected }
 
 class MyJoinRequestsController extends GetxController
     with SegmentedTabCacheController<JoinRequestStatusTab, TeamMemberModel> {
+  static const int _pageSize = 20;
+
   final TeamService _teamService = TeamService();
 
   final Rx<JoinRequestStatusTab> selectedTab = JoinRequestStatusTab.pending.obs;
@@ -36,17 +38,41 @@ class MyJoinRequestsController extends GetxController
     await ensureTabLoaded(tab, force: true);
   }
 
+  Future<void> loadMore(JoinRequestStatusTab tab) => loadMoreTab(tab);
+
   @override
-  Future<List<TeamMemberModel>> fetchTabItems(JoinRequestStatusTab key) async {
-    final status = switch (key) {
+  bool get paginatedTabs => true;
+
+  TeamMemberStatus _statusFor(JoinRequestStatusTab tab) {
+    return switch (tab) {
       JoinRequestStatusTab.pending => TeamMemberStatus.pending,
       JoinRequestStatusTab.accepted => TeamMemberStatus.active,
       JoinRequestStatusTab.rejected => TeamMemberStatus.rejected,
     };
+  }
+
+  @override
+  Future<List<TeamMemberModel>> fetchTabItems(JoinRequestStatusTab key) async {
+    return (await fetchTabPage(key, 1)).items;
+  }
+
+  @override
+  Future<SegmentedTabPageResult<TeamMemberModel>> fetchTabPage(
+    JoinRequestStatusTab key,
+    int page,
+  ) async {
     final res = await _teamService.memberService.myMemberships(
-      MyTeamMembershipsFilterQuery(status: status, limit: 50),
+      MyTeamMembershipsFilterQuery(
+        status: _statusFor(key),
+        page: page,
+        limit: _pageSize,
+      ),
     );
-    return res?.data ?? <TeamMemberModel>[];
+    return SegmentedTabPageResult(
+      items: res?.data ?? <TeamMemberModel>[],
+      page: res?.page ?? page,
+      hasMore: res?.hasNextPage ?? false,
+    );
   }
 
   @override

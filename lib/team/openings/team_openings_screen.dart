@@ -187,23 +187,52 @@ class _OpeningsTabContent extends StatelessWidget {
           await controller.reloadSport(sport);
           await controller.refreshMyMemberships();
         },
-        child: ListView.separated(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-          itemCount: state.items.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (context, i) {
-            final team = state.items[i];
-            final id = team.id;
-            if (id == null || id.isEmpty) return const SizedBox.shrink();
-            return _RecruitingTeamCard(
-              team: team,
-              label: controller.joinButtonLabel(id) ?? 'Join',
-              onJoin: controller.canTapJoin(id)
-                  ? () => controller.requestJoin(id)
-                  : null,
-              isJoining: controller.joiningTeamIds.contains(id),
-            );
+        color: const Color(AppColors.primaryColor),
+        child: NotificationListener<ScrollNotification>(
+          onNotification: (notification) {
+            if (notification.metrics.pixels >=
+                notification.metrics.maxScrollExtent - 160) {
+              controller.loadMoreSport(sport);
+            }
+            return false;
           },
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+            children: [
+              for (var i = 0; i < state.items.length; i++) ...[
+                if (i > 0) const SizedBox(height: 12),
+                Builder(
+                  builder: (context) {
+                    final team = state.items[i];
+                    final id = team.id;
+                    if (id == null || id.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
+                    return _RecruitingTeamCard(
+                      team: team,
+                      label: controller.joinButtonLabel(id) ?? 'Join',
+                      onJoin: controller.canTapJoin(id)
+                          ? () => controller.requestJoin(id)
+                          : null,
+                      isJoining: controller.joiningTeamIds.contains(id),
+                    );
+                  },
+                ),
+              ],
+              if (state.isLoadingMore)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(
+                    child: SizedBox(
+                      width: 28,
+                      height: 28,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       );
     });

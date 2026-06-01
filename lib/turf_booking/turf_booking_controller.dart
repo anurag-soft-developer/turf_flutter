@@ -14,7 +14,7 @@ class TurfBookingController extends GetxController
   final RxBool _isBookingLoading = false.obs;
   final Rxn<TurfBookingModel> _selectedBooking = Rxn<TurfBookingModel>();
   final Rxn<TurfBookingStatus> _selectedStatusTab = Rxn<TurfBookingStatus>();
-  final int _limitPerPage = 50;
+  static const int _pageSize = 20;
 
   // Filters
   final Rxn<PaymentStatus> _paymentStatusFilter = Rxn<PaymentStatus>();
@@ -32,6 +32,9 @@ class TurfBookingController extends GetxController
 
   @override
   List<TurfBookingStatus?> get tabKeys => [null, ...TurfBookingStatus.values];
+
+  @override
+  bool get paginatedTabs => true;
 
   @override
   void onInit() {
@@ -250,17 +253,29 @@ class TurfBookingController extends GetxController
     await ensureTabLoaded(status);
   }
 
+  Future<void> loadMore(TurfBookingStatus? status) => loadMoreTab(status);
+
   @override
-  Future<List<TurfBookingModel>> fetchTabItems(
+  Future<List<TurfBookingModel>> fetchTabItems(TurfBookingStatus? status) async {
+    return (await fetchTabPage(status, 1)).items;
+  }
+
+  @override
+  Future<SegmentedTabPageResult<TurfBookingModel>> fetchTabPage(
     TurfBookingStatus? status,
+    int page,
   ) async {
     final response = await _bookingService.findBookings(
-      page: 1,
-      limit: _limitPerPage,
+      page: page,
+      limit: _pageSize,
       status: status == null ? null : [status],
       paymentStatus: _paymentStatusFilter.value,
     );
-    return response?.data ?? <TurfBookingModel>[];
+    return SegmentedTabPageResult(
+      items: response?.data ?? <TurfBookingModel>[],
+      page: response?.page ?? page,
+      hasMore: response?.hasNextPage ?? false,
+    );
   }
 
   @override

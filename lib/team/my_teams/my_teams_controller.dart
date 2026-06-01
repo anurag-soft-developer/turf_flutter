@@ -6,33 +6,73 @@ import '../team_service.dart';
 
 /// Lists all teams the current user belongs to (as owner or member).
 class MyTeamsController extends GetxController {
+  static const int _pageSize = 20;
+
   final TeamService _teamService = TeamService();
 
-  final RxBool isLoading = true.obs;
+  final RxBool isLoading = false.obs;
+  final RxBool isLoadingMore = false.obs;
   final RxList<TeamMemberModel> memberships = <TeamMemberModel>[].obs;
+
+  int _currentPage = 1;
+  int _totalPages = 1;
+
+  bool get canLoadMore =>
+      _currentPage < _totalPages && !isLoadingMore.value;
 
   @override
   void onInit() {
     super.onInit();
-    load();
+    loadInitial();
   }
 
-  Future<void> load() async {
+  Future<void> loadInitial() async {
     isLoading.value = true;
+    _currentPage = 1;
+    _totalPages = 1;
     try {
       final result = await _teamService.memberService.myMemberships(
         const MyTeamMembershipsFilterQuery(
           status: TeamMemberStatus.active,
-          limit: 50,
+          page: 1,
+          limit: _pageSize,
         ),
       );
-      memberships.assignAll(result?.data ?? []);
+      if (result != null) {
+        memberships.assignAll(result.data);
+        _currentPage = result.page;
+        _totalPages = result.totalPages;
+      } else {
+        memberships.clear();
+      }
     } finally {
       isLoading.value = false;
     }
   }
 
-  Future<void> reload() async => load();
+  Future<void> reload() => loadInitial();
+
+  Future<void> loadMore() async {
+    if (!canLoadMore) return;
+    isLoadingMore.value = true;
+    try {
+      final nextPage = _currentPage + 1;
+      final result = await _teamService.memberService.myMemberships(
+        MyTeamMembershipsFilterQuery(
+          status: TeamMemberStatus.active,
+          page: nextPage,
+          limit: _pageSize,
+        ),
+      );
+      if (result != null && result.data.isNotEmpty) {
+        memberships.addAll(result.data);
+        _currentPage = result.page;
+        _totalPages = result.totalPages;
+      }
+    } finally {
+      isLoadingMore.value = false;
+    }
+  }
 
   /// Check whether the current user is an owner of the team referenced by [membership].
   bool isOwnerOf(TeamMemberModel membership) {

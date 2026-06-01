@@ -43,13 +43,43 @@ class MyTeamsScreen extends StatelessWidget {
 
         return RefreshIndicator(
           onRefresh: controller.reload,
-          child: ListView.separated(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-            itemCount: controller.memberships.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
-            itemBuilder: (_, i) => _TeamCard(
-              membership: controller.memberships[i],
-              roleLabel: controller.roleLabel(controller.memberships[i]),
+          color: const Color(AppColors.primaryColor),
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              if (notification.metrics.pixels >=
+                  notification.metrics.maxScrollExtent - 160) {
+                controller.loadMore();
+              }
+              return false;
+            },
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+              children: [
+                for (var i = 0; i < controller.memberships.length; i++) ...[
+                  if (i > 0) const SizedBox(height: 12),
+                  _TeamCard(
+                    membership: controller.memberships[i],
+                    roleLabel: controller.roleLabel(
+                      controller.memberships[i],
+                    ),
+                  ),
+                ],
+                Obx(
+                  () => controller.isLoadingMore.value
+                      ? const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 24),
+                          child: Center(
+                            child: SizedBox(
+                              width: 28,
+                              height: 28,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                        )
+                      : const SizedBox.shrink(),
+                ),
+              ],
             ),
           ),
         );
@@ -287,7 +317,7 @@ class _EmptyState extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         OutlinedButton.icon(
-          onPressed: () => Get.toNamed(AppConstants.routes.teamsRanking),
+          onPressed: () => Get.toNamed(AppConstants.routes.rank),
           icon: const Icon(Icons.search, size: 20),
           label: const Text(
             'Browse teams',

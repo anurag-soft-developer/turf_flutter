@@ -1,5 +1,4 @@
 import 'package:flutter_application_1/bindings/main_screen_wrapper_binding.dart';
-import 'package:flutter_application_1/bindings/player_ranking_binding.dart';
 import 'package:flutter_application_1/bindings/turf_list_binding.dart';
 import 'package:flutter_application_1/core/components/bottom_navigation_panel/main_screen_wrapper.dart';
 import 'package:flutter_application_1/core/config/constants.dart';
@@ -7,13 +6,13 @@ import 'package:flutter_application_1/core/guards/auth_guard.dart';
 import 'package:flutter_application_1/core/views/access_denied_screen.dart';
 import 'package:flutter_application_1/core/views/splash_screen.dart';
 import 'package:flutter_application_1/dashboard/dashboard_screen.dart';
-import 'package:flutter_application_1/rankings/player_ranking_screen.dart';
 import 'package:get/get.dart';
 
 import 'about_help_legal_routes.dart';
 import 'auth_routes.dart';
 import 'booking_routes.dart';
 import 'match_up_routes.dart';
+import 'rank_routes.dart';
 import 'profile_routes.dart';
 import 'settings_routes.dart';
 import 'team_routes.dart';
@@ -44,13 +43,7 @@ class AppRoutes {
       binding: TurfListBinding(),
       middlewares: [AuthGuard()],
     ),
-    GetPage(
-      name: AppConstants.routes.playerRanking,
-      page: () => const PlayerRankingScreen(),
-      binding: PlayerRankingBinding(),
-      transition: Transition.cupertino,
-      middlewares: [AuthGuard()],
-    ),
+    ...rankRoutes,
     ...authRoutes,
     ...profileRoutes,
     ...settingsRoutes,

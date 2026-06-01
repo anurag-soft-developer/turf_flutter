@@ -1,109 +1,39 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/components/shared/app_drawer.dart';
 import 'package:get/get.dart';
 
 import '../../components/match_up/team_logo.dart';
 import '../../components/match_up/team_stats_row.dart';
-import '../../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
+import '../../components/shared/app_segmented_tabs/segmented_tab_cache_controller.dart';
 import '../../core/config/constants.dart';
-import '../model/team_leaderboard_model.dart';
-import '../model/team_model.dart';
-import 'teams_ranking_controller.dart';
+import '../../team/feed/teams_ranking_controller.dart';
+import '../../team/model/team_leaderboard_model.dart';
+import '../../team/model/team_model.dart';
 
-class TeamsRankingScreen extends StatefulWidget {
-  const TeamsRankingScreen({super.key});
+class TeamsRankingList extends StatelessWidget {
+  const TeamsRankingList({
+    super.key,
+    required this.controller,
+    required this.sport,
+  });
 
-  @override
-  State<TeamsRankingScreen> createState() => _TeamsRankingScreenState();
-}
-
-class _TeamsRankingScreenState extends State<TeamsRankingScreen>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    final controller = Get.find<TeamsRankingController>();
-    final sports = TeamSportType.values;
-    final selected = sports.indexOf(controller.selectedSport.value);
-    _tabController = TabController(
-      length: sports.length,
-      vsync: this,
-      initialIndex: selected < 0 ? 0 : selected,
-    );
-    _tabController.addListener(() {
-      if (_tabController.indexIsChanging) return;
-      final idx = _tabController.index;
-      if (idx >= 0 && idx < sports.length) {
-        controller.switchSport(sports[idx]);
-      }
-    });
-    controller.ensureSportLoaded(controller.selectedSport.value);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
+  final TeamsRankingController controller;
+  final TeamSportType sport;
 
   @override
   Widget build(BuildContext context) {
-    final TeamsRankingController controller = Get.find();
-
-    return Scaffold(
-      drawer: const AppDrawer(),
-      backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(title: const Text('Team Rankings')),
-      body: Obx(() {
-        final sports = TeamSportType.values;
-        final currentIndex = sports.indexOf(controller.selectedSport.value);
-        final safeIndex = currentIndex < 0 ? 0 : currentIndex;
-        if (_tabController.index != safeIndex) {
-          _tabController.animateTo(safeIndex);
-        }
-        return Column(
-          children: [
-            AppSegmentedTabs(
-              controller: _tabController,
-              onTap: (index) => controller.switchSport(sports[index]),
-              items: sports
-                  .map(
-                    (sport) => AppTabItem(
-                      label: sport == TeamSportType.cricket
-                          ? 'Cricket'
-                          : 'Football',
-                      icon: sport == TeamSportType.cricket
-                          ? Icons.sports_cricket
-                          : Icons.sports_soccer,
-                    ),
-                  )
-                  .toList(),
-            ),
-            Expanded(
-              child: AppSegmentedTabView(
-                controller: _tabController,
-                children: sports
-                    .map(
-                      (sport) => _RankingTabContent(
-                        controller: controller,
-                        sport: sport,
-                        state: controller.stateForSport(sport),
-                      ),
-                    )
-                    .toList(),
-              ),
-            ),
-          ],
-        );
-      }),
-    );
+    return Obx(() {
+      final state = controller.stateForSport(sport);
+      return _TeamsRankingListBody(
+        controller: controller,
+        sport: sport,
+        state: state,
+      );
+    });
   }
 }
 
-class _RankingTabContent extends StatelessWidget {
-  const _RankingTabContent({
+class _TeamsRankingListBody extends StatelessWidget {
+  const _TeamsRankingListBody({
     required this.controller,
     required this.sport,
     required this.state,
@@ -178,23 +108,44 @@ class _RankingTabContent extends StatelessWidget {
     }
 
     final entries = state.items;
-    final topEntries = entries.take(3).toList();
-    final restEntries =
-        entries.length > 3 ? entries.sublist(3) : <TeamLeaderboardRow>[];
+    final topEntries = entries.where((e) => e.rank <= 3).toList()
+      ..sort((a, b) => a.rank.compareTo(b.rank));
+    final restEntries = entries.where((e) => e.rank > 3).toList();
 
     return RefreshIndicator(
       onRefresh: () => controller.reloadSport(sport),
-      child: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        children: [
-          const SizedBox(height: 20),
-          _PodiumSection(entries: topEntries),
-          if (restEntries.isNotEmpty) ...[
+      child: NotificationListener<ScrollNotification>(
+        onNotification: (notification) {
+          if (notification.metrics.pixels >=
+              notification.metrics.maxScrollExtent - 200) {
+            controller.loadMore(sport);
+          }
+          return false;
+        },
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          children: [
+            const SizedBox(height: 20),
+            _PodiumSection(entries: topEntries),
+            if (restEntries.isNotEmpty) ...[
+              const SizedBox(height: 24),
+              ...restEntries.map((entry) => _RankCard(entry: entry)),
+            ],
+            if (state.isLoadingMore)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Color(AppColors.primaryColor),
+                    ),
+                  ),
+                ),
+              ),
             const SizedBox(height: 24),
-            ...restEntries.map((entry) => _RankCard(entry: entry)),
           ],
-          const SizedBox(height: 24),
-        ],
+        ),
       ),
     );
   }

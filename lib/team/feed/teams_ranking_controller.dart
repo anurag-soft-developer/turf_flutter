@@ -7,6 +7,8 @@ import '../team_service.dart';
 
 class TeamsRankingController extends GetxController
     with SegmentedTabCacheController<TeamSportType, TeamLeaderboardRow> {
+  static const int _pageSize = 20;
+
   final TeamService _teamService = TeamService();
 
   final Rx<TeamSportType> selectedSport = TeamSportType.cricket.obs;
@@ -15,10 +17,7 @@ class TeamsRankingController extends GetxController
   List<TeamSportType> get tabKeys => TeamSportType.values;
 
   @override
-  void onInit() {
-    super.onInit();
-    ensureSportLoaded(selectedSport.value);
-  }
+  bool get paginatedTabs => true;
 
   void switchSport(TeamSportType sport) {
     if (selectedSport.value == sport) return;
@@ -38,12 +37,26 @@ class TeamsRankingController extends GetxController
     await ensureTabLoaded(sport, force: true);
   }
 
+  Future<void> loadMore(TeamSportType sport) => loadMoreTab(sport);
+
   @override
   Future<List<TeamLeaderboardRow>> fetchTabItems(TeamSportType sport) async {
-    final page = await _teamService.getLeaderboard(
-      TeamLeaderboardQuery(sportType: sport, page: 1, limit: 50),
+    return (await fetchTabPage(sport, 1)).items;
+  }
+
+  @override
+  Future<SegmentedTabPageResult<TeamLeaderboardRow>> fetchTabPage(
+    TeamSportType sport,
+    int page,
+  ) async {
+    final result = await _teamService.getLeaderboard(
+      TeamLeaderboardQuery(sportType: sport, page: page, limit: _pageSize),
     );
-    return page?.data ?? <TeamLeaderboardRow>[];
+    return SegmentedTabPageResult(
+      items: result?.data ?? <TeamLeaderboardRow>[],
+      page: result?.page ?? page,
+      hasMore: result?.hasNextPage ?? false,
+    );
   }
 
   @override

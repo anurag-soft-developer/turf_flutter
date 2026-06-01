@@ -172,16 +172,41 @@ class _BookingsScreenState extends State<BookingsScreen>
                           status,
                           force: true,
                         ),
-                        child: ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: bookings.length,
-                          itemBuilder: (context, index) {
-                            final booking = bookings[index];
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 12),
-                              child: BookingCard(booking: booking),
-                            );
+                        color: const Color(AppColors.primaryColor),
+                        child: NotificationListener<ScrollNotification>(
+                          onNotification: (notification) {
+                            if (notification.metrics.pixels >=
+                                notification.metrics.maxScrollExtent - 200) {
+                              bookingController.loadMore(status);
+                            }
+                            return false;
                           },
+                          child: ListView.builder(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.all(16),
+                            itemCount: bookings.length +
+                                (state.isLoadingMore ? 1 : 0),
+                            itemBuilder: (context, index) {
+                              if (index == bookings.length) {
+                                return const Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(16),
+                                    child: CircularProgressIndicator(
+                                      valueColor:
+                                          AlwaysStoppedAnimation<Color>(
+                                        Color(AppColors.primaryColor),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }
+                              final booking = bookings[index];
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: BookingCard(booking: booking),
+                              );
+                            },
+                          ),
                         ),
                       );
                     }),

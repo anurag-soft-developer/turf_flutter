@@ -15,7 +15,7 @@ class MatchChallengesController extends GetxController
   final MatchmakingService _matchmakingService = MatchmakingService();
   final TeamService _teamService = TeamService();
 
-  static const int _historyPageLimit = 20;
+  static const int _pageSize = 20;
 
   final Rx<MatchChallengesTab> selectedTab = MatchChallengesTab.received.obs;
   final RxBool isLoadingMemberships = true.obs;
@@ -29,6 +29,9 @@ class MatchChallengesController extends GetxController
 
   @override
   List<MatchChallengesTab> get tabKeys => MatchChallengesTab.values;
+
+  @override
+  bool get paginatedTabs => true;
 
   List<TeamMemberFieldInstance> get myTeams {
     final list = <TeamMemberFieldInstance>[];
@@ -101,10 +104,26 @@ class MatchChallengesController extends GetxController
     }
   }
 
+  Future<void> loadMore(MatchChallengesTab tab) => loadMoreTab(tab);
+
   @override
   Future<List<TeamMatchModel>> fetchTabItems(MatchChallengesTab tab) async {
+    return (await fetchTabPage(tab, 1)).items;
+  }
+
+  @override
+  Future<SegmentedTabPageResult<TeamMatchModel>> fetchTabPage(
+    MatchChallengesTab tab,
+    int page,
+  ) async {
     final teamIds = _activeTeamIdsForList();
-    if (teamIds.isEmpty) return <TeamMatchModel>[];
+    if (teamIds.isEmpty) {
+      return const SegmentedTabPageResult(
+        items: <TeamMatchModel>[],
+        page: 1,
+        hasMore: false,
+      );
+    }
 
     switch (tab) {
       case MatchChallengesTab.received:
@@ -112,29 +131,38 @@ class MatchChallengesController extends GetxController
         final type = tab == MatchChallengesTab.received
             ? NegotiationListType.incoming
             : NegotiationListType.outgoing;
-        final res = await _matchmakingService.listInbox(
+        final inbox = await _matchmakingService.listInbox(
           ListPreMatchInboxFilterQuery(
             type: type,
             teamIds: teamIds,
-            limit: 50,
+            page: page,
+            limit: _pageSize,
             sort: 'createdAt:desc',
           ),
         );
-        return res?.data ?? [];
+        return SegmentedTabPageResult(
+          items: inbox?.data ?? <TeamMatchModel>[],
+          page: inbox?.page ?? page,
+          hasMore: inbox?.hasNextPage ?? false,
+        );
       case MatchChallengesTab.completed:
-        final res = await _matchmakingService.listRequests(
+        final completed = await _matchmakingService.listRequests(
           ListNegotiationsFilterQuery(
             teamIds: teamIds,
             type: NegotiationListType.all,
             statuses: const [TeamMatchStatus.completed, TeamMatchStatus.draw],
-            page: 1,
-            limit: _historyPageLimit,
+            page: page,
+            limit: _pageSize,
             sort: 'updatedAt:desc',
           ),
         );
-        return res?.data ?? [];
+        return SegmentedTabPageResult(
+          items: completed?.data ?? <TeamMatchModel>[],
+          page: completed?.page ?? page,
+          hasMore: completed?.hasNextPage ?? false,
+        );
       case MatchChallengesTab.upcoming:
-        final res = await _matchmakingService.listRequests(
+        final upcoming = await _matchmakingService.listRequests(
           ListNegotiationsFilterQuery(
             teamIds: teamIds,
             type: NegotiationListType.all,
@@ -142,14 +170,18 @@ class MatchChallengesController extends GetxController
               TeamMatchStatus.scheduleFinalized,
               TeamMatchStatus.ongoing,
             ],
-            page: 1,
-            limit: _historyPageLimit,
+            page: page,
+            limit: _pageSize,
             sort: 'createdAt:asc',
           ),
         );
-        return res?.data ?? [];
+        return SegmentedTabPageResult(
+          items: upcoming?.data ?? <TeamMatchModel>[],
+          page: upcoming?.page ?? page,
+          hasMore: upcoming?.hasNextPage ?? false,
+        );
       case MatchChallengesTab.archive:
-        final res = await _matchmakingService.listRequests(
+        final archive = await _matchmakingService.listRequests(
           ListNegotiationsFilterQuery(
             teamIds: teamIds,
             type: NegotiationListType.all,
@@ -158,12 +190,16 @@ class MatchChallengesController extends GetxController
               TeamMatchStatus.cancelled,
               TeamMatchStatus.expired,
             ],
-            page: 1,
-            limit: _historyPageLimit,
+            page: page,
+            limit: _pageSize,
             sort: 'updatedAt:desc',
           ),
         );
-        return res?.data ?? [];
+        return SegmentedTabPageResult(
+          items: archive?.data ?? <TeamMatchModel>[],
+          page: archive?.page ?? page,
+          hasMore: archive?.hasNextPage ?? false,
+        );
     }
   }
 

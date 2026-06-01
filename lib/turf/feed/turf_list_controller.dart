@@ -18,6 +18,7 @@ class TurfListController extends GetxController {
 
   // Observable variables
   final RxBool _isLoading = false.obs;
+  final RxBool _isLoadingMore = false.obs;
   final RxBool _isSearching = false.obs;
   final RxList<TurfModel> _turfs = <TurfModel>[].obs;
   final RxList<TurfModel> _featuredTurfs = <TurfModel>[].obs;
@@ -30,17 +31,19 @@ class TurfListController extends GetxController {
   final RxString _sortBy = 'distance:asc'.obs;
 
   // Pagination
-  final RxInt _currentPage = 1.obs;
+  int _loadedPage = 0;
   final RxBool _hasMoreData = true.obs;
   final RxInt _totalItems = 0.obs;
   final int _limitPerPage = 10;
 
   Timer? _sliderFilterDebounce;
-  static const Duration _sliderFilterDebounceDuration =
-      Duration(milliseconds: 400);
+  static const Duration _sliderFilterDebounceDuration = Duration(
+    milliseconds: 400,
+  );
 
   // Getters - Return observables for reactivity
   RxBool get isLoading => _isLoading;
+  RxBool get isLoadingMore => _isLoadingMore;
   RxBool get isSearching => _isSearching;
   RxList<TurfModel> get turfs => _turfs;
   RxList<TurfModel> get featuredTurfs => _featuredTurfs;
@@ -51,7 +54,6 @@ class TurfListController extends GetxController {
   RxDouble get selectedRating => _selectedRating;
   // RxBool get isAvailableOnly => _isAvailableOnly;
   RxString get sortBy => _sortBy;
-  RxInt get currentPage => _currentPage;
   RxBool get hasMoreData => _hasMoreData;
   RxInt get totalItems => _totalItems;
 
@@ -77,13 +79,6 @@ class TurfListController extends GetxController {
     'Food Court',
   ];
 
-  // final List<String> sortOptions = [
-  //   'distance:asc',
-  //   'name',
-  //   'pricing',
-  //   'createdAt',
-  // ];
-
   @override
   void onInit() {
     super.onInit();
@@ -98,7 +93,7 @@ class TurfListController extends GetxController {
     }
 
     loadFeaturedTurfs();
-    loadTurfs();
+    loadTurfs(isRefresh: true);
   }
 
   @override
@@ -123,14 +118,19 @@ class TurfListController extends GetxController {
   // Load turfs with current filters
   Future<void> loadTurfs({bool isRefresh = false}) async {
     if (isRefresh) {
-      _currentPage.value = 1;
+      if (_isLoading.value) return;
+      _loadedPage = 0;
       _hasMoreData.value = true;
       _turfs.clear();
+      _isLoading.value = true;
+    } else {
+      if (_isLoadingMore.value || !_hasMoreData.value || _isLoading.value) {
+        return;
+      }
+      _isLoadingMore.value = true;
     }
 
-    if (!_hasMoreData.value) return;
-
-    _isLoading.value = true;
+    final pageToLoad = isRefresh ? 1 : _loadedPage + 1;
 
     try {
       final response = await _turfService.searchTurfs(
@@ -144,7 +144,7 @@ class TurfListController extends GetxController {
         maxPrice: _maxPrice.value < 5000 ? _maxPrice.value : null,
         // isAvailable: _isAvailableOnly.value,
         minRating: _selectedRating.value > 0 ? _selectedRating.value : null,
-        page: _currentPage.value,
+        page: pageToLoad,
         limit: _limitPerPage,
         sort: _sortBy.value,
       );
@@ -152,20 +152,19 @@ class TurfListController extends GetxController {
       if (response != null) {
         if (isRefresh) {
           _turfs.value = response.data;
-          _totalItems.value = response.totalDocuments;
         } else {
           _turfs.addAll(response.data);
         }
 
+        _loadedPage = response.page;
+        _totalItems.value = response.totalDocuments;
         _hasMoreData.value = response.hasNextPage;
-        if (!isRefresh && response.hasNextPage) {
-          _currentPage.value++;
-        }
       }
     } catch (e) {
       Get.snackbar('Error', 'Failed to load turfs');
     } finally {
       _isLoading.value = false;
+      _isLoadingMore.value = false;
     }
   }
 
@@ -185,11 +184,7 @@ class TurfListController extends GetxController {
   }
 
   // Load more turfs for pagination
-  Future<void> loadMoreTurfs() async {
-    if (!_isLoading.value && _hasMoreData.value) {
-      await loadTurfs();
-    }
-  }
+  Future<void> loadMoreTurfs() => loadTurfs();
 
   // Refresh turfs
   Future<void> refreshTurfs() async {
@@ -235,11 +230,6 @@ class TurfListController extends GetxController {
     _scheduleSliderFilterSearch();
   }
 
-  // void toggleAvailabilityFilter() {
-  //   _isAvailableOnly.value = !_isAvailableOnly.value;
-  //   searchTurfs();
-  // }
-
   void updateSortBy(String sortBy) {
     _sortBy.value = sortBy;
     searchTurfs();
@@ -254,7 +244,6 @@ class TurfListController extends GetxController {
     _minPrice.value = 0.0;
     _maxPrice.value = 5000.0;
     _selectedRating.value = 0.0;
-    // _isAvailableOnly.value = true;
     _sortBy.value = 'distance:asc';
     searchTurfs();
   }

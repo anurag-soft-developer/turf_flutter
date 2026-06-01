@@ -47,7 +47,7 @@ class Routes {
   final String myTeam = '/my-team';
   final String teamOpenings = '/team-openings';
   final String myJoinRequests = '/my-join-requests';
-  final String teamsRanking = '/teams-ranking';
+  final String rank = '/rank';
   final String addTeam = '/add-team';
   final String editTeam = '/edit-team';
   final String teamProfile = '/team-profile';
@@ -61,7 +61,6 @@ class Routes {
   final String cricketScoreBoard = '/match-up/cricket-scoreboard';
   final String footballScoreBoard = '/match-up/football-scoreboard';
   final String matchHistory = '/match-history';
-  final String playerRanking = '/player-ranking';
 }
 
 class StorageKeys {

@@ -54,31 +54,50 @@ class TurfListScreen extends StatelessWidget {
 
   Widget _buildTurfsList(TurfListController controller) {
     return Obx(() {
-      // Check if list is empty and not loading
+      if (controller.turfs.isEmpty && controller.isLoading.value) {
+        return const Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(
+              Color(AppColors.primaryColor),
+            ),
+          ),
+        );
+      }
+
       if (controller.turfs.isEmpty && !controller.isLoading.value) {
         return EmptyTurfsView(onClearFilters: controller.clearFilters);
       }
 
-      // Show the list
-      return ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        itemCount:
-            controller.turfs.length + (controller.hasMoreData.value ? 1 : 0),
-        itemBuilder: (context, index) {
-          if (index == controller.turfs.length) {
-            // Load more indicator
+      return NotificationListener<ScrollNotification>(
+        onNotification: (notification) {
+          if (notification.metrics.pixels >=
+              notification.metrics.maxScrollExtent - 200) {
             controller.loadMoreTurfs();
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: CircularProgressIndicator(),
-              ),
-            );
           }
-
-          final turf = controller.turfs[index];
-          return TurfListCard(turf: turf, controller: controller);
+          return false;
         },
+        child: ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          itemCount: controller.turfs.length +
+              (controller.isLoadingMore.value ? 1 : 0),
+          itemBuilder: (context, index) {
+            if (index == controller.turfs.length) {
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Color(AppColors.primaryColor),
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            final turf = controller.turfs[index];
+            return TurfListCard(turf: turf, controller: controller);
+          },
+        ),
       );
     });
   }

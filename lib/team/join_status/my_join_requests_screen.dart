@@ -162,12 +162,36 @@ class _RequestTabList extends StatelessWidget {
 
       return RefreshIndicator(
         onRefresh: () => controller.reloadTab(tab),
-        child: ListView.separated(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-          itemCount: state.items.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 10),
-          itemBuilder: (context, i) =>
-              _MembershipRow(membership: state.items[i]),
+        color: const Color(AppColors.primaryColor),
+        child: NotificationListener<ScrollNotification>(
+          onNotification: (notification) {
+            if (notification.metrics.pixels >=
+                notification.metrics.maxScrollExtent - 160) {
+              controller.loadMore(tab);
+            }
+            return false;
+          },
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+            children: [
+              for (var i = 0; i < state.items.length; i++) ...[
+                if (i > 0) const SizedBox(height: 10),
+                _MembershipRow(membership: state.items[i]),
+              ],
+              if (state.isLoadingMore)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(
+                    child: SizedBox(
+                      width: 28,
+                      height: 28,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       );
     });

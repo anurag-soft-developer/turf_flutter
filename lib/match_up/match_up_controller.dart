@@ -11,6 +11,8 @@ import 'model/team_match_model.dart';
 
 class MatchUpController extends GetxController
     with SegmentedTabCacheController<TeamSportType, TeamModel> {
+  static const int _pageSize = 10;
+
   final TeamService _teamService = TeamService();
   final MatchmakingService _matchmakingService = MatchmakingService();
 
@@ -30,6 +32,9 @@ class MatchUpController extends GetxController
 
   @override
   List<TeamSportType> get tabKeys => TeamSportType.values;
+
+  @override
+  bool get paginatedTabs => true;
 
   /// All user teams that match the currently selected sport.
   List<TeamMemberFieldInstance> get myTeamsForSport {
@@ -139,24 +144,7 @@ class MatchUpController extends GetxController
 
   @override
   Future<List<TeamModel>> fetchTabItems(TeamSportType sport) async {
-    final fromTeamId = selectedTeam.value?.id;
-    final result = await _teamService.findMany(
-      TeamFilterQuery(
-        sportType: sport,
-        teamOpenForMatch: true,
-        status: TeamStatus.active,
-        visibility: TeamVisibility.public,
-        limit: 50,
-        skipTeamsWithSentRequest: fromTeamId != null,
-        fromTeamId: fromTeamId,
-        search: _searchQuery,
-      ),
-    );
-    final serverTeams = result?.data ?? const <TeamModel>[];
-    final selectedTeamId = selectedTeam.value?.id;
-    return serverTeams
-        .where((team) => team.id != null && team.id != selectedTeamId)
-        .toList();
+    return (await fetchTabPage(sport, 1)).items;
   }
 
   @override
@@ -170,6 +158,39 @@ class MatchUpController extends GetxController
 
   Future<void> reloadSport(TeamSportType sport) async {
     await ensureTabLoaded(sport, force: true);
+  }
+
+  Future<void> loadMoreSport(TeamSportType sport) => loadMoreTab(sport);
+
+  @override
+  Future<SegmentedTabPageResult<TeamModel>> fetchTabPage(
+    TeamSportType sport,
+    int page,
+  ) async {
+    final fromTeamId = selectedTeam.value?.id;
+    final result = await _teamService.findMany(
+      TeamFilterQuery(
+        sportType: sport,
+        teamOpenForMatch: true,
+        status: TeamStatus.active,
+        visibility: TeamVisibility.public,
+        page: page,
+        limit: _pageSize,
+        skipTeamsWithSentRequest: fromTeamId != null,
+        fromTeamId: fromTeamId,
+        search: _searchQuery,
+      ),
+    );
+    final selectedTeamId = selectedTeam.value?.id;
+    final items = (result?.data ?? const <TeamModel>[])
+        .where((team) => team.id != null && team.id != selectedTeamId)
+        .toList();
+
+    return SegmentedTabPageResult(
+      items: items,
+      page: result?.page ?? page,
+      hasMore: result?.hasNextPage ?? false,
+    );
   }
 
   Future<void> sendChallenge(TeamModel opponent) async {
