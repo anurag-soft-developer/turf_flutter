@@ -15,6 +15,18 @@ enum DimensionUnit {
   feet,
 }
 
+/// Listing lifecycle status from turf-services (`TurfStatus` schema).
+enum TurfStatus {
+  @JsonValue('draft')
+  draft,
+  @JsonValue('pending_approval')
+  pendingApproval,
+  @JsonValue('published')
+  published,
+  @JsonValue('rejected')
+  rejected,
+}
+
 @JsonSerializable()
 class DimensionsModel {
   final double? length;
@@ -160,6 +172,15 @@ class TurfModel {
   final OperatingHoursModel? operatingHours;
   @JsonKey(name: 'isAvailable')
   final bool? isAvailable;
+  final TurfStatus? status;
+  final String? rejectionReason;
+  @JsonKey(name: 'submittedAt')
+  final String? submittedAt;
+  @JsonKey(name: 'reviewedAt')
+  final String? reviewedAt;
+  @JsonKey(name: 'reviewedBy')
+  @UserConverter()
+  final dynamic reviewedBy;
   @JsonKey(name: 'slotBufferMins')
   final int? slotBufferMins;
   @JsonKey(name: 'averageRating')
@@ -187,6 +208,11 @@ class TurfModel {
     this.pricing,
     this.operatingHours,
     this.isAvailable,
+    this.status,
+    this.rejectionReason,
+    this.submittedAt,
+    this.reviewedAt,
+    this.reviewedBy,
     this.slotBufferMins,
     this.averageRating,
     this.totalReviews,
@@ -213,6 +239,11 @@ class TurfModel {
     PricingModel? pricing,
     OperatingHoursModel? operatingHours,
     bool? isAvailable,
+    TurfStatus? status,
+    String? rejectionReason,
+    String? submittedAt,
+    String? reviewedAt,
+    dynamic reviewedBy,
     int? slotBufferMins,
     double? averageRating,
     int? totalReviews,
@@ -233,6 +264,11 @@ class TurfModel {
       pricing: pricing ?? this.pricing,
       operatingHours: operatingHours ?? this.operatingHours,
       isAvailable: isAvailable ?? this.isAvailable,
+      status: status ?? this.status,
+      rejectionReason: rejectionReason ?? this.rejectionReason,
+      submittedAt: submittedAt ?? this.submittedAt,
+      reviewedAt: reviewedAt ?? this.reviewedAt,
+      reviewedBy: reviewedBy ?? this.reviewedBy,
       slotBufferMins: slotBufferMins ?? this.slotBufferMins,
       averageRating: averageRating ?? this.averageRating,
       totalReviews: totalReviews ?? this.totalReviews,
@@ -266,6 +302,47 @@ class TurfModel {
   UserFieldInstance get postedByHelper {
     _postedByHelper ??= UserFieldInstance(postedBy);
     return _postedByHelper!;
+  }
+
+  UserFieldInstance? _reviewedByHelper;
+  UserFieldInstance get reviewedByHelper {
+    _reviewedByHelper ??= UserFieldInstance(reviewedBy);
+    return _reviewedByHelper!;
+  }
+
+  DateTime? get submittedAtDate => _parseDate(submittedAt);
+
+  DateTime? get reviewedAtDate => _parseDate(reviewedAt);
+
+  bool get isPublished => status == TurfStatus.published;
+
+  bool get canSubmitForApproval =>
+      status == TurfStatus.draft || status == TurfStatus.rejected;
+
+  bool get canWithdrawSubmission => status == TurfStatus.pendingApproval;
+
+  String get statusDisplay {
+    switch (status) {
+      case TurfStatus.draft:
+        return 'Draft';
+      case TurfStatus.pendingApproval:
+        return 'Pending approval';
+      case TurfStatus.published:
+        return 'Published';
+      case TurfStatus.rejected:
+        return 'Rejected';
+      case null:
+        return 'Draft';
+    }
+  }
+
+  DateTime? _parseDate(String? value) {
+    if (value == null) return null;
+    try {
+      return DateTime.parse(value);
+    } catch (_) {
+      return null;
+    }
   }
 
   // Helper getter for updated date parsing

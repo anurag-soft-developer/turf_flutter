@@ -73,6 +73,11 @@ TurfModel _$TurfModelFromJson(Map<String, dynamic> json) => TurfModel(
           json['operatingHours'] as Map<String, dynamic>,
         ),
   isAvailable: json['isAvailable'] as bool?,
+  status: $enumDecodeNullable(_$TurfStatusEnumMap, json['status']),
+  rejectionReason: json['rejectionReason'] as String?,
+  submittedAt: json['submittedAt'] as String?,
+  reviewedAt: json['reviewedAt'] as String?,
+  reviewedBy: const UserConverter().fromJson(json['reviewedBy']),
   slotBufferMins: (json['slotBufferMins'] as num?)?.toInt(),
   averageRating: (json['averageRating'] as num?)?.toDouble(),
   totalReviews: (json['totalReviews'] as num?)?.toInt(),
@@ -94,12 +99,24 @@ Map<String, dynamic> _$TurfModelToJson(TurfModel instance) => <String, dynamic>{
   'pricing': instance.pricing?.toJson(),
   'operatingHours': instance.operatingHours?.toJson(),
   'isAvailable': instance.isAvailable,
+  'status': _$TurfStatusEnumMap[instance.status],
+  'rejectionReason': instance.rejectionReason,
+  'submittedAt': instance.submittedAt,
+  'reviewedAt': instance.reviewedAt,
+  'reviewedBy': const UserConverter().toJson(instance.reviewedBy),
   'slotBufferMins': instance.slotBufferMins,
   'averageRating': instance.averageRating,
   'totalReviews': instance.totalReviews,
   'createdAt': instance.createdAt,
   'updatedAt': instance.updatedAt,
   'distance': instance.distance,
+};
+
+const _$TurfStatusEnumMap = {
+  TurfStatus.draft: 'draft',
+  TurfStatus.pendingApproval: 'pending_approval',
+  TurfStatus.published: 'published',
+  TurfStatus.rejected: 'rejected',
 };
 
 CreateTurfRequest _$CreateTurfRequestFromJson(
