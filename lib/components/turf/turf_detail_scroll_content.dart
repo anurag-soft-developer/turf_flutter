@@ -31,7 +31,6 @@ class TurfDetailScrollContent extends StatelessWidget {
             children: [
               TurfInfoSection(controller: controller),
               if (showBookingSection) ...[
-                DateSelector(controller: controller),
                 TimeSlotsGrid(controller: controller),
                 Obx(
                   () => controller.selectedTimeSlots.isNotEmpty

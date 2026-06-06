@@ -24,10 +24,18 @@ LocationModel _$LocationModelFromJson(Map<String, dynamic> json) =>
       coordinates: GeoPointModel.fromJson(
         json['coordinates'] as Map<String, dynamic>,
       ),
+      city: json['city'] as String?,
+      state: json['state'] as String?,
+      zip: json['zip'] as String?,
+      country: json['country'] as String?,
     );
 
 Map<String, dynamic> _$LocationModelToJson(LocationModel instance) =>
     <String, dynamic>{
       'address': instance.address,
       'coordinates': instance.coordinates.toJson(),
+      'city': instance.city,
+      'state': instance.state,
+      'zip': instance.zip,
+      'country': instance.country,
     };

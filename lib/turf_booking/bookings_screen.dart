@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'model/turf_booking_model.dart';
 import 'turf_booking_controller.dart';
 import '../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
 import '../components/booking/booking_card.dart';
@@ -17,20 +16,15 @@ class _BookingsScreenState extends State<BookingsScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
   late final List<AppTabItem> _tabItems;
-  final List<TurfBookingStatus?> _tabStatuses = [
-    null,
-    ...TurfBookingStatus.values,
-  ];
+  final List<BookingsTab> _tabs = BookingsTab.values;
 
   @override
   void initState() {
     super.initState();
     _tabItems = const [
-      AppTabItem(label: 'All'),
+      AppTabItem(label: 'Upcoming'),
       AppTabItem(label: 'Pending'),
-      AppTabItem(label: 'Confirmed'),
-      AppTabItem(label: 'Cancelled'),
-      AppTabItem(label: 'Completed'),
+      AppTabItem(label: 'Archive'),
     ];
     _tabController = TabController(
       length: _tabItems.length,
@@ -40,8 +34,8 @@ class _BookingsScreenState extends State<BookingsScreen>
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) return;
       final idx = _tabController.index;
-      if (idx >= 0 && idx < _tabStatuses.length) {
-        TurfBookingController.instance.switchStatusTab(_tabStatuses[idx]);
+      if (idx >= 0 && idx < _tabs.length) {
+        TurfBookingController.instance.switchTab(_tabs[idx]);
       }
     });
   }
@@ -53,9 +47,8 @@ class _BookingsScreenState extends State<BookingsScreen>
   }
 
   int _getInitialTabIndex() {
-    final selectedStatus =
-        TurfBookingController.instance.selectedStatusTab.value;
-    final matchedIndex = _tabStatuses.indexOf(selectedStatus);
+    final selectedTab = TurfBookingController.instance.selectedTab.value;
+    final matchedIndex = _tabs.indexOf(selectedTab);
     return matchedIndex == -1 ? 0 : matchedIndex;
   }
 
@@ -81,8 +74,8 @@ class _BookingsScreenState extends State<BookingsScreen>
               AppSegmentedTabs(
                 controller: _tabController,
                 items: _tabItems,
-                onTap: (index) =>
-                    bookingController.switchStatusTab(_tabStatuses[index]),
+                fillWidth: true,
+                onTap: (index) => bookingController.switchTab(_tabs[index]),
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               ),
               Expanded(
@@ -91,8 +84,8 @@ class _BookingsScreenState extends State<BookingsScreen>
                   children: List.generate(
                     _tabItems.length,
                     (index) => Obx(() {
-                      final status = _tabStatuses[index];
-                      final state = bookingController.tabStateFor(status);
+                      final tab = _tabs[index];
+                      final state = bookingController.tabStateFor(tab);
                       final bookings = state.items;
                       final isFirstLoad =
                           !state.hasInitialized && bookings.isEmpty;
@@ -129,7 +122,7 @@ class _BookingsScreenState extends State<BookingsScreen>
                               const SizedBox(height: 12),
                               ElevatedButton(
                                 onPressed: () => bookingController
-                                    .ensureTabLoaded(status, force: true),
+                                    .ensureTabLoaded(tab, force: true),
                                 child: const Text('Retry'),
                               ),
                             ],
@@ -138,29 +131,29 @@ class _BookingsScreenState extends State<BookingsScreen>
                       }
 
                       if (bookings.isEmpty) {
-                        return const Center(
+                        return Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
+                              const Icon(
                                 Icons.book_online,
                                 size: 64,
                                 color: Colors.grey,
                               ),
-                              SizedBox(height: 16),
+                              const SizedBox(height: 16),
                               Text(
-                                'No Bookings Found',
-                                style: TextStyle(
+                                _emptyTitleFor(tab),
+                                style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w500,
                                   color: Colors.grey,
                                 ),
                               ),
-                              SizedBox(height: 8),
+                              const SizedBox(height: 8),
                               Text(
-                                'You haven\'t made any turf bookings yet.\nStart by browsing available turfs.',
+                                _emptySubtitleFor(tab),
                                 textAlign: TextAlign.center,
-                                style: TextStyle(color: Colors.grey),
+                                style: const TextStyle(color: Colors.grey),
                               ),
                             ],
                           ),
@@ -168,32 +161,29 @@ class _BookingsScreenState extends State<BookingsScreen>
                       }
 
                       return RefreshIndicator(
-                        onRefresh: () => bookingController.ensureTabLoaded(
-                          status,
-                          force: true,
-                        ),
+                        onRefresh: () =>
+                            bookingController.ensureTabLoaded(tab, force: true),
                         color: const Color(AppColors.primaryColor),
                         child: NotificationListener<ScrollNotification>(
                           onNotification: (notification) {
                             if (notification.metrics.pixels >=
                                 notification.metrics.maxScrollExtent - 200) {
-                              bookingController.loadMore(status);
+                              bookingController.loadMore(tab);
                             }
                             return false;
                           },
                           child: ListView.builder(
                             physics: const AlwaysScrollableScrollPhysics(),
                             padding: const EdgeInsets.all(16),
-                            itemCount: bookings.length +
-                                (state.isLoadingMore ? 1 : 0),
+                            itemCount:
+                                bookings.length + (state.isLoadingMore ? 1 : 0),
                             itemBuilder: (context, index) {
                               if (index == bookings.length) {
                                 return const Center(
                                   child: Padding(
                                     padding: EdgeInsets.all(16),
                                     child: CircularProgressIndicator(
-                                      valueColor:
-                                          AlwaysStoppedAnimation<Color>(
+                                      valueColor: AlwaysStoppedAnimation<Color>(
                                         Color(AppColors.primaryColor),
                                       ),
                                     ),
@@ -218,5 +208,27 @@ class _BookingsScreenState extends State<BookingsScreen>
         ],
       ),
     );
+  }
+
+  String _emptyTitleFor(BookingsTab tab) {
+    switch (tab) {
+      case BookingsTab.upcoming:
+        return 'No Upcoming Bookings';
+      case BookingsTab.pending:
+        return 'No Pending Bookings';
+      case BookingsTab.archive:
+        return 'Nothing Archived';
+    }
+  }
+
+  String _emptySubtitleFor(BookingsTab tab) {
+    switch (tab) {
+      case BookingsTab.upcoming:
+        return 'Confirmed bookings with future time slots will appear here.';
+      case BookingsTab.pending:
+        return 'Pending bookings with upcoming time slots will appear here.';
+      case BookingsTab.archive:
+        return 'Past, completed, and cancelled bookings will appear here.';
+    }
   }
 }

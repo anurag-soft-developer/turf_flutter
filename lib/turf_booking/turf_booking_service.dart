@@ -47,6 +47,7 @@ class TurfBookingService {
     String? turf,
     List<TurfBookingStatus>? status,
     PaymentStatus? paymentStatus,
+    bool? upcoming,
     String? startDate,
     String? endDate,
     int page = 1,
@@ -64,6 +65,7 @@ class TurfBookingService {
     if (paymentStatus != null) {
       queryParams['paymentStatus'] = paymentStatus.toString().split('.').last;
     }
+    if (upcoming != null) queryParams['upcoming'] = upcoming.toString();
     if (startDate != null) queryParams['startDate'] = startDate;
     if (endDate != null) queryParams['endDate'] = endDate;
     queryParams['page'] = page.toString();

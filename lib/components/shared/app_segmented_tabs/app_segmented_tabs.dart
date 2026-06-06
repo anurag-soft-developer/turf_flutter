@@ -19,6 +19,7 @@ class AppSegmentedTabs extends StatelessWidget {
     this.onTap,
     this.padding = const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
     this.isScrollable = false,
+    this.fillWidth = false,
   });
 
   final TabController controller;
@@ -26,6 +27,8 @@ class AppSegmentedTabs extends StatelessWidget {
   final ValueChanged<int>? onTap;
   final EdgeInsetsGeometry padding;
   final bool isScrollable;
+  /// When true, tabs expand equally to fill the tab bar width.
+  final bool fillWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -37,11 +40,10 @@ class AppSegmentedTabs extends StatelessWidget {
         builder: (context, constraints) {
           // Auto-switch to scroll mode when tabs cannot fit comfortably.
           const minTabWidth = 112.0;
-          const outerHorizontalPadding = 24.0; // left + right
-          final neededWidth =
-              (items.length * minTabWidth) + outerHorizontalPadding;
-          final shouldScroll =
-              isScrollable || neededWidth > constraints.maxWidth;
+          final neededWidth = items.length * minTabWidth;
+          final shouldScroll = fillWidth
+              ? false
+              : (isScrollable || neededWidth > constraints.maxWidth);
 
           return Container(
             decoration: BoxDecoration(
@@ -59,7 +61,8 @@ class AppSegmentedTabs extends StatelessWidget {
               controller: controller,
               onTap: onTap,
               isScrollable: shouldScroll,
-              tabAlignment: shouldScroll ? TabAlignment.start : null,
+              tabAlignment:
+                  shouldScroll ? TabAlignment.start : TabAlignment.fill,
               indicatorSize: TabBarIndicatorSize.tab,
               indicator: BoxDecoration(
                 color: const Color(AppColors.primaryColor),

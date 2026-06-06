@@ -67,7 +67,9 @@ class _MyJoinRequestsScreenState extends State<MyJoinRequestsScreen>
           children: [
             AppSegmentedTabs(
               controller: _tabController,
+              fillWidth: true,
               onTap: (index) => c.switchTab(_tabs[index]),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               items: const [
                 AppTabItem(
                   label: 'Pending',

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../core/config/constants.dart';
+import '../../core/models/location_model.dart';
+import '../../core/utils/map_launch_util.dart';
 import '../../turf/details/turf_detail_controller.dart';
 
 class TurfImageCarousel extends StatelessWidget {
@@ -163,81 +165,68 @@ class TurfInfoSection extends StatelessWidget {
                 color: Color(AppColors.textColor),
               ),
             ),
-            // Location
-            if (turf.location?.address != null) ...[
-              const Text(
-                'Location',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(AppColors.textColor),
+            const SizedBox(height: 20),
+          ],
+
+          if (turf.location?.address != null) ...[
+            const Text(
+              'Location',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(AppColors.textColor),
+              ),
+            ),
+            const SizedBox(height: 8),
+            _LocationRow(location: turf.location!),
+            const SizedBox(height: 20),
+          ],
+
+          // Sports and amenities info grid
+          Row(
+            children: [
+              Expanded(
+                child: TurfInfoCard(
+                  title: 'Sports',
+                  value: turf.sportTypesDisplay,
+                  icon: Icons.sports_soccer,
                 ),
               ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  const Icon(Icons.location_on, color: Colors.red, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      turf.location!.address,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Color(AppColors.textColor),
-                      ),
-                    ),
-                  ),
-                ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: TurfInfoCard(
+                  title: 'Price',
+                  value: '₹${turf.pricing?.basePricePerHour ?? 0}/hr',
+                  icon: Icons.attach_money,
+                ),
               ),
-              const SizedBox(height: 20),
             ],
+          ),
 
-            // Sports and amenities info grid
+          const SizedBox(height: 12),
+
+          if (turf.amenities?.isNotEmpty == true)
             Row(
               children: [
                 Expanded(
                   child: TurfInfoCard(
-                    title: 'Sports',
-                    value: turf.sportTypesDisplay,
-                    icon: Icons.sports_soccer,
+                    title: 'Amenities',
+                    value: turf.amenitiesDisplay,
+                    icon: Icons.local_activity,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: TurfInfoCard(
-                    title: 'Price',
-                    value: '₹${turf.pricing?.basePricePerHour ?? 0}/hr',
-                    icon: Icons.attach_money,
+                    title: 'Timing',
+                    value: turf.operatingHours != null
+                        ? '${turf.operatingHours!.open} - ${turf.operatingHours!.close}'
+                        : 'Not specified',
+                    icon: Icons.access_time,
                   ),
                 ),
               ],
             ),
-
-            const SizedBox(height: 12),
-
-            if (turf.amenities?.isNotEmpty == true)
-              Row(
-                children: [
-                  Expanded(
-                    child: TurfInfoCard(
-                      title: 'Amenities',
-                      value: turf.amenitiesDisplay,
-                      icon: Icons.local_activity,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TurfInfoCard(
-                      title: 'Timing',
-                      value: turf.operatingHours != null
-                          ? '${turf.operatingHours!.open} - ${turf.operatingHours!.close}'
-                          : 'Not specified',
-                      icon: Icons.access_time,
-                    ),
-                  ),
-                ],
-              ),
-          ],
         ],
       ),
     );
@@ -280,6 +269,55 @@ class TurfInfoSection extends StatelessWidget {
           color: Colors.white,
           fontWeight: FontWeight.bold,
           fontSize: 12,
+        ),
+      ),
+    );
+  }
+}
+
+class _LocationRow extends StatelessWidget {
+  const _LocationRow({required this.location});
+
+  final LocationModel location;
+
+  @override
+  Widget build(BuildContext context) {
+    final canOpenMaps = canOpenLocationInMaps(location);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: canOpenMaps ? () => openLocationInMaps(location) : null,
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              const Icon(Icons.location_on, color: Colors.red, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  location.address,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: canOpenMaps
+                        ? const Color(AppColors.primaryColor)
+                        : const Color(AppColors.textColor),
+                    decoration: canOpenMaps
+                        ? TextDecoration.underline
+                        : TextDecoration.none,
+                    decorationColor: const Color(AppColors.primaryColor),
+                  ),
+                ),
+              ),
+              if (canOpenMaps)
+                const Icon(
+                  Icons.open_in_new,
+                  size: 18,
+                  color: Color(AppColors.primaryColor),
+                ),
+            ],
+          ),
         ),
       ),
     );

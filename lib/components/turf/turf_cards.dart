@@ -7,6 +7,11 @@ class FeaturedTurfCard extends StatelessWidget {
   final TurfModel turf;
   final TurfListController controller;
 
+  static const BorderRadius _cardRadius = BorderRadius.only(
+    bottomLeft: Radius.circular(16),
+    bottomRight: Radius.circular(16),
+  );
+
   const FeaturedTurfCard({
     super.key,
     required this.turf,
@@ -17,83 +22,78 @@ class FeaturedTurfCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 4,
+      margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: _cardRadius),
       child: InkWell(
         onTap: () => controller.navigateToTurfDetail(turf),
-        borderRadius: BorderRadius.circular(16),
-        child: Column(
+        borderRadius: _cardRadius,
+        child: Stack(
+          fit: StackFit.expand,
           children: [
-            Expanded(
-              child: Container(
+            if (turf.mainImage != null)
+              Image.network(
+                turf.mainImage!,
+                fit: BoxFit.cover,
                 width: double.infinity,
-                decoration: BoxDecoration(
-                  image: turf.mainImage != null
-                      ? DecorationImage(
-                          image: NetworkImage(turf.mainImage!),
-                          fit: BoxFit.cover,
-                        )
-                      : null,
-                  color: turf.mainImage == null ? Colors.grey[300] : null,
+                errorBuilder: (_, __, ___) => const _FeaturedImageFallback(),
+              )
+            else
+              const _FeaturedImageFallback(),
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withValues(alpha: 0.08),
+                    Colors.black.withValues(alpha: 0.35),
+                    Colors.black.withValues(alpha: 0.78),
+                  ],
+                  stops: const [0.0, 0.45, 1.0],
                 ),
-                child: turf.mainImage == null
-                    ? const Center(
-                        child: Icon(
-                          Icons.sports_soccer,
-                          size: 44,
-                          color: Colors.grey,
-                        ),
-                      )
-                    : null,
               ),
             ),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.92),
-                // boxShadow: [
-                //   BoxShadow(
-                //     color: Colors.black.withValues(alpha: 0.06),
-                //     blurRadius: 6,
-                //     offset: const Offset(0, -1),
-                //   ),
-                // ],
-              ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
                 children: [
+                  const Spacer(),
                   Text(
                     turf.displayName,
                     style: const TextStyle(
-                      fontSize: 12,
+                      fontSize: 16,
                       fontWeight: FontWeight.w700,
-                      color: Colors.black87,
+                      color: Colors.white,
+                      height: 1.2,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   Row(
                     children: [
-                      const Icon(Icons.star, color: Colors.amber, size: 13),
-                      const SizedBox(width: 3),
-                      Text(
-                        turf.ratingDisplay,
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: Colors.black87,
-                          fontWeight: FontWeight.w600,
+                      const Icon(Icons.star, color: Colors.amber, size: 15),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          turf.ratingDisplay,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.white70,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const Spacer(),
                       Text(
                         '₹${turf.pricing?.basePricePerHour ?? 0}/hr',
                         style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Color(AppColors.primaryColor),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
                         ),
                       ),
                     ],
@@ -102,6 +102,24 @@ class FeaturedTurfCard extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FeaturedImageFallback extends StatelessWidget {
+  const _FeaturedImageFallback();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: const Color(AppColors.primaryColor),
+      child: const Center(
+        child: Icon(
+          Icons.sports_soccer,
+          size: 48,
+          color: Colors.white54,
         ),
       ),
     );

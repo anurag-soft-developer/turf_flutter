@@ -4,9 +4,10 @@ import 'package:google_places_flutter/model/place_type.dart';
 import 'package:google_places_flutter/model/prediction.dart';
 
 import '../../core/config/env_config.dart';
+import '../../core/models/location_model.dart';
+import '../../core/utils/place_address_components.dart';
 
-typedef OnLocationSelected =
-    void Function(String address, double? latitude, double? longitude);
+typedef OnLocationSelected = void Function(SelectedLocation location);
 
 class LocationAutocompleteField extends StatefulWidget {
   final TextEditingController controller;
@@ -46,11 +47,29 @@ class _LocationAutocompleteFieldState extends State<LocationAutocompleteField> {
     super.dispose();
   }
 
-  void _onPredictionSelected(Prediction prediction) {
+  Future<void> _onPredictionSelected(Prediction prediction) async {
     final address = prediction.description ?? '';
     final latitude = double.tryParse(prediction.lat ?? '');
     final longitude = double.tryParse(prediction.lng ?? '');
-    widget.onLocationSelected(address, latitude, longitude);
+
+    if (latitude == null || longitude == null) {
+      return;
+    }
+
+    ParsedAddressComponents components = const ParsedAddressComponents();
+    final placeId = prediction.placeId?.trim();
+    if (placeId != null && placeId.isNotEmpty) {
+      components = await fetchAddressComponentsForPlaceId(placeId);
+    }
+
+    widget.onLocationSelected(
+      selectedLocationFromPrediction(
+        address: address,
+        latitude: latitude,
+        longitude: longitude,
+        components: components,
+      ),
+    );
   }
 
   @override

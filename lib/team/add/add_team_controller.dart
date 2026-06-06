@@ -3,7 +3,6 @@ import 'package:flutter_application_1/core/services/media_upload_service.dart';
 import 'package:get/get.dart';
 
 import '../../core/config/constants.dart';
-import '../../core/models/location_model.dart';
 import '../../core/utils/app_snackbar.dart';
 import '../model/team_model.dart';
 import '../team_service.dart';
@@ -50,6 +49,8 @@ class AddTeamController extends GetxController {
 
   final RxList<String> logoImages = <String>[].obs;
   final RxList<String> coverImages = <String>[].obs;
+
+  SelectedLocation? _selectedLocation;
 
   final GlobalKey<FormState> formKey = GlobalKey<FormState>();
 
@@ -118,6 +119,15 @@ class AddTeamController extends GetxController {
     if (t.location != null) {
       latController.text = t.location!.latitude.toString();
       lngController.text = t.location!.longitude.toString();
+      _selectedLocation = SelectedLocation(
+        address: t.location!.address,
+        latitude: t.location!.latitude,
+        longitude: t.location!.longitude,
+        city: t.location!.city,
+        state: t.location!.state,
+        zip: t.location!.zip,
+        country: t.location!.country,
+      );
     }
 
     if (t.logo.isNotEmpty) logoImages.add(t.logo);
@@ -182,6 +192,13 @@ class AddTeamController extends GetxController {
     }
   }
 
+  void onLocationSelected(SelectedLocation location) {
+    _selectedLocation = location;
+    addressController.text = location.address;
+    latController.text = location.latitude.toString();
+    lngController.text = location.longitude.toString();
+  }
+
   // ── Collected DTO helpers ────────────────────────────────────────────────
 
   TeamSocialLinks? _collectSocialLinks() {
@@ -211,6 +228,11 @@ class AddTeamController extends GetxController {
   }
 
   LocationModel? _collectLocation() {
+    final selected = _selectedLocation;
+    if (selected != null) {
+      return selected.toLocationModel();
+    }
+
     final address = addressController.text.trim();
     final latitude = double.tryParse(latController.text.trim());
     final longitude = double.tryParse(lngController.text.trim());

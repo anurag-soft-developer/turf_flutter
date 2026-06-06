@@ -71,12 +71,57 @@ class GeoPointModel {
       'GeoPointModel(type: $type, lng: $longitude, lat: $latitude)';
 }
 
+class SelectedLocation {
+  final String address;
+  final double latitude;
+  final double longitude;
+  final String? city;
+  final String? state;
+  final String? zip;
+  final String? country;
+
+  const SelectedLocation({
+    required this.address,
+    required this.latitude,
+    required this.longitude,
+    this.city,
+    this.state,
+    this.zip,
+    this.country,
+  });
+
+  LocationModel toLocationModel() {
+    return LocationModel(
+      address: address,
+      coordinates: GeoPointModel.fromLngLat(
+        longitude: longitude,
+        latitude: latitude,
+      ),
+      city: city,
+      state: state,
+      zip: zip,
+      country: country,
+    );
+  }
+}
+
 @JsonSerializable(explicitToJson: true)
 class LocationModel {
   final String address;
   final GeoPointModel coordinates;
+  final String? city;
+  final String? state;
+  final String? zip;
+  final String? country;
 
-  LocationModel({required this.address, required this.coordinates});
+  LocationModel({
+    required this.address,
+    required this.coordinates,
+    this.city,
+    this.state,
+    this.zip,
+    this.country,
+  });
 
   double get longitude => coordinates.longitude;
 
@@ -91,15 +136,27 @@ class LocationModel {
 
   Map<String, dynamic> toJson() => _$LocationModelToJson(this);
 
-  LocationModel copyWith({String? address, GeoPointModel? coordinates}) {
+  LocationModel copyWith({
+    String? address,
+    GeoPointModel? coordinates,
+    String? city,
+    String? state,
+    String? zip,
+    String? country,
+  }) {
     return LocationModel(
       address: address ?? this.address,
       coordinates: coordinates ?? this.coordinates,
+      city: city ?? this.city,
+      state: state ?? this.state,
+      zip: zip ?? this.zip,
+      country: country ?? this.country,
     );
   }
 
   @override
-  String toString() => 'LocationModel(address: $address, coordinates: $coordinates)';
+  String toString() =>
+      'LocationModel(address: $address, city: $city, state: $state, zip: $zip, country: $country, coordinates: $coordinates)';
 }
 
 /// Server defaults/range for `nearbyLocationQuerySchema.nearbyRadiusKm`.

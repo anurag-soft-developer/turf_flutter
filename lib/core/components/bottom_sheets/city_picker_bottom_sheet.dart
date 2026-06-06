@@ -91,23 +91,17 @@ class CityPickerBottomSheet {
                             hintText: 'Search city...',
                             countries: const ['in'],
                             placeType: PlaceType.cities,
-                            onLocationSelected:
-                                (address, latitude, longitude) async {
-                                  if (isDetecting) return;
-                                  if (latitude == null || longitude == null) {
-                                    return;
-                                  }
-                                  await settings.setCityLocation(
-                                    address: address,
-                                    latitude: latitude,
-                                    longitude: longitude,
-                                  );
-                                  onChanged?.call();
-                                  if (ctx.mounted &&
-                                      Navigator.of(ctx).canPop()) {
-                                    Navigator.of(ctx).pop();
-                                  }
-                                },
+                            onLocationSelected: (location) async {
+                              if (isDetecting) return;
+                              await settings.setCityLocationFromSelected(
+                                location,
+                              );
+                              onChanged?.call();
+                              if (ctx.mounted &&
+                                  Navigator.of(ctx).canPop()) {
+                                Navigator.of(ctx).pop();
+                              }
+                            },
                           ),
                         ),
                       ),

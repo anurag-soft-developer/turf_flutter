@@ -21,7 +21,7 @@ class PlayerDashboard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Featured Turfs Section
-            FeaturedTurfsSection(),
+            const FeaturedTurfsSection(),
             const SizedBox(height: 16),
 
             // Sports Section

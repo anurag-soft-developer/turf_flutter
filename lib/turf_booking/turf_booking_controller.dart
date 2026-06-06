@@ -5,15 +5,17 @@ import '../components/shared/app_segmented_tabs/segmented_tab_cache_controller.d
 import 'turf_booking_service.dart';
 import '../core/utils/exception_handler.dart';
 
+enum BookingsTab { upcoming, pending, archive }
+
 class TurfBookingController extends GetxController
-    with SegmentedTabCacheController<TurfBookingStatus?, TurfBookingModel> {
+    with SegmentedTabCacheController<BookingsTab, TurfBookingModel> {
   static TurfBookingController get instance => Get.find();
   final TurfBookingService _bookingService = TurfBookingService();
 
   // Observable variables
   final RxBool _isBookingLoading = false.obs;
   final Rxn<TurfBookingModel> _selectedBooking = Rxn<TurfBookingModel>();
-  final Rxn<TurfBookingStatus> _selectedStatusTab = Rxn<TurfBookingStatus>();
+  final Rx<BookingsTab> _selectedTab = BookingsTab.upcoming.obs;
   static const int _pageSize = 20;
 
   // Filters
@@ -22,16 +24,11 @@ class TurfBookingController extends GetxController
   // Getters - Return observables for reactivity
   RxBool get isBookingLoading => _isBookingLoading;
   Rxn<TurfBookingModel> get selectedBooking => _selectedBooking;
-  Rxn<TurfBookingStatus> get selectedStatusTab => _selectedStatusTab;
-  RxList<TurfBookingStatus> get selectedStatusFilters => RxList.unmodifiable(
-    _selectedStatusTab.value == null
-        ? const <TurfBookingStatus>[]
-        : <TurfBookingStatus>[_selectedStatusTab.value!],
-  );
+  Rx<BookingsTab> get selectedTab => _selectedTab;
   Rxn<PaymentStatus> get paymentStatusFilter => _paymentStatusFilter;
 
   @override
-  List<TurfBookingStatus?> get tabKeys => [null, ...TurfBookingStatus.values];
+  List<BookingsTab> get tabKeys => BookingsTab.values;
 
   @override
   bool get paginatedTabs => true;
@@ -62,10 +59,12 @@ class TurfBookingController extends GetxController
       final bookingOrder = await _bookingService.createBookingOrder(request);
 
       if (bookingOrder != null) {
-        final allState = tabStateFor(null);
+        final pendingState = tabStateFor(BookingsTab.pending);
         setTabState(
-          null,
-          allState.copyWith(items: [bookingOrder.booking, ...allState.items]),
+          BookingsTab.pending,
+          pendingState.copyWith(
+            items: [bookingOrder.booking, ...pendingState.items],
+          ),
         );
         ExceptionHandler.showSuccessToast('Booking created successfully');
       }
@@ -103,7 +102,7 @@ class TurfBookingController extends GetxController
 
   /// Load user's bookings
   Future<void> loadBookings({bool refresh = false}) async {
-    await ensureTabLoaded(_selectedStatusTab.value, force: refresh);
+    await ensureTabLoaded(_selectedTab.value, force: refresh);
   }
 
   /// Get booking by ID
@@ -178,28 +177,16 @@ class TurfBookingController extends GetxController
     }
   }
 
-  /// Toggle status filter
-  void toggleStatusFilter(TurfBookingStatus status) {
-    if (_selectedStatusTab.value == status) {
-      _selectedStatusTab.value = null;
-    } else {
-      _selectedStatusTab.value = status;
-    }
-    ensureTabLoaded(_selectedStatusTab.value, force: true);
-  }
-
   /// Apply filters (kept for backward compatibility)
-  void applyFilters({TurfBookingStatus? status, PaymentStatus? paymentStatus}) {
-    _selectedStatusTab.value = status;
+  void applyFilters({PaymentStatus? paymentStatus}) {
     _paymentStatusFilter.value = paymentStatus;
-    ensureTabLoaded(_selectedStatusTab.value, force: true);
+    refreshAll();
   }
 
   /// Clear filters
   void clearFilters() {
-    _selectedStatusTab.value = null;
     _paymentStatusFilter.value = null;
-    ensureTabLoaded(_selectedStatusTab.value, force: true);
+    refreshAll();
   }
 
   /// Helper method to update booking in all lists
@@ -244,33 +231,50 @@ class TurfBookingController extends GetxController
     for (final key in tabKeys) {
       setTabState(key, const SegmentedTabDataState<TurfBookingModel>());
     }
-    ensureTabLoaded(_selectedStatusTab.value);
+    ensureTabLoaded(_selectedTab.value);
   }
 
-  Future<void> switchStatusTab(TurfBookingStatus? status) async {
-    if (_selectedStatusTab.value == status) return;
-    _selectedStatusTab.value = status;
-    await ensureTabLoaded(status);
+  Future<void> switchTab(BookingsTab tab) async {
+    if (_selectedTab.value == tab) return;
+    _selectedTab.value = tab;
+    await ensureTabLoaded(tab);
   }
 
-  Future<void> loadMore(TurfBookingStatus? status) => loadMoreTab(status);
+  Future<void> loadMore(BookingsTab key) => loadMoreTab(key);
 
   @override
-  Future<List<TurfBookingModel>> fetchTabItems(TurfBookingStatus? status) async {
-    return (await fetchTabPage(status, 1)).items;
+  Future<List<TurfBookingModel>> fetchTabItems(BookingsTab key) async {
+    return (await fetchTabPage(key, 1)).items;
   }
 
   @override
   Future<SegmentedTabPageResult<TurfBookingModel>> fetchTabPage(
-    TurfBookingStatus? status,
+    BookingsTab key,
     int page,
   ) async {
+    final statuses = switch (key) {
+      BookingsTab.upcoming => const [TurfBookingStatus.confirmed],
+      BookingsTab.pending => const [TurfBookingStatus.pending],
+      BookingsTab.archive => null,
+    };
+    final upcoming = switch (key) {
+      BookingsTab.upcoming => true,
+      BookingsTab.pending => true,
+      BookingsTab.archive => false,
+    };
+    final sortBy = key == BookingsTab.archive ? 'updatedAt' : 'createdAt';
+    final sortOrder = key == BookingsTab.archive ? 'desc' : 'asc';
+
     final response = await _bookingService.findBookings(
       page: page,
       limit: _pageSize,
-      status: status == null ? null : [status],
+      status: statuses,
+      upcoming: upcoming,
       paymentStatus: _paymentStatusFilter.value,
+      sortBy: sortBy,
+      sortOrder: sortOrder,
     );
+
     return SegmentedTabPageResult(
       items: response?.data ?? <TurfBookingModel>[],
       page: response?.page ?? page,

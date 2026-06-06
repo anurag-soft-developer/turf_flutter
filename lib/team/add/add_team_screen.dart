@@ -172,11 +172,7 @@ class _BasicInfoSection extends StatelessWidget {
           hintText: 'Search your team location...',
           countries: const ['in'],
           // placeType: PlaceType.cities,
-          onLocationSelected: (address, latitude, longitude) {
-            controller.addressController.text = address;
-            controller.latController.text = latitude?.toString() ?? '';
-            controller.lngController.text = longitude?.toString() ?? '';
-          },
+          onLocationSelected: controller.onLocationSelected,
         ),
       ],
     );

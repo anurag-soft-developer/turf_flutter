@@ -50,6 +50,10 @@ class SettingsController extends GetxController {
                 longitude: lng,
                 latitude: lat,
               ),
+              city: jsonMap['city'] as String?,
+              state: jsonMap['state'] as String?,
+              zip: jsonMap['zip'] as String?,
+              country: jsonMap['country'] as String?,
             );
             cityController.text = address;
           }
@@ -66,6 +70,10 @@ class SettingsController extends GetxController {
     required String address,
     required double latitude,
     required double longitude,
+    String? city,
+    String? state,
+    String? zip,
+    String? country,
   }) async {
     cityController.text = address;
     _selectedCityLocation.value = LocationModel(
@@ -74,17 +82,41 @@ class SettingsController extends GetxController {
         longitude: longitude,
         latitude: latitude,
       ),
+      city: city,
+      state: state,
+      zip: zip,
+      country: country,
     );
 
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(
         _cityLocationKey,
-        jsonEncode({'address': address, 'lat': latitude, 'lng': longitude}),
+        jsonEncode({
+          'address': address,
+          'lat': latitude,
+          'lng': longitude,
+          if (city != null) 'city': city,
+          if (state != null) 'state': state,
+          if (zip != null) 'zip': zip,
+          if (country != null) 'country': country,
+        }),
       );
     } catch (_) {
       // ignore persistence errors
     }
+  }
+
+  Future<void> setCityLocationFromSelected(SelectedLocation location) {
+    return setCityLocation(
+      address: location.address,
+      latitude: location.latitude,
+      longitude: location.longitude,
+      city: location.city,
+      state: location.state,
+      zip: location.zip,
+      country: location.country,
+    );
   }
 
   Future<void> clearCityLocation() async {
@@ -122,6 +154,10 @@ class SettingsController extends GetxController {
       );
 
       String label = '${position.latitude}, ${position.longitude}';
+      String? city;
+      String? state;
+      String? zip;
+      String? country;
       try {
         final placemarks = await placemarkFromCoordinates(
           position.latitude,
@@ -129,11 +165,15 @@ class SettingsController extends GetxController {
         );
         if (placemarks.isNotEmpty) {
           final p = placemarks.first;
-          final parts = <String?>[
-            p.locality,
-            p.administrativeArea,
-            p.country,
-          ].where((e) => e?.trim().isNotEmpty == true).toList();
+          city = p.locality?.trim().isNotEmpty == true ? p.locality : null;
+          state = p.administrativeArea?.trim().isNotEmpty == true
+              ? p.administrativeArea
+              : null;
+          zip = p.postalCode?.trim().isNotEmpty == true ? p.postalCode : null;
+          country = p.country?.trim().isNotEmpty == true ? p.country : null;
+          final parts = <String?>[city, state, country]
+              .where((e) => e?.trim().isNotEmpty == true)
+              .toList();
           if (parts.isNotEmpty) label = parts.join(', ');
         }
       } catch (_) {}
@@ -142,6 +182,10 @@ class SettingsController extends GetxController {
         address: label,
         latitude: position.latitude,
         longitude: position.longitude,
+        city: city,
+        state: state,
+        zip: zip,
+        country: country,
       );
     } catch (_) {
       // ignore

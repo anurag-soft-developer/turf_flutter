@@ -258,19 +258,34 @@ class TurfDetailController extends GetxController {
     _totalPrice.value = total;
   }
 
+  static const int maxBookingDaysAhead = 30;
+
+  DateTime get minSelectableDate {
+    final today = DateTime.now();
+    return DateTime(today.year, today.month, today.day);
+  }
+
+  DateTime get maxSelectableDate =>
+      minSelectableDate.add(const Duration(days: maxBookingDaysAhead));
+
   // Change selected date
   void changeSelectedDate(DateTime date) {
-    // Don't allow past dates
-    final today = DateTime.now();
-    final todayDate = DateTime(today.year, today.month, today.day);
     final selectedDateOnly = DateTime(date.year, date.month, date.day);
 
-    if (selectedDateOnly.isBefore(todayDate)) {
+    if (selectedDateOnly.isBefore(minSelectableDate)) {
       Get.snackbar('Invalid Date', 'Cannot select past dates');
       return;
     }
 
-    _selectedDate.value = date;
+    if (selectedDateOnly.isAfter(maxSelectableDate)) {
+      Get.snackbar(
+        'Invalid Date',
+        'Bookings are only available up to $maxBookingDaysAhead days ahead',
+      );
+      return;
+    }
+
+    _selectedDate.value = selectedDateOnly;
     loadTimeSlots();
   }
 
@@ -356,18 +371,6 @@ class TurfDetailController extends GetxController {
         '${DateTime.parse(lastSlot.endTime).hour.toString().padLeft(2, '0')}:${DateTime.parse(lastSlot.endTime).minute.toString().padLeft(2, '0')}';
 
     return '$startTime - $endTime (${_selectedTimeSlots.length} slot${_selectedTimeSlots.length > 1 ? 's' : ''})';
-  }
-
-  // Get next 7 days for date selection
-  List<DateTime> get availableDates {
-    final List<DateTime> dates = [];
-    final today = DateTime.now();
-
-    for (int i = 0; i < 7; i++) {
-      dates.add(DateTime(today.year, today.month, today.day + i));
-    }
-
-    return dates;
   }
 
   // Check if turf is currently open

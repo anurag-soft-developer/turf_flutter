@@ -5,125 +5,23 @@ import 'package:intl/intl.dart';
 import '../../core/config/constants.dart';
 import '../../turf/details/turf_detail_controller.dart';
 
-class DateSelector extends StatelessWidget {
-  final TurfDetailController controller;
-
-  const DateSelector({super.key, required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Select Date',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(AppColors.textColor),
-            ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 80,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: controller.availableDates.length,
-              itemBuilder: (context, index) {
-                final date = controller.availableDates[index];
-
-                return Obx(() {
-                  final isSelected =
-                      date.day == controller.selectedDate.value.day &&
-                      date.month == controller.selectedDate.value.month &&
-                      date.year == controller.selectedDate.value.year;
-
-                  return DateCard(
-                    date: date,
-                    isSelected: isSelected,
-                    onTap: () => controller.changeSelectedDate(date),
-                  );
-                });
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class DateCard extends StatelessWidget {
-  final DateTime date;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const DateCard({
-    super.key,
-    required this.date,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 70,
-        margin: const EdgeInsets.only(right: 12),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? const Color(AppColors.primaryColor)
-              : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected
-                ? const Color(AppColors.primaryColor)
-                : Colors.grey[300]!,
-          ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              DateFormat('EEE').format(date),
-              style: TextStyle(
-                fontSize: 12,
-                color: isSelected ? Colors.white : Colors.grey[600],
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              date.day.toString(),
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: isSelected ? Colors.white : Colors.black,
-              ),
-            ),
-            Text(
-              DateFormat('MMM').format(date),
-              style: TextStyle(
-                fontSize: 10,
-                color: isSelected ? Colors.white : Colors.grey[600],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class TimeSlotsGrid extends StatelessWidget {
   final TurfDetailController controller;
 
   const TimeSlotsGrid({super.key, required this.controller});
 
+  Future<void> _pickDate(BuildContext context) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: controller.selectedDate.value,
+      firstDate: controller.minSelectableDate,
+      lastDate: controller.maxSelectableDate,
+    );
+    if (picked != null) {
+      controller.changeSelectedDate(picked);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -131,15 +29,27 @@ class TimeSlotsGrid extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Available Time Slots',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(AppColors.textColor),
-            ),
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Time Slots',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(AppColors.textColor),
+                  ),
+                ),
+              ),
+              Obx(
+                () => BookingDatePickerChip(
+                  date: controller.selectedDate.value,
+                  onTap: () => _pickDate(context),
+                ),
+              ),
+            ],
           ),
-          // const SizedBox(height: 12),
+          const SizedBox(height: 12),
           Obx(() {
             if (controller.isSlotsLoading.value) {
               return const Padding(
@@ -194,6 +104,64 @@ class TimeSlotsGrid extends StatelessWidget {
             );
           }),
         ],
+      ),
+    );
+  }
+}
+
+class BookingDatePickerChip extends StatelessWidget {
+  const BookingDatePickerChip({
+    super.key,
+    required this.date,
+    required this.onTap,
+  });
+
+  final DateTime date;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: const Color(AppColors.primaryColor).withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: const Color(
+                AppColors.primaryColor,
+              ).withValues(alpha: 0.25),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.calendar_today_outlined,
+                size: 15,
+                color: Color(AppColors.primaryColor),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                DateFormat('EEE, d MMM').format(date),
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Color(AppColors.primaryColor),
+                ),
+              ),
+              const Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 18,
+                color: Color(AppColors.primaryColor),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
