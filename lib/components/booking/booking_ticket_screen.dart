@@ -189,7 +189,9 @@ class BookingTicketScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        BookingReferenceCard(bookingId: booking.id),
+                        BookingReferenceCard(
+                          bookingId: booking.bookingId ?? booking.id,
+                        ),
 
                         // QR Code section
                         Center(

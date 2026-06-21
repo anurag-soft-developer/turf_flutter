@@ -154,12 +154,12 @@ class TurfBookingModel {
   final TurfBookingStatus? status;
   @JsonKey(name: 'paymentStatus')
   final PaymentStatus? paymentStatus;
-  @JsonKey(name: 'paymentId')
-  final String? paymentId;
+  @JsonKey(name: 'razorpayPaymentId')
+  final String? razorpayPaymentId;
   @JsonKey(name: 'razorpayOrderId')
   final String? razorpayOrderId;
-  @JsonKey(name: 'invoiceId')
-  final String? invoiceId;
+  @JsonKey(name: 'bookingId')
+  final String? bookingId;
   @JsonKey(name: 'paidAt')
   final String? paidAt;
   @JsonKey(name: 'paymentExpiresAt')
@@ -193,9 +193,9 @@ class TurfBookingModel {
     this.totalAmount,
     this.status,
     this.paymentStatus,
-    this.paymentId,
+    this.razorpayPaymentId,
     this.razorpayOrderId,
-    this.invoiceId,
+    this.bookingId,
     this.paidAt,
     this.paymentExpiresAt,
     this.slotHoldStatus,
@@ -224,9 +224,9 @@ class TurfBookingModel {
     double? totalAmount,
     TurfBookingStatus? status,
     PaymentStatus? paymentStatus,
-    String? paymentId,
+    String? razorpayPaymentId,
     String? razorpayOrderId,
-    String? invoiceId,
+    String? bookingId,
     String? paidAt,
     String? paymentExpiresAt,
     SlotHoldStatus? slotHoldStatus,
@@ -249,9 +249,9 @@ class TurfBookingModel {
       totalAmount: totalAmount ?? this.totalAmount,
       status: status ?? this.status,
       paymentStatus: paymentStatus ?? this.paymentStatus,
-      paymentId: paymentId ?? this.paymentId,
+      razorpayPaymentId: razorpayPaymentId ?? this.razorpayPaymentId,
       razorpayOrderId: razorpayOrderId ?? this.razorpayOrderId,
-      invoiceId: invoiceId ?? this.invoiceId,
+      bookingId: bookingId ?? this.bookingId,
       paidAt: paidAt ?? this.paidAt,
       paymentExpiresAt: paymentExpiresAt ?? this.paymentExpiresAt,
       slotHoldStatus: slotHoldStatus ?? this.slotHoldStatus,
@@ -538,8 +538,8 @@ class UpdateTurfBookingRequest {
   final TurfBookingStatus? status;
   @JsonKey(name: 'paymentStatus')
   final PaymentStatus? paymentStatus;
-  @JsonKey(name: 'paymentId')
-  final String? paymentId;
+  @JsonKey(name: 'razorpayPaymentId')
+  final String? razorpayPaymentId;
   @JsonKey(name: 'cancelReason')
   final String? cancelReason;
 
@@ -548,7 +548,7 @@ class UpdateTurfBookingRequest {
     this.notes,
     this.status,
     this.paymentStatus,
-    this.paymentId,
+    this.razorpayPaymentId,
     this.cancelReason,
   });
 

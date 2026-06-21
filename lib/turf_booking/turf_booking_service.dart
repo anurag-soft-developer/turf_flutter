@@ -192,11 +192,11 @@ class TurfBookingService {
   Future<TurfBookingModel?> updatePaymentStatus(
     String bookingId,
     PaymentStatus paymentStatus, {
-    String? paymentId,
+    String? razorpayPaymentId,
   }) async {
     final request = UpdateTurfBookingRequest(
       paymentStatus: paymentStatus,
-      paymentId: paymentId,
+      razorpayPaymentId: razorpayPaymentId,
     );
 
     return await updateBooking(bookingId, request);

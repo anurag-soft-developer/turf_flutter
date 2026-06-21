@@ -149,7 +149,7 @@ class TurfBookingController extends GetxController
   Future<bool> updatePaymentStatus(
     String bookingId,
     PaymentStatus paymentStatus, {
-    String? paymentId,
+    String? razorpayPaymentId,
   }) async {
     try {
       _isBookingLoading.value = true;
@@ -157,7 +157,7 @@ class TurfBookingController extends GetxController
       final updatedBooking = await _bookingService.updatePaymentStatus(
         bookingId,
         paymentStatus,
-        paymentId: paymentId,
+        razorpayPaymentId: razorpayPaymentId,
       );
 
       if (updatedBooking != null) {

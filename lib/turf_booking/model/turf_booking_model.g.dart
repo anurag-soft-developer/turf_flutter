@@ -31,9 +31,9 @@ TurfBookingModel _$TurfBookingModelFromJson(Map<String, dynamic> json) =>
         _$PaymentStatusEnumMap,
         json['paymentStatus'],
       ),
-      paymentId: json['paymentId'] as String?,
+      razorpayPaymentId: json['razorpayPaymentId'] as String?,
       razorpayOrderId: json['razorpayOrderId'] as String?,
-      invoiceId: json['invoiceId'] as String?,
+      bookingId: json['bookingId'] as String?,
       paidAt: json['paidAt'] as String?,
       paymentExpiresAt: json['paymentExpiresAt'] as String?,
       slotHoldStatus: $enumDecodeNullable(
@@ -61,9 +61,9 @@ Map<String, dynamic> _$TurfBookingModelToJson(TurfBookingModel instance) =>
       'totalAmount': instance.totalAmount,
       'status': _$TurfBookingStatusEnumMap[instance.status],
       'paymentStatus': _$PaymentStatusEnumMap[instance.paymentStatus],
-      'paymentId': instance.paymentId,
+      'razorpayPaymentId': instance.razorpayPaymentId,
       'razorpayOrderId': instance.razorpayOrderId,
-      'invoiceId': instance.invoiceId,
+      'bookingId': instance.bookingId,
       'paidAt': instance.paidAt,
       'paymentExpiresAt': instance.paymentExpiresAt,
       'slotHoldStatus': _$SlotHoldStatusEnumMap[instance.slotHoldStatus],
@@ -184,7 +184,7 @@ UpdateTurfBookingRequest _$UpdateTurfBookingRequestFromJson(
     _$PaymentStatusEnumMap,
     json['paymentStatus'],
   ),
-  paymentId: json['paymentId'] as String?,
+  razorpayPaymentId: json['razorpayPaymentId'] as String?,
   cancelReason: json['cancelReason'] as String?,
 );
 
@@ -195,7 +195,7 @@ Map<String, dynamic> _$UpdateTurfBookingRequestToJson(
   'notes': instance.notes,
   'status': _$TurfBookingStatusEnumMap[instance.status],
   'paymentStatus': _$PaymentStatusEnumMap[instance.paymentStatus],
-  'paymentId': instance.paymentId,
+  'razorpayPaymentId': instance.razorpayPaymentId,
   'cancelReason': instance.cancelReason,
 };
 
