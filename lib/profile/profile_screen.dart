@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/components/shared/app_drawer.dart';
+import 'package:flutter_application_1/components/shared/user_avatar_app_bar_action.dart';
 import 'package:get/get.dart';
 
 import '../components/player/profile/player_badges_section.dart';
@@ -159,10 +159,11 @@ class _ProfileScreenState extends State<ProfileScreen>
       final availableSports = _getAvailableSports();
 
       return Scaffold(
-        drawer: const AppDrawer(),
         backgroundColor: const Color(AppColors.backgroundColor),
         extendBodyBehindAppBar: true,
         appBar: AppBar(
+          automaticallyImplyLeading: false,
+          leading: const UserAvatarAppBarAction(),
           backgroundColor: Colors.transparent,
           elevation: 0,
           foregroundColor: Colors.white,

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
+import '../../core/config/turf_sport_types.dart';
 import '../model/turf_model.dart';
 // import '../models/common/paginated_response.dart';
 import '../turf_service.dart';
@@ -22,6 +23,7 @@ class TurfListController extends GetxController {
   final RxBool _isSearching = false.obs;
   final RxList<TurfModel> _turfs = <TurfModel>[].obs;
   final RxList<TurfModel> _featuredTurfs = <TurfModel>[].obs;
+  final RxBool _isFeaturedLoading = false.obs;
   final RxList<String> _selectedSportTypes = <String>[].obs;
   final RxList<String> _selectedAmenities = <String>[].obs;
   final RxDouble _minPrice = 0.0.obs;
@@ -47,6 +49,7 @@ class TurfListController extends GetxController {
   RxBool get isSearching => _isSearching;
   RxList<TurfModel> get turfs => _turfs;
   RxList<TurfModel> get featuredTurfs => _featuredTurfs;
+  RxBool get isFeaturedLoading => _isFeaturedLoading;
   RxList<String> get selectedSportTypes => _selectedSportTypes;
   RxList<String> get selectedAmenities => _selectedAmenities;
   RxDouble get minPrice => _minPrice;
@@ -58,15 +61,7 @@ class TurfListController extends GetxController {
   RxInt get totalItems => _totalItems;
 
   // Filter options
-  final List<String> availableSportTypes = [
-    'Football',
-    'Cricket',
-    'Basketball',
-    'Badminton',
-    'Tennis',
-    'Volleyball',
-    'Hockey',
-  ];
+  final List<TurfSportType> availableSportTypes = TurfSportTypes.filterable;
 
   final List<String> availableAmenities = [
     'Parking',
@@ -83,14 +78,7 @@ class TurfListController extends GetxController {
   void onInit() {
     super.onInit();
 
-    // Handle navigation arguments for pre-selected sport
-    final arguments = Get.arguments;
-    if (arguments != null && arguments is Map<String, dynamic>) {
-      final String? sportType = arguments['sportType'];
-      if (sportType != null && sportType != 'All') {
-        _selectedSportTypes.add(sportType);
-      }
-    }
+    _applyRouteSportFilter(Get.arguments);
 
     loadFeaturedTurfs();
     loadTurfs(isRefresh: true);
@@ -105,6 +93,7 @@ class TurfListController extends GetxController {
 
   // Load featured turfs for home section
   Future<void> loadFeaturedTurfs() async {
+    _isFeaturedLoading.value = true;
     try {
       final turfs = await _turfService.getFeaturedTurfs(limit: 5);
       if (turfs != null) {
@@ -112,6 +101,8 @@ class TurfListController extends GetxController {
       }
     } catch (e) {
       Get.snackbar('Error', 'Failed to load featured turfs');
+    } finally {
+      _isFeaturedLoading.value = false;
     }
   }
 
@@ -201,10 +192,22 @@ class TurfListController extends GetxController {
     searchTurfs();
   }
 
+  void _applyRouteSportFilter(dynamic arguments) {
+    if (arguments is! Map<String, dynamic>) return;
+
+    final sportType = arguments['sportType'];
+    if (sportType is! String) return;
+
+    _selectedSportTypes.clear();
+    if (!TurfSportTypes.isAll(sportType)) {
+      _selectedSportTypes.add(sportType);
+    }
+  }
+
   // Set sport filter directly (used when navigating from dashboard)
   void setSportFilter(String sportType) {
     _selectedSportTypes.clear();
-    if (sportType != 'All') {
+    if (!TurfSportTypes.isAll(sportType)) {
       _selectedSportTypes.add(sportType);
     }
     searchTurfs();

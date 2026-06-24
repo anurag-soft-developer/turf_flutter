@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/components/shared/app_drawer.dart';
+import 'package:flutter_application_1/components/shared/user_avatar_app_bar_action.dart';
 import 'package:get/get.dart';
 
 import '../components/match_up/my_team_selector.dart';
@@ -54,9 +54,10 @@ class _MatchUpScreenState extends State<MatchUpScreen>
   Widget build(BuildContext context) {
     final MatchUpController c = Get.find();
     return Scaffold(
-      drawer: const AppDrawer(),
       backgroundColor: const Color(AppColors.backgroundColor),
       appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: const UserAvatarAppBarAction(),
         title: const Text('Match Up'),
         actions: [
           IconButton(

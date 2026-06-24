@@ -184,6 +184,7 @@ class TurfInfoSection extends StatelessWidget {
 
           // Sports and amenities info grid
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: TurfInfoCard(
@@ -207,13 +208,10 @@ class TurfInfoSection extends StatelessWidget {
 
           if (turf.amenities?.isNotEmpty == true)
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: TurfInfoCard(
-                    title: 'Amenities',
-                    value: turf.amenitiesDisplay,
-                    icon: Icons.local_activity,
-                  ),
+                  child: _AmenitiesInfoCard(amenities: turf.amenities!),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -374,6 +372,176 @@ class TurfInfoCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AmenitiesInfoCard extends StatelessWidget {
+  const _AmenitiesInfoCard({required this.amenities});
+
+  final List<String> amenities;
+
+  static const int _visibleCount = 2;
+
+  String get _visibleText {
+    if (amenities.length <= _visibleCount) {
+      return amenities.join(', ');
+    }
+
+    return amenities.take(_visibleCount).join(', ');
+  }
+
+  int? get _remainingCount {
+    if (amenities.length <= _visibleCount) return null;
+    return amenities.length - _visibleCount;
+  }
+
+  void _showAll(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        final maxHeight = MediaQuery.of(context).size.height * 0.6;
+
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 12, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Amenities',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: Color(AppColors.textColor),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close_rounded),
+                      color: const Color(AppColors.textSecondaryColor),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: maxHeight),
+                  child: SingleChildScrollView(
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: amenities
+                          .map((amenity) => _AmenityChip(label: amenity))
+                          .toList(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _showAll(context),
+        borderRadius: BorderRadius.circular(12),
+        child: Ink(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.grey[50],
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[200]!),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(
+                    Icons.local_activity,
+                    size: 20,
+                    color: Color(AppColors.primaryColor),
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    'Amenities',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(AppColors.textSecondaryColor),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text.rich(
+                TextSpan(
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Color(AppColors.textColor),
+                  ),
+                  children: [
+                    TextSpan(text: _visibleText),
+                    if (_remainingCount != null)
+                      TextSpan(
+                        text: ' +$_remainingCount',
+                        style: const TextStyle(
+                          color: Color(AppColors.primaryColor),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                  ],
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AmenityChip extends StatelessWidget {
+  const _AmenityChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(AppColors.dividerColor)),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: Color(AppColors.textColor),
+        ),
       ),
     );
   }

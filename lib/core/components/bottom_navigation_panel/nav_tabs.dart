@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/match_up/match_up_controller.dart';
 import 'package:flutter_application_1/match_up/match_up_screen.dart';
 import 'package:get/get.dart';
+import '../../../dashboard/player/dashboard_leaderboard_controller.dart';
 import '../../../dashboard/dashboard_screen.dart';
 import '../../../settings/settings_controller.dart';
 import '../../../turf/feed/turf_list_screen.dart';
@@ -40,10 +41,14 @@ final List<NavTab> kNavTabs = [
     loadController: () {
       _ensure<SettingsController>(() => SettingsController());
       _ensure<TurfListController>(() => TurfListController());
+      _ensure<DashboardLeaderboardController>(
+        () => DashboardLeaderboardController(),
+      );
     },
     disposeController: () {
       _dispose<SettingsController>();
       _dispose<TurfListController>();
+      _dispose<DashboardLeaderboardController>();
     },
   ),
   NavTab(

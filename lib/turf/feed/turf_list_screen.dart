@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/components/shared/app_drawer.dart';
+import 'package:flutter_application_1/components/shared/user_avatar_app_bar_action.dart';
 import 'package:get/get.dart';
 import 'turf_list_controller.dart';
 import '../../components/turf/search_components.dart';
@@ -15,9 +15,10 @@ class TurfListScreen extends StatelessWidget {
     final TurfListController controller = Get.find();
 
     return Scaffold(
-      drawer: const AppDrawer(),
       backgroundColor: const Color(AppColors.backgroundColor),
       appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: const UserAvatarAppBarAction(),
         title: const Text(
           'Find Turfs',
           style: TextStyle(fontWeight: FontWeight.bold),

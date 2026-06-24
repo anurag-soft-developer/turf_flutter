@@ -147,109 +147,37 @@ class SettingsScreen extends StatelessWidget {
         () => LoadingOverlay(
           isLoading: authController.isLoading,
           child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // User Info Header
-                Container(
-                  width: double.infinity,
-                  decoration: const BoxDecoration(
-                    color: Color(AppColors.primaryColor),
-                    borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(30),
-                      bottomRight: Radius.circular(30),
-                    ),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.only(
-                      left: 24,
-                      right: 24,
-                      bottom: 30,
-                    ),
-                    child: Row(
-                      children: [
-                        Obx(
-                          () => CircleAvatar(
-                            radius: 30,
-                            backgroundColor: Colors.white,
-                            backgroundImage: authController.user?.avatar != null
-                                ? NetworkImage(authController.user!.avatar!)
-                                : null,
-                            child: authController.user?.avatar == null
-                                ? const Icon(
-                                    Icons.person,
-                                    color: Color(AppColors.primaryColor),
-                                    size: 30,
-                                  )
-                                : null,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Obx(
-                            () => Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  authController.user?.fullName ?? 'User',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  authController.user?.email ?? '',
-                                  style: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.9),
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // Settings Sections
-                Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
+                _ManageNotificationsEntry(),
+                const SizedBox(height: 32),
+                // Loop through setting sections
+                ...settingSections.map(
+                  (section) => Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _ManageNotificationsEntry(),
-                      const SizedBox(height: 32),
-                      // Loop through setting sections
-                      ...settingSections.map(
-                        (section) => Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              section.title,
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Color(AppColors.textColor),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Card(
-                              elevation: 1,
-                              color: const Color(AppColors.surfaceColor),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Column(
-                                children: _buildSectionItems(section.items),
-                              ),
-                            ),
-                            const SizedBox(height: 32),
-                          ],
+                      Text(
+                        section.title,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Color(AppColors.textColor),
                         ),
                       ),
+                      const SizedBox(height: 16),
+                      Card(
+                        elevation: 1,
+                        color: const Color(AppColors.surfaceColor),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          children: _buildSectionItems(section.items),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
                     ],
                   ),
                 ),

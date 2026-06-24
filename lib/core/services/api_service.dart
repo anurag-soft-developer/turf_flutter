@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
+// import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/utils/exception_handler.dart';
 import 'dart:async';
 import '../config/api_constants.dart';
@@ -95,15 +95,15 @@ class ApiService {
     );
 
     // Add logging in debug mode
-    dioInstance.interceptors.add(
-      LogInterceptor(
-        requestBody: true,
-        responseBody: true,
-        logPrint: (object) {
-          debugPrint('[API] $object');
-        },
-      ),
-    );
+    // dioInstance.interceptors.add(
+    //   LogInterceptor(
+    //     requestBody: true,
+    //     responseBody: true,
+    //     logPrint: (object) {
+    //       debugPrint('[API] $object');
+    //     },
+    //   ),
+    // );
 
     return dioInstance;
   }

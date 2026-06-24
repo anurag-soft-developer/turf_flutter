@@ -7,10 +7,7 @@ class FeaturedTurfCard extends StatelessWidget {
   final TurfModel turf;
   final TurfListController controller;
 
-  static const BorderRadius _cardRadius = BorderRadius.only(
-    bottomLeft: Radius.circular(16),
-    bottomRight: Radius.circular(16),
-  );
+  static const BorderRadius _cardRadius = BorderRadius.all(Radius.circular(16));
 
   const FeaturedTurfCard({
     super.key,

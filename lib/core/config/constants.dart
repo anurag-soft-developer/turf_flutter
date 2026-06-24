@@ -27,6 +27,7 @@ class Routes {
   final String forgotPassword = '/forgot-password';
   final String dashboard = '/dashboard';
   final String profile = '/profile';
+  final String appMenu = '/app-menu';
   final String settings = '/settings';
   final String manageNotifications = '/manage-notifications';
   final String notifications = '/notifications';

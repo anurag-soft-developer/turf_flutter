@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/components/shared/app_drawer.dart';
+import 'package:flutter_application_1/components/shared/user_avatar_app_bar_action.dart';
 import 'package:get/get.dart';
 
 import '../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
@@ -60,9 +60,12 @@ class _RankScreenState extends State<RankScreen>
     final playerController = Get.find<PlayerRankingController>();
 
     return Scaffold(
-      drawer: const AppDrawer(),
       backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(title: const Text('Rank')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: const UserAvatarAppBarAction(),
+        title: const Text('Rank'),
+      ),
       body: Obx(() {
         final currentIndex = _tabs.indexOf(rankController.selectedTab.value);
         final safeIndex = currentIndex < 0 ? 0 : currentIndex;

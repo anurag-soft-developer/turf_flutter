@@ -5,6 +5,7 @@ import 'package:flutter_application_1/core/config/constants.dart';
 import 'package:flutter_application_1/core/guards/auth_guard.dart';
 import 'package:flutter_application_1/core/views/access_denied_screen.dart';
 import 'package:flutter_application_1/core/views/splash_screen.dart';
+import 'package:flutter_application_1/components/shared/app_menu.dart';
 import 'package:flutter_application_1/dashboard/dashboard_screen.dart';
 import 'package:get/get.dart';
 
@@ -41,6 +42,12 @@ class AppRoutes {
       page: () => const DashboardScreen(),
       transition: Transition.cupertino,
       binding: TurfListBinding(),
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppConstants.routes.appMenu,
+      page: () => const AppMenuScreen(),
+      transition: Transition.cupertino,
       middlewares: [AuthGuard()],
     ),
     ...rankRoutes,

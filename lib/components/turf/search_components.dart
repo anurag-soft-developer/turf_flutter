@@ -18,10 +18,13 @@ class TurfSearchBar extends StatelessWidget {
       prefixIcon: const Icon(Icons.search, color: Colors.grey),
       suffixIcon: Obx(
         () => controller.isSearching.value
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
+            ? const Padding(
+                padding: EdgeInsets.all(14),
+                child: SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 1.5),
+                ),
               )
             : IconButton(
                 onPressed: controller.searchTurfs,
@@ -132,14 +135,14 @@ class QuickFiltersRow extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             ...controller.availableSportTypes
-                .take(3)
                 .map(
                   (sport) => Padding(
                     padding: const EdgeInsets.only(right: 8.0),
                     child: QuickFilterChip(
-                      label: sport,
-                      isSelected: controller.selectedSportTypes.contains(sport),
-                      onTap: () => controller.toggleSportType(sport),
+                      label: sport.value,
+                      isSelected:
+                          controller.selectedSportTypes.contains(sport.value),
+                      onTap: () => controller.toggleSportType(sport.value),
                     ),
                   ),
                 ),

@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import '../../../turf/feed/turf_list_controller.dart';
 import 'nav_tabs.dart';
 
 class NavigationController extends GetxController {
@@ -14,6 +15,18 @@ class NavigationController extends GetxController {
     if (_currentIndex.value != index && index >= 0 && index < tabCount) {
       _currentIndex.value = index;
       _loadControllerForCurrentTab();
+    }
+  }
+
+  /// Switches to the Turfs tab and optionally applies a sport filter.
+  void goToTurfs({String? sportFilter}) {
+    final turfsIndex = kNavTabs.indexWhere((tab) => tab.label == 'Turfs');
+    if (turfsIndex < 0) return;
+
+    changeTab(turfsIndex);
+
+    if (sportFilter != null && Get.isRegistered<TurfListController>()) {
+      Get.find<TurfListController>().setSportFilter(sportFilter);
     }
   }
 
