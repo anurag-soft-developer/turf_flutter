@@ -136,6 +136,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     return switch (m) {
       NotificationModule.turfBooking => 'Turf booking',
       NotificationModule.matchmaking => 'Matchmaking',
+      NotificationModule.eventBooking => 'Event booking',
+      NotificationModule.teams => 'Teams',
+      NotificationModule.connections => 'Connections',
+      NotificationModule.withdrawals => 'Withdrawals',
+      NotificationModule.turfApproval => 'Turf approval',
     };
   }
 

@@ -6,10 +6,15 @@ export 'player_stats_models.dart';
 
 part 'user_model.g.dart';
 
-/// Backend `NotificationModule` string values (`turfBooking`, `matchmaking`).
+/// Backend `NotificationModule` string values.
 enum NotificationModule {
   turfBooking,
   matchmaking,
+  eventBooking,
+  teams,
+  connections,
+  withdrawals,
+  turfApproval,
 }
 
 extension NotificationModuleApi on NotificationModule {
@@ -17,6 +22,11 @@ extension NotificationModuleApi on NotificationModule {
   String get apiKey => switch (this) {
         NotificationModule.turfBooking => 'turfBooking',
         NotificationModule.matchmaking => 'matchmaking',
+        NotificationModule.eventBooking => 'eventBooking',
+        NotificationModule.teams => 'teams',
+        NotificationModule.connections => 'connections',
+        NotificationModule.withdrawals => 'withdrawals',
+        NotificationModule.turfApproval => 'turfApproval',
       };
 }
 
@@ -26,6 +36,16 @@ NotificationModule? notificationModuleFromApiString(String key) {
       return NotificationModule.turfBooking;
     case 'matchmaking':
       return NotificationModule.matchmaking;
+    case 'eventBooking':
+      return NotificationModule.eventBooking;
+    case 'teams':
+      return NotificationModule.teams;
+    case 'connections':
+      return NotificationModule.connections;
+    case 'withdrawals':
+      return NotificationModule.withdrawals;
+    case 'turfApproval':
+      return NotificationModule.turfApproval;
     default:
       return null;
   }

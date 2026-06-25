@@ -39,6 +39,16 @@ class ManageNotificationsScreen extends StatelessWidget {
             user?.notificationModules?[NotificationModule.turfBooking] ?? true;
         final matchmakingModuleOn =
             user?.notificationModules?[NotificationModule.matchmaking] ?? true;
+        final eventBookingModuleOn =
+            user?.notificationModules?[NotificationModule.eventBooking] ?? true;
+        final teamsModuleOn =
+            user?.notificationModules?[NotificationModule.teams] ?? true;
+        final connectionsModuleOn =
+            user?.notificationModules?[NotificationModule.connections] ?? true;
+        final withdrawalsModuleOn =
+            user?.notificationModules?[NotificationModule.withdrawals] ?? true;
+        final turfApprovalModuleOn =
+            user?.notificationModules?[NotificationModule.turfApproval] ?? true;
 
         final hasDeliveryChannel = smsOn || emailOn;
         final canEditChannels = masterOn && !busy;
@@ -49,48 +59,58 @@ class ManageNotificationsScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _SectionLabel(
-                title: 'All notifications',
-                subtitle:
-                    'Turn this off to pause push and all alerts below.',
-              ),
-              const SizedBox(height: 12),
-              Material(
-                color: _primary.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
+              Card(
+                elevation: 1,
+                color: _surface,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
+                    horizontal: 18,
+                    vertical: 16,
                   ),
-                  child: SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    secondary: Icon(
-                      Icons.notifications_active_rounded,
-                      color: busy ? theme.disabledColor : _primary,
-                      size: 28,
-                    ),
-                    title: Text(
-                      'Push & in-app',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: busy ? theme.disabledColor : _text,
-                        fontWeight: FontWeight.w600,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Notification',
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                color: busy ? theme.disabledColor : _text,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 18,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Turn this off to pause push and all alerts below.',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: busy
+                                    ? theme.disabledColor
+                                    : _textSecondary,
+                                height: 1.35,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    subtitle: Text(
-                      'Primary switch — controls whether notifications run at all.',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: busy ? theme.disabledColor : _textSecondary,
+                      const SizedBox(width: 16),
+                      Switch(
+                        value: masterOn,
+                        activeThumbColor: Colors.white,
+                        activeTrackColor: _primary,
+                        onChanged: busy
+                            ? null
+                            : (enabled) {
+                                authController.updateNotificationSettings(
+                                  notificationsEnabled: enabled,
+                                );
+                              },
                       ),
-                    ),
-                    value: masterOn,
-                    onChanged: busy
-                        ? null
-                        : (enabled) {
-                            authController.updateNotificationSettings(
-                              notificationsEnabled: enabled,
-                            );
-                          },
+                    ],
                   ),
                 ),
               ),
@@ -99,7 +119,7 @@ class ManageNotificationsScreen extends StatelessWidget {
                 title: 'Delivery channels',
                 subtitle: masterOn
                     ? 'How we reach you — texts and email.'
-                    : 'Enable “Push & in-app” above to change these.',
+                    : 'Enable notifications above to change these.',
               ),
               const SizedBox(height: 12),
               Card(
@@ -110,74 +130,30 @@ class ManageNotificationsScreen extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    SwitchListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 4,
-                      ),
-                      secondary: Icon(
-                        Icons.sms_outlined,
-                        color: canEditChannels
-                            ? _primary
-                            : theme.disabledColor,
-                      ),
-                      title: Text(
-                        'SMS',
-                        style: TextStyle(
-                          color: canEditChannels ? _text : theme.disabledColor,
-                        ),
-                      ),
-                      subtitle: Text(
-                        'Text messages for important alerts',
-                        style: TextStyle(
-                          color: canEditChannels
-                              ? _textSecondary
-                              : theme.disabledColor,
-                        ),
-                      ),
+                    _CompactSwitchTile(
+                      icon: Icons.sms_outlined,
+                      title: 'SMS',
+                      subtitle: 'Text messages for important alerts',
                       value: smsOn,
-                      onChanged: canEditChannels
-                          ? (enabled) {
-                              authController.updateNotificationSettings(
-                                smsNotificationsEnabled: enabled,
-                              );
-                            }
-                          : null,
+                      enabled: canEditChannels,
+                      onChanged: (enabled) {
+                        authController.updateNotificationSettings(
+                          smsNotificationsEnabled: enabled,
+                        );
+                      },
                     ),
                     const Divider(height: 1, color: _divider),
-                    SwitchListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 4,
-                      ),
-                      secondary: Icon(
-                        Icons.email_outlined,
-                        color: canEditChannels
-                            ? _primary
-                            : theme.disabledColor,
-                      ),
-                      title: Text(
-                        'Email',
-                        style: TextStyle(
-                          color: canEditChannels ? _text : theme.disabledColor,
-                        ),
-                      ),
-                      subtitle: Text(
-                        'Booking updates, reminders, and account alerts',
-                        style: TextStyle(
-                          color: canEditChannels
-                              ? _textSecondary
-                              : theme.disabledColor,
-                        ),
-                      ),
+                    _CompactSwitchTile(
+                      icon: Icons.email_outlined,
+                      title: 'Email',
+                      subtitle: 'Booking updates, reminders, and account alerts',
                       value: emailOn,
-                      onChanged: canEditChannels
-                          ? (enabled) {
-                              authController.updateNotificationSettings(
-                                emailNotificationsEnabled: enabled,
-                              );
-                            }
-                          : null,
+                      enabled: canEditChannels,
+                      onChanged: (enabled) {
+                        authController.updateNotificationSettings(
+                          emailNotificationsEnabled: enabled,
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -186,10 +162,10 @@ class ManageNotificationsScreen extends StatelessWidget {
               _SectionLabel(
                 title: 'Alerts by topic',
                 subtitle: !masterOn
-                    ? 'Enable “Push & in-app” above first.'
+                    ? 'Enable notifications above first.'
                     : !hasDeliveryChannel
                         ? 'Turn on SMS or Email above to choose topic alerts.'
-                        : 'Fine-tune turf and matchmaking notices.',
+                        : 'Fine-tune alerts by topic.',
               ),
               const SizedBox(height: 12),
               Card(
@@ -200,78 +176,109 @@ class ManageNotificationsScreen extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    SwitchListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 4,
-                      ),
-                      secondary: Icon(
-                        Icons.sports_soccer,
-                        color:
-                            canEditModules ? _primary : theme.disabledColor,
-                      ),
-                      title: Text(
-                        'Turf booking',
-                        style: TextStyle(
-                          color:
-                              canEditModules ? _text : theme.disabledColor,
-                        ),
-                      ),
-                      subtitle: Text(
-                        'Bookings, reminders, and turf-related notices',
-                        style: TextStyle(
-                          color: canEditModules
-                              ? _textSecondary
-                              : theme.disabledColor,
-                        ),
-                      ),
+                    _CompactSwitchTile(
+                      icon: Icons.sports_soccer,
+                      title: 'Turf booking',
+                      subtitle: 'Bookings, reminders, and turf-related notices',
                       value: turfModuleOn,
-                      onChanged: canEditModules
-                          ? (enabled) {
-                              authController.updateNotificationSettings(
-                                notificationModules: {
-                                  NotificationModule.turfBooking: enabled,
-                                },
-                              );
-                            }
-                          : null,
+                      enabled: canEditModules,
+                      onChanged: (enabled) {
+                        authController.updateNotificationSettings(
+                          notificationModules: {
+                            NotificationModule.turfBooking: enabled,
+                          },
+                        );
+                      },
                     ),
                     const Divider(height: 1, color: _divider),
-                    SwitchListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 4,
-                      ),
-                      secondary: Icon(
-                        Icons.groups_outlined,
-                        color:
-                            canEditModules ? _primary : theme.disabledColor,
-                      ),
-                      title: Text(
-                        'Matchmaking',
-                        style: TextStyle(
-                          color:
-                              canEditModules ? _text : theme.disabledColor,
-                        ),
-                      ),
-                      subtitle: Text(
-                        'Match requests and matchmaking updates',
-                        style: TextStyle(
-                          color: canEditModules
-                              ? _textSecondary
-                              : theme.disabledColor,
-                        ),
-                      ),
+                    _CompactSwitchTile(
+                      icon: Icons.groups_outlined,
+                      title: 'Matchmaking',
+                      subtitle: 'Match requests and matchmaking updates',
                       value: matchmakingModuleOn,
-                      onChanged: canEditModules
-                          ? (enabled) {
-                              authController.updateNotificationSettings(
-                                notificationModules: {
-                                  NotificationModule.matchmaking: enabled,
-                                },
-                              );
-                            }
-                          : null,
+                      enabled: canEditModules,
+                      onChanged: (enabled) {
+                        authController.updateNotificationSettings(
+                          notificationModules: {
+                            NotificationModule.matchmaking: enabled,
+                          },
+                        );
+                      },
+                    ),
+                    const Divider(height: 1, color: _divider),
+                    _CompactSwitchTile(
+                      icon: Icons.event_available_outlined,
+                      title: 'Event booking',
+                      subtitle: 'Event registrations and cancellations',
+                      value: eventBookingModuleOn,
+                      enabled: canEditModules,
+                      onChanged: (enabled) {
+                        authController.updateNotificationSettings(
+                          notificationModules: {
+                            NotificationModule.eventBooking: enabled,
+                          },
+                        );
+                      },
+                    ),
+                    const Divider(height: 1, color: _divider),
+                    _CompactSwitchTile(
+                      icon: Icons.shield_outlined,
+                      title: 'Teams',
+                      subtitle: 'Join requests and roster updates',
+                      value: teamsModuleOn,
+                      enabled: canEditModules,
+                      onChanged: (enabled) {
+                        authController.updateNotificationSettings(
+                          notificationModules: {
+                            NotificationModule.teams: enabled,
+                          },
+                        );
+                      },
+                    ),
+                    const Divider(height: 1, color: _divider),
+                    _CompactSwitchTile(
+                      icon: Icons.person_add_alt_1_outlined,
+                      title: 'Connections',
+                      subtitle: 'Connection requests and responses',
+                      value: connectionsModuleOn,
+                      enabled: canEditModules,
+                      onChanged: (enabled) {
+                        authController.updateNotificationSettings(
+                          notificationModules: {
+                            NotificationModule.connections: enabled,
+                          },
+                        );
+                      },
+                    ),
+                    const Divider(height: 1, color: _divider),
+                    _CompactSwitchTile(
+                      icon: Icons.account_balance_wallet_outlined,
+                      title: 'Withdrawals',
+                      subtitle: 'Payout and withdrawal status updates',
+                      value: withdrawalsModuleOn,
+                      enabled: canEditModules,
+                      onChanged: (enabled) {
+                        authController.updateNotificationSettings(
+                          notificationModules: {
+                            NotificationModule.withdrawals: enabled,
+                          },
+                        );
+                      },
+                    ),
+                    const Divider(height: 1, color: _divider),
+                    _CompactSwitchTile(
+                      icon: Icons.verified_outlined,
+                      title: 'Turf approval',
+                      subtitle: 'Turf listing review and publish updates',
+                      value: turfApprovalModuleOn,
+                      enabled: canEditModules,
+                      onChanged: (enabled) {
+                        authController.updateNotificationSettings(
+                          notificationModules: {
+                            NotificationModule.turfApproval: enabled,
+                          },
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -280,6 +287,82 @@ class ManageNotificationsScreen extends StatelessWidget {
           ),
         );
       }),
+    );
+  }
+}
+
+class _CompactSwitchTile extends StatelessWidget {
+  const _CompactSwitchTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.enabled,
+    required this.onChanged,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool value;
+  final bool enabled;
+  final ValueChanged<bool> onChanged;
+
+  static const Color _primary = Color(AppColors.primaryColor);
+  static const Color _text = Color(AppColors.textColor);
+  static const Color _textSecondary = Color(AppColors.textSecondaryColor);
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final textColor = enabled ? _text : theme.disabledColor;
+    final subtitleColor = enabled ? _textSecondary : theme.disabledColor;
+    final iconColor = enabled ? _primary : theme.disabledColor;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(icon, size: 18, color: iconColor),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: textColor,
+                    height: 1.2,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: subtitleColor,
+                    height: 1.25,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Transform.scale(
+            scale: 0.72,
+            child: Switch(
+              value: value,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              activeThumbColor: Colors.white,
+              activeTrackColor: _primary,
+              onChanged: enabled ? onChanged : null,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -301,8 +384,8 @@ class _SectionLabel extends StatelessWidget {
         Text(
           title,
           style: const TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w700,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
             color: Color(AppColors.textColor),
           ),
         ),

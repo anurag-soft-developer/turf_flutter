@@ -127,10 +127,14 @@ class _FeaturedTurfsSkeleton extends StatelessWidget {
 
             return SizedBox(
               height: 200,
-              width: pageWidth,
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: itemHorizontalPadding),
-                child: Card(
+              child: Center(
+                child: SizedBox(
+                  width: pageWidth,
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: itemHorizontalPadding,
+                    ),
+                    child: Card(
                   elevation: 4,
                   margin: EdgeInsets.zero,
                   clipBehavior: Clip.antiAlias,
@@ -204,7 +208,9 @@ class _FeaturedTurfsSkeleton extends StatelessWidget {
                   ),
                 ),
               ),
-            );
+            ),
+          ),
+        );
           },
         );
       },
