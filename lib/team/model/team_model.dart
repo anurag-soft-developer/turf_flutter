@@ -1,5 +1,7 @@
+import 'package:flutter/material.dart';
 import 'package:json_annotation/json_annotation.dart';
 
+import '../../core/config/sport_types.dart';
 import '../../core/models/location_model.dart';
 import '../../core/models/user_field_converters.dart';
 import '../../core/models/user_field_instance.dart';
@@ -9,7 +11,32 @@ export '../../core/models/location_model.dart';
 part 'team_model.g.dart';
 
 /// Backend [SportType].
-enum TeamSportType { cricket, football }
+enum TeamSportType {
+  football,
+  cricket,
+  basketball,
+  badminton,
+  tennis,
+  volleyball,
+  hockey,
+  table_tennis,
+  squash,
+  futsal,
+  kabaddi,
+  pickleball,
+  rugby,
+  baseball,
+  softball,
+  handball,
+  throwball,
+  netball,
+  athletics,
+  boxing,
+  martial_arts,
+  skating,
+  golf,
+  swimming,
+}
 
 /// Backend [TeamVisibility].
 enum TeamVisibility { public, private }
@@ -43,9 +70,19 @@ const int kTeamFilterMaxLimit = 50;
 /// Backend [SPORT_ROSTER_CONFIG] — roster bounds per sport (DTO validation).
 ({int min, int max}) teamSportRosterBounds(TeamSportType sport) {
   return switch (sport) {
-    TeamSportType.cricket => (min: 11, max: 15),
+    TeamSportType.cricket => (min: 5, max: 15),
     TeamSportType.football => (min: 5, max: 18),
+    _ => (min: 2, max: 20),
   };
+}
+
+List<TeamSportType> get rankingTeamSportTypes =>
+    TeamSportType.values.where((s) => s.config.rankingEnabled).toList();
+
+extension TeamSportTypeX on TeamSportType {
+  SportTypeConfig get config => SportTypes.byId(name)!;
+  String get label => config.label;
+  IconData get icon => config.icon;
 }
 
 List<String> _ownerIdsFromJson(dynamic json) {
@@ -560,6 +597,7 @@ class TeamModel {
     return switch (sportType) {
       TeamSportType.football => sportStats.football,
       TeamSportType.cricket => sportStats.cricket,
+      _ => null,
     };
   }
 }

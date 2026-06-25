@@ -14,7 +14,7 @@ class TeamsRankingController extends GetxController
   final Rx<TeamSportType> selectedSport = TeamSportType.cricket.obs;
 
   @override
-  List<TeamSportType> get tabKeys => TeamSportType.values;
+  List<TeamSportType> get tabKeys => rankingTeamSportTypes;
 
   @override
   bool get paginatedTabs => true;

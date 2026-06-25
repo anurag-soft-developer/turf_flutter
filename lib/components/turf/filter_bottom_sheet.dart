@@ -122,10 +122,11 @@ class FilterBottomSheet extends StatelessWidget {
             children: controller.availableSportTypes
                 .map(
                   (sport) => QuickFilterChip(
-                    label: sport.value,
+                    label: sport.label,
+                    icon: sport.icon,
                     isSelected:
-                        controller.selectedSportTypes.contains(sport.value),
-                    onTap: () => controller.toggleSportType(sport.value),
+                        controller.selectedSportTypes.contains(sport.id),
+                    onTap: () => controller.toggleSportType(sport.id),
                   ),
                 )
                 .toList(),

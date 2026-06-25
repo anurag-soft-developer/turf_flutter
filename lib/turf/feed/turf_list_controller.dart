@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
-import '../../core/config/turf_sport_types.dart';
+import '../../core/config/sport_types.dart';
 import '../model/turf_model.dart';
 // import '../models/common/paginated_response.dart';
 import '../turf_service.dart';
@@ -61,7 +61,7 @@ class TurfListController extends GetxController {
   RxInt get totalItems => _totalItems;
 
   // Filter options
-  final List<TurfSportType> availableSportTypes = TurfSportTypes.filterable;
+  final List<SportTypeConfig> availableSportTypes = SportTypes.catalog;
 
   final List<String> availableAmenities = [
     'Parking',
@@ -199,7 +199,7 @@ class TurfListController extends GetxController {
     if (sportType is! String) return;
 
     _selectedSportTypes.clear();
-    if (!TurfSportTypes.isAll(sportType)) {
+    if (!SportTypes.isAll(sportType)) {
       _selectedSportTypes.add(sportType);
     }
   }
@@ -207,7 +207,7 @@ class TurfListController extends GetxController {
   // Set sport filter directly (used when navigating from dashboard)
   void setSportFilter(String sportType) {
     _selectedSportTypes.clear();
-    if (!TurfSportTypes.isAll(sportType)) {
+    if (!SportTypes.isAll(sportType)) {
       _selectedSportTypes.add(sportType);
     }
     searchTurfs();

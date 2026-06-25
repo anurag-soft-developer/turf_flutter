@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../core/components/bottom_navigation_panel/navigation_controller.dart';
 import '../../core/config/constants.dart';
-import '../../core/config/turf_sport_types.dart';
+import '../../core/config/sport_types.dart';
 
 class SportsSection extends StatelessWidget {
   const SportsSection({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final sports = TurfSportTypes.filterable;
+    final sports = SportTypes.catalog;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -49,9 +49,9 @@ class SportsSection extends StatelessWidget {
     );
   }
 
-  Widget _buildSportCard({required TurfSportType sport}) {
+  Widget _buildSportCard({required SportTypeConfig sport}) {
     return InkWell(
-      onTap: () => _navigateToTurfList(sport.value),
+      onTap: () => _navigateToTurfList(sport.id),
       borderRadius: BorderRadius.circular(12),
       child: Container(
         width: 72,
@@ -84,7 +84,7 @@ class SportsSection extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              sport.value,
+              sport.label,
               style: const TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,

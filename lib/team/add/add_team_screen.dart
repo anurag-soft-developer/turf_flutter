@@ -7,8 +7,8 @@ import '../../components/create_turf/section_container.dart';
 import '../../core/models/media_upload_models.dart';
 import '../../components/create_turf/styled_text_field.dart';
 import '../../core/config/constants.dart';
+import '../../rankings/widgets/rank_sport_filter.dart';
 import '../model/team_model.dart';
-import '../utils/team_ui.dart';
 import 'add_team_controller.dart';
 
 class AddTeamScreen extends StatelessWidget {
@@ -149,12 +149,28 @@ class _BasicInfoSection extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         if (!controller.isEditing) ...[
-          _StyledDropdown<TeamSportType>(
-            label: 'Sport',
-            value: controller.sportType,
-            items: TeamSportType.values,
-            itemLabel: teamSportLabel,
-            onChanged: (v) => controller.sportType.value = v,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Sport',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Color(AppColors.textSecondaryColor),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Obx(
+                () => SportFilterPicker(
+                  value: controller.sportType.value,
+                  sports: TeamSportType.values,
+                  sheetTitle: 'Select sport',
+                  searchable: true,
+                  onChanged: (v) => controller.sportType.value = v,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
         ],

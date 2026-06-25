@@ -109,6 +109,7 @@ MatchTeamScoreLine? scoreForTeam(TeamMatchModel match, String? teamId) {
       if (goals == null) return null;
       return MatchTeamScoreLine(main: '$goals');
     }(),
+    _ => null,
   };
 }
 

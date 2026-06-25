@@ -1,14 +1,7 @@
 import '../model/team_model.dart';
 import '../members/model/team_member_model.dart';
 
-String teamSportLabel(TeamSportType type) {
-  switch (type) {
-    case TeamSportType.cricket:
-      return 'Cricket';
-    case TeamSportType.football:
-      return 'Football';
-  }
-}
+String teamSportLabel(TeamSportType type) => type.label;
 
 String teamVisibilityLabel(TeamVisibility v) {
   switch (v) {

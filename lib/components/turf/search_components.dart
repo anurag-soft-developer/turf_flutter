@@ -39,23 +39,30 @@ class QuickFilterChip extends StatelessWidget {
   final String label;
   final bool isSelected;
   final VoidCallback onTap;
+  final IconData? icon;
 
   const QuickFilterChip({
     super.key,
     required this.label,
     required this.isSelected,
     required this.onTap,
+    this.icon,
   });
 
   @override
   Widget build(BuildContext context) {
+    final foregroundColor = isSelected
+        ? Colors.white
+        : const Color(AppColors.primaryColor);
+
     return FilterChip(
+      avatar: icon == null
+          ? null
+          : Icon(icon, size: 16, color: foregroundColor),
       label: Text(
         label,
         style: TextStyle(
-          color: isSelected
-              ? Colors.white
-              : const Color(AppColors.primaryColor),
+          color: foregroundColor,
           fontWeight: FontWeight.w500,
         ),
       ),
@@ -64,6 +71,7 @@ class QuickFilterChip extends StatelessWidget {
       backgroundColor: Colors.white,
       selectedColor: const Color(AppColors.secondaryColor),
       checkmarkColor: Colors.white,
+      showCheckmark: icon == null,
       side: BorderSide(
         color: isSelected
             ? const Color(AppColors.secondaryColor)
@@ -139,10 +147,11 @@ class QuickFiltersRow extends StatelessWidget {
                   (sport) => Padding(
                     padding: const EdgeInsets.only(right: 8.0),
                     child: QuickFilterChip(
-                      label: sport.value,
+                      label: sport.label,
+                      icon: sport.icon,
                       isSelected:
-                          controller.selectedSportTypes.contains(sport.value),
-                      onTap: () => controller.toggleSportType(sport.value),
+                          controller.selectedSportTypes.contains(sport.id),
+                      onTap: () => controller.toggleSportType(sport.id),
                     ),
                   ),
                 ),

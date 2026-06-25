@@ -2,49 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../components/match_up/team_logo.dart';
-import '../../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
 import '../../core/config/constants.dart';
+import '../../rankings/widgets/rank_sport_filter.dart';
 import '../model/team_model.dart';
 import '../utils/team_ui.dart';
 import 'team_openings_controller.dart';
 
-class TeamOpeningsScreen extends StatefulWidget {
+class TeamOpeningsScreen extends StatelessWidget {
   const TeamOpeningsScreen({super.key});
-
-  @override
-  State<TeamOpeningsScreen> createState() => _TeamOpeningsScreenState();
-}
-
-class _TeamOpeningsScreenState extends State<TeamOpeningsScreen>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    final controller = Get.find<TeamOpeningsController>();
-    final sports = TeamSportType.values;
-    final selected = sports.indexOf(controller.selectedSport.value);
-    _tabController = TabController(
-      length: sports.length,
-      vsync: this,
-      initialIndex: selected < 0 ? 0 : selected,
-    );
-    _tabController.addListener(() {
-      if (_tabController.indexIsChanging) return;
-      final idx = _tabController.index;
-      if (idx >= 0 && idx < sports.length) {
-        controller.switchSport(sports[idx]);
-      }
-    });
-    controller.ensureSportLoaded(controller.selectedSport.value);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -63,39 +28,23 @@ class _TeamOpeningsScreenState extends State<TeamOpeningsScreen>
         ],
       ),
       body: Obx(() {
-        final sports = TeamSportType.values;
-        final currentIndex = sports.indexOf(controller.selectedSport.value);
-        final safeIndex = currentIndex < 0 ? 0 : currentIndex;
-        if (_tabController.index != safeIndex) {
-          _tabController.animateTo(safeIndex);
-        }
+        final sport = controller.selectedSport.value;
         return Column(
           children: [
-            AppSegmentedTabs(
-              controller: _tabController,
-              onTap: (index) => controller.switchSport(sports[index]),
-              items: sports
-                  .map(
-                    (sport) => AppTabItem(
-                      label: teamSportLabel(sport),
-                      icon: sport == TeamSportType.cricket
-                          ? Icons.sports_cricket
-                          : Icons.sports_soccer,
-                    ),
-                  )
-                  .toList(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: SportFilterPicker(
+                value: sport,
+                sports: TeamSportType.values,
+                sheetTitle: 'Filter by sport',
+                searchable: true,
+                onChanged: controller.switchSport,
+              ),
             ),
             Expanded(
-              child: AppSegmentedTabView(
-                controller: _tabController,
-                children: sports
-                    .map(
-                      (sport) => _OpeningsTabContent(
-                        controller: controller,
-                        sport: sport,
-                      ),
-                    )
-                    .toList(),
+              child: _OpeningsTabContent(
+                controller: controller,
+                sport: sport,
               ),
             ),
           ],

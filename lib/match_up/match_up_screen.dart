@@ -4,51 +4,17 @@ import 'package:get/get.dart';
 
 import '../components/match_up/my_team_selector.dart';
 import '../components/match_up/team_search_components.dart';
-import '../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
 import '../components/match_up/team_logo.dart';
 import '../components/match_up/team_stats_row.dart';
+import '../components/shared/app_segmented_tabs/segmented_tab_cache_controller.dart';
 import '../core/config/constants.dart';
+import '../rankings/widgets/rank_sport_filter.dart';
 import '../team/members/model/team_member_model.dart';
 import '../team/model/team_model.dart';
 import 'match_up_controller.dart';
 
-class MatchUpScreen extends StatefulWidget {
+class MatchUpScreen extends StatelessWidget {
   const MatchUpScreen({super.key});
-
-  @override
-  State<MatchUpScreen> createState() => _MatchUpScreenState();
-}
-
-class _MatchUpScreenState extends State<MatchUpScreen>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    final c = Get.find<MatchUpController>();
-    final sports = TeamSportType.values;
-    final selected = sports.indexOf(c.selectedSport.value);
-    _tabController = TabController(
-      length: sports.length,
-      vsync: this,
-      initialIndex: selected < 0 ? 0 : selected,
-    );
-    _tabController.addListener(() {
-      if (_tabController.indexIsChanging) return;
-      final idx = _tabController.index;
-      if (idx >= 0 && idx < sports.length) {
-        c.switchSport(sports[idx]);
-      }
-    });
-    c.ensureSportFeedLoaded(c.selectedSport.value);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -68,14 +34,6 @@ class _MatchUpScreenState extends State<MatchUpScreen>
         ],
       ),
       body: Obx(() {
-        final sports = TeamSportType.values;
-        final currentIndex = sports.indexOf(c.selectedSport.value);
-        final safeIndex = currentIndex < 0 ? 0 : currentIndex;
-
-        if (_tabController.index != safeIndex) {
-          _tabController.animateTo(safeIndex);
-        }
-
         if (c.isLoadingMyTeams.value) {
           return const Center(
             child: CircularProgressIndicator(
@@ -86,43 +44,32 @@ class _MatchUpScreenState extends State<MatchUpScreen>
           );
         }
 
+        final sport = c.selectedSport.value;
+        final teamsForSport = _teamsForSport(c.myMemberships, sport);
+        final feedState = c.feedStateForSport(sport);
+
         return Column(
           children: [
             TeamSearchSection(controller: c),
-            AppSegmentedTabs(
-              controller: _tabController,
-              onTap: (index) => c.switchSport(sports[index]),
-              items: sports
-                  .map(
-                    (sport) => AppTabItem(
-                      label: sport == TeamSportType.cricket
-                          ? 'Cricket'
-                          : 'Football',
-                      icon: sport == TeamSportType.cricket
-                          ? Icons.sports_cricket
-                          : Icons.sports_soccer,
-                    ),
-                  )
-                  .toList(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: SportFilterPicker(
+                value: sport,
+                sports: TeamSportType.values,
+                sheetTitle: 'Filter by sport',
+                searchable: true,
+                onChanged: c.switchSport,
+              ),
             ),
             Expanded(
-              child: AppSegmentedTabView(
-                controller: _tabController,
-                children: List.generate(sports.length, (index) {
-                  final sport = sports[index];
-                  final teamsForSport = _teamsForSport(c.myMemberships, sport);
-                  final feedState = c.feedStateForSport(sport);
-
-                  return _SportFeedSection(
-                    sport: sport,
-                    hasTeams: teamsForSport.isNotEmpty,
-                    feedState: feedState,
-                    controller: c,
-                    onRefresh: () => c.reloadSport(sport),
-                    onLoadMore: () => c.loadMoreSport(sport),
-                    onChallenge: (team) => _confirmChallenge(context, c, team),
-                  );
-                }),
+              child: _SportFeedSection(
+                sport: sport,
+                hasTeams: teamsForSport.isNotEmpty,
+                feedState: feedState,
+                controller: c,
+                onRefresh: () => c.reloadSport(sport),
+                onLoadMore: () => c.loadMoreSport(sport),
+                onChallenge: (team) => _confirmChallenge(context, c, team),
               ),
             ),
           ],
@@ -172,7 +119,6 @@ class _MatchUpScreenState extends State<MatchUpScreen>
     );
   }
 }
-
 class _SportFeedSection extends StatelessWidget {
   const _SportFeedSection({
     required this.sport,

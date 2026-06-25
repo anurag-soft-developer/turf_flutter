@@ -33,12 +33,11 @@ Future<void> openManageAnnouncedPlayersSheet({
 }
 
 AnnouncedPlayerRole _defaultRoleForSport(TeamSportType sport) {
-  switch (sport) {
-    case TeamSportType.cricket:
-      return AnnouncedPlayerRole.batsman;
-    case TeamSportType.football:
-      return AnnouncedPlayerRole.allrounder;
-  }
+  return switch (sport) {
+    TeamSportType.cricket => AnnouncedPlayerRole.batsman,
+    TeamSportType.football => AnnouncedPlayerRole.allrounder,
+    _ => AnnouncedPlayerRole.allrounder,
+  };
 }
 
 class _ManageAnnouncedPlayersSheetBody extends StatefulWidget {

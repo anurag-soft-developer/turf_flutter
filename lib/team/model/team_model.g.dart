@@ -201,8 +201,30 @@ const _$TeamPreferredTimeSlotEnumMap = {
 };
 
 const _$TeamSportTypeEnumMap = {
-  TeamSportType.cricket: 'cricket',
   TeamSportType.football: 'football',
+  TeamSportType.cricket: 'cricket',
+  TeamSportType.basketball: 'basketball',
+  TeamSportType.badminton: 'badminton',
+  TeamSportType.tennis: 'tennis',
+  TeamSportType.volleyball: 'volleyball',
+  TeamSportType.hockey: 'hockey',
+  TeamSportType.table_tennis: 'table_tennis',
+  TeamSportType.squash: 'squash',
+  TeamSportType.futsal: 'futsal',
+  TeamSportType.kabaddi: 'kabaddi',
+  TeamSportType.pickleball: 'pickleball',
+  TeamSportType.rugby: 'rugby',
+  TeamSportType.baseball: 'baseball',
+  TeamSportType.softball: 'softball',
+  TeamSportType.handball: 'handball',
+  TeamSportType.throwball: 'throwball',
+  TeamSportType.netball: 'netball',
+  TeamSportType.athletics: 'athletics',
+  TeamSportType.boxing: 'boxing',
+  TeamSportType.martial_arts: 'martial_arts',
+  TeamSportType.skating: 'skating',
+  TeamSportType.golf: 'golf',
+  TeamSportType.swimming: 'swimming',
 };
 
 const _$TeamVisibilityEnumMap = {
