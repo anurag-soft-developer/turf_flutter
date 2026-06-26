@@ -12,15 +12,21 @@ import 'match_challenge_detail_controller.dart';
 import 'match_challenge_versus_header.dart';
 
 Future<T?>? openMatchChallengeDetail<T>({
-  required TeamMatchModel match,
-  required bool isIncoming,
+  TeamMatchModel? match,
+  String? matchId,
+  bool? isIncoming,
 }) {
+  assert(
+    match != null || (matchId != null && matchId.isNotEmpty),
+    'Provide match or matchId',
+  );
   return Get.to<T>(
     () => const MatchChallengeDetailScreen(),
     binding: BindingsBuilder(
       () => Get.lazyPut(
         () => MatchChallengeDetailController(
           initialMatch: match,
+          matchId: matchId,
           isIncoming: isIncoming,
         ),
       ),
@@ -45,12 +51,51 @@ class MatchChallengeDetailScreen extends GetView<MatchChallengeDetailController>
           ),
         ],
       ),
-      body: Obx(() => _buildDetailsBody(context)),
+      body: Obx(() {
+        if (controller.isInitialLoading.value) {
+          return const Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(
+                Color(AppColors.primaryColor),
+              ),
+            ),
+          );
+        }
+        if (controller.loadError.value != null) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    controller.loadError.value!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Color(AppColors.textSecondaryColor),
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  OutlinedButton(
+                    onPressed: () => Get.back(),
+                    child: const Text('Go back'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        return _buildDetailsBody(context);
+      }),
     );
   }
 
   Widget _buildDetailsBody(BuildContext context) {
     final currentMatch = controller.match.value;
+    if (currentMatch == null) {
+      return const SizedBox.shrink();
+    }
     final acceptedSlotCandidates = currentMatch.proposedSlots.where((slot) {
       if (currentMatch.selectedSlotProposalId != null) {
         return slot.proposalId == currentMatch.selectedSlotProposalId;

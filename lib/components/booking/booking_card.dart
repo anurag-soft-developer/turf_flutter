@@ -148,7 +148,10 @@ class BookingCard extends StatelessWidget {
         booking.status == TurfBookingStatus.completed) {
       Get.toNamed(
         AppConstants.routes.bookingTicket,
-        arguments: {'booking': booking},
+        arguments: {
+          'bookingId': booking.id ?? booking.bookingId,
+          'booking': booking,
+        },
       );
     } else {
       AppSnackbar.error(

@@ -147,7 +147,10 @@ class TurfDetailController extends GetxController {
         await loadTimeSlots();
         Get.toNamed(
           AppConstants.routes.bookingTicket,
-          arguments: {'booking': verifiedBooking},
+          arguments: {
+            'bookingId': verifiedBooking.id ?? verifiedBooking.bookingId,
+            'booking': verifiedBooking,
+          },
         );
         return;
       }

@@ -3,31 +3,143 @@ import 'package:get/get.dart';
 import 'package:pretty_qr_code/pretty_qr_code.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../turf_booking/model/turf_booking_model.dart';
+import '../../turf_booking/turf_booking_service.dart';
 import '../../core/config/constants.dart';
 import 'booking_reference_card.dart';
 
-class BookingTicketScreen extends StatelessWidget {
-  final TurfBookingModel? booking;
+class BookingTicketScreen extends StatefulWidget {
+  const BookingTicketScreen({super.key});
 
-  const BookingTicketScreen({super.key, this.booking});
+  @override
+  State<BookingTicketScreen> createState() => _BookingTicketScreenState();
+}
 
-  TurfBookingModel _resolveBooking() {
-    if (booking != null) return booking!;
+class _BookingTicketScreenState extends State<BookingTicketScreen> {
+  final TurfBookingService _bookingService = TurfBookingService();
 
-    final args = Get.arguments;
-    if (args is Map<String, dynamic>) {
-      final routeBooking = args['booking'];
-      if (routeBooking is TurfBookingModel) {
-        return routeBooking;
-      }
+  TurfBookingModel? _booking;
+  bool _isLoading = true;
+  String? _loadError;
+
+  @override
+  void initState() {
+    super.initState();
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    final args = (Get.arguments as Map?)?.cast<String, dynamic>() ?? const {};
+    final routeBooking = args['booking'];
+    if (routeBooking is TurfBookingModel) {
+      setState(() {
+        _booking = routeBooking;
+        _isLoading = false;
+      });
+      return;
     }
 
-    throw Exception('Booking ticket requires a TurfBookingModel argument.');
+    final bookingId = _resolveBookingId(args);
+    if (bookingId == null || bookingId.isEmpty) {
+      setState(() {
+        _loadError = 'Booking not found.';
+        _isLoading = false;
+      });
+      return;
+    }
+
+    final fetched = await _bookingService.findById(bookingId);
+    if (!mounted) return;
+
+    if (fetched == null) {
+      setState(() {
+        _loadError = 'Could not load booking.';
+        _isLoading = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _booking = fetched;
+      _isLoading = false;
+    });
+  }
+
+  String? _resolveBookingId(Map<String, dynamic> args) {
+    final fromArg = args['bookingId']?.toString();
+    if (fromArg != null && fromArg.isNotEmpty) return fromArg;
+
+    final booking = args['booking'];
+    if (booking is TurfBookingModel) {
+      return booking.id ?? booking.bookingId;
+    }
+    return null;
   }
 
   @override
   Widget build(BuildContext context) {
-    final booking = _resolveBooking();
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: const Color(AppColors.primaryColor),
+        appBar: AppBar(
+          backgroundColor: const Color(AppColors.primaryColor),
+          elevation: 0,
+          title: const Text(
+            'Ticket',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Get.back(),
+          ),
+        ),
+        body: const Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+          ),
+        ),
+      );
+    }
+
+    if (_loadError != null || _booking == null) {
+      return Scaffold(
+        backgroundColor: const Color(AppColors.backgroundColor),
+        appBar: AppBar(
+          title: const Text('Ticket'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Get.back(),
+          ),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _loadError ?? 'Booking not found.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Color(AppColors.textSecondaryColor),
+                    fontSize: 15,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                OutlinedButton(
+                  onPressed: () => Get.back(),
+                  child: const Text('Go back'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return _buildTicketContent(_booking!);
+  }
+
+  Widget _buildTicketContent(TurfBookingModel booking) {
     return Scaffold(
       backgroundColor: const Color(AppColors.primaryColor),
       appBar: AppBar(
@@ -61,9 +173,6 @@ class BookingTicketScreen extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-                // Ticket ID header with copy button
-
-                // Turf name section
                 Container(
                   margin: const EdgeInsets.symmetric(
                     horizontal: 10,
@@ -173,7 +282,6 @@ class BookingTicketScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-                // Main ticket card
                 Card(
                   elevation: 12,
                   shape: RoundedRectangleBorder(
@@ -192,8 +300,6 @@ class BookingTicketScreen extends StatelessWidget {
                         BookingReferenceCard(
                           bookingId: booking.bookingId ?? booking.id,
                         ),
-
-                        // QR Code section
                         Center(
                           child: Container(
                             padding: const EdgeInsets.all(16),
@@ -219,19 +325,7 @@ class BookingTicketScreen extends StatelessWidget {
                             ),
                           ),
                         ),
-
                         const SizedBox(height: 18),
-
-                        // Booking details section
-                        // const Text(
-                        //   'Booking Details',
-                        //   style: TextStyle(
-                        //     fontSize: 20,
-                        //     fontWeight: FontWeight.bold,
-                        //     color: Color(AppColors.textColor),
-                        //   ),
-                        // ),
-                        // const SizedBox(height: 16),
                         _DetailRow(
                           icon: Icons.access_time,
                           iconColor: Colors.blue,
@@ -269,10 +363,7 @@ class BookingTicketScreen extends StatelessWidget {
                           value:
                               booking.status?.name.toUpperCase() ?? 'UNKNOWN',
                         ),
-
                         const SizedBox(height: 24),
-
-                        // Instructions
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
@@ -304,7 +395,6 @@ class BookingTicketScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 20),
               ],
             ),
@@ -355,7 +445,10 @@ Show this at the turf for check-in!
   static void show(TurfBookingModel booking) {
     Get.toNamed(
       AppConstants.routes.bookingTicket,
-      arguments: {'booking': booking},
+      arguments: {
+        'bookingId': booking.id ?? booking.bookingId,
+        'booking': booking,
+      },
     );
   }
 }

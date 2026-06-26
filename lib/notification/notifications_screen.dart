@@ -4,6 +4,7 @@ import 'package:flutter_application_1/core/models/paginated_response.dart';
 import 'package:flutter_application_1/core/models/user/user_model.dart';
 import 'package:flutter_application_1/core/utils/app_snackbar.dart';
 import 'package:flutter_application_1/notification/model/notification_model.dart';
+import 'package:flutter_application_1/notification/notification_router.dart';
 import 'package:flutter_application_1/notification/notification_service.dart';
 import 'package:intl/intl.dart';
 
@@ -27,6 +28,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   bool _loadingMore = false;
   bool _hasMore = true;
   String? _error;
+  String? _tappingId;
 
   static const int _pageSize = 20;
 
@@ -104,13 +106,27 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _onTap(AppNotification n) async {
-    if (n.isRead) return;
-    final updated = await _service.markRead(n.id);
-    if (!mounted) return;
-    if (updated != null) {
-      final i = _items.indexWhere((e) => e.id == n.id);
-      if (i != -1) {
-        setState(() => _items[i] = updated);
+    if (_tappingId == n.id) return;
+    _tappingId = n.id;
+
+    try {
+      if (!n.isRead) {
+        final updated = await _service.markRead(n.id);
+        if (!mounted) return;
+        if (updated != null) {
+          final i = _items.indexWhere((e) => e.id == n.id);
+          if (i != -1) {
+            setState(() => _items[i] = updated);
+          }
+        }
+      }
+
+      if (!mounted) return;
+      debugPrint('notification: ${n.toJson()}');
+      await NotificationRouter.open(n);
+    } finally {
+      if (mounted) {
+        setState(() => _tappingId = null);
       }
     }
   }

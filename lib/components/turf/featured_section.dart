@@ -68,9 +68,7 @@ class _FeaturedTurfsSectionState extends State<FeaturedTurfsSection> {
               itemCount: turfs.length,
               itemBuilder: (context, index) {
                 return Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: _itemHorizontalPadding,
-                  ),
+                  padding: const EdgeInsets.only(right: _itemHorizontalPadding),
                   child: FeaturedTurfCard(
                     turf: turfs[index],
                     controller: _controller,
