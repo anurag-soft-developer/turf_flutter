@@ -58,12 +58,7 @@ class MyTeamsScreen extends StatelessWidget {
               children: [
                 for (var i = 0; i < controller.memberships.length; i++) ...[
                   if (i > 0) const SizedBox(height: 12),
-                  _TeamCard(
-                    membership: controller.memberships[i],
-                    roleLabel: controller.roleLabel(
-                      controller.memberships[i],
-                    ),
-                  ),
+                  _TeamCard(membership: controller.memberships[i]),
                 ],
                 Obx(
                   () => controller.isLoadingMore.value
@@ -93,10 +88,9 @@ class MyTeamsScreen extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _TeamCard extends StatelessWidget {
-  const _TeamCard({required this.membership, required this.roleLabel});
+  const _TeamCard({required this.membership});
 
   final TeamMemberModel membership;
-  final String roleLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -170,52 +164,16 @@ class _TeamCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        if (sportType != null) ...[
-                          Text(
-                            teamSportLabel(sportType),
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: Color(AppColors.textSecondaryColor),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            width: 4,
-                            height: 4,
-                            decoration: BoxDecoration(
-                              color: const Color(
-                                AppColors.textSecondaryColor,
-                              ).withValues(alpha: 0.5),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                        ],
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(
-                              AppColors.primaryColor,
-                            ).withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            roleLabel,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: Color(AppColors.primaryColor),
-                            ),
-                          ),
+                    if (sportType != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        teamSportLabel(sportType),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(AppColors.textSecondaryColor),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ],
                 ),
               ),

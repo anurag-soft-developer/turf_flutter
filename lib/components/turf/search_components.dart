@@ -4,6 +4,7 @@ import '../../core/config/constants.dart';
 import '../../turf/feed/turf_list_controller.dart';
 import '../../core/components/bottom_sheets/city_picker_bottom_sheet.dart';
 import '../shared/custom_text_field.dart';
+import 'turf_filter_bottom_sheets.dart';
 
 class TurfSearchBar extends StatelessWidget {
   final TurfListController controller;
@@ -81,6 +82,103 @@ class QuickFilterChip extends StatelessWidget {
   }
 }
 
+class FilterFieldChip extends StatelessWidget {
+  final String label;
+  final IconData? icon;
+  final bool isActive;
+  final VoidCallback onPressed;
+
+  const FilterFieldChip({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.icon,
+    this.isActive = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final borderColor = isActive
+        ? const Color(AppColors.secondaryColor)
+        : const Color(AppColors.primaryColor);
+
+    return ActionChip(
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+      avatar: icon == null
+          ? null
+          : Icon(icon, size: 16, color: borderColor),
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 120),
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: borderColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Icon(Icons.arrow_drop_down, color: borderColor),
+        ],
+      ),
+      backgroundColor: isActive
+          ? const Color(AppColors.secondaryColor).withValues(alpha: 0.12)
+          : Colors.white,
+      side: BorderSide(color: borderColor),
+      onPressed: onPressed,
+    );
+  }
+}
+
+String _multiSelectLabel({
+  required String placeholder,
+  required List<String> selected,
+  required List<String> Function(List<String> selected) resolveLabels,
+}) {
+  if (selected.isEmpty) return placeholder;
+
+  final labels = resolveLabels(selected);
+  if (labels.isEmpty) return placeholder;
+  if (labels.length == 1) return labels.first;
+  return '${labels.first} +${labels.length - 1}';
+}
+
+String _sportTypesLabel(TurfListController controller) {
+  return _multiSelectLabel(
+    placeholder: 'Sports',
+    selected: controller.selectedSportTypes,
+    resolveLabels: (selected) => controller.availableSportTypes
+        .where((sport) => selected.contains(sport.id))
+        .map((sport) => sport.label)
+        .toList(),
+  );
+}
+
+String _amenitiesLabel(TurfListController controller) {
+  return _multiSelectLabel(
+    placeholder: 'Amenities',
+    selected: controller.selectedAmenities,
+    resolveLabels: (selected) => selected,
+  );
+}
+
+String _priceLabel(TurfListController controller) {
+  final min = controller.minPrice.value;
+  final max = controller.maxPrice.value;
+  if (min <= 0 && max >= 5000) return 'Price';
+  return '₹${min.toInt()}-₹${max.toInt()}';
+}
+
+String _ratingLabel(TurfListController controller) {
+  final rating = controller.selectedRating.value;
+  if (rating <= 0) return 'Rating';
+  return '${rating.toStringAsFixed(1)}+';
+}
+
 class QuickFiltersRow extends StatelessWidget {
   final TurfListController controller;
 
@@ -109,52 +207,45 @@ class QuickFiltersRow extends StatelessWidget {
 
         return Row(
           children: [
-            ActionChip(
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-              avatar: const Icon(
-                Icons.location_city,
-                size: 16,
-                color: Color(AppColors.primaryColor),
-              ),
-              label: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 140),
-                    child: Text(
-                      cityLabel,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Color(AppColors.primaryColor),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  const Icon(
-                    Icons.arrow_drop_down,
-                    color: Color(AppColors.primaryColor),
-                  ),
-                ],
-              ),
-              backgroundColor: Colors.white,
-              side: const BorderSide(color: Color(AppColors.primaryColor)),
+            FilterFieldChip(
+              label: cityLabel,
+              icon: Icons.location_city,
+              isActive: city.isNotEmpty,
               onPressed: () => _showCityPickerBottomSheet(context),
             ),
             const SizedBox(width: 8),
-            ...controller.availableSportTypes
-                .map(
-                  (sport) => Padding(
-                    padding: const EdgeInsets.only(right: 8.0),
-                    child: QuickFilterChip(
-                      label: sport.label,
-                      icon: sport.icon,
-                      isSelected:
-                          controller.selectedSportTypes.contains(sport.id),
-                      onTap: () => controller.toggleSportType(sport.id),
-                    ),
-                  ),
-                ),
+            FilterFieldChip(
+              label: _sportTypesLabel(controller),
+              icon: Icons.sports,
+              isActive: controller.selectedSportTypes.isNotEmpty,
+              onPressed: () =>
+                  SportTypesFilterBottomSheet.show(context, controller),
+            ),
+            const SizedBox(width: 8),
+            FilterFieldChip(
+              label: _amenitiesLabel(controller),
+              icon: Icons.local_offer_outlined,
+              isActive: controller.selectedAmenities.isNotEmpty,
+              onPressed: () =>
+                  AmenitiesFilterBottomSheet.show(context, controller),
+            ),
+            const SizedBox(width: 8),
+            FilterFieldChip(
+              label: _priceLabel(controller),
+              icon: Icons.currency_rupee,
+              isActive: controller.minPrice.value > 0 ||
+                  controller.maxPrice.value < 5000,
+              onPressed: () =>
+                  PriceRangeFilterBottomSheet.show(context, controller),
+            ),
+            const SizedBox(width: 8),
+            FilterFieldChip(
+              label: _ratingLabel(controller),
+              icon: Icons.star_outline,
+              isActive: controller.selectedRating.value > 0,
+              onPressed: () =>
+                  RatingFilterBottomSheet.show(context, controller),
+            ),
           ],
         );
       }),

@@ -5,6 +5,7 @@ import '../../core/config/constants.dart';
 import '../../core/utils/app_snackbar.dart';
 import '../members/model/team_member_model.dart';
 import '../team_service.dart';
+import '../utils/team_ui.dart';
 
 /// Owner-only: full roster (active + suspended) with management actions.
 class TeamRosterManageController extends GetxController {
@@ -61,6 +62,12 @@ class TeamRosterManageController extends GetxController {
   }
 
   int _sortMembers(TeamMemberModel a, TeamMemberModel b) {
+    int leadershipOrder(LeadershipRole? r) {
+      if (r == LeadershipRole.captain) return 0;
+      if (r == LeadershipRole.viceCaptain) return 1;
+      return 2;
+    }
+
     const order = {
       TeamMemberStatus.active: 0,
       TeamMemberStatus.suspended: 1,
@@ -68,6 +75,11 @@ class TeamRosterManageController extends GetxController {
     final oa = order[a.status] ?? 9;
     final ob = order[b.status] ?? 9;
     if (oa != ob) return oa.compareTo(ob);
+
+    final la = leadershipOrder(a.leadershipRole);
+    final lb = leadershipOrder(b.leadershipRole);
+    if (la != lb) return la.compareTo(lb);
+
     return a.userHelper
         .getDisplayName()
         .toLowerCase()
@@ -195,6 +207,55 @@ class TeamRosterManageController extends GetxController {
       } else {
         AppSnackbar.error(
           title: 'Could not unsuspend',
+          message: 'Try again later.',
+        );
+      }
+    } finally {
+      actionTargetId.value = null;
+    }
+  }
+
+  Future<void> assignCaptain(TeamMemberModel m) async {
+    await _updateLeadershipRole(
+      m,
+      UpdateTeamMemberRequest(leadershipRole: LeadershipRole.captain),
+      'Captain updated',
+    );
+  }
+
+  Future<void> assignViceCaptain(TeamMemberModel m) async {
+    await _updateLeadershipRole(
+      m,
+      UpdateTeamMemberRequest(leadershipRole: LeadershipRole.viceCaptain),
+      'Vice captain updated',
+    );
+  }
+
+  Future<void> _updateLeadershipRole(
+    TeamMemberModel m,
+    UpdateTeamMemberRequest request,
+    String successTitle,
+  ) async {
+    if (_teamId == null || m.status != TeamMemberStatus.active) return;
+    final mid = m.id;
+    if (mid == null || mid.isEmpty) return;
+
+    actionTargetId.value = mid;
+    try {
+      final res = await _teamService.memberService.updateMember(
+        _teamId!,
+        mid,
+        request,
+      );
+      if (res != null) {
+        AppSnackbar.success(
+          title: successTitle,
+          message: '${leadershipRoleLabel(request.leadershipRole)} assigned.',
+        );
+        await loadMembers();
+      } else {
+        AppSnackbar.error(
+          title: 'Update failed',
           message: 'Try again later.',
         );
       }

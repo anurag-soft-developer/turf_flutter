@@ -4,7 +4,6 @@ import 'package:get/get.dart';
 import 'turf_list_controller.dart';
 import '../../components/turf/search_components.dart';
 import '../../components/turf/turf_cards.dart';
-import '../../components/turf/filter_bottom_sheet.dart';
 import '../../core/config/constants.dart';
 
 class TurfListScreen extends StatelessWidget {
@@ -26,12 +25,6 @@ class TurfListScreen extends StatelessWidget {
         backgroundColor: const Color(AppColors.primaryColor),
         foregroundColor: Colors.white,
         elevation: 0,
-        actions: [
-          IconButton(
-            onPressed: () => FilterBottomSheet.show(context, controller),
-            icon: const Icon(Icons.filter_list),
-          ),
-        ],
       ),
       body: Stack(
         children: [

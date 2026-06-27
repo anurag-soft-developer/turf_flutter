@@ -85,6 +85,8 @@ class TeamRosterManageScreen extends StatelessWidget {
                 isBusy: busy,
                 isSelf: c.isSelf(m),
                 onOpenProfile: () => c.openProfile(m),
+                onAssignCaptain: () => c.assignCaptain(m),
+                onAssignViceCaptain: () => c.assignViceCaptain(m),
                 onRemove: () => _confirmRemove(context, c, m),
                 onSuspend: () => _confirmSuspend(context, c, m),
                 onUnsuspend: () => c.unsuspendMember(m),
@@ -164,6 +166,8 @@ class _RosterRow extends StatelessWidget {
     required this.isBusy,
     required this.isSelf,
     required this.onOpenProfile,
+    required this.onAssignCaptain,
+    required this.onAssignViceCaptain,
     required this.onRemove,
     required this.onSuspend,
     required this.onUnsuspend,
@@ -173,15 +177,29 @@ class _RosterRow extends StatelessWidget {
   final bool isBusy;
   final bool isSelf;
   final VoidCallback onOpenProfile;
+  final VoidCallback onAssignCaptain;
+  final VoidCallback onAssignViceCaptain;
   final VoidCallback onRemove;
   final VoidCallback onSuspend;
   final VoidCallback onUnsuspend;
+
+  String _subtitle() {
+    final parts = <String>[];
+    if (isSelf) parts.add('You (owner)');
+    parts.add(teamMemberStatusLabel(member.status));
+    return parts.join(' · ');
+  }
 
   @override
   Widget build(BuildContext context) {
     final h = member.userHelper;
     final avatar = h.getAvatar();
     final name = h.getDisplayName();
+    final isActive = member.status == TeamMemberStatus.active;
+    final isCaptain = member.leadershipRole == LeadershipRole.captain;
+    final isViceCaptain = member.leadershipRole == LeadershipRole.viceCaptain;
+    final hasLeadership = member.leadershipRole != null;
+
     return Card(
       elevation: 0,
       color: const Color(AppColors.surfaceColor),
@@ -209,18 +227,28 @@ class _RosterRow extends StatelessWidget {
         title: GestureDetector(
           onTap: onOpenProfile,
           behavior: HitTestBehavior.opaque,
-          child: Text(
-            name,
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              color: Color(AppColors.textColor),
-            ),
+          child: Row(
+            children: [
+              Flexible(
+                child: Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: Color(AppColors.textColor),
+                  ),
+                ),
+              ),
+              if (hasLeadership) ...[
+                const SizedBox(width: 8),
+                _LeadershipChip(role: member.leadershipRole!),
+              ],
+            ],
           ),
         ),
         subtitle: Text(
-          isSelf
-              ? 'You (owner) · ${teamMemberStatusLabel(member.status)}'
-              : teamMemberStatusLabel(member.status),
+          _subtitle(),
           style: const TextStyle(
             fontSize: 12,
             color: Color(AppColors.textSecondaryColor),
@@ -244,6 +272,10 @@ class _RosterRow extends StatelessWidget {
                 ),
                 onSelected: (v) {
                   switch (v) {
+                    case 'captain':
+                      onAssignCaptain();
+                    case 'vice_captain':
+                      onAssignViceCaptain();
                     case 'remove':
                       onRemove();
                     case 'suspend':
@@ -254,6 +286,29 @@ class _RosterRow extends StatelessWidget {
                 },
                 itemBuilder: (context) {
                   return [
+                    if (isActive) ...[
+                      if (!isCaptain)
+                        const PopupMenuItem(
+                          value: 'captain',
+                          child: ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: Icon(Icons.military_tech_outlined),
+                            title: Text('Make captain'),
+                            dense: true,
+                          ),
+                        ),
+                      if (!isViceCaptain)
+                        const PopupMenuItem(
+                          value: 'vice_captain',
+                          child: ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: Icon(Icons.emoji_events_outlined),
+                            title: Text('Make vice-captain'),
+                            dense: true,
+                          ),
+                        ),
+                      if (!isSelf) const PopupMenuDivider(),
+                    ],
                     if (!isSelf) ...[
                       if (member.status == TeamMemberStatus.active)
                         const PopupMenuItem(
@@ -291,6 +346,37 @@ class _RosterRow extends StatelessWidget {
                   ];
                 },
               ),
+      ),
+    );
+  }
+}
+
+class _LeadershipChip extends StatelessWidget {
+  const _LeadershipChip({required this.role});
+
+  final LeadershipRole role;
+
+  @override
+  Widget build(BuildContext context) {
+    final isCaptain = role == LeadershipRole.captain;
+    final color = isCaptain
+        ? const Color(AppColors.primaryColor)
+        : const Color(AppColors.secondaryColor);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Text(
+        leadershipRoleLabel(role),
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
       ),
     );
   }

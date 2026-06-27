@@ -85,12 +85,4 @@ class MyTeamsController extends GetxController {
     // Since we can't know that from membership alone, we'll show leadership role.
     return false;
   }
-
-  String roleLabel(TeamMemberModel membership) {
-    if (membership.leadershipRole == LeadershipRole.captain) return 'Captain';
-    if (membership.leadershipRole == LeadershipRole.viceCaptain) {
-      return 'Vice Captain';
-    }
-    return 'Member';
-  }
 }

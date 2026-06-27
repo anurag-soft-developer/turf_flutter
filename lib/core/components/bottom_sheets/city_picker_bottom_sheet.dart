@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:google_places_flutter/model/place_type.dart';
 
 import '../../../components/shared/location_autocomplete_field.dart';
+import '../../config/constants.dart';
 import '../../../settings/settings_controller.dart';
 
 class CityPickerBottomSheet {
@@ -14,40 +15,42 @@ class CityPickerBottomSheet {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      showDragHandle: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
         return SafeArea(
+          top: false,
           child: Obx(() {
             final isDetecting = settings.isDetectingCityLocation.value;
+            final screenHeight = MediaQuery.sizeOf(ctx).height;
+            final keyboardHeight = MediaQuery.viewInsetsOf(ctx).bottom;
+            final maxHeight =
+                (screenHeight * 0.85 - keyboardHeight).clamp(280.0, screenHeight);
+            final sheetHeight =
+                keyboardHeight > 0 ? maxHeight : screenHeight * 0.55;
 
-            return DraggableScrollableSheet(
-              expand: false,
-              initialChildSize: 0.9,
-              maxChildSize: 0.95,
-              minChildSize: 0.55,
-              builder: (context, scrollController) {
-                return Padding(
-                  padding: EdgeInsets.only(
-                    left: 16,
-                    right: 16,
-                    top: 12,
-                    bottom: 16 + MediaQuery.of(ctx).viewInsets.bottom,
-                  ),
-                  child: ListView(
-                    controller: scrollController,
+            return AnimatedPadding(
+              padding: EdgeInsets.only(bottom: keyboardHeight),
+              duration: const Duration(milliseconds: 100),
+              curve: Curves.easeOut,
+              child: SizedBox(
+                height: sheetHeight.clamp(280.0, maxHeight),
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Choose city',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      _buildHeader(
+                        onClear: isDetecting
+                            ? null
+                            : () async {
+                                await settings.clearCityLocation();
+                                onChanged?.call();
+                              },
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 16),
                       if (isDetecting) ...[
                         const LinearProgressIndicator(minHeight: 2),
                         const SizedBox(height: 12),
@@ -81,51 +84,82 @@ class CityPickerBottomSheet {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      AbsorbPointer(
-                        absorbing: isDetecting,
-                        child: Opacity(
-                          opacity: isDetecting ? 0.6 : 1,
-                          child: LocationAutocompleteField(
-                            controller: settings.cityController,
-                            labelText: 'City',
-                            hintText: 'Search city...',
-                            countries: const ['in'],
-                            placeType: PlaceType.cities,
-                            onLocationSelected: (location) async {
-                              if (isDetecting) return;
-                              await settings.setCityLocationFromSelected(
-                                location,
-                              );
-                              onChanged?.call();
-                              if (ctx.mounted &&
-                                  Navigator.of(ctx).canPop()) {
-                                Navigator.of(ctx).pop();
-                              }
-                            },
+                      Expanded(
+                        child: SingleChildScrollView(
+                          keyboardDismissBehavior:
+                              ScrollViewKeyboardDismissBehavior.onDrag,
+                          child: AbsorbPointer(
+                            absorbing: isDetecting,
+                            child: Opacity(
+                              opacity: isDetecting ? 0.6 : 1,
+                              child: LocationAutocompleteField(
+                                controller: settings.cityController,
+                                labelText: 'City',
+                                hintText: 'Search city...',
+                                countries: const ['in'],
+                                placeType: PlaceType.cities,
+                                onLocationSelected: (location) async {
+                                  if (isDetecting) return;
+                                  await settings.setCityLocationFromSelected(
+                                    location,
+                                  );
+                                  onChanged?.call();
+                                  if (ctx.mounted &&
+                                      Navigator.of(ctx).canPop()) {
+                                    Navigator.of(ctx).pop();
+                                  }
+                                },
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      TextButton(
-                        onPressed: isDetecting
-                            ? null
-                            : () async {
-                                await settings.clearCityLocation();
-                                onChanged?.call();
-                                if (ctx.mounted && Navigator.of(ctx).canPop()) {
-                                  Navigator.of(ctx).pop();
-                                }
-                              },
-                        child: const Text('Clear city filter'),
-                      ),
                     ],
                   ),
-                );
-              },
+                ),
+              ),
             );
           }),
         );
       },
     );
   }
+}
+
+Widget _buildHeader({required VoidCallback? onClear}) {
+  return Column(
+    children: [
+      Center(
+        child: Container(
+          width: 40,
+          height: 4,
+          decoration: BoxDecoration(
+            color: Colors.grey[300],
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+      ),
+      const SizedBox(height: 20),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text(
+            'Choose city',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Color(AppColors.textColor),
+            ),
+          ),
+          TextButton(
+            onPressed: onClear,
+            child: const Text(
+              'Clear',
+              style: TextStyle(color: Color(AppColors.primaryColor)),
+            ),
+          ),
+        ],
+      ),
+    ],
+  );
 }
