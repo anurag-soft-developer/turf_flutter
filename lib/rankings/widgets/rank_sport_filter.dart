@@ -23,10 +23,45 @@ class SportFilterPicker extends StatelessWidget {
 
   List<TeamSportType> get _sports => sports ?? rankingTeamSportTypes;
 
+  /// Opens the searchable sport bottom sheet.
+  static Future<void> showSheet({
+    required BuildContext context,
+    required TeamSportType value,
+    required ValueChanged<TeamSportType> onChanged,
+    List<TeamSportType>? sports,
+    String sheetTitle = 'Select sport',
+    bool searchable = false,
+  }) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return _SportPickerSheet(
+          value: value,
+          sports: sports ?? rankingTeamSportTypes,
+          sheetTitle: sheetTitle,
+          searchable: searchable,
+          onChanged: (sport) {
+            onChanged(sport);
+            Navigator.pop(sheetContext);
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => _showSportPicker(context),
+      onTap: () => showSheet(
+        context: context,
+        value: value,
+        onChanged: onChanged,
+        sports: _sports,
+        sheetTitle: sheetTitle,
+        searchable: searchable,
+      ),
       child: Container(
         height: 40,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -62,26 +97,6 @@ class SportFilterPicker extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-
-  void _showSportPicker(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) {
-        return _SportPickerSheet(
-          value: value,
-          sports: _sports,
-          sheetTitle: sheetTitle,
-          searchable: searchable,
-          onChanged: (sport) {
-            onChanged(sport);
-            Navigator.pop(sheetContext);
-          },
-        );
-      },
     );
   }
 }
@@ -163,9 +178,33 @@ class _SportPickerSheetState extends State<_SportPickerSheet> {
               const SizedBox(height: 16),
               TextField(
                 controller: _searchController,
+                style: const TextStyle(
+                  color: Color(AppColors.textColor),
+                  fontSize: 15,
+                ),
+                cursorColor: const Color(AppColors.primaryColor),
                 decoration: InputDecoration(
                   hintText: 'Search sports',
-                  prefixIcon: const Icon(Icons.search),
+                  hintStyle: const TextStyle(
+                    color: Color(AppColors.textSecondaryColor),
+                  ),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    color: Color(AppColors.textSecondaryColor),
+                  ),
+                  filled: true,
+                  fillColor: const Color(AppColors.backgroundColor),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: Color(AppColors.primaryColor),
+                      width: 1.5,
+                    ),
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),

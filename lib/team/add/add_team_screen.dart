@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-// import 'package:google_places_flutter/model/place_type.dart';
+import '../../components/shared/avatar_image_input.dart';
 import '../../components/shared/image_input.dart';
 import '../../components/shared/location_autocomplete_field.dart';
 import '../../components/create_turf/section_container.dart';
@@ -9,6 +9,7 @@ import '../../components/create_turf/styled_text_field.dart';
 import '../../core/config/constants.dart';
 import '../../rankings/widgets/rank_sport_filter.dart';
 import '../model/team_model.dart';
+import '../utils/team_ui.dart';
 import 'add_team_controller.dart';
 
 class AddTeamScreen extends StatelessWidget {
@@ -34,55 +35,392 @@ class AddTeamScreen extends StatelessWidget {
       ),
       body: Form(
         key: controller.formKey,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(2),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _BasicInfoSection(controller: controller),
-              const SizedBox(height: 24),
-              // _TeamSettingsSection(controller: controller),
-              // const SizedBox(height: 24),
-              _ScheduleSection(controller: controller),
-              const SizedBox(height: 24),
-              _SocialLinksSection(controller: controller),
-              const SizedBox(height: 24),
-              // _TagsSection(controller: controller),
-              // const SizedBox(height: 24),
-              // _PinnedNoticesSection(controller: controller),
-              // const SizedBox(height: 24),
-              // _RosterSection(controller: controller),
-              // const SizedBox(height: 24),
-              ImageInput(
-                title: 'Team Logo',
-                icon: Icons.shield,
-                imageUrls: controller.logoImages,
-                onChange: (_) {},
-                maxImages: 1,
-                uploadPurpose: MediaUploadPurpose.teamMedia,
-                allowPasteUrl: true,
-                deleteRemoteOnRemove: !controller.isEditing,
-                onDeferredRemoteRemoval:
-                    controller.queueDeferredRemoteImageDeletion,
-              ),
-              const SizedBox(height: 24),
-              ImageInput(
-                title: 'Cover Images',
-                icon: Icons.image,
-                imageUrls: controller.coverImages,
-                onChange: (_) {},
-                uploadPurpose: MediaUploadPurpose.teamMedia,
-                allowPasteUrl: true,
-                deleteRemoteOnRemove: !controller.isEditing,
-                onDeferredRemoteRemoval:
-                    controller.queueDeferredRemoteImageDeletion,
-              ),
-              const SizedBox(height: 24),
-              _SubmitButton(controller: controller),
-              const SizedBox(height: 20),
-            ],
+        child: controller.isEditing
+            ? _EditTeamBody(controller: controller)
+            : _CreateTeamStepper(controller: controller),
+      ),
+    );
+  }
+}
+
+// ── Create mode (stepper) ─────────────────────────────────────────────────────
+
+class _CreateTeamStepper extends StatelessWidget {
+  final AddTeamController controller;
+
+  const _CreateTeamStepper({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Theme(
+      data: Theme.of(context).copyWith(
+        brightness: Brightness.light,
+        canvasColor: Colors.white,
+        shadowColor: Colors.transparent,
+        colorScheme: const ColorScheme.light(
+          primary: Color(AppColors.primaryColor),
+          onPrimary: Colors.white,
+          secondary: Color(AppColors.primaryColor),
+          onSecondary: Colors.white,
+          surface: Colors.white,
+          onSurface: Color(AppColors.textColor),
+          onSurfaceVariant: Color(AppColors.textSecondaryColor),
+        ),
+        textTheme: Theme.of(context).textTheme.apply(
+          bodyColor: const Color(AppColors.textColor),
+          displayColor: const Color(AppColors.textColor),
+        ).copyWith(
+          bodyLarge: const TextStyle(
+            color: Color(AppColors.textColor),
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+          bodyMedium: const TextStyle(
+            color: Color(AppColors.textColor),
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+          ),
+          bodySmall: const TextStyle(
+            color: Color(AppColors.textSecondaryColor),
+            fontSize: 12,
           ),
         ),
+      ),
+      child: Column(
+        children: [
+          Expanded(
+            child: Obx(
+              () => Stepper(
+                type: StepperType.horizontal,
+                elevation: 0,
+                currentStep: controller.currentStep.value,
+                onStepTapped: (step) {
+                  if (step < controller.currentStep.value) {
+                    controller.currentStep.value = step;
+                  }
+                },
+                controlsBuilder: (context, details) => const SizedBox.shrink(),
+                steps: [
+                  Step(
+                    title: Text(
+                      'Sport',
+                      style: TextStyle(
+                        color: controller.currentStep.value >= 0
+                            ? const Color(AppColors.textColor)
+                            : const Color(AppColors.textSecondaryColor),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                    isActive: controller.currentStep.value >= 0,
+                    state: controller.currentStep.value > 0
+                        ? StepState.complete
+                        : StepState.indexed,
+                    content: _SportTypeStep(controller: controller),
+                  ),
+                  Step(
+                    title: Text(
+                      'Details',
+                      style: TextStyle(
+                        color: controller.currentStep.value >= 1
+                            ? const Color(AppColors.textColor)
+                            : const Color(AppColors.textSecondaryColor),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                    isActive: controller.currentStep.value >= 1,
+                    state: controller.currentStep.value >= 1
+                        ? StepState.indexed
+                        : StepState.disabled,
+                    content: _CreateDetailsStep(controller: controller),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          _CreateStepBottomBar(controller: controller),
+        ],
+      ),
+    );
+  }
+}
+
+class _CreateStepBottomBar extends StatelessWidget {
+  final AddTeamController controller;
+
+  const _CreateStepBottomBar({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      elevation: 8,
+      shadowColor: Colors.black.withValues(alpha: 0.08),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          child: Obx(() {
+            final step = controller.currentStep.value;
+            if (step == 0) {
+              return SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => controller.currentStep.value = 1,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    backgroundColor: const Color(AppColors.primaryColor),
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text(
+                    'Next',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              );
+            }
+
+            return Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => controller.currentStep.value = 0,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: const Text('Back'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: controller.isSubmitting.value
+                        ? null
+                        : controller.submit,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      backgroundColor: const Color(AppColors.primaryColor),
+                      foregroundColor: Colors.white,
+                    ),
+                    child: controller.isSubmitting.value
+                        ? const SizedBox(
+                            height: 22,
+                            width: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text(
+                            'Create Team',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                  ),
+                ),
+              ],
+            );
+          }),
+        ),
+      ),
+    );
+  }
+}
+
+class _SportTypeStep extends StatelessWidget {
+  final AddTeamController controller;
+
+  const _SportTypeStep({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'What sport does your team play?',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Color(AppColors.textColor),
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Pick the primary sport for this team. This can’t be changed later.',
+          style: TextStyle(
+            fontSize: 14,
+            color: Color(AppColors.textSecondaryColor),
+          ),
+        ),
+        const SizedBox(height: 20),
+        Obx(
+          () {
+            final sport = controller.sportType.value;
+            return Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => SportFilterPicker.showSheet(
+                  context: context,
+                  value: sport,
+                  sports: TeamSportType.values,
+                  sheetTitle: 'Select sport',
+                  searchable: true,
+                  onChanged: (v) => controller.sportType.value = v,
+                ),
+                borderRadius: BorderRadius.circular(14),
+                child: Ink(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(
+                      AppColors.primaryColor,
+                    ).withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: const Color(
+                        AppColors.primaryColor,
+                      ).withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: const Color(
+                            AppColors.primaryColor,
+                          ).withValues(alpha: 0.12),
+                        ),
+                        child: Icon(
+                          sport.icon,
+                          color: const Color(AppColors.primaryColor),
+                          size: 26,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Selected sport',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Color(AppColors.textSecondaryColor),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              teamSportLabel(sport),
+                              style: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w700,
+                                color: Color(AppColors.textColor),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.expand_more_rounded,
+                        color: Color(AppColors.textSecondaryColor),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _CreateDetailsStep extends StatelessWidget {
+  final AddTeamController controller;
+
+  const _CreateDetailsStep({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        AvatarImageInput(
+          imageUrls: controller.logoImages,
+          label: 'Team Logo',
+          placeholderIcon: Icons.shield_outlined,
+          uploadPurpose: MediaUploadPurpose.teamMedia,
+          allowPasteUrl: true,
+          deleteRemoteOnRemove: !controller.isEditing,
+          onDeferredRemoteRemoval: controller.queueDeferredRemoteImageDeletion,
+          onChange: (_) {},
+          radius: 52,
+        ),
+        const SizedBox(height: 20),
+        _BasicInfoSection(controller: controller),
+      ],
+    );
+  }
+}
+
+// ── Edit mode (all sections, no stepper) ──────────────────────────────────────
+
+class _EditTeamBody extends StatelessWidget {
+  final AddTeamController controller;
+
+  const _EditTeamBody({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AvatarImageInput(
+            imageUrls: controller.logoImages,
+            label: 'Team Logo',
+            placeholderIcon: Icons.shield_outlined,
+            uploadPurpose: MediaUploadPurpose.teamMedia,
+            allowPasteUrl: true,
+            deleteRemoteOnRemove: !controller.isEditing,
+            onDeferredRemoteRemoval: controller.queueDeferredRemoteImageDeletion,
+            onChange: (_) {},
+            radius: 52,
+          ),
+          const SizedBox(height: 24),
+          _BasicInfoSection(controller: controller),
+          const SizedBox(height: 24),
+          _ScheduleSection(controller: controller),
+          const SizedBox(height: 24),
+          _SocialLinksSection(controller: controller),
+          const SizedBox(height: 24),
+          ImageInput(
+            title: 'Cover Images',
+            icon: Icons.image,
+            imageUrls: controller.coverImages,
+            onChange: (_) {},
+            uploadPurpose: MediaUploadPurpose.teamMedia,
+            allowPasteUrl: true,
+            deleteRemoteOnRemove: false,
+            onDeferredRemoteRemoval: controller.queueDeferredRemoteImageDeletion,
+          ),
+          const SizedBox(height: 24),
+          _SubmitButton(controller: controller),
+        ],
       ),
     );
   }
@@ -148,32 +486,6 @@ class _BasicInfoSection extends StatelessWidget {
           },
         ),
         const SizedBox(height: 16),
-        if (!controller.isEditing) ...[
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Sport',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Color(AppColors.textSecondaryColor),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Obx(
-                () => SportFilterPicker(
-                  value: controller.sportType.value,
-                  sports: TeamSportType.values,
-                  sheetTitle: 'Select sport',
-                  searchable: true,
-                  onChanged: (v) => controller.sportType.value = v,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-        ],
         _NullableDropdown<TeamGenderCategory>(
           label: 'Gender Category',
           value: controller.genderCategory,
@@ -187,7 +499,6 @@ class _BasicInfoSection extends StatelessWidget {
           labelText: 'City',
           hintText: 'Search your team location...',
           countries: const ['in'],
-          // placeType: PlaceType.cities,
           onLocationSelected: controller.onLocationSelected,
         ),
       ],
@@ -331,279 +642,6 @@ class _SocialLinksSection extends StatelessWidget {
   }
 }
 
-// ── Tags ──────────────────────────────────────────────────────────────────────
-
-// class _TagsSection extends StatelessWidget {
-//   final AddTeamController controller;
-
-//   const _TagsSection({required this.controller});
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return SectionContainer(
-//       title: 'Tags',
-//       icon: Icons.tag,
-//       children: [
-//         Row(
-//           children: [
-//             Expanded(
-//               child: TurfFormField(
-//                 controller: controller.tagInputController,
-//                 labelText: 'Add a tag',
-//                 hintText: 'e.g. competitive',
-//                 onFieldSubmitted: (_) => controller.addTag(),
-//               ),
-//             ),
-//             const SizedBox(width: 10),
-//             IconButton.filled(
-//               onPressed: controller.addTag,
-//               icon: const Icon(Icons.add, size: 20),
-//               style: IconButton.styleFrom(
-//                 backgroundColor: const Color(AppColors.primaryColor),
-//                 foregroundColor: Colors.white,
-//                 shape: RoundedRectangleBorder(
-//                   borderRadius: BorderRadius.circular(8),
-//                 ),
-//               ),
-//             ),
-//           ],
-//         ),
-//         const SizedBox(height: 12),
-//         Obx(
-//           () => controller.tags.isEmpty
-//               ? const SizedBox.shrink()
-//               : Wrap(
-//                   spacing: 8,
-//                   runSpacing: 8,
-//                   children: controller.tags
-//                       .map(
-//                         (tag) => Chip(
-//                           label: Text(
-//                             '#$tag',
-//                             style: const TextStyle(
-//                               fontSize: 13,
-//                               color: Color(AppColors.primaryColor),
-//                               fontWeight: FontWeight.w500,
-//                             ),
-//                           ),
-//                           backgroundColor: const Color(
-//                             AppColors.primaryColor,
-//                           ).withValues(alpha: 0.08),
-//                           deleteIcon: const Icon(Icons.close, size: 16),
-//                           deleteIconColor: const Color(AppColors.primaryColor),
-//                           onDeleted: () => controller.removeTag(tag),
-//                           shape: RoundedRectangleBorder(
-//                             borderRadius: BorderRadius.circular(20),
-//                             side: BorderSide(
-//                               color: const Color(
-//                                 AppColors.primaryColor,
-//                               ).withValues(alpha: 0.2),
-//                             ),
-//                           ),
-//                         ),
-//                       )
-//                       .toList(),
-//                 ),
-//         ),
-//       ],
-//     );
-//   }
-// }
-
-// ── Pinned Notices ────────────────────────────────────────────────────────────
-
-// class _PinnedNoticesSection extends StatelessWidget {
-//   final AddTeamController controller;
-
-//   const _PinnedNoticesSection({required this.controller});
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return SectionContainer(
-//       title: 'Pinned Notices',
-//       icon: Icons.push_pin_outlined,
-//       children: [
-//         Row(
-//           children: [
-//             Expanded(
-//               child: TurfFormField(
-//                 controller: controller.noticeInputController,
-//                 labelText: 'Add a notice',
-//                 hintText: 'e.g. Practice every Saturday 5 PM',
-//                 onFieldSubmitted: (_) => controller.addNotice(),
-//               ),
-//             ),
-//             const SizedBox(width: 10),
-//             IconButton.filled(
-//               onPressed: controller.addNotice,
-//               icon: const Icon(Icons.add, size: 20),
-//               style: IconButton.styleFrom(
-//                 backgroundColor: const Color(AppColors.primaryColor),
-//                 foregroundColor: Colors.white,
-//                 shape: RoundedRectangleBorder(
-//                   borderRadius: BorderRadius.circular(8),
-//                 ),
-//               ),
-//             ),
-//           ],
-//         ),
-//         const SizedBox(height: 12),
-//         Obx(
-//           () => controller.pinnedNotices.isEmpty
-//               ? const SizedBox.shrink()
-//               : Column(
-//                   children: [
-//                     for (int i = 0; i < controller.pinnedNotices.length; i++)
-//                       Container(
-//                         margin: const EdgeInsets.only(bottom: 8),
-//                         padding: const EdgeInsets.symmetric(
-//                           horizontal: 14,
-//                           vertical: 10,
-//                         ),
-//                         decoration: BoxDecoration(
-//                           color: const Color(
-//                             AppColors.accentColor,
-//                           ).withValues(alpha: 0.06),
-//                           borderRadius: BorderRadius.circular(10),
-//                           border: Border.all(
-//                             color: const Color(
-//                               AppColors.accentColor,
-//                             ).withValues(alpha: 0.15),
-//                           ),
-//                         ),
-//                         child: Row(
-//                           children: [
-//                             Icon(
-//                               Icons.push_pin,
-//                               size: 16,
-//                               color: const Color(AppColors.accentColor),
-//                             ),
-//                             const SizedBox(width: 10),
-//                             Expanded(
-//                               child: Text(
-//                                 controller.pinnedNotices[i],
-//                                 style: const TextStyle(
-//                                   fontSize: 14,
-//                                   color: Color(AppColors.textColor),
-//                                 ),
-//                               ),
-//                             ),
-//                             GestureDetector(
-//                               onTap: () => controller.removeNotice(i),
-//                               child: Icon(
-//                                 Icons.close,
-//                                 size: 18,
-//                                 color: const Color(
-//                                   AppColors.textSecondaryColor,
-//                                 ),
-//                               ),
-//                             ),
-//                           ],
-//                         ),
-//                       ),
-//                   ],
-//                 ),
-//         ),
-//       ],
-//     );
-//   }
-// }
-
-// ── Join Requests ─────────────────────────────────────────────────────────────
-
-// class _RosterSection extends StatelessWidget {
-//   final AddTeamController controller;
-
-//   const _RosterSection({required this.controller});
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return SectionContainer(
-//       title: 'Join Requests',
-//       icon: Icons.hourglass_empty_outlined,
-//       children: [
-//         TurfFormField(
-//           controller: controller.maxPendingController,
-//           labelText: 'Max pending join requests *',
-//           hintText: '0–1000',
-//           keyboardType: TextInputType.number,
-//           validator: (v) {
-//             final n = int.tryParse(v ?? '');
-//             if (n == null || n < 0 || n > 1000) {
-//               return 'Enter 0–1000';
-//             }
-//             return null;
-//           },
-//         ),
-//       ],
-//     );
-//   }
-// }
-
-// ── Styled Dropdown (required value) ──────────────────────────────────────────
-
-class _StyledDropdown<T> extends StatelessWidget {
-  final String label;
-  final Rx<T> value;
-  final List<T> items;
-  final String Function(T) itemLabel;
-  final void Function(T) onChanged;
-
-  const _StyledDropdown({
-    required this.label,
-    required this.value,
-    required this.items,
-    required this.itemLabel,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Obx(
-      () => Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-              spreadRadius: 1,
-            ),
-          ],
-          border: Border.all(color: Colors.grey.shade300, width: 1),
-        ),
-        child: DropdownButtonFormField<T>(
-          initialValue: value.value,
-          isExpanded: false,
-          decoration: InputDecoration(
-            labelText: label,
-            border: InputBorder.none,
-            enabledBorder: InputBorder.none,
-            focusedBorder: InputBorder.none,
-            filled: true,
-            fillColor: Colors.transparent,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 12,
-            ),
-            labelStyle: const TextStyle(color: Colors.black87),
-          ),
-          style: const TextStyle(color: Colors.black87, fontSize: 16),
-          dropdownColor: Colors.white,
-          items: items
-              .map((s) => DropdownMenuItem(value: s, child: Text(itemLabel(s))))
-              .toList(),
-          onChanged: (v) {
-            if (v != null) onChanged(v);
-          },
-        ),
-      ),
-    );
-  }
-}
-
 // ── Nullable Dropdown (optional value with "None" option) ─────────────────────
 
 class _NullableDropdown<T> extends StatelessWidget {
@@ -709,9 +747,9 @@ class _SubmitButton extends StatelessWidget {
                       color: Colors.white,
                     ),
                   )
-                : Text(
-                    controller.isEditing ? 'Save Changes' : 'Create Team',
-                    style: const TextStyle(
+                : const Text(
+                    'Save Changes',
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),

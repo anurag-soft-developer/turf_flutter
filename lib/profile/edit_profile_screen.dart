@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../components/shared/avatar_image_input.dart';
 import '../components/shared/custom_button.dart';
 import '../components/shared/custom_text_field.dart';
-import '../components/shared/image_input.dart';
 import '../components/shared/loading_overlay.dart';
 import '../core/auth/auth_state_controller.dart';
 import '../core/config/constants.dart';
@@ -33,7 +33,6 @@ class EditProfileScreen extends StatelessWidget {
           child: SingleChildScrollView(
             child: Column(
               children: [
-                // Avatar Section
                 Container(
                   width: double.infinity,
                   decoration: const BoxDecoration(
@@ -50,66 +49,18 @@ class EditProfileScreen extends StatelessWidget {
                       bottom: 30,
                       top: 8,
                     ),
-                    child: Center(
-                      child: Stack(
-                        children: [
-                          Obx(() {
-                            final avatarUrl =
-                                profileController.avatarImageUrls.isNotEmpty
-                                ? profileController.avatarImageUrls.first
-                                : authController.user?.avatar;
-                            return CircleAvatar(
-                              radius: 50,
-                              backgroundColor: Colors.white,
-                              backgroundImage: avatarUrl != null
-                                  ? NetworkImage(avatarUrl)
-                                  : null,
-                              child: avatarUrl == null
-                                  ? const Icon(
-                                      Icons.person,
-                                      size: 50,
-                                      color: Color(AppColors.primaryColor),
-                                    )
-                                  : null,
-                            );
-                          }),
-                          Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: ImageInput(
-                              title: 'Profile photo',
-                              imageUrls: profileController.avatarImageUrls,
-                              maxImages: 1,
-                              uploadPurpose: MediaUploadPurpose.avatar,
-                              onChange: (urls) async {
-                                if (urls.isEmpty) return;
-                                await authController.updateUserProfile(
-                                  avatar: urls.first,
-                                );
-                              },
-                              buttonChild: Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: const Color(AppColors.primaryColor),
-                                    width: 2,
-                                  ),
-                                ),
-                                constraints: const BoxConstraints(
-                                  minWidth: 36,
-                                  minHeight: 36,
-                                ),
-                                padding: const EdgeInsets.all(8),
-                                child: const Icon(
-                                  Icons.camera_alt,
-                                  color: Color(AppColors.primaryColor),
-                                  size: 18,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                    child: Obx(
+                      () => AvatarImageInput(
+                        imageUrls: profileController.avatarImageUrls,
+                        fallbackUrl: authController.user?.avatar,
+                        placeholderIcon: Icons.person,
+                        uploadPurpose: MediaUploadPurpose.avatar,
+                        onChange: (urls) async {
+                          if (urls.isEmpty) return;
+                          await authController.updateUserProfile(
+                            avatar: urls.first,
+                          );
+                        },
                       ),
                     ),
                   ),

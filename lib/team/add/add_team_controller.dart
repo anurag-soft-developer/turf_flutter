@@ -47,6 +47,9 @@ class AddTeamController extends GetxController {
 
   final RxBool isSubmitting = false.obs;
 
+  /// Create-mode stepper index (0 = sport, 1 = basic info). Unused in edit mode.
+  final RxInt currentStep = 0.obs;
+
   final RxList<String> logoImages = <String>[].obs;
   final RxList<String> coverImages = <String>[].obs;
 
