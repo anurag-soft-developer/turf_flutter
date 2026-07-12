@@ -264,8 +264,9 @@ class _MatchChallengeActionsCardState extends State<MatchChallengeActionsCard> {
         updated.id!.isNotEmpty) {
       try {
         if (mounted) {
-          final sportLabel =
-              updated.sportType == TeamSportType.cricket ? 'Cricket' : 'Football';
+          final sportLabel = updated.sportType == TeamSportType.cricket
+              ? 'Cricket'
+              : 'Football';
           AppSnackbar.success(
             title: 'Live scoring connected',
             message: '$sportLabel scoring session is ready.',
@@ -293,61 +294,109 @@ class _MatchChallengeActionsCardState extends State<MatchChallengeActionsCard> {
       return const SizedBox.shrink();
     }
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Actions',
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              color: Color(AppColors.textColor),
+    return Row(
+      children: [
+        if (canRecordMatchResult)
+          Expanded(
+            child: _ActionChipButton(
+              icon: Icons.emoji_events_outlined,
+              label: 'Record result',
+              busy: _isRecordingResult,
+              enabled: !_apiBusy,
+              onTap: _onRecordResult,
             ),
           ),
-          const SizedBox(height: 4),
-          if (canRecordMatchResult)
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: _isRecordingResult
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.emoji_events_outlined),
-              title: const Text('Record match result'),
-              subtitle: const Text('Draw, winner, or mark as ongoing'),
-              onTap: _apiBusy ? null : _onRecordResult,
+        if (canRecordMatchResult && canCancelMatch) const SizedBox(width: 10),
+        if (canCancelMatch)
+          Expanded(
+            child: _ActionChipButton(
+              icon: Icons.event_busy,
+              label: 'Cancel',
+              busy: _isCancelling,
+              enabled: !_apiBusy,
+              onTap: _onCancel,
+              foreground: Colors.red.shade800,
+              background: Colors.red.shade50,
+              border: Colors.red.shade200,
             ),
-          if (canRecordMatchResult && canCancelMatch) const Divider(height: 1),
-          if (canCancelMatch)
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: _isCancelling
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Icon(Icons.event_busy, color: Colors.red.shade700),
-              title: Text(
-                'Cancel match',
-                style: TextStyle(
-                  color: _apiBusy
-                      ? const Color(AppColors.textSecondaryColor)
-                      : Colors.red.shade800,
-                  fontWeight: FontWeight.w600,
+          ),
+      ],
+    );
+  }
+}
+
+class _ActionChipButton extends StatelessWidget {
+  const _ActionChipButton({
+    required this.icon,
+    required this.label,
+    required this.busy,
+    required this.enabled,
+    required this.onTap,
+    this.foreground,
+    this.background,
+    this.border,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool busy;
+  final bool enabled;
+  final VoidCallback onTap;
+  final Color? foreground;
+  final Color? background;
+  final Color? border;
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = foreground ?? const Color(AppColors.primaryColor);
+    final bg = background ??
+        const Color(AppColors.primaryColor).withValues(alpha: 0.08);
+    final bd = border ??
+        const Color(AppColors.primaryColor).withValues(alpha: 0.22);
+    final muted = !enabled;
+
+    return Material(
+      color: muted ? bg.withValues(alpha: 0.5) : bg,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: enabled && !busy ? onTap : null,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: muted ? bd.withValues(alpha: 0.5) : bd),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (busy)
+                SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: fg,
+                  ),
+                )
+              else
+                Icon(icon, size: 18, color: muted ? fg.withValues(alpha: 0.5) : fg),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: muted ? fg.withValues(alpha: 0.5) : fg,
+                  ),
                 ),
               ),
-              subtitle: const Text('Stop this challenge'),
-              onTap: _apiBusy ? null : _onCancel,
-            ),
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -1,15 +1,13 @@
+import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
-import '../../components/shared/app_segmented_tabs/segmented_tab_cache_controller.dart';
-import '../members/model/team_member_model.dart';
-import '../model/team_model.dart';
-import '../team_service.dart';
+import '../../core/query/query_keys.dart';
 import '../../core/utils/app_snackbar.dart';
+import '../members/model/team_member_model.dart';
+import '../team_service.dart';
 
-class TeamOpeningsController extends GetxController
-    with SegmentedTabCacheController<TeamSportType, TeamModel> {
-  static const int _pageSize = 20;
-
+/// UI + join mutation state. List fetching is owned by flutter_query on the screen.
+class TeamOpeningsController extends GetxController {
   final TeamService _teamService = TeamService();
 
   final Rx<TeamSportType> selectedSport = TeamSportType.cricket.obs;
@@ -18,59 +16,24 @@ class TeamOpeningsController extends GetxController
   final RxBool myMembershipsLoaded = false.obs;
   final joiningTeamIds = <String>[].obs;
 
-  @override
-  List<TeamSportType> get tabKeys => TeamSportType.values;
-
-  @override
-  void onInit() {
-    super.onInit();
-    ensureSportLoaded(selectedSport.value);
-    refreshMyMemberships();
-  }
-
   void switchSport(TeamSportType sport) {
     if (selectedSport.value == sport) return;
     selectedSport.value = sport;
-    ensureSportLoaded(sport);
   }
 
-  SegmentedTabDataState<TeamModel> stateForSport(TeamSportType sport) {
-    return tabStateFor(sport);
-  }
-
-  Future<void> ensureSportLoaded(TeamSportType sport) async {
-    await ensureTabLoaded(sport);
-  }
-
-  Future<void> reloadSport(TeamSportType sport) async {
-    await ensureTabLoaded(sport, force: true);
-  }
-
-  Future<void> loadMoreSport(TeamSportType sport) => loadMoreTab(sport);
-
-  @override
-  bool get paginatedTabs => true;
-
-  Future<void> refreshMyMemberships() async {
-    myMembershipsLoaded.value = false;
-    try {
-      final result = await _teamService.memberService.myMemberships(
-        const MyTeamMembershipsFilterQuery(limit: 100),
+  void syncMemberships(List<TeamMemberModel> memberships) {
+    myMembershipByTeamId
+      ..clear()
+      ..addEntries(
+        memberships
+            .map((m) {
+              final id = m.teamId;
+              if (id == null || id.isEmpty) return null;
+              return MapEntry(id, m);
+            })
+            .whereType<MapEntry<String, TeamMemberModel>>(),
       );
-      myMembershipByTeamId
-        ..clear()
-        ..addEntries(
-          (result?.data ?? const <TeamMemberModel>[])
-              .map((m) {
-                final id = m.teamId;
-                if (id == null || id.isEmpty) return null;
-                return MapEntry(id, m);
-              })
-              .whereType<MapEntry<String, TeamMemberModel>>(),
-        );
-    } finally {
-      myMembershipsLoaded.value = true;
-    }
+    myMembershipsLoaded.value = true;
   }
 
   TeamMemberModel? membershipForTeam(String? teamId) {
@@ -103,7 +66,6 @@ class TeamOpeningsController extends GetxController
         m.status == TeamMemberStatus.removed;
   }
 
-  /// Join (or re-request after reject). No-op if already active or pending.
   Future<void> requestJoin(String teamId) async {
     final m = membershipForTeam(teamId);
     if (m != null &&
@@ -124,8 +86,15 @@ class TeamOpeningsController extends GetxController
               ? 'You have joined the team.'
               : 'Your join request was submitted.',
         );
-        await ensureTabLoaded(selectedSport.value, force: true);
-        await refreshMyMemberships();
+        if (Get.isRegistered<QueryClient>()) {
+          final client = Get.find<QueryClient>();
+          await Future.wait([
+            client.invalidateQueries(
+              queryKey: QueryKeys.teamOpenings(selectedSport.value.name),
+            ),
+            client.invalidateQueries(queryKey: QueryKeys.myMemberships),
+          ]);
+        }
       } else {
         AppSnackbar.error(
           title: 'Request failed',
@@ -135,37 +104,5 @@ class TeamOpeningsController extends GetxController
     } finally {
       joiningTeamIds.remove(teamId);
     }
-  }
-
-  @override
-  Future<List<TeamModel>> fetchTabItems(TeamSportType sport) async {
-    return (await fetchTabPage(sport, 1)).items;
-  }
-
-  @override
-  Future<SegmentedTabPageResult<TeamModel>> fetchTabPage(
-    TeamSportType sport,
-    int page,
-  ) async {
-    final result = await _teamService.findMany(
-      TeamFilterQuery(
-        status: TeamStatus.active,
-        visibility: TeamVisibility.public,
-        sportType: sport,
-        lookingForMembers: true,
-        page: page,
-        limit: _pageSize,
-      ),
-    );
-    return SegmentedTabPageResult(
-      items: result?.data ?? <TeamModel>[],
-      page: result?.page ?? page,
-      hasMore: result?.hasNextPage ?? false,
-    );
-  }
-
-  @override
-  String mapFetchError(Object error) {
-    return 'Failed to load recruiting teams';
   }
 }

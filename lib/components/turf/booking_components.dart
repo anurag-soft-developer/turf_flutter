@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/turf_booking/model/turf_booking_model.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+
 import '../../core/config/constants.dart';
+import '../../core/query/query_keys.dart';
 import '../../turf/details/turf_detail_controller.dart';
+import '../../turf_booking/turf_booking_service.dart';
+
+Duration? _noRetry(int count, Object error) => null;
 
 class TimeSlotsGrid extends StatelessWidget {
   final TurfDetailController controller;
@@ -51,60 +58,108 @@ class TimeSlotsGrid extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Obx(() {
-            if (controller.isSlotsLoading.value) {
-              return const Padding(
-                padding: EdgeInsets.all(32),
-                child: Center(child: CircularProgressIndicator()),
-              );
+            final turfId = controller.turfId;
+            final dateKey = controller.selectedDateKey;
+            if (turfId == null || turfId.isEmpty) {
+              return const SizedBox.shrink();
             }
-            if (controller.timeSlots.isEmpty) {
-              return Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Center(
-                  child: Text(
-                    'No time slots available for this date',
-                    style: TextStyle(
-                      color: Color(AppColors.textSecondaryColor),
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-              );
-            }
-
-            return GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 2.5,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-              ),
-              itemCount: controller.timeSlots.length,
-              itemBuilder: (context, index) {
-                final slot = controller.timeSlots[index];
-
-                return Obx(() {
-                  final isSelected = controller.selectedTimeSlots.contains(
-                    slot,
-                  );
-
-                  return TimeSlotCard(
-                    slot: slot,
-                    isSelected: isSelected,
-                    onTap: () => controller.toggleTimeSlot(slot),
-                  );
-                });
-              },
+            return _TimeSlotsQueryBody(
+              key: ValueKey('$turfId|$dateKey'),
+              controller: controller,
+              turfId: turfId,
+              dateKey: dateKey,
+              date: controller.selectedDate.value,
             );
           }),
         ],
       ),
+    );
+  }
+}
+
+class _TimeSlotsQueryBody extends HookWidget {
+  const _TimeSlotsQueryBody({
+    super.key,
+    required this.controller,
+    required this.turfId,
+    required this.dateKey,
+    required this.date,
+  });
+
+  final TurfDetailController controller;
+  final String turfId;
+  final String dateKey;
+  final DateTime date;
+
+  @override
+  Widget build(BuildContext context) {
+    final slotsQuery = useQuery<List<TurfTimeSlotListing>, Object>(
+      QueryKeys.turfSlots(turfId, dateKey),
+      (_) => TurfBookingService().getTimeSlotsForDate(turfId, date),
+      retry: _noRetry,
+    );
+
+    if (slotsQuery.isLoading ||
+        (slotsQuery.isFetching && slotsQuery.data == null)) {
+      return const Padding(
+        padding: EdgeInsets.all(32),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (slotsQuery.isError && slotsQuery.data == null) {
+      return Center(
+        child: TextButton(
+          onPressed: () => slotsQuery.refetch(),
+          child: const Text('Retry loading slots'),
+        ),
+      );
+    }
+
+    final timeSlots = slotsQuery.data ?? const <TurfTimeSlotListing>[];
+
+    if (timeSlots.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Center(
+          child: Text(
+            'No time slots available for this date',
+            style: TextStyle(
+              color: Color(AppColors.textSecondaryColor),
+              fontSize: 16,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 2.5,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemCount: timeSlots.length,
+      itemBuilder: (context, index) {
+        final slot = timeSlots[index];
+
+        return Obx(() {
+          final isSelected = controller.selectedTimeSlots.contains(slot);
+
+          return TimeSlotCard(
+            slot: slot,
+            isSelected: isSelected,
+            onTap: () => controller.toggleTimeSlot(slot),
+          );
+        });
+      },
     );
   }
 }

@@ -1,15 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
 import '../../components/announced_players/match_announced_players_section.dart';
 import '../../components/scoring/cricket/scorecard/match_scorecard_tab.dart';
 import '../../components/challenges/match_challenge_respond_actions.dart';
 import '../../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
+import '../../core/components/query/query_async_body.dart';
 import '../../core/config/constants.dart';
+import '../../core/query/query_keys.dart';
+import '../../team/members/model/team_member_model.dart';
+import '../../team/team_service.dart';
+import '../matchmaking_service.dart';
 import '../model/team_match_model.dart';
 import 'match_challenge_actions_card.dart';
 import 'match_challenge_detail_controller.dart';
 import 'match_challenge_versus_header.dart';
+import 'match_incoming_resolver.dart';
+
+Duration? _noRetry(int count, Object error) => null;
 
 Future<T?>? openMatchChallengeDetail<T>({
   TeamMatchModel? match,
@@ -26,19 +36,103 @@ Future<T?>? openMatchChallengeDetail<T>({
       () => Get.lazyPut(
         () => MatchChallengeDetailController(
           initialMatch: match,
-          matchId: matchId,
-          isIncoming: isIncoming,
+          matchIdArg: matchId,
+          explicitIsIncoming: isIncoming,
         ),
       ),
     ),
   );
 }
 
-class MatchChallengeDetailScreen extends GetView<MatchChallengeDetailController> {
+class MatchChallengeDetailScreen extends HookWidget {
   const MatchChallengeDetailScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<MatchChallengeDetailController>();
+    final matchId = controller.resolvedMatchId;
+
+    if (matchId == null || matchId.isEmpty) {
+      return Scaffold(
+        backgroundColor: const Color(AppColors.backgroundColor),
+        appBar: AppBar(title: const Text('Challenge Details')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Challenge not found.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Color(AppColors.textSecondaryColor),
+                    fontSize: 15,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                OutlinedButton(
+                  onPressed: () => Get.back(),
+                  child: const Text('Go back'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    final matchQuery = useQuery<TeamMatchModel, Object>(
+      QueryKeys.matchChallengeDetail(matchId),
+      (_) async {
+        final loaded = await MatchmakingService().getTeamMatchById(matchId);
+        if (loaded == null) throw Exception('Could not load challenge.');
+        return loaded;
+      },
+      retry: _noRetry,
+      seed: controller.initialMatch,
+    );
+
+    final needsMemberships = controller.explicitIsIncoming == null;
+    final membershipsQuery = useQuery<List<TeamMemberModel>, Object>(
+      QueryKeys.myMemberships,
+      (_) async {
+        final res = await TeamService().memberService.myMemberships(
+          const MyTeamMembershipsFilterQuery(
+            status: TeamMemberStatus.active,
+            limit: 50,
+          ),
+        );
+        return res?.data ?? const <TeamMemberModel>[];
+      },
+      retry: _noRetry,
+      enabled: needsMemberships,
+    );
+
+    useEffect(() {
+      controller.syncMatch(matchQuery.data);
+      return null;
+    }, [matchQuery.data]);
+
+    useEffect(() {
+      if (controller.explicitIsIncoming != null) {
+        controller.syncIsIncoming(controller.explicitIsIncoming!);
+        return null;
+      }
+      final data = membershipsQuery.data;
+      final current = matchQuery.data;
+      if (data == null || current == null) return null;
+      final myTeamIds = <String>{};
+      for (final m in data) {
+        final t = m.team;
+        if (t is TeamMemberFieldInstance && t.id != null && t.id!.isNotEmpty) {
+          myTeamIds.add(t.id!);
+        }
+      }
+      controller.syncIsIncoming(resolveIsIncoming(current, myTeamIds));
+      return null;
+    }, [membershipsQuery.data, matchQuery.data]);
+
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
       appBar: AppBar(
@@ -51,51 +145,51 @@ class MatchChallengeDetailScreen extends GetView<MatchChallengeDetailController>
           ),
         ],
       ),
-      body: Obx(() {
-        if (controller.isInitialLoading.value) {
-          return const Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(
-                Color(AppColors.primaryColor),
+      body: QueryAsyncBody<TeamMatchModel, Object>(
+        state: matchQuery,
+        onRetry: () => matchQuery.refetch(),
+        data: (_) {
+          if (needsMemberships &&
+              (membershipsQuery.isLoading ||
+                  (membershipsQuery.isFetching &&
+                      membershipsQuery.data == null))) {
+            return const Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  Color(AppColors.primaryColor),
+                ),
               ),
-            ),
-          );
-        }
-        if (controller.loadError.value != null) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    controller.loadError.value!,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Color(AppColors.textSecondaryColor),
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  OutlinedButton(
-                    onPressed: () => Get.back(),
-                    child: const Text('Go back'),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
-        return _buildDetailsBody(context);
-      }),
+            );
+          }
+          return Obx(() {
+            final currentMatch = controller.match.value;
+            final _ = controller.isIncoming.value;
+            if (currentMatch == null) {
+              return const SizedBox.shrink();
+            }
+            return _MatchChallengeDetailBody(
+              controller: controller,
+              match: currentMatch,
+            );
+          });
+        },
+      ),
     );
   }
+}
 
-  Widget _buildDetailsBody(BuildContext context) {
-    final currentMatch = controller.match.value;
-    if (currentMatch == null) {
-      return const SizedBox.shrink();
-    }
+class _MatchChallengeDetailBody extends StatelessWidget {
+  const _MatchChallengeDetailBody({
+    required this.controller,
+    required this.match,
+  });
+
+  final MatchChallengeDetailController controller;
+  final TeamMatchModel match;
+
+  @override
+  Widget build(BuildContext context) {
+    final currentMatch = match;
     final acceptedSlotCandidates = currentMatch.proposedSlots.where((slot) {
       if (currentMatch.selectedSlotProposalId != null) {
         return slot.proposalId == currentMatch.selectedSlotProposalId;
@@ -124,8 +218,8 @@ class MatchChallengeDetailScreen extends GetView<MatchChallengeDetailController>
         ? acceptedTurf.turfIdHelper.getDisplayName()
         : 'Not set';
 
-    final showScoreboardBar = (controller.isCricketMatch ||
-            controller.isFootballMatch) &&
+    final showScoreboardBar =
+        (controller.isCricketMatch || controller.isFootballMatch) &&
         (controller.canStartScoring ||
             currentMatch.status == TeamMatchStatus.ongoing);
     final showFloatingBottom =
@@ -163,7 +257,6 @@ class MatchChallengeDetailScreen extends GetView<MatchChallengeDetailController>
                     icon: Icons.scoreboard_outlined,
                   ),
                   AppTabItem(label: 'Players', icon: Icons.groups_outlined),
-                  AppTabItem(label: 'Actions', icon: Icons.bolt_outlined),
                 ],
               ),
               Expanded(
@@ -171,48 +264,65 @@ class MatchChallengeDetailScreen extends GetView<MatchChallengeDetailController>
                   controller: controller.detailTabController,
                   children: [
                     SingleChildScrollView(
-                      child: _InfoCard(
-                        title: 'Schedule',
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Obx(
-                              () => _ScheduleLine(
-                                icon: Icons.schedule,
-                                label: 'Time',
-                                value: timeSummary,
-                                canEdit: controller.canUseScheduleControls,
-                                isLoading: controller.isUpdatingSlot.value,
-                                otherFieldBusy: controller.isUpdatingTurf.value ||
-                                    controller.actionsChildBusy.value,
-                                onEditPressed: () =>
-                                    controller.setTimeSlot(context),
-                                editTooltip: hasSlot ? 'Edit time' : 'Set time',
-                                editIcon: hasSlot
-                                    ? Icons.edit_outlined
-                                    : Icons.event_available_outlined,
-                              ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _InfoCard(
+                            title: 'Schedule',
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Obx(
+                                  () => _ScheduleLine(
+                                    icon: Icons.schedule,
+                                    label: 'Time',
+                                    value: timeSummary,
+                                    canEdit: controller.canUseScheduleControls,
+                                    isLoading: controller.isUpdatingSlot.value,
+                                    otherFieldBusy:
+                                        controller.isUpdatingTurf.value ||
+                                        controller.actionsChildBusy.value,
+                                    onEditPressed: () =>
+                                        controller.setTimeSlot(context),
+                                    editTooltip:
+                                        hasSlot ? 'Edit time' : 'Set time',
+                                    editIcon: hasSlot
+                                        ? Icons.edit_outlined
+                                        : Icons.event_available_outlined,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Obx(
+                                  () => _ScheduleLine(
+                                    icon: Icons.grass,
+                                    label: 'Turf',
+                                    value: turfSummary,
+                                    canEdit: controller.canUseScheduleControls,
+                                    isLoading: controller.isUpdatingTurf.value,
+                                    otherFieldBusy:
+                                        controller.isUpdatingSlot.value ||
+                                        controller.actionsChildBusy.value,
+                                    onEditPressed: () =>
+                                        controller.setTurf(context),
+                                    editTooltip:
+                                        hasTurf ? 'Edit turf' : 'Set turf',
+                                    editIcon: hasTurf
+                                        ? Icons.edit_outlined
+                                        : Icons.add_location_alt_outlined,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 12),
-                            Obx(
-                              () => _ScheduleLine(
-                                icon: Icons.grass,
-                                label: 'Turf',
-                                value: turfSummary,
-                                canEdit: controller.canUseScheduleControls,
-                                isLoading: controller.isUpdatingTurf.value,
-                                otherFieldBusy: controller.isUpdatingSlot.value ||
-                                    controller.actionsChildBusy.value,
-                                onEditPressed: () =>
-                                    controller.setTurf(context),
-                                editTooltip: hasTurf ? 'Edit turf' : 'Set turf',
-                                editIcon: hasTurf
-                                    ? Icons.edit_outlined
-                                    : Icons.add_location_alt_outlined,
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(height: 12),
+                          MatchChallengeActionsCard(
+                            match: currentMatch,
+                            myTeamId: controller.myTeamId,
+                            onMatchUpdated: controller.scheduleMatchUpdate,
+                            onInternalBusyChanged:
+                                controller.scheduleActionsChildBusy,
+                          ),
+                        ],
                       ),
                     ),
                     MatchScorecardTab(
@@ -224,14 +334,6 @@ class MatchChallengeDetailScreen extends GetView<MatchChallengeDetailController>
                         match: currentMatch,
                         myTeamId: controller.myTeamId,
                         onMatchUpdated: controller.scheduleMatchUpdate,
-                      ),
-                    ),
-                    SingleChildScrollView(
-                      child: MatchChallengeActionsCard(
-                        match: currentMatch,
-                        myTeamId: controller.myTeamId,
-                        onMatchUpdated: controller.scheduleMatchUpdate,
-                        onInternalBusyChanged: controller.scheduleActionsChildBusy,
                       ),
                     ),
                   ],
@@ -251,16 +353,26 @@ class MatchChallengeDetailScreen extends GetView<MatchChallengeDetailController>
               children: [
                 if (showScoreboardBar) ...[
                   Obx(
-                    () => SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: controller.actionBusy
-                            ? null
-                            : controller.openScoreboard,
-                        icon: const Icon(Icons.play_circle_outline),
-                        label: const Text('Scoreboard'),
-                      ),
-                    ),
+                    () {
+                      final ongoing =
+                          currentMatch.status == TeamMatchStatus.ongoing;
+                      return SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: controller.actionBusy
+                              ? null
+                              : controller.openScoreboard,
+                          icon: Icon(
+                            ongoing
+                                ? Icons.scoreboard_outlined
+                                : Icons.play_circle_outline,
+                          ),
+                          label: Text(
+                            ongoing ? 'Open scoreboard' : 'Start scoring',
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ],
                 if (showScoreboardBar && controller.canRespondToChallenge)
@@ -270,7 +382,8 @@ class MatchChallengeDetailScreen extends GetView<MatchChallengeDetailController>
                     () => MatchChallengeRespondActions(
                       isRejecting: controller.isRejectingChallenge.value,
                       isAccepting: controller.isAcceptingChallenge.value,
-                      enabled: !controller.isUpdatingSlot.value &&
+                      enabled:
+                          !controller.isUpdatingSlot.value &&
                           !controller.isUpdatingTurf.value &&
                           !controller.actionsChildBusy.value,
                       onReject: () => controller.respondToChallenge(

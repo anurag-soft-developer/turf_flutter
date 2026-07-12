@@ -55,6 +55,8 @@ dependencies:
   flutter_native_splash: ^2.4.7
   flutter_launcher_icons: ^0.14.4
   socket_io_client: ^3.1.1
+  flutter_query: 0.7.0
+  flutter_hooks: ^0.21.3+1
 
 dev_dependencies:
   flutter_test:

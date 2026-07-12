@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/binding/initial_binding.dart';
+import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 import 'core/config/env_config.dart';
 import 'core/routes/app_routes.dart';
@@ -10,25 +11,33 @@ void main() async {
 
   await EnvConfig.initialize();
 
-  runApp(const MyApp());
+  final queryClient = QueryClient();
+  InitialBinding(queryClient: queryClient).dependencies();
+
+  runApp(MyApp(queryClient: queryClient));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({super.key, required this.queryClient});
+
+  final QueryClient queryClient;
 
   @override
   Widget build(BuildContext context) {
-    return GetMaterialApp(
-      title: EnvConfig.appName,
-      theme: _lightTheme,
-      darkTheme: _darkTheme,
-      themeMode: ThemeMode.system,
-      initialRoute: '/',
-      initialBinding: InitialBinding(),
-      getPages: AppRoutes.routes,
-      debugShowCheckedModeBanner: false,
-      defaultTransition: Transition.cupertino,
-      transitionDuration: const Duration(milliseconds: 300),
+    return QueryClientProvider.value(
+      queryClient,
+      child: GetMaterialApp(
+        title: EnvConfig.appName,
+        theme: _lightTheme,
+        darkTheme: _darkTheme,
+        themeMode: ThemeMode.system,
+        initialRoute: '/',
+        initialBinding: InitialBinding(queryClient: queryClient),
+        getPages: AppRoutes.routes,
+        debugShowCheckedModeBanner: false,
+        defaultTransition: Transition.cupertino,
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
     );
   }
 

@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
+import '../../core/query/query_keys.dart';
 import '../../match_up/model/team_match_model.dart';
 import 'cricket_scoring_api_service.dart';
 import 'model/cricket_ball_event_model.dart';
@@ -41,6 +43,61 @@ class CricketScoringController extends GetxController {
   bool get canUndoCricketBall =>
       cricketOvers.any((over) => over.ballEvents.isNotEmpty);
 
+  void seedFromQuery({
+    TeamMatchModel? match,
+    List<CricketOverEvent>? overs,
+  }) {
+    if (match != null) {
+      cricketMatch.value = match;
+    }
+    if (overs != null) {
+      cricketOvers.assignAll(overs);
+    }
+  }
+
+  void _syncQueryCache({bool includeOvers = true}) {
+    if (!Get.isRegistered<QueryClient>()) return;
+    final client = Get.find<QueryClient>();
+    final id = currentSessionId.value;
+    if (id.isEmpty) return;
+    final match = cricketMatch.value;
+    if (match != null) {
+      client.setQueryData<TeamMatchModel, Object>(
+        QueryKeys.cricketSession(id),
+        (_) => match,
+      );
+      client.setQueryData<TeamMatchModel, Object>(
+        QueryKeys.matchChallengeDetail(id),
+        (_) => match,
+      );
+    }
+    if (includeOvers) {
+      final overs = cricketOvers.toList();
+      client.setQueryData<List<CricketOverEvent>, Object>(
+        QueryKeys.cricketOvers(id),
+        (_) => overs,
+      );
+    }
+  }
+
+  Future<void> _invalidateQueryCache({bool includeOvers = true}) async {
+    if (!Get.isRegistered<QueryClient>()) return;
+    final client = Get.find<QueryClient>();
+    final id = currentSessionId.value;
+    if (id.isEmpty) return;
+    final futures = <Future<void>>[
+      client.invalidateQueries(queryKey: QueryKeys.cricketSession(id)),
+      client.invalidateQueries(queryKey: QueryKeys.matchChallengeDetail(id)),
+    ];
+    if (includeOvers) {
+      futures.add(
+        client.invalidateQueries(queryKey: QueryKeys.cricketOvers(id)),
+      );
+    }
+    await Future.wait(futures);
+  }
+
+  /// Thin helper used after mutations / manual refresh.
   Future<void> fetchCricketMatch(String teamMatchId) async {
     if (teamMatchId.isEmpty) {
       errorMessage.value = 'Missing match id.';
@@ -52,10 +109,13 @@ class CricketScoringController extends GetxController {
     cricketMatch.value = match;
     if (match == null) {
       errorMessage.value = 'Could not load match.';
+    } else {
+      _syncQueryCache(includeOvers: false);
     }
     isFetchingCricketMatch.value = false;
   }
 
+  /// Thin helper used after mutations / manual refresh.
   Future<void> fetchCricketOvers(
     String teamMatchId, {
     bool resetBallHistory = false,
@@ -71,6 +131,7 @@ class CricketScoringController extends GetxController {
       if (resetBallHistory) {
         _resetCricketBallHistory();
       }
+      _syncQueryCache();
     } catch (error) {
       errorMessage.value = error.toString();
     } finally {
@@ -128,6 +189,7 @@ class CricketScoringController extends GetxController {
     }
     cricketMatch.value = match;
     await fetchCricketOvers(sessionId, resetBallHistory: true);
+    _syncQueryCache();
     return true;
   }
 
@@ -145,6 +207,7 @@ class CricketScoringController extends GetxController {
     );
     if (match != null) {
       cricketMatch.value = match;
+      _syncQueryCache(includeOvers: false);
     }
     isUpdatingCricketLineup.value = false;
     return match != null;
@@ -169,6 +232,8 @@ class CricketScoringController extends GetxController {
       }
       cricketMatch.value = match;
       _resetCricketBallHistory();
+      _syncQueryCache(includeOvers: false);
+      await _invalidateQueryCache(includeOvers: false);
       return true;
     } catch (error) {
       errorMessage.value = error.toString();
@@ -195,6 +260,7 @@ class CricketScoringController extends GetxController {
       }
       cricketMatch.value = match;
       _resetCricketBallHistory();
+      _syncQueryCache(includeOvers: false);
       return true;
     } catch (error) {
       errorMessage.value = error.toString();
@@ -233,6 +299,7 @@ class CricketScoringController extends GetxController {
       if (match != null) {
         cricketMatch.value = match;
       }
+      _syncQueryCache();
       return response;
     } catch (error) {
       errorMessage.value = error.toString();
@@ -270,6 +337,7 @@ class CricketScoringController extends GetxController {
       if (match != null) {
         cricketMatch.value = match;
       }
+      _syncQueryCache();
       return true;
     } catch (error) {
       errorMessage.value = error.toString();

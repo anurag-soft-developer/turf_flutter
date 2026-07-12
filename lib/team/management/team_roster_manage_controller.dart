@@ -1,26 +1,25 @@
+import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
 import '../../core/auth/auth_state_controller.dart';
 import '../../core/config/constants.dart';
+import '../../core/query/query_keys.dart';
 import '../../core/utils/app_snackbar.dart';
 import '../members/model/team_member_model.dart';
 import '../team_service.dart';
 import '../utils/team_ui.dart';
 
 /// Owner-only: full roster (active + suspended) with management actions.
+/// Fetching is owned by flutter_query on the screen.
 class TeamRosterManageController extends GetxController {
   final TeamService _teamService = TeamService();
 
-  final RxBool isInitialLoading = true.obs;
-  final RxBool isBusy = false.obs;
   final RxnString actionTargetId = RxnString();
   final RxBool accessDenied = false.obs;
+  final RxnString teamName = RxnString();
 
   String? _teamId;
   String? get teamId => _teamId;
-
-  final RxnString teamName = RxnString();
-  final RxList<TeamMemberModel> members = <TeamMemberModel>[].obs;
 
   @override
   void onInit() {
@@ -31,10 +30,7 @@ class TeamRosterManageController extends GetxController {
     }
     if (_teamId == null || _teamId!.isEmpty) {
       accessDenied.value = true;
-      isInitialLoading.value = false;
-      return;
     }
-    _bootstrap();
   }
 
   String? get _me => Get.find<AuthStateController>().user?.id;
@@ -44,74 +40,12 @@ class TeamRosterManageController extends GetxController {
     return uid != null && uid == _me;
   }
 
-  Future<void> _bootstrap() async {
-    isInitialLoading.value = true;
-    try {
-      final t = await _teamService.findById(_teamId!);
-      final uid = _me;
-      if (t == null || uid == null || !t.isOwner(uid)) {
-        accessDenied.value = true;
-        return;
-      }
-      teamName.value = t.name;
-      accessDenied.value = false;
-      await loadMembers();
-    } finally {
-      isInitialLoading.value = false;
-    }
+  void syncTeamName(String? name) {
+    teamName.value = name;
   }
 
-  int _sortMembers(TeamMemberModel a, TeamMemberModel b) {
-    int leadershipOrder(LeadershipRole? r) {
-      if (r == LeadershipRole.captain) return 0;
-      if (r == LeadershipRole.viceCaptain) return 1;
-      return 2;
-    }
-
-    const order = {
-      TeamMemberStatus.active: 0,
-      TeamMemberStatus.suspended: 1,
-    };
-    final oa = order[a.status] ?? 9;
-    final ob = order[b.status] ?? 9;
-    if (oa != ob) return oa.compareTo(ob);
-
-    final la = leadershipOrder(a.leadershipRole);
-    final lb = leadershipOrder(b.leadershipRole);
-    if (la != lb) return la.compareTo(lb);
-
-    return a.userHelper
-        .getDisplayName()
-        .toLowerCase()
-        .compareTo(b.userHelper.getDisplayName().toLowerCase());
-  }
-
-  Future<void> loadMembers() async {
-    if (_teamId == null) return;
-    isBusy.value = true;
-    try {
-      final active = await _teamService.memberService.listForTeam(
-        _teamId!,
-        const TeamMemberRosterFilterQuery(
-          status: TeamMemberStatus.active,
-          limit: 100,
-        ),
-      );
-      final suspended = await _teamService.memberService.listForTeam(
-        _teamId!,
-        const TeamMemberRosterFilterQuery(
-          status: TeamMemberStatus.suspended,
-          limit: 100,
-        ),
-      );
-      final list = <TeamMemberModel>[
-        ...(active?.data ?? <TeamMemberModel>[]),
-        ...(suspended?.data ?? <TeamMemberModel>[]),
-      ]..sort(_sortMembers);
-      members.assignAll(list);
-    } finally {
-      isBusy.value = false;
-    }
+  void syncAccessDenied(bool denied) {
+    accessDenied.value = denied;
   }
 
   void openProfile(TeamMemberModel m) {
@@ -149,7 +83,7 @@ class TeamRosterManageController extends GetxController {
           title: 'Removed',
           message: 'Player was removed from the team.',
         );
-        await loadMembers();
+        await _invalidateRoster();
       } else {
         AppSnackbar.error(
           title: 'Remove failed',
@@ -176,7 +110,7 @@ class TeamRosterManageController extends GetxController {
           title: 'Suspended',
           message: 'Player is suspended from the team.',
         );
-        await loadMembers();
+        await _invalidateRoster();
       } else {
         AppSnackbar.error(
           title: 'Could not suspend',
@@ -203,7 +137,7 @@ class TeamRosterManageController extends GetxController {
           title: 'Restored',
           message: 'Player is active again.',
         );
-        await loadMembers();
+        await _invalidateRoster();
       } else {
         AppSnackbar.error(
           title: 'Could not unsuspend',
@@ -252,7 +186,7 @@ class TeamRosterManageController extends GetxController {
           title: successTitle,
           message: '${leadershipRoleLabel(request.leadershipRole)} assigned.',
         );
-        await loadMembers();
+        await _invalidateRoster();
       } else {
         AppSnackbar.error(
           title: 'Update failed',
@@ -262,5 +196,15 @@ class TeamRosterManageController extends GetxController {
     } finally {
       actionTargetId.value = null;
     }
+  }
+
+  Future<void> _invalidateRoster() async {
+    final id = _teamId;
+    if (id == null || !Get.isRegistered<QueryClient>()) return;
+    final client = Get.find<QueryClient>();
+    await Future.wait([
+      client.invalidateQueries(queryKey: ['teamRoster', id]),
+      client.invalidateQueries(queryKey: QueryKeys.teamDetail(id)),
+    ]);
   }
 }

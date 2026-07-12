@@ -2,17 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/match_up/match_up_controller.dart';
 import 'package:flutter_application_1/match_up/match_up_screen.dart';
 import 'package:get/get.dart';
-import '../../../dashboard/player/dashboard_leaderboard_controller.dart';
 import '../../../dashboard/dashboard_screen.dart';
-import '../../../settings/settings_controller.dart';
 import '../../../turf/feed/turf_list_screen.dart';
 import '../../../rankings/rank_screen.dart';
 import '../../../rankings/rank_controller.dart';
 import '../../../profile/profile_screen.dart';
 import '../../../turf/feed/turf_list_controller.dart';
-import '../../../team/feed/teams_ranking_controller.dart';
-import '../../../rankings/player_ranking_controller.dart';
-import '../../../profile/profile_controller.dart';
 
 class NavTab {
   final IconData icon;
@@ -38,18 +33,6 @@ final List<NavTab> kNavTabs = [
     activeIcon: Icons.dashboard,
     label: 'Dashboard',
     screenBuilder: () => const DashboardScreen(),
-    loadController: () {
-      _ensure<SettingsController>(() => SettingsController());
-      _ensure<TurfListController>(() => TurfListController());
-      _ensure<DashboardLeaderboardController>(
-        () => DashboardLeaderboardController(),
-      );
-    },
-    disposeController: () {
-      _dispose<SettingsController>();
-      _dispose<TurfListController>();
-      _dispose<DashboardLeaderboardController>();
-    },
   ),
   NavTab(
     icon: Icons.grass_outlined,
@@ -73,24 +56,14 @@ final List<NavTab> kNavTabs = [
     activeIcon: Icons.emoji_events,
     label: 'Rank',
     screenBuilder: () => const RankScreen(),
-    loadController: () {
-      _ensure<TeamsRankingController>(() => TeamsRankingController());
-      _ensure<PlayerRankingController>(() => PlayerRankingController());
-      _ensure<RankController>(() => RankController());
-    },
-    disposeController: () {
-      _dispose<RankController>();
-      _dispose<TeamsRankingController>();
-      _dispose<PlayerRankingController>();
-    },
+    loadController: () => _ensure<RankController>(() => RankController()),
+    disposeController: () => _dispose<RankController>(),
   ),
   NavTab(
     icon: Icons.person_outline,
     activeIcon: Icons.person,
     label: 'Profile',
     screenBuilder: () => const ProfileScreen(),
-    loadController: () => _ensure<ProfileController>(() => ProfileController()),
-    disposeController: () => _dispose<ProfileController>(),
   ),
 ];
 

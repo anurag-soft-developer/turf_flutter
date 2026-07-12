@@ -1,10 +1,10 @@
 import 'package:get/get.dart';
-import '../../../turf/feed/turf_list_controller.dart';
 import 'nav_tabs.dart';
 
 class NavigationController extends GetxController {
   final RxInt _currentIndex = 0.obs;
   final RxDouble _slideValue = 0.0.obs;
+  final RxnString pendingSportFilter = RxnString();
 
   int get currentIndex => _currentIndex.value;
   double get slideValue => _slideValue.value;
@@ -12,10 +12,13 @@ class NavigationController extends GetxController {
   int get tabCount => activeTabs.length;
 
   void changeTab(int index) {
-    if (_currentIndex.value != index && index >= 0 && index < tabCount) {
-      _currentIndex.value = index;
-      _loadControllerForCurrentTab();
+    if (_currentIndex.value == index || index < 0 || index >= tabCount) {
+      return;
     }
+
+    activeTabs[_currentIndex.value].disposeController?.call();
+    _currentIndex.value = index;
+    _loadControllerForCurrentTab();
   }
 
   /// Switches to the Turfs tab and optionally applies a sport filter.
@@ -23,11 +26,16 @@ class NavigationController extends GetxController {
     final turfsIndex = kNavTabs.indexWhere((tab) => tab.label == 'Turfs');
     if (turfsIndex < 0) return;
 
-    changeTab(turfsIndex);
-
-    if (sportFilter != null && Get.isRegistered<TurfListController>()) {
-      Get.find<TurfListController>().setSportFilter(sportFilter);
+    if (sportFilter != null) {
+      pendingSportFilter.value = sportFilter;
     }
+    changeTab(turfsIndex);
+  }
+
+  String? takePendingSportFilter() {
+    final value = pendingSportFilter.value;
+    pendingSportFilter.value = null;
+    return value;
   }
 
   void slideToNext() {

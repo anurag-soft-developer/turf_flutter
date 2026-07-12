@@ -1,40 +1,34 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
 import '../../components/challenges/praposals/propose_time_slot_sheet.dart';
 import '../../components/challenges/praposals/propose_turf_sheet.dart';
 import '../../core/config/constants.dart';
+import '../../core/query/query_keys.dart';
 import '../../core/utils/app_snackbar.dart';
-import '../../team/members/model/team_member_model.dart';
-import '../../team/team_service.dart';
 import '../../team/utils/team_ui.dart';
+import '../../team/model/team_model.dart' show TeamSportType;
 import '../matchmaking_service.dart';
 import '../model/team_match_model.dart';
-import 'match_challenges_controller.dart';
-import 'match_incoming_resolver.dart';
 
+/// Tab + mutation state for challenge detail. Match data is owned by flutter_query.
 class MatchChallengeDetailController extends GetxController
     with GetSingleTickerProviderStateMixin {
   MatchChallengeDetailController({
-    TeamMatchModel? initialMatch,
-    String? matchId,
-    bool? isIncoming,
-  })  : _initialMatch = initialMatch,
-        _matchId = matchId,
-        _explicitIsIncoming = isIncoming;
+    this.initialMatch,
+    this.matchIdArg,
+    this.explicitIsIncoming,
+  });
 
-  final TeamMatchModel? _initialMatch;
-  final String? _matchId;
-  final bool? _explicitIsIncoming;
+  final TeamMatchModel? initialMatch;
+  final String? matchIdArg;
+  final bool? explicitIsIncoming;
 
   final Rxn<TeamMatchModel> match = Rxn<TeamMatchModel>();
-  late bool isIncoming;
-
-  final RxBool isInitialLoading = true.obs;
-  final Rxn<String> loadError = Rxn<String>();
+  final RxBool isIncoming = false.obs;
 
   final MatchmakingService _matchmakingService = MatchmakingService();
-  final TeamService _teamService = TeamService();
 
   late final TabController detailTabController;
 
@@ -43,6 +37,14 @@ class MatchChallengeDetailController extends GetxController
   final RxBool isRejectingChallenge = false.obs;
   final RxBool isAcceptingChallenge = false.obs;
   final RxBool actionsChildBusy = false.obs;
+
+  String? get resolvedMatchId {
+    final fromMatch = match.value?.id ?? initialMatch?.id;
+    if (fromMatch != null && fromMatch.isNotEmpty) return fromMatch;
+    final arg = matchIdArg?.trim();
+    if (arg != null && arg.isNotEmpty) return arg;
+    return null;
+  }
 
   bool get actionBusy =>
       isUpdatingSlot.value ||
@@ -63,7 +65,7 @@ class MatchChallengeDetailController extends GetxController
     };
   }
 
-  String get myTeamId => isIncoming
+  String get myTeamId => isIncoming.value
       ? (match.value?.toTeamHelper.getId() ?? '')
       : (match.value?.fromTeamHelper.getId() ?? '');
 
@@ -73,7 +75,7 @@ class MatchChallengeDetailController extends GetxController
   }
 
   bool get canRespondToChallenge {
-    return isIncoming &&
+    return isIncoming.value &&
         match.value?.status == TeamMatchStatus.requested &&
         !isExpiredByDeadline;
   }
@@ -94,54 +96,13 @@ class MatchChallengeDetailController extends GetxController
   @override
   void onInit() {
     super.onInit();
-    detailTabController = TabController(length: 4, vsync: this);
-    _bootstrap();
-  }
-
-  Future<void> _bootstrap() async {
-    TeamMatchModel? loaded = _initialMatch;
-
-    if (loaded == null) {
-      final id = _matchId?.trim();
-      if (id == null || id.isEmpty) {
-        loadError.value = 'Challenge not found.';
-        isInitialLoading.value = false;
-        return;
-      }
-      loaded = await _matchmakingService.getTeamMatchById(id);
-      if (loaded == null) {
-        loadError.value = 'Could not load challenge.';
-        isInitialLoading.value = false;
-        return;
-      }
+    detailTabController = TabController(length: 3, vsync: this);
+    if (initialMatch != null) {
+      match.value = initialMatch;
     }
-
-    match.value = loaded;
-
-    if (_explicitIsIncoming != null) {
-      isIncoming = _explicitIsIncoming;
-    } else {
-      isIncoming = await _resolveIsIncoming(loaded);
+    if (explicitIsIncoming != null) {
+      isIncoming.value = explicitIsIncoming!;
     }
-
-    isInitialLoading.value = false;
-  }
-
-  Future<bool> _resolveIsIncoming(TeamMatchModel loaded) async {
-    final res = await _teamService.memberService.myMemberships(
-      const MyTeamMembershipsFilterQuery(
-        status: TeamMemberStatus.active,
-        limit: 50,
-      ),
-    );
-    final myTeamIds = <String>{};
-    for (final m in res?.data ?? const []) {
-      final t = m.team;
-      if (t is TeamMemberFieldInstance && t.id != null && t.id!.isNotEmpty) {
-        myTeamIds.add(t.id!);
-      }
-    }
-    return resolveIsIncoming(loaded, myTeamIds);
   }
 
   @override
@@ -150,11 +111,20 @@ class MatchChallengeDetailController extends GetxController
     super.onClose();
   }
 
+  void syncMatch(TeamMatchModel? value) {
+    if (value == null) return;
+    match.value = value;
+  }
+
+  void syncIsIncoming(bool value) {
+    isIncoming.value = value;
+  }
+
   void scheduleMatchUpdate(TeamMatchModel updated) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (isClosed) return;
       match.value = updated;
-      _trySyncChallengesList(updated);
+      _invalidateMatchQueries(updated);
     });
   }
 
@@ -166,9 +136,19 @@ class MatchChallengeDetailController extends GetxController
     });
   }
 
-  void _trySyncChallengesList(TeamMatchModel updated) {
-    if (!Get.isRegistered<MatchChallengesController>()) return;
-    Get.find<MatchChallengesController>().applyMatchUpdateFromDetail(updated);
+  Future<void> _invalidateMatchQueries(TeamMatchModel updated) async {
+    if (!Get.isRegistered<QueryClient>()) return;
+    final client = Get.find<QueryClient>();
+    final id = updated.id;
+    final futures = <Future<void>>[
+      client.invalidateQueries(queryKey: const ['matchChallenges']),
+    ];
+    if (id != null && id.isNotEmpty) {
+      futures.add(
+        client.invalidateQueries(queryKey: QueryKeys.matchChallengeDetail(id)),
+      );
+    }
+    await Future.wait(futures);
   }
 
   Future<void> respondToChallenge(MatchResponseAction action) async {
@@ -202,7 +182,7 @@ class MatchChallengeDetailController extends GetxController
     }
 
     match.value = updated;
-    _trySyncChallengesList(updated);
+    await _invalidateMatchQueries(updated);
     AppSnackbar.success(
       title: action == MatchResponseAction.accept
           ? 'Challenge accepted'
@@ -247,7 +227,7 @@ class MatchChallengeDetailController extends GetxController
     }
 
     match.value = updated;
-    _trySyncChallengesList(updated);
+    await _invalidateMatchQueries(updated);
     AppSnackbar.success(
       title: 'Time updated',
       message: 'The match time has been saved.',
@@ -288,7 +268,7 @@ class MatchChallengeDetailController extends GetxController
     }
 
     match.value = updated;
-    _trySyncChallengesList(updated);
+    await _invalidateMatchQueries(updated);
     AppSnackbar.success(
       title: 'Turf updated',
       message: 'The venue has been saved.',

@@ -1,17 +1,47 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
 import '../../core/config/constants.dart';
+import '../../core/models/paginated_response.dart';
+import '../../core/query/query_keys.dart';
 import '../members/model/team_member_model.dart';
+import '../team_service.dart';
 import '../utils/team_ui.dart';
-import 'my_teams_controller.dart';
 
-class MyTeamsScreen extends StatelessWidget {
+Duration? _noRetry(int count, Object error) => null;
+
+class MyTeamsScreen extends HookWidget {
   const MyTeamsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final MyTeamsController controller = Get.find();
+    final query =
+        useInfiniteQuery<PaginatedResponse<TeamMemberModel>, Object, int>(
+      QueryKeys.myMembershipsActive,
+      (ctx) async {
+        final result = await TeamService().memberService.myMemberships(
+          MyTeamMembershipsFilterQuery(
+            status: TeamMemberStatus.active,
+            page: ctx.pageParam,
+            limit: 20,
+          ),
+        );
+        return result ?? EmptyPaginatedResponse<TeamMemberModel>();
+      },
+      initialPageParam: 1,
+      retry: _noRetry,
+      nextPageParamBuilder: (data) {
+        final last = data.pages.isNotEmpty ? data.pages.last : null;
+        if (last == null || !last.hasNextPage) return null;
+        return last.page + 1;
+      },
+    );
+
+    final memberships =
+        query.data?.pages.expand((p) => p.data).toList() ??
+        const <TeamMemberModel>[];
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
@@ -26,66 +56,85 @@ class MyTeamsScreen extends StatelessWidget {
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
-      body: Obx(() {
-        if (controller.isLoading.value && controller.memberships.isEmpty) {
-          return const Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(
-                Color(AppColors.primaryColor),
-              ),
-            ),
-          );
-        }
+      body: _buildBody(query, memberships),
+    );
+  }
 
-        if (controller.memberships.isEmpty) {
-          return _EmptyState();
-        }
-
-        return RefreshIndicator(
-          onRefresh: controller.reload,
-          color: const Color(AppColors.primaryColor),
-          child: NotificationListener<ScrollNotification>(
-            onNotification: (notification) {
-              if (notification.metrics.pixels >=
-                  notification.metrics.maxScrollExtent - 160) {
-                controller.loadMore();
-              }
-              return false;
-            },
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-              children: [
-                for (var i = 0; i < controller.memberships.length; i++) ...[
-                  if (i > 0) const SizedBox(height: 12),
-                  _TeamCard(membership: controller.memberships[i]),
-                ],
-                Obx(
-                  () => controller.isLoadingMore.value
-                      ? const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 24),
-                          child: Center(
-                            child: SizedBox(
-                              width: 28,
-                              height: 28,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                          ),
-                        )
-                      : const SizedBox.shrink(),
-                ),
-              ],
-            ),
+  Widget _buildBody(
+    InfiniteQueryResult<PaginatedResponse<TeamMemberModel>, Object, int> query,
+    List<TeamMemberModel> memberships,
+  ) {
+    if (query.isLoading || (query.isFetching && memberships.isEmpty)) {
+      return const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(
+            Color(AppColors.primaryColor),
           ),
-        );
-      }),
+        ),
+      );
+    }
+
+    if (query.isError && memberships.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Failed to load teams',
+              style: TextStyle(color: Color(AppColors.textSecondaryColor)),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: () => query.refetch(),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (memberships.isEmpty) {
+      return _EmptyState();
+    }
+
+    return RefreshIndicator(
+      onRefresh: () => query.refetch(),
+      color: const Color(AppColors.primaryColor),
+      child: NotificationListener<ScrollNotification>(
+        onNotification: (notification) {
+          if (notification.metrics.pixels >=
+              notification.metrics.maxScrollExtent - 160) {
+            if (query.hasNextPage && !query.isFetchingNextPage) {
+              query.fetchNextPage();
+            }
+          }
+          return false;
+        },
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+          children: [
+            for (var i = 0; i < memberships.length; i++) ...[
+              if (i > 0) const SizedBox(height: 12),
+              _TeamCard(membership: memberships[i]),
+            ],
+            if (query.isFetchingNextPage)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: Center(
+                  child: SizedBox(
+                    width: 28,
+                    height: 28,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Team card
-// ─────────────────────────────────────────────────────────────────────────────
 
 class _TeamCard extends StatelessWidget {
   const _TeamCard({required this.membership});
@@ -128,7 +177,6 @@ class _TeamCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              // Team logo / avatar
               Container(
                 width: 56,
                 height: 56,
@@ -148,8 +196,6 @@ class _TeamCard extends StatelessWidget {
                     : _teamInitials(teamName),
               ),
               const SizedBox(width: 14),
-
-              // Info
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -209,10 +255,6 @@ class _TeamCard extends StatelessWidget {
     );
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Empty state
-// ─────────────────────────────────────────────────────────────────────────────
 
 class _EmptyState extends StatelessWidget {
   @override

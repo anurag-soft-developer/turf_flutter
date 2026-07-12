@@ -1,53 +1,57 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
 import '../../components/match_up/team_logo.dart';
 import '../../components/match_up/team_stats_row.dart';
 import '../../components/rankings/leaderboard_podium.dart';
-import '../../components/shared/app_segmented_tabs/segmented_tab_cache_controller.dart';
 import '../../core/config/constants.dart';
-import '../../team/feed/teams_ranking_controller.dart';
+import '../../core/models/paginated_response.dart';
+import '../../core/query/query_keys.dart';
 import '../../team/model/team_leaderboard_model.dart';
 import '../../team/model/team_model.dart';
+import '../../team/team_service.dart';
 
-class TeamsRankingList extends StatelessWidget {
-  const TeamsRankingList({
-    super.key,
-    required this.controller,
-    required this.sport,
-  });
+Duration? _noRetry(int count, Object error) => null;
 
-  final TeamsRankingController controller;
+class TeamsRankingList extends HookWidget {
+  const TeamsRankingList({super.key, required this.sport});
+
   final TeamSportType sport;
 
   @override
   Widget build(BuildContext context) {
-    return Obx(() {
-      final state = controller.stateForSport(sport);
-      return _TeamsRankingListBody(
-        controller: controller,
-        sport: sport,
-        state: state,
-      );
-    });
-  }
-}
+    final queryKey = QueryKeys.teamLeaderboard(sport.name);
 
-class _TeamsRankingListBody extends StatelessWidget {
-  const _TeamsRankingListBody({
-    required this.controller,
-    required this.sport,
-    required this.state,
-  });
+    final query =
+        useInfiniteQuery<PaginatedResponse<TeamLeaderboardRow>, Object, int>(
+      queryKey,
+      (ctx) async {
+        final result = await TeamService().getLeaderboard(
+          TeamLeaderboardQuery(
+            sportType: sport,
+            page: ctx.pageParam,
+            limit: 20,
+          ),
+        );
+        return result ??
+            EmptyPaginatedResponse<TeamLeaderboardRow>();
+      },
+      initialPageParam: 1,
+      retry: _noRetry,
+      nextPageParamBuilder: (data) {
+        final last = data.pages.isNotEmpty ? data.pages.last : null;
+        if (last == null || !last.hasNextPage) return null;
+        return last.page + 1;
+      },
+    );
 
-  final TeamsRankingController controller;
-  final TeamSportType sport;
-  final SegmentedTabDataState<TeamLeaderboardRow> state;
+    final entries =
+        query.data?.pages.expand((p) => p.data).toList() ??
+        const <TeamLeaderboardRow>[];
 
-  @override
-  Widget build(BuildContext context) {
-    final isFirstLoad = !state.hasInitialized && state.items.isEmpty;
-    if (isFirstLoad || (state.isFetching && state.items.isEmpty)) {
+    if (query.isLoading || (query.isFetching && entries.isEmpty)) {
       return const Center(
         child: CircularProgressIndicator(
           valueColor: AlwaysStoppedAnimation<Color>(
@@ -57,7 +61,7 @@ class _TeamsRankingListBody extends StatelessWidget {
       );
     }
 
-    if (state.error != null && state.items.isEmpty) {
+    if (query.isError && entries.isEmpty) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -68,16 +72,16 @@ class _TeamsRankingListBody extends StatelessWidget {
               color: Color(AppColors.textSecondaryColor),
             ),
             const SizedBox(height: 10),
-            Text(
-              state.error!,
-              style: const TextStyle(
+            const Text(
+              'Failed to load ranked teams',
+              style: TextStyle(
                 color: Color(AppColors.textSecondaryColor),
                 fontSize: 14,
               ),
             ),
             const SizedBox(height: 12),
             ElevatedButton(
-              onPressed: () => controller.reloadSport(sport),
+              onPressed: () => query.refetch(),
               child: const Text('Retry'),
             ),
           ],
@@ -85,7 +89,7 @@ class _TeamsRankingListBody extends StatelessWidget {
       );
     }
 
-    if (state.items.isEmpty) {
+    if (entries.isEmpty) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -108,16 +112,17 @@ class _TeamsRankingListBody extends StatelessWidget {
       );
     }
 
-    final entries = state.items;
     final restEntries = entries.where((e) => e.rank > 3).toList();
 
     return RefreshIndicator(
-      onRefresh: () => controller.reloadSport(sport),
+      onRefresh: () => query.refetch(),
       child: NotificationListener<ScrollNotification>(
         onNotification: (notification) {
           if (notification.metrics.pixels >=
               notification.metrics.maxScrollExtent - 200) {
-            controller.loadMore(sport);
+            if (query.hasNextPage && !query.isFetchingNextPage) {
+              query.fetchNextPage();
+            }
           }
           return false;
         },
@@ -131,7 +136,7 @@ class _TeamsRankingListBody extends StatelessWidget {
               const SizedBox(height: 24),
               ...restEntries.map((entry) => _RankCard(entry: entry)),
             ],
-            if (state.isLoadingMore)
+            if (query.isFetchingNextPage)
               const Center(
                 child: Padding(
                   padding: EdgeInsets.all(16),
@@ -149,7 +154,6 @@ class _TeamsRankingListBody extends StatelessWidget {
     );
   }
 }
-
 TeamLeaderboardRow? _entryForRank(List<TeamLeaderboardRow> entries, int rank) {
   for (final entry in entries) {
     if (entry.rank == rank) return entry;

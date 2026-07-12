@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
 import '../../components/dashboard/battle_mode_card.dart';
@@ -8,18 +10,10 @@ import '../../components/dashboard/team_action_cards.dart';
 import '../../components/turf/featured_section.dart';
 import '../../core/auth/auth_state_controller.dart';
 import '../../core/config/constants.dart';
-import '../../dashboard/player/dashboard_leaderboard_controller.dart';
-import '../../turf/feed/turf_list_controller.dart';
+import '../../core/query/query_keys.dart';
 
-class PlayerDashboard extends StatelessWidget {
+class PlayerDashboard extends HookWidget {
   const PlayerDashboard({super.key});
-
-  Future<void> _onRefresh() async {
-    await Future.wait([
-      Get.find<TurfListController>().loadFeaturedTurfs(),
-      Get.find<DashboardLeaderboardController>().loadLeaderboard(),
-    ]);
-  }
 
   String _greeting() {
     final hour = DateTime.now().hour;
@@ -31,9 +25,17 @@ class PlayerDashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authController = Get.find<AuthStateController>();
+    final queryClient = useQueryClient();
 
     return RefreshIndicator(
-      onRefresh: _onRefresh,
+      onRefresh: () async {
+        await Future.wait([
+          queryClient.invalidateQueries(queryKey: QueryKeys.featuredTurfs),
+          queryClient.invalidateQueries(
+            queryKey: QueryKeys.dashboardLeaderboard,
+          ),
+        ]);
+      },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         child: Column(

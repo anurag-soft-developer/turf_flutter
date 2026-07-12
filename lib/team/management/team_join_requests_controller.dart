@@ -1,24 +1,22 @@
+import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
-import '../../core/auth/auth_state_controller.dart';
+import '../../core/query/query_keys.dart';
 import '../../core/utils/app_snackbar.dart';
 import '../members/model/team_member_model.dart';
 import '../team_service.dart';
 
 /// Owner-only: pending join applications for a team.
+/// Fetching is owned by flutter_query on the screen.
 class TeamJoinRequestsController extends GetxController {
   final TeamService _teamService = TeamService();
 
-  final RxBool isInitialLoading = true.obs;
-  final RxBool isBusy = false.obs;
   final RxnString actionMembershipId = RxnString();
   final RxBool accessDenied = false.obs;
+  final RxnString teamName = RxnString();
 
   String? _teamId;
   String? get teamId => _teamId;
-
-  final RxnString teamName = RxnString();
-  final RxList<TeamMemberModel> pending = <TeamMemberModel>[].obs;
 
   @override
   void onInit() {
@@ -29,44 +27,15 @@ class TeamJoinRequestsController extends GetxController {
     }
     if (_teamId == null || _teamId!.isEmpty) {
       accessDenied.value = true;
-      isInitialLoading.value = false;
-      return;
-    }
-    _bootstrap();
-  }
-
-  Future<void> _bootstrap() async {
-    isInitialLoading.value = true;
-    try {
-      final t = await _teamService.findById(_teamId!);
-      final uid = Get.find<AuthStateController>().user?.id;
-      if (t == null || uid == null || !t.isOwner(uid)) {
-        accessDenied.value = true;
-        return;
-      }
-      teamName.value = t.name;
-      accessDenied.value = false;
-      await loadPending();
-    } finally {
-      isInitialLoading.value = false;
     }
   }
 
-  Future<void> loadPending() async {
-    if (_teamId == null) return;
-    isBusy.value = true;
-    try {
-      final page = await _teamService.memberService.listForTeam(
-        _teamId!,
-        const TeamMemberRosterFilterQuery(
-          status: TeamMemberStatus.pending,
-          limit: 100,
-        ),
-      );
-      pending.assignAll(page?.data ?? <TeamMemberModel>[]);
-    } finally {
-      isBusy.value = false;
-    }
+  void syncTeamName(String? name) {
+    teamName.value = name;
+  }
+
+  void syncAccessDenied(bool denied) {
+    accessDenied.value = denied;
   }
 
   Future<void> accept(TeamMemberModel m) async {
@@ -90,7 +59,7 @@ class TeamJoinRequestsController extends GetxController {
           title: 'Player added',
           message: 'They are now a member of the team.',
         );
-        await loadPending();
+        await _invalidateAfterDecision();
       } else {
         AppSnackbar.error(
           title: 'Could not accept',
@@ -123,7 +92,7 @@ class TeamJoinRequestsController extends GetxController {
           title: 'Request rejected',
           message: 'The application was rejected.',
         );
-        await loadPending();
+        await _invalidateAfterDecision();
       } else {
         AppSnackbar.error(
           title: 'Could not reject',
@@ -133,5 +102,21 @@ class TeamJoinRequestsController extends GetxController {
     } finally {
       actionMembershipId.value = null;
     }
+  }
+
+  Future<void> _invalidateAfterDecision() async {
+    final id = _teamId;
+    if (id == null || !Get.isRegistered<QueryClient>()) return;
+    final client = Get.find<QueryClient>();
+    await Future.wait([
+      client.invalidateQueries(
+        queryKey: QueryKeys.teamRoster(id, status: TeamMemberStatus.pending.name),
+      ),
+      client.invalidateQueries(
+        queryKey: QueryKeys.teamRoster(id, status: TeamMemberStatus.active.name),
+      ),
+      client.invalidateQueries(queryKey: const ['myJoinRequests']),
+      client.invalidateQueries(queryKey: QueryKeys.teamDetail(id)),
+    ]);
   }
 }

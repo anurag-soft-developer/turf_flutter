@@ -6,7 +6,7 @@ import '../../core/auth/auth_state_controller.dart';
 import '../../core/config/constants.dart';
 import '../../turf/model/turf_review_model.dart';
 import '../../turf/reviews/turf_review_service.dart';
-import '../../turf/reviews/turf_reviews_list_controller.dart';
+import 'turf_detail_reviews_section.dart';
 
 class TurfReviewTile extends StatelessWidget {
   const TurfReviewTile({super.key, required this.review});
@@ -49,7 +49,7 @@ class TurfReviewTile extends StatelessWidget {
     if (!context.mounted) return;
     if (ok) {
       final turfId = review.turfHelper.getId();
-      if (turfId != null) reloadTurfReviewListsIfRegistered(turfId);
+      if (turfId != null) await invalidateTurfReviewQueries(turfId);
       Get.snackbar('Removed', 'Your review was deleted');
     } else {
       Get.snackbar('Error', 'Could not delete review');

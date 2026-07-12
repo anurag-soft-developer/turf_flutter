@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
 import '../../components/team/profile/team_hero_header.dart';
@@ -10,17 +12,148 @@ import '../../components/team/profile/team_social_links_row.dart';
 import '../../components/team/profile/team_sport_stats_section.dart';
 import '../../components/team/team_actions_card.dart';
 import '../../components/team/team_settings_card.dart';
+import '../../core/auth/auth_state_controller.dart';
+import '../../core/components/query/query_async_body.dart';
 import '../../core/config/constants.dart';
+import '../../core/models/paginated_response.dart';
+import '../../core/query/query_keys.dart';
 import '../members/model/team_member_model.dart';
 import '../model/team_model.dart';
+import '../team_service.dart';
 import 'team_detail_controller.dart';
 
-class TeamDetailScreen extends StatelessWidget {
+Duration? _noRetry(int count, Object error) => null;
+
+String? _argsTeamId() {
+  final args = Get.arguments;
+  if (args is Map && args['teamId'] is String) {
+    final id = args['teamId'] as String;
+    if (id.isNotEmpty) return id;
+  }
+  return null;
+}
+
+String? _firstActiveTeamId(List<TeamMemberModel>? memberships) {
+  if (memberships == null) return null;
+  for (final m in memberships) {
+    if (m.status == TeamMemberStatus.active &&
+        m.teamId != null &&
+        m.teamId!.isNotEmpty) {
+      return m.teamId;
+    }
+  }
+  return null;
+}
+
+TeamMemberModel? _membershipForTeam({
+  required String teamId,
+  required List<TeamMemberModel> roster,
+  required List<TeamMemberModel>? mine,
+}) {
+  final me = Get.find<AuthStateController>().user?.id;
+  if (me == null) return null;
+
+  for (final m in roster) {
+    if (m.userHelper.getId() == me) return m;
+  }
+  if (mine != null) {
+    for (final m in mine) {
+      if (m.teamId == teamId) return m;
+    }
+  }
+  return null;
+}
+
+class TeamDetailScreen extends HookWidget {
   const TeamDetailScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final TeamDetailController controller = Get.find();
+    final teamService = TeamService();
+    final argsTeamId = _argsTeamId();
+    final needsMembershipResolution =
+        controller.isMyTeamMode && argsTeamId == null;
+
+    final membershipsQuery = useQuery<List<TeamMemberModel>, Object>(
+      QueryKeys.myMemberships,
+      (_) async {
+        final result = await teamService.memberService.myMemberships(
+          const MyTeamMembershipsFilterQuery(limit: 100),
+        );
+        return result?.data ?? const <TeamMemberModel>[];
+      },
+      retry: _noRetry,
+    );
+
+    final resolvedTeamId = argsTeamId ??
+        (needsMembershipResolution
+            ? _firstActiveTeamId(membershipsQuery.data)
+            : null);
+    final hasTeamId = resolvedTeamId != null && resolvedTeamId.isNotEmpty;
+
+    final teamQuery = useQuery<TeamModel, Object>(
+      QueryKeys.teamDetail(resolvedTeamId ?? ''),
+      (_) async {
+        final team = await teamService.findById(resolvedTeamId!);
+        if (team == null) throw Exception('Team not found');
+        return team;
+      },
+      enabled: hasTeamId,
+      retry: _noRetry,
+    );
+
+    final rosterQuery =
+        useQuery<PaginatedResponse<TeamMemberModel>, Object>(
+      QueryKeys.teamRoster(
+        resolvedTeamId ?? '',
+        status: TeamMemberStatus.active.name,
+      ),
+      (_) async {
+        final page = await teamService.memberService.listForTeam(
+          resolvedTeamId!,
+          const TeamMemberRosterFilterQuery(
+            status: TeamMemberStatus.active,
+            limit: 100,
+          ),
+        );
+        return page ?? EmptyPaginatedResponse<TeamMemberModel>();
+      },
+      enabled: hasTeamId,
+      retry: _noRetry,
+    );
+
+    useEffect(() {
+      controller.setTeamId(hasTeamId ? resolvedTeamId : null);
+      return null;
+    }, [resolvedTeamId]);
+
+    useEffect(() {
+      controller.syncTeam(teamQuery.data);
+      return null;
+    }, [teamQuery.data]);
+
+    useEffect(() {
+      final page = rosterQuery.data;
+      controller.syncMembers(page?.data ?? const <TeamMemberModel>[]);
+      return null;
+    }, [rosterQuery.data]);
+
+    useEffect(() {
+      final id = resolvedTeamId;
+      if (id == null || id.isEmpty) {
+        controller.syncMyMembership(null);
+        return null;
+      }
+      controller.syncMyMembership(
+        _membershipForTeam(
+          teamId: id,
+          roster: rosterQuery.data?.data ?? const <TeamMemberModel>[],
+          mine: membershipsQuery.data,
+        ),
+      );
+      return null;
+    }, [resolvedTeamId, rosterQuery.data, membershipsQuery.data]);
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
@@ -61,209 +194,16 @@ class TeamDetailScreen extends StatelessWidget {
             }),
       body: Stack(
         children: [
-          Obx(() {
-            if (controller.isLoading.value) {
-              return const Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    Color(AppColors.primaryColor),
-                  ),
-                ),
-              );
-            }
-
-            final t = controller.team.value;
-
-            if (t == null && controller.isMyTeamMode) {
-              return _NoTeamBody(
-                onAddTeam: () => Get.toNamed(AppConstants.routes.addTeam),
-                onJoinTeam: () => Get.toNamed(AppConstants.routes.rank),
-              );
-            }
-
-            if (t == null) {
-              return Center(
-                child: Text(
-                  controller.teamId == null
-                      ? 'Missing team ID.'
-                      : 'Team not found.',
-                  style: const TextStyle(
-                    color: Color(AppColors.textSecondaryColor),
-                  ),
-                ),
-              );
-            }
-
-            return RefreshIndicator(
-              onRefresh: controller.load,
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Hero header
-                    TeamHeroHeader(team: t),
-
-                    const SizedBox(height: 16),
-
-                    // Quick stats
-                    // if (t.matchesPlayed > 0) ...[
-                    TeamQuickStatsBar(team: t),
-                    const SizedBox(height: 24),
-                    // ] else
-                    //   const SizedBox(height: 8),
-
-                    // About & Info
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: const TeamSectionHeader(title: 'About'),
-                    ),
-                    const SizedBox(height: 12),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: TeamInfoSection(team: t),
-                    ),
-
-                    const SizedBox(height: 28),
-
-                    // Sport-specific stats
-                    // Padding(
-                    //   padding: const EdgeInsets.symmetric(horizontal: 20),
-                    //   child: TeamSectionHeader(title: 'Stats'),
-                    // ),
-                    // const SizedBox(height: 12),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: TeamSportStatsSection(team: t),
-                    ),
-                    const SizedBox(height: 28),
-
-                    // Members
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: TeamSectionHeader(
-                        title: 'Squad',
-                        trailing:
-                            controller.isMyTeamMode &&
-                                controller.isOwner &&
-                                t.id != null &&
-                                t.id!.isNotEmpty
-                            ? TextButton.icon(
-                                onPressed: () => Get.toNamed(
-                                  AppConstants.routes.teamRosterManage,
-                                  arguments: {'teamId': t.id!},
-                                ),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: const Color(
-                                    AppColors.primaryColor,
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 6,
-                                  ),
-                                  visualDensity: VisualDensity.compact,
-                                ),
-                                icon: const Icon(
-                                  Icons.manage_accounts,
-                                  size: 16,
-                                ),
-                                label: const Text(
-                                  'Manage',
-                                  style: TextStyle(
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              )
-                            : null,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    if (controller.isMyTeamMode &&
-                        controller.isOwner &&
-                        t.id != null &&
-                        t.id!.isNotEmpty) ...[
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: _PendingRequestsNotifierCard(teamId: t.id!),
-                      ),
-                      const SizedBox(height: 12),
-                    ],
-                    _MembersHorizontalList(members: controller.members),
-
-                    const SizedBox(height: 28),
-
-                    // Social links
-                    if (t.socialLinks.instagram != null ||
-                        t.socialLinks.twitter != null ||
-                        t.socialLinks.facebook != null ||
-                        t.socialLinks.youtube != null) ...[
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: const TeamSectionHeader(title: 'Connect'),
-                      ),
-                      const SizedBox(height: 12),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: TeamSocialLinksRow(links: t.socialLinks),
-                      ),
-                      const SizedBox(height: 28),
-                    ],
-
-                    // Team actions (my-team mode)
-                    if (controller.isMyTeamMode)
-                      Obx(() {
-                        final isOwner = controller.isOwner;
-                        final isMember = controller.isMember;
-                        final st = controller.team.value;
-                        if (st == null || !isOwner && !isMember) {
-                          return const SizedBox.shrink();
-                        }
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const TeamSectionHeader(title: 'Team Actions'),
-                              const SizedBox(height: 12),
-                              if (isOwner) ...[
-                                TeamSettingsCard(
-                                  controller: controller,
-                                  team: st,
-                                ),
-                                const SizedBox(height: 18),
-                                TeamRecruitmentSettingsCard(
-                                  controller: controller,
-                                  team: st,
-                                ),
-                                const SizedBox(height: 18),
-                              ],
-                              TeamActionsCard(
-                                isOwner: isOwner,
-                                isMember: isMember,
-                                isActionLoading:
-                                    controller.isActionLoading.value,
-                                teamStatus: t.status,
-                                onToggleStatus: () =>
-                                    _confirmToggleStatus(context, controller),
-                                onLeave: () =>
-                                    _confirmLeave(context, controller),
-                              ),
-
-                              const SizedBox(height: 28),
-                            ],
-                          ),
-                        );
-                      }),
-
-                    const SizedBox(height: 24),
-                  ],
-                ),
-              ),
-            );
-          }),
-
-          // Action-busy overlay
+          _buildBody(
+            context: context,
+            controller: controller,
+            needsMembershipResolution: needsMembershipResolution,
+            hasTeamId: hasTeamId,
+            resolvedTeamId: resolvedTeamId,
+            membershipsQuery: membershipsQuery,
+            teamQuery: teamQuery,
+            rosterQuery: rosterQuery,
+          ),
           if (controller.isMyTeamMode)
             Obx(
               () => controller.isActionLoading.value
@@ -281,6 +221,235 @@ class TeamDetailScreen extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+
+  Widget _buildBody({
+    required BuildContext context,
+    required TeamDetailController controller,
+    required bool needsMembershipResolution,
+    required bool hasTeamId,
+    required String? resolvedTeamId,
+    required QueryResult<List<TeamMemberModel>, Object> membershipsQuery,
+    required QueryResult<TeamModel, Object> teamQuery,
+    required QueryResult<PaginatedResponse<TeamMemberModel>, Object>
+        rosterQuery,
+  }) {
+    if (needsMembershipResolution) {
+      if (membershipsQuery.isLoading ||
+          (membershipsQuery.isFetching && membershipsQuery.data == null)) {
+        return const Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(
+              Color(AppColors.primaryColor),
+            ),
+          ),
+        );
+      }
+      if (membershipsQuery.isError && membershipsQuery.data == null) {
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Failed to load your team',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Color(AppColors.textSecondaryColor),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => membershipsQuery.refetch(),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+      if (!hasTeamId) {
+        return _NoTeamBody(
+          onAddTeam: () => Get.toNamed(AppConstants.routes.addTeam),
+          onJoinTeam: () => Get.toNamed(AppConstants.routes.rank),
+        );
+      }
+    }
+
+    if (!hasTeamId) {
+      return const Center(
+        child: Text(
+          'Missing team ID.',
+          style: TextStyle(color: Color(AppColors.textSecondaryColor)),
+        ),
+      );
+    }
+
+    return QueryAsyncBody<TeamModel, Object>(
+      state: teamQuery,
+      onRetry: () {
+        teamQuery.refetch();
+        rosterQuery.refetch();
+        membershipsQuery.refetch();
+      },
+      data: (t) {
+        final uid = Get.find<AuthStateController>().user?.id;
+        final isOwner = uid != null && t.isOwner(uid);
+        final members =
+            rosterQuery.data?.data ?? const <TeamMemberModel>[];
+        final id = resolvedTeamId;
+        final membership = id != null && id.isNotEmpty
+            ? _membershipForTeam(
+                teamId: id,
+                roster: members,
+                mine: membershipsQuery.data,
+              )
+            : null;
+        final isMember = membership?.status == TeamMemberStatus.active;
+
+        return RefreshIndicator(
+          onRefresh: () async {
+            await Future.wait([
+              teamQuery.refetch(),
+              rosterQuery.refetch(),
+              membershipsQuery.refetch(),
+            ]);
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TeamHeroHeader(team: t),
+                const SizedBox(height: 16),
+                TeamQuickStatsBar(team: t),
+                const SizedBox(height: 24),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: const TeamSectionHeader(title: 'About'),
+                ),
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: TeamInfoSection(team: t),
+                ),
+                const SizedBox(height: 28),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: TeamSportStatsSection(team: t),
+                ),
+                const SizedBox(height: 28),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: TeamSectionHeader(
+                    title: 'Squad',
+                    trailing: controller.isMyTeamMode &&
+                            isOwner &&
+                            t.id != null &&
+                            t.id!.isNotEmpty
+                        ? TextButton.icon(
+                            onPressed: () => Get.toNamed(
+                              AppConstants.routes.teamRosterManage,
+                              arguments: {'teamId': t.id!},
+                            ),
+                            style: TextButton.styleFrom(
+                              foregroundColor: const Color(
+                                AppColors.primaryColor,
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              visualDensity: VisualDensity.compact,
+                            ),
+                            icon: const Icon(
+                              Icons.manage_accounts,
+                              size: 16,
+                            ),
+                            label: const Text(
+                              'Manage',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          )
+                        : null,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                if (controller.isMyTeamMode &&
+                    isOwner &&
+                    t.id != null &&
+                    t.id!.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: _PendingRequestsNotifierCard(teamId: t.id!),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                _MembersHorizontalList(members: members),
+                const SizedBox(height: 28),
+                if (t.socialLinks.instagram != null ||
+                    t.socialLinks.twitter != null ||
+                    t.socialLinks.facebook != null ||
+                    t.socialLinks.youtube != null) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: const TeamSectionHeader(title: 'Connect'),
+                  ),
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: TeamSocialLinksRow(links: t.socialLinks),
+                  ),
+                  const SizedBox(height: 28),
+                ],
+                if (controller.isMyTeamMode && (isOwner || isMember))
+                  Obx(() {
+                    final st = controller.team.value ?? t;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const TeamSectionHeader(title: 'Team Actions'),
+                          const SizedBox(height: 12),
+                          if (isOwner) ...[
+                            TeamSettingsCard(
+                              controller: controller,
+                              team: st,
+                            ),
+                            const SizedBox(height: 18),
+                            TeamRecruitmentSettingsCard(
+                              controller: controller,
+                              team: st,
+                            ),
+                            const SizedBox(height: 18),
+                          ],
+                          TeamActionsCard(
+                            isOwner: isOwner,
+                            isMember: isMember,
+                            isActionLoading: controller.isActionLoading.value,
+                            teamStatus: st.status,
+                            onToggleStatus: () =>
+                                _confirmToggleStatus(context, controller),
+                            onLeave: () =>
+                                _confirmLeave(context, controller),
+                          ),
+                          const SizedBox(height: 28),
+                        ],
+                      ),
+                    );
+                  }),
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
 import '../../core/config/constants.dart';
-import '../../turf/reviews/turf_reviews_list_controller.dart';
+import '../../core/models/paginated_response.dart';
+import '../../core/query/query_keys.dart';
+import '../../turf/model/turf_review_model.dart';
+import '../../turf/reviews/turf_review_service.dart';
 import 'turf_review_stats_summary.dart';
 import 'turf_review_tile.dart';
 import 'turf_review_write_form.dart';
+
+Duration? _noRetry(int count, Object error) => null;
 
 void openTurfReviewWriteSheet(BuildContext context, String turfId) {
   showModalBottomSheet<void>(
@@ -16,7 +23,16 @@ void openTurfReviewWriteSheet(BuildContext context, String turfId) {
   );
 }
 
-class TurfDetailReviewsSection extends StatelessWidget {
+Future<void> invalidateTurfReviewQueries(String turfId) async {
+  if (!Get.isRegistered<QueryClient>()) return;
+  final client = Get.find<QueryClient>();
+  await Future.wait([
+    client.invalidateQueries(queryKey: ['turfReviews', turfId]),
+    client.invalidateQueries(queryKey: QueryKeys.turfReviewStats(turfId)),
+  ]);
+}
+
+class TurfDetailReviewsSection extends HookWidget {
   const TurfDetailReviewsSection({
     super.key,
     required this.turfId,
@@ -30,13 +46,37 @@ class TurfDetailReviewsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tag = turfReviewsPreviewTag(turfId);
-    if (!Get.isRegistered<TurfReviewsListController>(tag: tag)) {
-      return const SizedBox.shrink();
-    }
+    final statsQuery = useQuery<TurfReviewStats?, Object>(
+      QueryKeys.turfReviewStats(turfId),
+      (_) => TurfReviewService().getTurfReviewStats(turfId),
+      retry: _noRetry,
+    );
 
-    final TurfReviewsListController controller =
-        Get.find<TurfReviewsListController>(tag: tag);
+    final previewQuery =
+        useQuery<PaginatedResponse<TurfReviewModel>, Object>(
+      QueryKeys.turfReviews(turfId, preview: true),
+      (_) async {
+        final page = await TurfReviewService().findTurfReviews(
+          turfId,
+          TurfReviewListQuery(
+            turf: turfId,
+            page: 1,
+            limit: 3,
+            sortBy: 'helpfulVotes',
+            sortOrder: 'desc',
+          ),
+        );
+        return page ?? EmptyPaginatedResponse<TurfReviewModel>();
+      },
+      retry: _noRetry,
+    );
+
+    final statsLoading =
+        statsQuery.isLoading || (statsQuery.isFetching && statsQuery.data == null);
+    final list = previewQuery.data?.data ?? const <TurfReviewModel>[];
+    final listLoading = previewQuery.isLoading ||
+        (previewQuery.isFetching && previewQuery.data == null);
+    final listError = previewQuery.isError && list.isEmpty;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -77,105 +117,60 @@ class TurfDetailReviewsSection extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          Obx(
-            () => TurfReviewStatsSummary(
-              stats: controller.stats.value,
-              isLoading: controller.isLoading.value,
-            ),
+          TurfReviewStatsSummary(
+            stats: statsQuery.data,
+            isLoading: statsLoading,
           ),
-          Obx(() {
-            final loading = controller.isLoading.value;
-            final err = controller.errorMessage.value;
-            final list = controller.reviews;
-
-            if (err != null && list.isEmpty) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Text(
-                  'Could not load reviews',
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-              );
-            }
-            if (!showReviewList) {
-              return const SizedBox.shrink();
-            }
-            if (list.isEmpty && !loading) {
-              return const Padding(
+          if (listError)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Text(
+                'Could not load reviews',
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            )
+          else if (showReviewList) ...[
+            if (list.isEmpty && !listLoading)
+              const Padding(
                 padding: EdgeInsets.symmetric(vertical: 16),
                 child: Text(
                   'No reviews yet. Be the first to share your experience.',
                   style: TextStyle(color: Color(AppColors.textSecondaryColor)),
                 ),
-              );
-            }
-            if (list.isEmpty) {
-              return const SizedBox.shrink();
-            }
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 16),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Popular reviews',
+              )
+            else if (list.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Popular reviews',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: Color(AppColors.textColor),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => Get.toNamed(
+                      AppConstants.routes.turfReviews,
+                      arguments: {'turfId': turfId},
+                    ),
+                    child: const Text(
+                      'View all',
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: Color(AppColors.textColor),
+                        color: Color(AppColors.primaryColor),
                       ),
                     ),
-                    TextButton(
-                      onPressed: () => Get.toNamed(
-                        AppConstants.routes.turfReviews,
-                        arguments: {'turfId': turfId},
-                      ),
-                      child: const Text(
-                        'View all',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: Color(AppColors.primaryColor),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                // const SizedBox(height: 2),
-                ...list.map((r) => TurfReviewTile(review: r)),
-              ],
-            );
-          }),
+                  ),
+                ],
+              ),
+              ...list.map((r) => TurfReviewTile(review: r)),
+            ],
+          ],
           const SizedBox(height: 8),
-          // if (showReviewList)
-          //   Obx(() {
-          //     final list = controller.reviews;
-          //     if (list.isEmpty) return const SizedBox.shrink();
-          //     final total = controller.stats.value?.totalReviews ?? 0;
-          //     final showViewAll =
-          //         total > list.length || (total == 0 && list.length >= 3);
-          //     if (!showViewAll) return const SizedBox.shrink();
-          //     return Center(
-          //       child: TextButton(
-          //         style: TextButton.styleFrom(
-          //           foregroundColor: const Color(AppColors.primaryColor),
-          //         ),
-          //         onPressed: () => Get.toNamed(
-          //           AppConstants.routes.turfReviews,
-          //           arguments: {'turfId': turfId},
-          //         ),
-          //         child: const Text(
-          //           'View all reviews',
-          //           style: TextStyle(fontSize: 14),
-          //         ),
-          //       ),
-          //     );
-          //   }),
-          // const SizedBox(height: 8),
         ],
       ),
     );

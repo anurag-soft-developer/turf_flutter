@@ -54,15 +54,25 @@ class FootballScorecard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: const Color(AppColors.surfaceColor),
               borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: const Color(AppColors.dividerColor),
+              ),
             ),
             child: Row(
               children: [
                 Expanded(
                   child: Column(
                     children: [
-                      Text(fromName, style: const TextStyle(fontWeight: FontWeight.w600)),
+                      Text(
+                        fromName,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Color(AppColors.textColor),
+                        ),
+                      ),
                       Text(
                         '${fs.scoreTeamOne}',
                         style: const TextStyle(
@@ -74,11 +84,24 @@ class FootballScorecard extends StatelessWidget {
                     ],
                   ),
                 ),
-                const Text('–', style: TextStyle(fontSize: 24)),
+                const Text(
+                  '–',
+                  style: TextStyle(
+                    fontSize: 24,
+                    color: Color(AppColors.textSecondaryColor),
+                  ),
+                ),
                 Expanded(
                   child: Column(
                     children: [
-                      Text(toName, style: const TextStyle(fontWeight: FontWeight.w600)),
+                      Text(
+                        toName,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Color(AppColors.textColor),
+                        ),
+                      ),
                       Text(
                         '${fs.scoreTeamTwo}',
                         style: const TextStyle(
@@ -101,14 +124,36 @@ class FootballScorecard extends StatelessWidget {
             )
           else
             ...events.map((e) {
-              final primary = UserFieldInstance(e.primaryUserId).getDisplayName();
+              final primary = UserFieldInstance(
+                e.primaryUserId,
+              ).getDisplayName();
               return ListTile(
-                leading: Icon(eventKindIcon(e.kind)),
-                title: Text('#${e.sequence} ${eventKindLabel(e.kind)}'),
+                leading: Icon(
+                  eventKindIcon(e.kind),
+                  color: const Color(AppColors.primaryColor),
+                ),
+                title: Text(
+                  '#${e.sequence} ${eventKindLabel(e.kind)}',
+                  style: const TextStyle(
+                    color: Color(AppColors.textColor),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 subtitle: primary.isNotEmpty && primary != 'Unknown'
-                    ? Text(primary)
+                    ? Text(
+                        primary,
+                        style: const TextStyle(
+                          color: Color(AppColors.textSecondaryColor),
+                        ),
+                      )
                     : null,
-                trailing: Text(periodLabel(e.period)),
+                trailing: Text(
+                  periodLabel(e.period),
+                  style: const TextStyle(
+                    color: Color(AppColors.textSecondaryColor),
+                    fontSize: 13,
+                  ),
+                ),
               );
             }),
         ],

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
 import '../../components/challenges/match_challenge_respond_actions.dart';
@@ -7,23 +9,22 @@ import '../../components/match_history/match_history_placeholders.dart';
 import '../../components/match_up/my_team_selector.dart';
 import '../../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
 import '../../core/config/constants.dart';
+import '../../core/models/paginated_response.dart';
+import '../../core/query/query_keys.dart';
+import '../../team/members/model/team_member_model.dart';
+import '../../team/team_service.dart';
 import '../../team/utils/team_ui.dart';
+import '../matchmaking_service.dart';
 import '../model/team_match_model.dart';
 import 'match_challenge_detail_screen.dart';
 import 'match_challenges_controller.dart';
 
-class MatchChallengesScreen extends StatefulWidget {
+Duration? _noRetry(int count, Object error) => null;
+
+class MatchChallengesScreen extends HookWidget {
   const MatchChallengesScreen({super.key});
 
-  @override
-  State<MatchChallengesScreen> createState() => _MatchChallengesScreenState();
-}
-
-class _MatchChallengesScreenState extends State<MatchChallengesScreen>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
-
-  final List<AppTabItem> _tabs = const [
+  static const _tabs = [
     AppTabItem(label: 'Received'),
     AppTabItem(label: 'Sent'),
     AppTabItem(label: 'Completed'),
@@ -32,284 +33,73 @@ class _MatchChallengesScreenState extends State<MatchChallengesScreen>
   ];
 
   @override
-  void initState() {
-    super.initState();
-    final c = Get.find<MatchChallengesController>();
-    _tabController = TabController(
-      length: _tabs.length,
-      vsync: this,
-      initialIndex: c.selectedTab.value.index,
-    );
-    _tabController.addListener(() {
-      if (_tabController.indexIsChanging) return;
-      c.switchTab(_tabController.index);
-    });
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final MatchChallengesController c = Get.find();
+    final teamService = TeamService();
+    final ticker = useSingleTickerProvider();
+
+    final membershipsQuery = useQuery<List<TeamMemberModel>, Object>(
+      QueryKeys.myMemberships,
+      (_) async {
+        final res = await teamService.memberService.myMemberships(
+          const MyTeamMembershipsFilterQuery(
+            status: TeamMemberStatus.active,
+            limit: 50,
+          ),
+        );
+        return res?.data ?? const <TeamMemberModel>[];
+      },
+      retry: _noRetry,
+    );
+
+    useEffect(() {
+      final data = membershipsQuery.data;
+      if (data != null) {
+        c.syncMemberships(data);
+      }
+      return null;
+    }, [membershipsQuery.data]);
+
+    final tabController = useMemoized(
+      () => TabController(
+        length: _tabs.length,
+        vsync: ticker,
+        initialIndex: c.selectedTab.value.index,
+      ),
+      [ticker],
+    );
+
+    useEffect(() {
+      void listener() {
+        if (tabController.indexIsChanging) return;
+        c.switchTab(tabController.index);
+      }
+
+      tabController.addListener(listener);
+      return () {
+        tabController.removeListener(listener);
+        tabController.dispose();
+      };
+    }, [tabController]);
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
       appBar: AppBar(title: const Text('Challenges')),
-      body: Obx(() {
-        if (c.isLoadingMemberships.value && c.memberships.isEmpty) {
-          return const Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(
-                Color(AppColors.primaryColor),
-              ),
-            ),
-          );
-        }
-        if (c.myTeams.isEmpty) {
-          return const _NoMembershipsMessage();
-        }
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Row(
-                // spacing: 4,
-                children: [
-                  Expanded(
-                    child: Obx(
-                      () => MyTeamSelector(
-                        teams: c.myTeams,
-                        allowToSelectAll: true,
-                        allTeamsSelected: c.filterAllTeams.value,
-                        selectedTeam: c.selectedMembershipTeam.value,
-                        sheetTitle: 'Show challenges for',
-                        onTeamSelected: c.selectTeamForFilter,
-                        onAllTeamsSelected: c.selectAllTeamsFilter,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: AppSegmentedTabs(
-                controller: _tabController,
-                onTap: c.switchTab,
-                padding: EdgeInsets.zero,
-                items: _tabs,
-              ),
-            ),
-            Expanded(
-              child: AppSegmentedTabView(
-                controller: _tabController,
-                children: [
-                  Obx(() {
-                    final state = c.tabStateFor(MatchChallengesTab.received);
-                    return _ChallengesTabView(
-                      state: state,
-                      emptyMessage: 'No challenges received yet.',
-                      itemBuilder: (m) =>
-                          _ReceivedChallengeCard(match: m, controller: c),
-                      onRefresh: c.refreshCurrentTab,
-                      onLoadMore: () => c.loadMore(MatchChallengesTab.received),
-                    );
-                  }),
-                  Obx(() {
-                    final state = c.tabStateFor(MatchChallengesTab.sent);
-                    return _ChallengesTabView(
-                      state: state,
-                      emptyMessage: 'No challenges sent yet.',
-                      itemBuilder: (m) =>
-                          _SentChallengeCard(match: m, controller: c),
-                      onRefresh: c.refreshCurrentTab,
-                      onLoadMore: () => c.loadMore(MatchChallengesTab.sent),
-                    );
-                  }),
-                  const _HistoryListPane(
-                    tab: MatchChallengesTab.completed,
-                    isHistory: true,
-                    emptyIcon: Icons.history,
-                    emptyTitle: 'No match history',
-                    emptySubtitle:
-                        'Completed matches will appear here once your team finishes a game.',
-                  ),
-                  const _HistoryListPane(
-                    tab: MatchChallengesTab.upcoming,
-                    isHistory: false,
-                    emptyIcon: Icons.event_available,
-                    emptyTitle: 'No upcoming matches',
-                    emptySubtitle:
-                        'Scheduled or live matches show up here once a time is set.',
-                  ),
-                  const _HistoryListPane(
-                    tab: MatchChallengesTab.archive,
-                    isHistory: true,
-                    emptyIcon: Icons.inventory_2_outlined,
-                    emptyTitle: 'Nothing archived',
-                    emptySubtitle:
-                        'Rejected, cancelled, and expired requests appear here.',
-                  ),
-                ],
-              ),
-            ),
-          ],
-        );
-      }),
+      body: _buildBody(
+        c: c,
+        membershipsQuery: membershipsQuery,
+        tabController: tabController,
+      ),
     );
   }
-}
 
-class _HistoryListPane extends StatelessWidget {
-  const _HistoryListPane({
-    required this.tab,
-    required this.isHistory,
-    required this.emptyIcon,
-    required this.emptyTitle,
-    required this.emptySubtitle,
-  });
-
-  final MatchChallengesTab tab;
-  final bool isHistory;
-  final IconData emptyIcon;
-  final String emptyTitle;
-  final String emptySubtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = Get.find<MatchChallengesController>();
-
-    return Obx(() {
-      final state = c.tabStateFor(tab);
-      final selectedTeamId = c.filterAllTeams.value
-          ? null
-          : c.selectedMembershipTeam.value?.id;
-      final matches = state.items;
-      if ((state.isFetching && matches.isEmpty) ||
-          (!state.hasInitialized && matches.isEmpty)) {
-        return const Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(
-              Color(AppColors.primaryColor),
-            ),
-          ),
-        );
-      }
-
-      if (state.error != null && matches.isEmpty) {
-        return Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.error_outline,
-                size: 42,
-                color: Color(AppColors.textSecondaryColor),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                state.error!,
-                style: const TextStyle(
-                  color: Color(AppColors.textSecondaryColor),
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton(
-                onPressed: () => c.resetAndRefetch(tab),
-                child: const Text('Retry'),
-              ),
-            ],
-          ),
-        );
-      }
-
-      if (matches.isEmpty) {
-        return MatchHistoryEmptyPlaceholder(
-          icon: emptyIcon,
-          title: emptyTitle,
-          subtitle: emptySubtitle,
-        );
-      }
-
-      return RefreshIndicator(
-        onRefresh: c.refreshCurrentTab,
-        color: const Color(AppColors.primaryColor),
-        child: NotificationListener<ScrollNotification>(
-          onNotification: (notification) {
-            if (notification.metrics.pixels >=
-                notification.metrics.maxScrollExtent - 200) {
-              c.loadMore(tab);
-            }
-            return false;
-          },
-          child: ListView.builder(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-            physics: const AlwaysScrollableScrollPhysics(),
-            itemCount: matches.length + (state.isLoadingMore ? 1 : 0),
-            itemBuilder: (context, index) {
-              if (index == matches.length) {
-                return const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(16),
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Color(AppColors.primaryColor),
-                      ),
-                    ),
-                  ),
-                );
-              }
-              final m = matches[index];
-              return Padding(
-                padding: EdgeInsets.only(
-                  bottom: index < matches.length - 1 ? 12 : 0,
-                ),
-                child: MatchCard(
-                  match: m,
-                  selectedTeamId: selectedTeamId,
-                  isHistory: isHistory,
-                  onTap: () async {
-                    await openMatchChallengeDetail(
-                      match: m,
-                      isIncoming: _isIncomingForMatch(m, c),
-                    );
-                  },
-                ),
-              );
-            },
-          ),
-        ),
-      );
-    });
-  }
-}
-
-class _ChallengesTabView extends StatelessWidget {
-  const _ChallengesTabView({
-    required this.state,
-    required this.emptyMessage,
-    required this.itemBuilder,
-    required this.onRefresh,
-    this.onLoadMore,
-  });
-
-  final SegmentedTabDataState<TeamMatchModel> state;
-  final String emptyMessage;
-  final Widget Function(TeamMatchModel match) itemBuilder;
-  final Future<void> Function() onRefresh;
-  final VoidCallback? onLoadMore;
-
-  @override
-  Widget build(BuildContext context) {
-    final list = state.items;
-    if ((state.isFetching && list.isEmpty) ||
-        (!state.hasInitialized && list.isEmpty)) {
+  Widget _buildBody({
+    required MatchChallengesController c,
+    required QueryResult<List<TeamMemberModel>, Object> membershipsQuery,
+    required TabController tabController,
+  }) {
+    if (membershipsQuery.isLoading ||
+        (membershipsQuery.isFetching && membershipsQuery.data == null)) {
       return const Center(
         child: CircularProgressIndicator(
           valueColor: AlwaysStoppedAnimation<Color>(
@@ -319,7 +109,236 @@ class _ChallengesTabView extends StatelessWidget {
       );
     }
 
-    if (state.error != null && list.isEmpty) {
+    if (membershipsQuery.isError && membershipsQuery.data == null) {
+      return Center(
+        child: ElevatedButton(
+          onPressed: () => membershipsQuery.refetch(),
+          child: const Text('Retry'),
+        ),
+      );
+    }
+
+    return Obx(() {
+      if (c.myTeams.isEmpty) {
+        return const _NoMembershipsMessage();
+      }
+
+      final filterKey = c.teamFilterKey;
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: MyTeamSelector(
+                    teams: c.myTeams,
+                    allowToSelectAll: true,
+                    allTeamsSelected: c.filterAllTeams.value,
+                    selectedTeam: c.selectedMembershipTeam.value,
+                    sheetTitle: 'Show challenges for',
+                    onTeamSelected: c.selectTeamForFilter,
+                    onAllTeamsSelected: c.selectAllTeamsFilter,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: AppSegmentedTabs(
+              controller: tabController,
+              onTap: c.switchTab,
+              padding: EdgeInsets.zero,
+              items: _tabs,
+            ),
+          ),
+          Expanded(
+            child: AppSegmentedTabView(
+              controller: tabController,
+              children: [
+                _ChallengesQueryPane(
+                  key: ValueKey('received|$filterKey'),
+                  tab: MatchChallengesTab.received,
+                  teamFilter: filterKey,
+                  emptyMessage: 'No challenges received yet.',
+                  itemBuilder: (m) =>
+                      _ReceivedChallengeCard(match: m, controller: c),
+                ),
+                _ChallengesQueryPane(
+                  key: ValueKey('sent|$filterKey'),
+                  tab: MatchChallengesTab.sent,
+                  teamFilter: filterKey,
+                  emptyMessage: 'No challenges sent yet.',
+                  itemBuilder: (m) =>
+                      _SentChallengeCard(match: m, controller: c),
+                ),
+                _HistoryQueryPane(
+                  key: ValueKey('completed|$filterKey'),
+                  tab: MatchChallengesTab.completed,
+                  teamFilter: filterKey,
+                  isHistory: true,
+                  emptyIcon: Icons.history,
+                  emptyTitle: 'No match history',
+                  emptySubtitle:
+                      'Completed matches will appear here once your team finishes a game.',
+                ),
+                _HistoryQueryPane(
+                  key: ValueKey('upcoming|$filterKey'),
+                  tab: MatchChallengesTab.upcoming,
+                  teamFilter: filterKey,
+                  isHistory: false,
+                  emptyIcon: Icons.event_available,
+                  emptyTitle: 'No upcoming matches',
+                  emptySubtitle:
+                      'Scheduled or live matches show up here once a time is set.',
+                ),
+                _HistoryQueryPane(
+                  key: ValueKey('archive|$filterKey'),
+                  tab: MatchChallengesTab.archive,
+                  teamFilter: filterKey,
+                  isHistory: true,
+                  emptyIcon: Icons.inventory_2_outlined,
+                  emptyTitle: 'Nothing archived',
+                  emptySubtitle:
+                      'Rejected, cancelled, and expired requests appear here.',
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    });
+  }
+}
+
+Future<PaginatedResponse<TeamMatchModel>> _fetchChallengesPage({
+  required MatchChallengesTab tab,
+  required List<String> teamIds,
+  required int page,
+}) async {
+  if (teamIds.isEmpty) {
+    return EmptyPaginatedResponse<TeamMatchModel>();
+  }
+
+  const pageSize = 20;
+  final service = MatchmakingService();
+
+  switch (tab) {
+    case MatchChallengesTab.received:
+    case MatchChallengesTab.sent:
+      final type = tab == MatchChallengesTab.received
+          ? NegotiationListType.incoming
+          : NegotiationListType.outgoing;
+      final inbox = await service.listInbox(
+        ListPreMatchInboxFilterQuery(
+          type: type,
+          teamIds: teamIds,
+          page: page,
+          limit: pageSize,
+          sort: 'createdAt:desc',
+        ),
+      );
+      return inbox ?? EmptyPaginatedResponse<TeamMatchModel>();
+    case MatchChallengesTab.completed:
+      final completed = await service.listRequests(
+        ListNegotiationsFilterQuery(
+          teamIds: teamIds,
+          type: NegotiationListType.all,
+          statuses: const [TeamMatchStatus.completed, TeamMatchStatus.draw],
+          page: page,
+          limit: pageSize,
+          sort: 'updatedAt:desc',
+        ),
+      );
+      return completed ?? EmptyPaginatedResponse<TeamMatchModel>();
+    case MatchChallengesTab.upcoming:
+      final upcoming = await service.listRequests(
+        ListNegotiationsFilterQuery(
+          teamIds: teamIds,
+          type: NegotiationListType.all,
+          statuses: const [
+            TeamMatchStatus.scheduleFinalized,
+            TeamMatchStatus.ongoing,
+          ],
+          page: page,
+          limit: pageSize,
+          sort: 'createdAt:asc',
+        ),
+      );
+      return upcoming ?? EmptyPaginatedResponse<TeamMatchModel>();
+    case MatchChallengesTab.archive:
+      final archive = await service.listRequests(
+        ListNegotiationsFilterQuery(
+          teamIds: teamIds,
+          type: NegotiationListType.all,
+          statuses: const [
+            TeamMatchStatus.rejected,
+            TeamMatchStatus.cancelled,
+            TeamMatchStatus.expired,
+          ],
+          page: page,
+          limit: pageSize,
+          sort: 'updatedAt:desc',
+        ),
+      );
+      return archive ?? EmptyPaginatedResponse<TeamMatchModel>();
+  }
+}
+
+class _ChallengesQueryPane extends HookWidget {
+  const _ChallengesQueryPane({
+    super.key,
+    required this.tab,
+    required this.teamFilter,
+    required this.emptyMessage,
+    required this.itemBuilder,
+  });
+
+  final MatchChallengesTab tab;
+  final String teamFilter;
+  final String emptyMessage;
+  final Widget Function(TeamMatchModel match) itemBuilder;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = Get.find<MatchChallengesController>();
+    final teamIds = c.activeTeamIdsForList();
+
+    final query =
+        useInfiniteQuery<PaginatedResponse<TeamMatchModel>, Object, int>(
+      QueryKeys.matchChallenges(tab: tab.name, teamFilter: teamFilter),
+      (ctx) => _fetchChallengesPage(
+        tab: tab,
+        teamIds: teamIds,
+        page: ctx.pageParam,
+      ),
+      initialPageParam: 1,
+      retry: _noRetry,
+      nextPageParamBuilder: (data) {
+        final last = data.pages.isNotEmpty ? data.pages.last : null;
+        if (last == null || !last.hasNextPage) return null;
+        return last.page + 1;
+      },
+    );
+
+    final list =
+        query.data?.pages.expand((p) => p.data).toList() ??
+        const <TeamMatchModel>[];
+
+    if (query.isLoading || (query.isFetching && list.isEmpty)) {
+      return const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(
+            Color(AppColors.primaryColor),
+          ),
+        ),
+      );
+    }
+
+    if (query.isError && list.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
@@ -335,16 +354,16 @@ class _ChallengesTabView extends StatelessWidget {
                     color: Color(AppColors.textSecondaryColor),
                   ),
                   const SizedBox(height: 12),
-                  Text(
-                    state.error!,
-                    style: const TextStyle(
+                  const Text(
+                    'Failed to load',
+                    style: TextStyle(
                       color: Color(AppColors.textSecondaryColor),
                       fontSize: 15,
                     ),
                   ),
                   const SizedBox(height: 12),
                   ElevatedButton(
-                    onPressed: onRefresh,
+                    onPressed: () => query.refetch(),
                     child: const Text('Retry'),
                   ),
                 ],
@@ -356,7 +375,7 @@ class _ChallengesTabView extends StatelessWidget {
     }
 
     return RefreshIndicator(
-      onRefresh: onRefresh,
+      onRefresh: () => query.refetch(),
       color: const Color(AppColors.primaryColor),
       child: list.isEmpty
           ? ListView(
@@ -378,17 +397,18 @@ class _ChallengesTabView extends StatelessWidget {
             )
           : NotificationListener<ScrollNotification>(
               onNotification: (notification) {
-                if (onLoadMore != null &&
-                    notification.metrics.pixels >=
-                        notification.metrics.maxScrollExtent - 200) {
-                  onLoadMore!();
+                if (notification.metrics.pixels >=
+                    notification.metrics.maxScrollExtent - 200) {
+                  if (query.hasNextPage && !query.isFetchingNextPage) {
+                    query.fetchNextPage();
+                  }
                 }
                 return false;
               },
               child: ListView.builder(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                 physics: const AlwaysScrollableScrollPhysics(),
-                itemCount: list.length + (state.isLoadingMore ? 1 : 0),
+                itemCount: list.length + (query.isFetchingNextPage ? 1 : 0),
                 itemBuilder: (context, i) {
                   if (i == list.length) {
                     return const Center(
@@ -411,6 +431,153 @@ class _ChallengesTabView extends StatelessWidget {
                 },
               ),
             ),
+    );
+  }
+}
+
+class _HistoryQueryPane extends HookWidget {
+  const _HistoryQueryPane({
+    super.key,
+    required this.tab,
+    required this.teamFilter,
+    required this.isHistory,
+    required this.emptyIcon,
+    required this.emptyTitle,
+    required this.emptySubtitle,
+  });
+
+  final MatchChallengesTab tab;
+  final String teamFilter;
+  final bool isHistory;
+  final IconData emptyIcon;
+  final String emptyTitle;
+  final String emptySubtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = Get.find<MatchChallengesController>();
+    final teamIds = c.activeTeamIdsForList();
+    final selectedTeamId = c.filterAllTeams.value
+        ? null
+        : c.selectedMembershipTeam.value?.id;
+
+    final query =
+        useInfiniteQuery<PaginatedResponse<TeamMatchModel>, Object, int>(
+      QueryKeys.matchChallenges(tab: tab.name, teamFilter: teamFilter),
+      (ctx) => _fetchChallengesPage(
+        tab: tab,
+        teamIds: teamIds,
+        page: ctx.pageParam,
+      ),
+      initialPageParam: 1,
+      retry: _noRetry,
+      nextPageParamBuilder: (data) {
+        final last = data.pages.isNotEmpty ? data.pages.last : null;
+        if (last == null || !last.hasNextPage) return null;
+        return last.page + 1;
+      },
+    );
+
+    final matches =
+        query.data?.pages.expand((p) => p.data).toList() ??
+        const <TeamMatchModel>[];
+
+    if (query.isLoading || (query.isFetching && matches.isEmpty)) {
+      return const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(
+            Color(AppColors.primaryColor),
+          ),
+        ),
+      );
+    }
+
+    if (query.isError && matches.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.error_outline,
+              size: 42,
+              color: Color(AppColors.textSecondaryColor),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Failed to load',
+              style: TextStyle(
+                color: Color(AppColors.textSecondaryColor),
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: () => query.refetch(),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (matches.isEmpty) {
+      return MatchHistoryEmptyPlaceholder(
+        icon: emptyIcon,
+        title: emptyTitle,
+        subtitle: emptySubtitle,
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () => query.refetch(),
+      color: const Color(AppColors.primaryColor),
+      child: NotificationListener<ScrollNotification>(
+        onNotification: (notification) {
+          if (notification.metrics.pixels >=
+              notification.metrics.maxScrollExtent - 200) {
+            if (query.hasNextPage && !query.isFetchingNextPage) {
+              query.fetchNextPage();
+            }
+          }
+          return false;
+        },
+        child: ListView.builder(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+          physics: const AlwaysScrollableScrollPhysics(),
+          itemCount: matches.length + (query.isFetchingNextPage ? 1 : 0),
+          itemBuilder: (context, index) {
+            if (index == matches.length) {
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Color(AppColors.primaryColor),
+                    ),
+                  ),
+                ),
+              );
+            }
+            final m = matches[index];
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: index < matches.length - 1 ? 12 : 0,
+              ),
+              child: MatchCard(
+                match: m,
+                selectedTeamId: selectedTeamId,
+                isHistory: isHistory,
+                onTap: () async {
+                  await openMatchChallengeDetail(
+                    match: m,
+                    isIncoming: _isIncomingForMatch(m, c),
+                  );
+                },
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 }
@@ -691,7 +858,6 @@ String _statusLabel(TeamMatchStatus s) {
   };
 }
 
-/// Backend [expired], or [expiresAt] passed while still negotiating.
 bool _matchShowsAsExpired(TeamMatchModel m) {
   if (m.status == TeamMatchStatus.expired) return true;
   final ex = m.expiresAt;
@@ -716,7 +882,6 @@ String _formatDate(DateTime d) {
       '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
 }
 
-/// Aligns with [MatchChallengeDetailController.isIncoming]: [to] is the side that received the request.
 bool _isIncomingForMatch(TeamMatchModel match, MatchChallengesController c) {
   final toId = match.toTeamHelper.getId();
   final fromId = match.fromTeamHelper.getId();

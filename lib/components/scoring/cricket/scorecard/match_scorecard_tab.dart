@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:flutter_query/flutter_query.dart';
 
 import '../../../../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
 import '../../../../core/config/constants.dart';
+import '../../../../core/query/query_keys.dart';
 import '../../../../match_up/model/team_match_model.dart';
 import '../../../../scoring/cricket/cricket_scoring_api_service.dart';
 import '../../../../scoring/cricket/model/cricket_ball_event_model.dart';
@@ -11,7 +14,9 @@ import '../../../../scoring/football/widgets/football_scorecard.dart';
 import '../../../../team/model/team_model.dart';
 import 'cricket_scorecard.dart';
 
-class MatchScorecardTab extends StatefulWidget {
+Duration? _noRetry(int count, Object error) => null;
+
+class MatchScorecardTab extends HookWidget {
   const MatchScorecardTab({
     super.key,
     required this.match,
@@ -22,159 +27,162 @@ class MatchScorecardTab extends StatefulWidget {
   final TabController? parentTabController;
 
   @override
-  State<MatchScorecardTab> createState() => _MatchScorecardTabState();
-}
-
-class _MatchScorecardTabState extends State<MatchScorecardTab> {
-  final CricketScoringApiService _cricketApi = CricketScoringApiService();
-  final FootballScoringApiService _footballApi = FootballScoringApiService();
-
-  TeamMatchModel? _match;
-  List<CricketOverEvent> _overs = const [];
-  List<FootballMatchEvent> _footballEvents = const [];
-  bool _isLoading = false;
-  String? _errorMessage;
-
-  @override
-  void initState() {
-    super.initState();
-    _match = widget.match;
-    _loadScorecard();
-  }
-
-  @override
-  void didUpdateWidget(covariant MatchScorecardTab oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.match.id != widget.match.id ||
-        oldWidget.match.updatedAt != widget.match.updatedAt) {
-      _match = widget.match;
-      _loadScorecard();
-    }
-  }
-
-  Future<void> _loadScorecard() async {
-    if (widget.match.sportType == TeamSportType.cricket) {
-      await _loadCricketScorecard();
-    } else if (widget.match.sportType == TeamSportType.football) {
-      await _loadFootballScorecard();
-    }
-  }
-
-  Future<void> _loadCricketScorecard() async {
-    final matchId = widget.match.id;
-    if (matchId == null || matchId.isEmpty) {
-      setState(() {
-        _errorMessage = 'Missing match id.';
-        _overs = const [];
-      });
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      final match = await _cricketApi.getCricketSession(matchId);
-      final overs = await _cricketApi.listCricketOvers(teamMatchId: matchId);
-      if (!mounted) return;
-      setState(() {
-        _match = match ?? widget.match;
-        _overs = List<CricketOverEvent>.from(overs)
-          ..sort((a, b) => a.sequence.compareTo(b.sequence));
-        _isLoading = false;
-        if (match == null) {
-          _errorMessage = 'Could not load scorecard.';
-        }
-      });
-    } catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-        _errorMessage = error.toString();
-      });
-    }
-  }
-
-  Future<void> _loadFootballScorecard() async {
-    final matchId = widget.match.id;
-    if (matchId == null || matchId.isEmpty) {
-      setState(() {
-        _errorMessage = 'Missing match id.';
-        _footballEvents = const [];
-      });
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      final match = await _footballApi.getFootballSession(matchId);
-      final events = await _footballApi.listFootballEvents(teamMatchId: matchId);
-      if (!mounted) return;
-      setState(() {
-        _match = match ?? widget.match;
-        _footballEvents = List<FootballMatchEvent>.from(events)
-          ..sort((a, b) => a.sequence.compareTo(b.sequence));
-        _isLoading = false;
-        if (match == null) {
-          _errorMessage = 'Could not load scorecard.';
-        }
-      });
-    } catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-        _errorMessage = error.toString();
-      });
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    if (widget.match.sportType == TeamSportType.football) {
-      if (_errorMessage != null && _match?.footballState == null) {
-        return _wrapParentSwipe(
-          _ErrorState(message: _errorMessage!, onRetry: _loadFootballScorecard),
-        );
-      }
-      return FootballScorecard(
-        match: _match ?? widget.match,
-        events: _footballEvents,
-        parentTabController: widget.parentTabController,
-        isLoading: _isLoading,
-        onRetry: _loadFootballScorecard,
-      );
-    }
+    final matchId = match.id ?? '';
+    final isCricket = match.sportType == TeamSportType.cricket;
+    final isFootball = match.sportType == TeamSportType.football;
+    final supported = isCricket || isFootball;
+    final hasMatchId = matchId.isNotEmpty;
 
-    if (widget.match.sportType != TeamSportType.cricket) {
+    final cricketApi = useMemoized(() => CricketScoringApiService());
+    final footballApi = useMemoized(() => FootballScoringApiService());
+
+    final cricketSessionQuery = useQuery<TeamMatchModel, Object>(
+      QueryKeys.cricketSession(matchId),
+      (_) async {
+        final loaded = await cricketApi.getCricketSession(matchId);
+        if (loaded == null) throw Exception('Could not load scorecard.');
+        return loaded;
+      },
+      enabled: supported && isCricket && hasMatchId,
+      retry: _noRetry,
+    );
+
+    final cricketOversQuery = useQuery<List<CricketOverEvent>, Object>(
+      QueryKeys.cricketOvers(matchId),
+      (_) async {
+        final overs = await cricketApi.listCricketOvers(teamMatchId: matchId);
+        return List<CricketOverEvent>.from(overs)
+          ..sort((a, b) => a.sequence.compareTo(b.sequence));
+      },
+      enabled: supported &&
+          isCricket &&
+          hasMatchId &&
+          cricketSessionQuery.data?.cricketState != null,
+      retry: _noRetry,
+    );
+
+    final footballSessionQuery = useQuery<TeamMatchModel, Object>(
+      QueryKeys.footballSession(matchId),
+      (_) async {
+        final loaded = await footballApi.getFootballSession(matchId);
+        if (loaded == null) throw Exception('Could not load scorecard.');
+        return loaded;
+      },
+      enabled: supported && isFootball && hasMatchId,
+      retry: _noRetry,
+    );
+
+    final footballEventsQuery = useQuery<List<FootballMatchEvent>, Object>(
+      QueryKeys.footballEvents(matchId),
+      (_) async {
+        final events =
+            await footballApi.listFootballEvents(teamMatchId: matchId);
+        return List<FootballMatchEvent>.from(events)
+          ..sort((a, b) => a.sequence.compareTo(b.sequence));
+      },
+      enabled: supported &&
+          isFootball &&
+          hasMatchId &&
+          footballSessionQuery.data?.footballState != null,
+      retry: _noRetry,
+    );
+
+    if (!supported) {
       return _wrapParentSwipe(const _SportPlaceholder());
     }
 
-    if (_errorMessage != null && _match?.cricketState == null) {
+    if (!hasMatchId) {
       return _wrapParentSwipe(
         _ErrorState(
-          message: _errorMessage!,
-          onRetry: _loadCricketScorecard,
+          message: 'Missing match id.',
+          onRetry: () {},
+        ),
+      );
+    }
+
+    if (isFootball) {
+      final session = footballSessionQuery.data ?? match;
+      final sessionError = footballSessionQuery.isError &&
+          footballSessionQuery.data == null;
+      final eventsError = footballEventsQuery.isError &&
+          footballSessionQuery.data?.footballState != null &&
+          footballEventsQuery.data == null;
+      final loading = footballSessionQuery.isLoading ||
+          (footballSessionQuery.isFetching &&
+              footballSessionQuery.data == null) ||
+          (footballSessionQuery.data?.footballState != null &&
+              (footballEventsQuery.isLoading ||
+                  (footballEventsQuery.isFetching &&
+                      footballEventsQuery.data == null)));
+
+      if ((sessionError || eventsError) && session.footballState == null) {
+        return _wrapParentSwipe(
+          _ErrorState(
+            message: (footballSessionQuery.error ?? footballEventsQuery.error)
+                    ?.toString() ??
+                'Could not load scorecard.',
+            onRetry: () {
+              footballSessionQuery.refetch();
+              footballEventsQuery.refetch();
+            },
+          ),
+        );
+      }
+
+      return FootballScorecard(
+        match: session,
+        events: footballEventsQuery.data ?? const [],
+        parentTabController: parentTabController,
+        isLoading: loading,
+        onRetry: () {
+          footballSessionQuery.refetch();
+          footballEventsQuery.refetch();
+        },
+      );
+    }
+
+    final session = cricketSessionQuery.data ?? match;
+    final sessionError =
+        cricketSessionQuery.isError && cricketSessionQuery.data == null;
+    final oversError = cricketOversQuery.isError &&
+        cricketSessionQuery.data?.cricketState != null &&
+        cricketOversQuery.data == null;
+    final loading = cricketSessionQuery.isLoading ||
+        (cricketSessionQuery.isFetching && cricketSessionQuery.data == null) ||
+        (cricketSessionQuery.data?.cricketState != null &&
+            (cricketOversQuery.isLoading ||
+                (cricketOversQuery.isFetching &&
+                    cricketOversQuery.data == null)));
+
+    if ((sessionError || oversError) && session.cricketState == null) {
+      return _wrapParentSwipe(
+        _ErrorState(
+          message: (cricketSessionQuery.error ?? cricketOversQuery.error)
+                  ?.toString() ??
+              'Could not load scorecard.',
+          onRetry: () {
+            cricketSessionQuery.refetch();
+            cricketOversQuery.refetch();
+          },
         ),
       );
     }
 
     return CricketScorecard(
-      match: _match ?? widget.match,
-      overs: _overs,
-      parentTabController: widget.parentTabController,
-      isLoading: _isLoading,
-      onRetry: _loadCricketScorecard,
+      match: session,
+      overs: cricketOversQuery.data ?? const [],
+      parentTabController: parentTabController,
+      isLoading: loading,
+      onRetry: () {
+        cricketSessionQuery.refetch();
+        cricketOversQuery.refetch();
+      },
     );
   }
 
   Widget _wrapParentSwipe(Widget child) {
-    final parent = widget.parentTabController;
+    final parent = parentTabController;
     if (parent == null) return child;
     return ParentLinkedHorizontalSwipe(
       parentController: parent,

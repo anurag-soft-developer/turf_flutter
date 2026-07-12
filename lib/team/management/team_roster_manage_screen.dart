@@ -1,98 +1,316 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
+import '../../core/auth/auth_state_controller.dart';
 import '../../core/config/constants.dart';
+import '../../core/models/paginated_response.dart';
+import '../../core/query/query_keys.dart';
 import '../members/model/team_member_model.dart';
+import '../model/team_model.dart';
+import '../team_service.dart';
 import '../utils/team_ui.dart';
 import 'team_roster_manage_controller.dart';
 
-class TeamRosterManageScreen extends StatelessWidget {
+Duration? _noRetry(int count, Object error) => null;
+
+int _sortMembers(TeamMemberModel a, TeamMemberModel b) {
+  int leadershipOrder(LeadershipRole? r) {
+    if (r == LeadershipRole.captain) return 0;
+    if (r == LeadershipRole.viceCaptain) return 1;
+    return 2;
+  }
+
+  const order = {
+    TeamMemberStatus.active: 0,
+    TeamMemberStatus.suspended: 1,
+  };
+  final oa = order[a.status] ?? 9;
+  final ob = order[b.status] ?? 9;
+  if (oa != ob) return oa.compareTo(ob);
+
+  final la = leadershipOrder(a.leadershipRole);
+  final lb = leadershipOrder(b.leadershipRole);
+  if (la != lb) return la.compareTo(lb);
+
+  return a.userHelper
+      .getDisplayName()
+      .toLowerCase()
+      .compareTo(b.userHelper.getDisplayName().toLowerCase());
+}
+
+class TeamRosterManageScreen extends HookWidget {
   const TeamRosterManageScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final c = Get.find<TeamRosterManageController>();
+    final teamId = c.teamId;
+    final hasTeamId = teamId != null && teamId.isNotEmpty;
+    final teamService = TeamService();
+
+    final teamQuery = useQuery<TeamModel?, Object>(
+      QueryKeys.teamDetail(teamId ?? ''),
+      (_) => teamService.findById(teamId!),
+      enabled: hasTeamId,
+      retry: _noRetry,
+    );
+
+    final activeQuery =
+        useQuery<PaginatedResponse<TeamMemberModel>, Object>(
+      QueryKeys.teamRoster(
+        teamId ?? '',
+        status: TeamMemberStatus.active.name,
+      ),
+      (_) async {
+        final page = await teamService.memberService.listForTeam(
+          teamId!,
+          const TeamMemberRosterFilterQuery(
+            status: TeamMemberStatus.active,
+            limit: 100,
+          ),
+        );
+        return page ?? EmptyPaginatedResponse<TeamMemberModel>();
+      },
+      enabled: hasTeamId,
+      retry: _noRetry,
+    );
+
+    final suspendedQuery =
+        useQuery<PaginatedResponse<TeamMemberModel>, Object>(
+      QueryKeys.teamRoster(
+        teamId ?? '',
+        status: TeamMemberStatus.suspended.name,
+      ),
+      (_) async {
+        final page = await teamService.memberService.listForTeam(
+          teamId!,
+          const TeamMemberRosterFilterQuery(
+            status: TeamMemberStatus.suspended,
+            limit: 100,
+          ),
+        );
+        return page ?? EmptyPaginatedResponse<TeamMemberModel>();
+      },
+      enabled: hasTeamId,
+      retry: _noRetry,
+    );
+
+    final uid = Get.find<AuthStateController>().user?.id;
+    final team = teamQuery.data;
+    final accessDenied = !hasTeamId ||
+        (teamQuery.isSuccess &&
+            (team == null || uid == null || !team.isOwner(uid)));
+
+    useEffect(() {
+      c.syncAccessDenied(accessDenied);
+      c.syncTeamName(team?.name);
+      return null;
+    }, [accessDenied, team?.name]);
+
+    final members = <TeamMemberModel>[
+      ...(activeQuery.data?.data ?? const <TeamMemberModel>[]),
+      ...(suspendedQuery.data?.data ?? const <TeamMemberModel>[]),
+    ]..sort(_sortMembers);
+
+    final rosterLoading = hasTeamId &&
+        !accessDenied &&
+        ((activeQuery.isLoading ||
+                (activeQuery.isFetching && activeQuery.data == null)) ||
+            (suspendedQuery.isLoading ||
+                (suspendedQuery.isFetching && suspendedQuery.data == null)));
+
+    final rosterError = hasTeamId &&
+        !accessDenied &&
+        ((activeQuery.isError && activeQuery.data == null) ||
+            (suspendedQuery.isError && suspendedQuery.data == null));
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
       appBar: AppBar(
-        title: Obx(
-          () => Text(
-            c.teamName.value != null
-                ? 'Manage squad · ${c.teamName.value}'
-                : 'Manage squad',
-          ),
+        title: Text(
+          team?.name != null
+              ? 'Manage squad · ${team!.name}'
+              : 'Manage squad',
         ),
       ),
-      body: Obx(() {
-        if (c.isInitialLoading.value) {
-          return const Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(
-                Color(AppColors.primaryColor),
-              ),
+      body: _buildBody(
+        context: context,
+        c: c,
+        hasTeamId: hasTeamId,
+        accessDenied: accessDenied,
+        teamQuery: teamQuery,
+        activeQuery: activeQuery,
+        suspendedQuery: suspendedQuery,
+        members: members,
+        rosterLoading: rosterLoading,
+        rosterError: rosterError,
+      ),
+    );
+  }
+
+  Widget _buildBody({
+    required BuildContext context,
+    required TeamRosterManageController c,
+    required bool hasTeamId,
+    required bool accessDenied,
+    required QueryResult<TeamModel?, Object> teamQuery,
+    required QueryResult<PaginatedResponse<TeamMemberModel>, Object>
+        activeQuery,
+    required QueryResult<PaginatedResponse<TeamMemberModel>, Object>
+        suspendedQuery,
+    required List<TeamMemberModel> members,
+    required bool rosterLoading,
+    required bool rosterError,
+  }) {
+    if (!hasTeamId) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Text(
+            'You do not have permission to manage this team’s roster.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Color(AppColors.textSecondaryColor),
+              fontSize: 15,
             ),
-          );
-        }
-        if (c.accessDenied.value) {
-          return const Center(
-            child: Padding(
-              padding: EdgeInsets.all(24),
-              child: Text(
-                'You do not have permission to manage this team’s roster.',
+          ),
+        ),
+      );
+    }
+
+    if (teamQuery.isLoading ||
+        (teamQuery.isFetching && teamQuery.data == null && !teamQuery.isError)) {
+      return const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(
+            Color(AppColors.primaryColor),
+          ),
+        ),
+      );
+    }
+
+    if (teamQuery.isError && teamQuery.data == null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Failed to load team',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Color(AppColors.textSecondaryColor),
-                  fontSize: 15,
                 ),
               ),
-            ),
-          );
-        }
-        if (c.isBusy.value && c.members.isEmpty) {
-          return const Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(
-                Color(AppColors.primaryColor),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => teamQuery.refetch(),
+                child: const Text('Retry'),
               ),
-            ),
-          );
-        }
-        if (c.members.isEmpty) {
-          return const Center(
-            child: Text(
-              'No members in the roster yet.',
-              style: TextStyle(
-                color: Color(AppColors.textSecondaryColor),
-                fontSize: 15,
-              ),
-            ),
-          );
-        }
-
-        return RefreshIndicator(
-          onRefresh: c.loadMembers,
-          child: ListView.separated(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-            itemCount: c.members.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
-            itemBuilder: (context, i) {
-              final m = c.members[i];
-              final busy = c.actionTargetId.value != null &&
-                  c.actionTargetId.value == m.id;
-              return _RosterRow(
-                member: m,
-                isBusy: busy,
-                isSelf: c.isSelf(m),
-                onOpenProfile: () => c.openProfile(m),
-                onAssignCaptain: () => c.assignCaptain(m),
-                onAssignViceCaptain: () => c.assignViceCaptain(m),
-                onRemove: () => _confirmRemove(context, c, m),
-                onSuspend: () => _confirmSuspend(context, c, m),
-                onUnsuspend: () => c.unsuspendMember(m),
-              );
-            },
+            ],
           ),
+        ),
+      );
+    }
+
+    if (accessDenied) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Text(
+            'You do not have permission to manage this team’s roster.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Color(AppColors.textSecondaryColor),
+              fontSize: 15,
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (rosterLoading) {
+      return const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(
+            Color(AppColors.primaryColor),
+          ),
+        ),
+      );
+    }
+
+    if (rosterError) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Failed to load roster',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Color(AppColors.textSecondaryColor),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  activeQuery.refetch();
+                  suspendedQuery.refetch();
+                },
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (members.isEmpty) {
+      return const Center(
+        child: Text(
+          'No members in the roster yet.',
+          style: TextStyle(
+            color: Color(AppColors.textSecondaryColor),
+            fontSize: 15,
+          ),
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        await Future.wait([
+          teamQuery.refetch(),
+          activeQuery.refetch(),
+          suspendedQuery.refetch(),
+        ]);
+      },
+      child: Obx(() {
+        final busyId = c.actionTargetId.value;
+        return ListView.separated(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+          itemCount: members.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 8),
+          itemBuilder: (context, i) {
+            final m = members[i];
+            final busy = busyId != null && busyId == m.id;
+            return _RosterRow(
+              member: m,
+              isBusy: busy,
+              isSelf: c.isSelf(m),
+              onOpenProfile: () => c.openProfile(m),
+              onAssignCaptain: () => c.assignCaptain(m),
+              onAssignViceCaptain: () => c.assignViceCaptain(m),
+              onRemove: () => _confirmRemove(context, c, m),
+              onSuspend: () => _confirmSuspend(context, c, m),
+              onUnsuspend: () => c.unsuspendMember(m),
+            );
+          },
         );
       }),
     );

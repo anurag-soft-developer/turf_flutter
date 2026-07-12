@@ -4,8 +4,6 @@ import 'package:get/get.dart';
 
 import '../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
 import '../core/config/constants.dart';
-import '../team/feed/teams_ranking_controller.dart';
-import 'player_ranking_controller.dart';
 import 'rank_controller.dart';
 import 'widgets/player_ranking_list.dart';
 import 'widgets/rank_sport_filter.dart';
@@ -35,7 +33,6 @@ class _RankScreenState extends State<RankScreen>
       initialIndex: initialIndex < 0 ? 0 : initialIndex,
     );
     _tabController.addListener(_onTabChanged);
-    rankController.ensureActiveTabLoaded();
   }
 
   void _onTabChanged() {
@@ -56,8 +53,6 @@ class _RankScreenState extends State<RankScreen>
   @override
   Widget build(BuildContext context) {
     final rankController = Get.find<RankController>();
-    final teamsController = Get.find<TeamsRankingController>();
-    final playerController = Get.find<PlayerRankingController>();
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
@@ -110,11 +105,11 @@ class _RankScreenState extends State<RankScreen>
                 controller: _tabController,
                 children: [
                   TeamsRankingList(
-                    controller: teamsController,
+                    key: ValueKey('teams-${sport.name}'),
                     sport: sport,
                   ),
                   PlayerRankingList(
-                    controller: playerController,
+                    key: ValueKey('players-${playerSport.name}'),
                     sport: playerSport,
                   ),
                 ],

@@ -1,24 +1,19 @@
+import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
-import '../../components/shared/app_segmented_tabs/segmented_tab_cache_controller.dart';
+import '../../core/query/query_keys.dart';
 import '../../core/utils/app_snackbar.dart';
 import '../../team/members/model/team_member_model.dart';
-import '../../team/team_service.dart';
 import '../matchmaking_service.dart';
 import '../model/team_match_model.dart';
 
 enum MatchChallengesTab { received, sent, completed, upcoming, archive }
 
-/// Lists match requests; filter by one team or merge all of the user’s teams.
-class MatchChallengesController extends GetxController
-    with SegmentedTabCacheController<MatchChallengesTab, TeamMatchModel> {
+/// UI + accept/reject mutations. List fetching is owned by flutter_query on the screen.
+class MatchChallengesController extends GetxController {
   final MatchmakingService _matchmakingService = MatchmakingService();
-  final TeamService _teamService = TeamService();
-
-  static const int _pageSize = 20;
 
   final Rx<MatchChallengesTab> selectedTab = MatchChallengesTab.received.obs;
-  final RxBool isLoadingMemberships = true.obs;
   final Rxn<String> acceptingMatchId = Rxn<String>();
   final Rxn<String> rejectingMatchId = Rxn<String>();
 
@@ -26,12 +21,6 @@ class MatchChallengesController extends GetxController
   final RxBool filterAllTeams = true.obs;
   final Rxn<TeamMemberFieldInstance> selectedMembershipTeam =
       Rxn<TeamMemberFieldInstance>();
-
-  @override
-  List<MatchChallengesTab> get tabKeys => MatchChallengesTab.values;
-
-  @override
-  bool get paginatedTabs => true;
 
   List<TeamMemberFieldInstance> get myTeams {
     final list = <TeamMemberFieldInstance>[];
@@ -45,176 +34,14 @@ class MatchChallengesController extends GetxController
     return list.where((t) => seen.add(t.id!)).toList();
   }
 
-  @override
-  void onInit() {
-    super.onInit();
-    _bootstrap();
-  }
-
-  Future<void> _bootstrap() async {
-    await loadMemberships();
-    await loadSelectedTab();
-  }
-
-  Future<void> loadMemberships() async {
-    isLoadingMemberships.value = true;
-    try {
-      final res = await _teamService.memberService.myMemberships(
-        const MyTeamMembershipsFilterQuery(
-          status: TeamMemberStatus.active,
-          limit: 50,
-        ),
-      );
-      memberships.assignAll(res?.data ?? []);
-      if (!filterAllTeams.value) {
-        final sel = selectedMembershipTeam.value;
-        if (sel != null && !myTeams.any((t) => t.id == sel.id)) {
-          selectedMembershipTeam.value = myTeams.isNotEmpty
-              ? myTeams.first
-              : null;
-        }
-      }
-    } finally {
-      isLoadingMemberships.value = false;
-    }
-  }
-
-  void selectTeamForFilter(TeamMemberFieldInstance team) {
-    filterAllTeams.value = false;
-    selectedMembershipTeam.value = team;
-    refreshAllTabs();
-  }
-
-  void selectAllTeamsFilter() {
-    filterAllTeams.value = true;
-    refreshAllTabs();
-  }
-
-  Future<void> loadSelectedTab() async {
-    if (myTeams.isEmpty) {
-      _clearAllTabStates();
-      return;
-    }
-    await ensureTabLoaded(selectedTab.value);
-  }
-
-  void _clearAllTabStates() {
-    for (final tab in tabKeys) {
-      setTabState(tab, const SegmentedTabDataState<TeamMatchModel>());
-    }
-  }
-
-  Future<void> loadMore(MatchChallengesTab tab) => loadMoreTab(tab);
-
-  @override
-  Future<List<TeamMatchModel>> fetchTabItems(MatchChallengesTab tab) async {
-    return (await fetchTabPage(tab, 1)).items;
-  }
-
-  @override
-  Future<SegmentedTabPageResult<TeamMatchModel>> fetchTabPage(
-    MatchChallengesTab tab,
-    int page,
-  ) async {
-    final teamIds = _activeTeamIdsForList();
-    if (teamIds.isEmpty) {
-      return const SegmentedTabPageResult(
-        items: <TeamMatchModel>[],
-        page: 1,
-        hasMore: false,
-      );
-    }
-
-    switch (tab) {
-      case MatchChallengesTab.received:
-      case MatchChallengesTab.sent:
-        final type = tab == MatchChallengesTab.received
-            ? NegotiationListType.incoming
-            : NegotiationListType.outgoing;
-        final inbox = await _matchmakingService.listInbox(
-          ListPreMatchInboxFilterQuery(
-            type: type,
-            teamIds: teamIds,
-            page: page,
-            limit: _pageSize,
-            sort: 'createdAt:desc',
-          ),
-        );
-        return SegmentedTabPageResult(
-          items: inbox?.data ?? <TeamMatchModel>[],
-          page: inbox?.page ?? page,
-          hasMore: inbox?.hasNextPage ?? false,
-        );
-      case MatchChallengesTab.completed:
-        final completed = await _matchmakingService.listRequests(
-          ListNegotiationsFilterQuery(
-            teamIds: teamIds,
-            type: NegotiationListType.all,
-            statuses: const [TeamMatchStatus.completed, TeamMatchStatus.draw],
-            page: page,
-            limit: _pageSize,
-            sort: 'updatedAt:desc',
-          ),
-        );
-        return SegmentedTabPageResult(
-          items: completed?.data ?? <TeamMatchModel>[],
-          page: completed?.page ?? page,
-          hasMore: completed?.hasNextPage ?? false,
-        );
-      case MatchChallengesTab.upcoming:
-        final upcoming = await _matchmakingService.listRequests(
-          ListNegotiationsFilterQuery(
-            teamIds: teamIds,
-            type: NegotiationListType.all,
-            statuses: const [
-              TeamMatchStatus.scheduleFinalized,
-              TeamMatchStatus.ongoing,
-            ],
-            page: page,
-            limit: _pageSize,
-            sort: 'createdAt:asc',
-          ),
-        );
-        return SegmentedTabPageResult(
-          items: upcoming?.data ?? <TeamMatchModel>[],
-          page: upcoming?.page ?? page,
-          hasMore: upcoming?.hasNextPage ?? false,
-        );
-      case MatchChallengesTab.archive:
-        final archive = await _matchmakingService.listRequests(
-          ListNegotiationsFilterQuery(
-            teamIds: teamIds,
-            type: NegotiationListType.all,
-            statuses: const [
-              TeamMatchStatus.rejected,
-              TeamMatchStatus.cancelled,
-              TeamMatchStatus.expired,
-            ],
-            page: page,
-            limit: _pageSize,
-            sort: 'updatedAt:desc',
-          ),
-        );
-        return SegmentedTabPageResult(
-          items: archive?.data ?? <TeamMatchModel>[],
-          page: archive?.page ?? page,
-          hasMore: archive?.hasNextPage ?? false,
-        );
-    }
-  }
-
-  /// Inbox / outbox: active challenge flow only ([requested], [accepted], [negotiating]).
-  static bool _isPreMatchInbox(TeamMatchModel m) {
-    if (m.status == TeamMatchStatus.requested) {
-      if (_isMatchExpiredByDeadline(m)) return false;
-    }
-    return m.status == TeamMatchStatus.requested ||
-        m.status == TeamMatchStatus.accepted ||
-        m.status == TeamMatchStatus.negotiating;
+  /// Team filter key segment for [QueryKeys.matchChallenges].
+  String get teamFilterKey {
+    if (filterAllTeams.value) return 'all';
+    return selectedMembershipTeam.value?.id ?? 'all';
   }
 
   /// Team ids for list endpoints: one selected team or all distinct [myTeams] ids.
-  List<String> _activeTeamIdsForList() {
+  List<String> activeTeamIdsForList() {
     if (!filterAllTeams.value) {
       final tid = selectedMembershipTeam.value?.id;
       if (tid == null || tid.isEmpty) return <String>[];
@@ -230,139 +57,39 @@ class MatchChallengesController extends GetxController
     return ids;
   }
 
-  @override
-  String mapFetchError(Object error) => 'Failed to load';
-
-  /// Clears tab cache and refetches a single tab (e.g. retry after error).
-  Future<void> resetAndRefetch(MatchChallengesTab tab) async {
-    setTabState(tab, const SegmentedTabDataState<TeamMatchModel>());
-    await ensureTabLoaded(tab, force: true);
+  void syncMemberships(List<TeamMemberModel> data) {
+    memberships.assignAll(data);
+    if (!filterAllTeams.value) {
+      final sel = selectedMembershipTeam.value;
+      if (sel != null && !myTeams.any((t) => t.id == sel.id)) {
+        selectedMembershipTeam.value = myTeams.isNotEmpty
+            ? myTeams.first
+            : null;
+      }
+    }
   }
 
-  /// Updates a single match in the **selected** tab only. Replaces the row, removes
-  /// it if it no longer belongs, or no-ops if this tab was never loaded. Other
-  /// tab caches are unchanged. No-op if [updated.id] is null.
-  void applyMatchUpdateFromDetail(TeamMatchModel updated) {
-    final id = updated.id;
-    if (id == null || id.isEmpty) return;
-
-    bool matchInvolvesCurrentFilter(TeamMatchModel m) {
-      final fromId = m.fromTeamHelper.getId();
-      final toId = m.toTeamHelper.getId();
-      if (!filterAllTeams.value) {
-        final sel = selectedMembershipTeam.value?.id;
-        if (sel == null) return false;
-        return sel == fromId || sel == toId;
-      }
-      for (final t in myTeams) {
-        final tid = t.id;
-        if (tid != null && (tid == fromId || tid == toId)) return true;
-      }
-      return false;
-    }
-
-    bool matchBelongsInReceived(TeamMatchModel m) {
-      if (!_isPreMatchInbox(m)) return false;
-      final toId = m.toTeamHelper.getId();
-      if (toId == null) return false;
-      if (!filterAllTeams.value) {
-        return selectedMembershipTeam.value?.id == toId;
-      }
-      return myTeams.any((t) => t.id == toId);
-    }
-
-    bool matchBelongsInSent(TeamMatchModel m) {
-      if (!_isPreMatchInbox(m)) return false;
-      final fromId = m.fromTeamHelper.getId();
-      if (fromId == null) return false;
-      if (!filterAllTeams.value) {
-        return selectedMembershipTeam.value?.id == fromId;
-      }
-      return myTeams.any((t) => t.id == fromId);
-    }
-
-    bool matchBelongsInCompleted(TeamMatchModel m) {
-      if (m.status != TeamMatchStatus.completed &&
-          m.status != TeamMatchStatus.draw) {
-        return false;
-      }
-      return matchInvolvesCurrentFilter(m);
-    }
-
-    bool matchBelongsInUpcoming(TeamMatchModel m) {
-      if (m.status != TeamMatchStatus.scheduleFinalized &&
-          m.status != TeamMatchStatus.ongoing) {
-        return false;
-      }
-      return matchInvolvesCurrentFilter(m);
-    }
-
-    bool matchBelongsInArchive(TeamMatchModel m) {
-      if (m.status != TeamMatchStatus.rejected &&
-          m.status != TeamMatchStatus.cancelled &&
-          m.status != TeamMatchStatus.expired) {
-        return false;
-      }
-      return matchInvolvesCurrentFilter(m);
-    }
-
-    void sortItemsForTab(MatchChallengesTab tab, List<TeamMatchModel> items) {
-      switch (tab) {
-        case MatchChallengesTab.received:
-        case MatchChallengesTab.sent:
-          items.sort((a, b) {
-            final da = a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-            final db = b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-            return db.compareTo(da);
-          });
-        case MatchChallengesTab.completed:
-        case MatchChallengesTab.archive:
-          items.sort(
-            (a, b) => (b.updatedAt ?? b.createdAt ?? DateTime(2000)).compareTo(
-              a.updatedAt ?? a.createdAt ?? DateTime(2000),
-            ),
-          );
-        case MatchChallengesTab.upcoming:
-          items.sort(
-            (a, b) => (a.createdAt ?? DateTime(2099)).compareTo(
-              b.createdAt ?? DateTime(2099),
-            ),
-          );
-      }
-    }
-
-    final tab = selectedTab.value;
-    final state = tabStateFor(tab);
-    if (!state.hasInitialized) return;
-
-    final without = state.items.where((m) => m.id != id).toList();
-    final shouldInclude = switch (tab) {
-      MatchChallengesTab.received => matchBelongsInReceived(updated),
-      MatchChallengesTab.sent => matchBelongsInSent(updated),
-      MatchChallengesTab.completed => matchBelongsInCompleted(updated),
-      MatchChallengesTab.upcoming => matchBelongsInUpcoming(updated),
-      MatchChallengesTab.archive => matchBelongsInArchive(updated),
-    };
-    final items = shouldInclude ? [...without, updated] : without;
-    sortItemsForTab(tab, items);
-    setTabState(tab, state.copyWith(items: items, clearError: true));
+  void selectTeamForFilter(TeamMemberFieldInstance team) {
+    filterAllTeams.value = false;
+    selectedMembershipTeam.value = team;
   }
 
-  Future<void> switchTab(int index) async {
+  void selectAllTeamsFilter() {
+    filterAllTeams.value = true;
+  }
+
+  void switchTab(int index) {
     if (index < 0 || index >= MatchChallengesTab.values.length) return;
     final tab = MatchChallengesTab.values[index];
     if (selectedTab.value == tab) return;
     selectedTab.value = tab;
-    await ensureTabLoaded(tab);
   }
 
-  Future<void> refreshCurrentTab() async {
-    await ensureTabLoaded(selectedTab.value, force: true);
-  }
-
-  Future<void> refreshAllTabs() async {
-    _clearAllTabStates();
-    await loadSelectedTab();
+  Future<void> invalidateChallengeQueries() async {
+    if (!Get.isRegistered<QueryClient>()) return;
+    await Get.find<QueryClient>().invalidateQueries(
+      queryKey: const ['matchChallenges'],
+    );
   }
 
   Future<void> acceptChallenge(TeamMatchModel match) async {
@@ -392,7 +119,7 @@ class MatchChallengesController extends GetxController
           message:
               'You can continue scheduling from match details when available.',
         );
-        applyMatchUpdateFromDetail(updated);
+        await invalidateChallengeQueries();
       } else {
         AppSnackbar.error(
           title: 'Could not accept',
@@ -430,7 +157,7 @@ class MatchChallengesController extends GetxController
           title: 'Challenge rejected',
           message: 'The match request was declined.',
         );
-        applyMatchUpdateFromDetail(updated);
+        await invalidateChallengeQueries();
       } else {
         AppSnackbar.error(
           title: 'Could not reject',

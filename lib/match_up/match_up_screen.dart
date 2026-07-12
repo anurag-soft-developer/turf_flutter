@@ -1,24 +1,99 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/components/shared/user_avatar_app_bar_action.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
 import '../components/match_up/my_team_selector.dart';
 import '../components/match_up/team_search_components.dart';
 import '../components/match_up/team_logo.dart';
 import '../components/match_up/team_stats_row.dart';
-import '../components/shared/app_segmented_tabs/segmented_tab_cache_controller.dart';
 import '../core/config/constants.dart';
+import '../core/models/paginated_response.dart';
+import '../core/query/query_keys.dart';
 import '../rankings/widgets/rank_sport_filter.dart';
 import '../team/members/model/team_member_model.dart';
 import '../team/model/team_model.dart';
+import '../team/team_service.dart';
 import 'match_up_controller.dart';
 
-class MatchUpScreen extends StatelessWidget {
+Duration? _noRetry(int count, Object error) => null;
+
+class MatchUpScreen extends HookWidget {
   const MatchUpScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final MatchUpController c = Get.find();
+    final teamService = TeamService();
+
+    final membershipsQuery =
+        useQuery<List<TeamMemberModel>, Object>(
+      QueryKeys.myMemberships,
+      (_) async {
+        final result = await teamService.memberService.myMemberships(
+          const MyTeamMembershipsFilterQuery(
+            status: TeamMemberStatus.active,
+            limit: 50,
+          ),
+        );
+        return result?.data ?? const <TeamMemberModel>[];
+      },
+      retry: _noRetry,
+    );
+
+    useEffect(() {
+      final data = membershipsQuery.data;
+      if (data != null) {
+        c.syncMemberships(data);
+      }
+      return null;
+    }, [membershipsQuery.data]);
+
+    if (membershipsQuery.isLoading ||
+        (membershipsQuery.isFetching && membershipsQuery.data == null)) {
+      return Scaffold(
+        backgroundColor: const Color(AppColors.backgroundColor),
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          leading: const UserAvatarAppBarAction(),
+          title: const Text('Match Up'),
+          actions: [
+            IconButton(
+              tooltip: 'Challenges',
+              icon: const Icon(Icons.inbox_outlined),
+              onPressed: () =>
+                  Get.toNamed(AppConstants.routes.matchUpChallenges),
+            ),
+          ],
+        ),
+        body: const Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(
+              Color(AppColors.primaryColor),
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (membershipsQuery.isError && membershipsQuery.data == null) {
+      return Scaffold(
+        backgroundColor: const Color(AppColors.backgroundColor),
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          leading: const UserAvatarAppBarAction(),
+          title: const Text('Match Up'),
+        ),
+        body: Center(
+          child: ElevatedButton(
+            onPressed: () => membershipsQuery.refetch(),
+            child: const Text('Retry'),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
       appBar: AppBar(
@@ -34,19 +109,12 @@ class MatchUpScreen extends StatelessWidget {
         ],
       ),
       body: Obx(() {
-        if (c.isLoadingMyTeams.value) {
-          return const Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(
-                Color(AppColors.primaryColor),
-              ),
-            ),
-          );
-        }
-
         final sport = c.selectedSport.value;
-        final teamsForSport = _teamsForSport(c.myMemberships, sport);
-        final feedState = c.feedStateForSport(sport);
+        final teamsForSport = c.myTeamsForSport;
+        c.feedRevision.value;
+        c.searchController.text;
+        final fromTeamId = c.selectedTeam.value?.id;
+        final search = c.searchQuery;
 
         return Column(
           children: [
@@ -63,12 +131,14 @@ class MatchUpScreen extends StatelessWidget {
             ),
             Expanded(
               child: _SportFeedSection(
+                key: ValueKey(
+                  '${sport.name}|${fromTeamId ?? ''}|${search ?? ''}|${c.feedRevision.value}',
+                ),
                 sport: sport,
                 hasTeams: teamsForSport.isNotEmpty,
-                feedState: feedState,
+                fromTeamId: fromTeamId,
+                search: search,
                 controller: c,
-                onRefresh: () => c.reloadSport(sport),
-                onLoadMore: () => c.loadMoreSport(sport),
                 onChallenge: (team) => _confirmChallenge(context, c, team),
               ),
             ),
@@ -78,20 +148,6 @@ class MatchUpScreen extends StatelessWidget {
     );
   }
 
-  List<TeamMemberFieldInstance> _teamsForSport(
-    List<TeamMemberModel> memberships,
-    TeamSportType sport,
-  ) {
-    final teams = <TeamMemberFieldInstance>[];
-    for (final membership in memberships) {
-      final team = membership.team;
-      if (team is TeamMemberFieldInstance && team.sportType == sport) {
-        teams.add(team);
-      }
-    }
-    return teams;
-  }
-
   void _confirmChallenge(
     BuildContext context,
     MatchUpController controller,
@@ -99,10 +155,7 @@ class MatchUpScreen extends StatelessWidget {
   ) {
     final myTeam = controller.selectedTeam.value;
     if (myTeam == null) return;
-    final teamsForSport = _teamsForSport(
-      controller.myMemberships,
-      controller.selectedSport.value,
-    );
+    final teamsForSport = controller.myTeamsForSport;
 
     showModalBottomSheet(
       context: context,
@@ -119,23 +172,23 @@ class MatchUpScreen extends StatelessWidget {
     );
   }
 }
-class _SportFeedSection extends StatelessWidget {
+
+class _SportFeedSection extends HookWidget {
   const _SportFeedSection({
+    super.key,
     required this.sport,
     required this.hasTeams,
-    required this.feedState,
+    required this.fromTeamId,
+    required this.search,
     required this.controller,
-    required this.onRefresh,
-    required this.onLoadMore,
     required this.onChallenge,
   });
 
   final TeamSportType sport;
   final bool hasTeams;
-  final SegmentedTabDataState<TeamModel> feedState;
+  final String? fromTeamId;
+  final String? search;
   final MatchUpController controller;
-  final Future<void> Function() onRefresh;
-  final Future<void> Function() onLoadMore;
   final ValueChanged<TeamModel> onChallenge;
 
   @override
@@ -144,8 +197,56 @@ class _SportFeedSection extends StatelessWidget {
       return _NoTeamPlaceholder(sport: sport);
     }
 
-    final isFirstLoad = !feedState.hasInitialized && feedState.items.isEmpty;
-    if (isFirstLoad || (feedState.isFetching && feedState.items.isEmpty)) {
+    final queryKey = QueryKeys.matchUpOpponents(
+      sport: sport.name,
+      fromTeamId: fromTeamId,
+      search: search,
+    );
+
+    final opponentsQuery =
+        useInfiniteQuery<PaginatedResponse<TeamModel>, Object, int>(
+      queryKey,
+      (ctx) async {
+        final result = await TeamService().findMany(
+          TeamFilterQuery(
+            sportType: sport,
+            teamOpenForMatch: true,
+            status: TeamStatus.active,
+            visibility: TeamVisibility.public,
+            page: ctx.pageParam,
+            limit: 10,
+            skipTeamsWithSentRequest: fromTeamId != null,
+            fromTeamId: fromTeamId,
+            search: search,
+          ),
+        );
+        final selectedTeamId = fromTeamId;
+        final items = (result?.data ?? const <TeamModel>[])
+            .where((team) => team.id != null && team.id != selectedTeamId)
+            .toList();
+        return PaginatedResponse<TeamModel>(
+          data: items,
+          totalDocuments: result?.totalDocuments ?? items.length,
+          page: result?.page ?? ctx.pageParam,
+          limit: result?.limit ?? 10,
+          totalPages: result?.totalPages ?? 1,
+        );
+      },
+      initialPageParam: 1,
+      retry: _noRetry,
+      nextPageParamBuilder: (data) {
+        final last = data.pages.isNotEmpty ? data.pages.last : null;
+        if (last == null || !last.hasNextPage) return null;
+        return last.page + 1;
+      },
+    );
+
+    final items =
+        opponentsQuery.data?.pages.expand((p) => p.data).toList() ??
+        const <TeamModel>[];
+
+    if (opponentsQuery.isLoading ||
+        (opponentsQuery.isFetching && items.isEmpty)) {
       return const Center(
         child: CircularProgressIndicator(
           valueColor: AlwaysStoppedAnimation<Color>(
@@ -155,17 +256,19 @@ class _SportFeedSection extends StatelessWidget {
       );
     }
 
-    if (feedState.error != null && feedState.items.isEmpty) {
+    if (opponentsQuery.isError && items.isEmpty) {
       return _FeedErrorPlaceholder(
         sport: sport,
-        message: feedState.error!,
-        onRetry: onRefresh,
+        message: 'Failed to load teams',
+        onRetry: () async {
+          await opponentsQuery.refetch();
+        },
       );
     }
 
     return RefreshIndicator(
-      onRefresh: onRefresh,
-      child: feedState.items.isEmpty
+      onRefresh: () => opponentsQuery.refetch(),
+      child: items.isEmpty
           ? ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               children: [_EmptyFeedPlaceholder(sport: sport)],
@@ -174,17 +277,20 @@ class _SportFeedSection extends StatelessWidget {
               onNotification: (notification) {
                 if (notification.metrics.pixels >=
                     notification.metrics.maxScrollExtent - 200) {
-                  onLoadMore();
+                  if (opponentsQuery.hasNextPage &&
+                      !opponentsQuery.isFetchingNextPage) {
+                    opponentsQuery.fetchNextPage();
+                  }
                 }
                 return false;
               },
               child: ListView.builder(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                itemCount: feedState.items.length +
-                    (feedState.isLoadingMore ? 1 : 0),
+                itemCount:
+                    items.length + (opponentsQuery.isFetchingNextPage ? 1 : 0),
                 itemBuilder: (context, index) {
-                  if (index == feedState.items.length) {
+                  if (index == items.length) {
                     return const Center(
                       child: Padding(
                         padding: EdgeInsets.all(16),
@@ -197,7 +303,7 @@ class _SportFeedSection extends StatelessWidget {
                     );
                   }
 
-                  final team = feedState.items[index];
+                  final team = items[index];
                   return Obx(() {
                     final isSent = controller.isTeamChallenged(team.id);
                     return _OpponentCard(

@@ -1,15 +1,39 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
+import '../../core/auth/auth_state_controller.dart';
 import '../../core/components/bottom_navigation_panel/navigation_controller.dart';
 import '../../core/config/constants.dart';
-import '../../dashboard/player/dashboard_leaderboard_controller.dart';
+import '../../core/models/user/player_stats_models.dart';
+import '../../core/query/query_keys.dart';
+import '../../core/services/user_service.dart';
 import '../../rankings/model/player_leaderboard_model.dart';
 import '../rankings/leaderboard_podium.dart';
 import '../rankings/player_avatar.dart';
 import '../shared/breathing_skeleton.dart';
 
-class DashboardLeaderboardSection extends StatelessWidget {
+Duration? _noRetry(int count, Object error) => null;
+
+class _DashboardLeaderboardData {
+  const _DashboardLeaderboardData({
+    required this.topThree,
+    required this.currentUserRow,
+  });
+
+  final List<PlayerLeaderboardRow> topThree;
+  final PlayerLeaderboardRow? currentUserRow;
+
+  PlayerLeaderboardRow? entryForRank(int rank) {
+    for (final entry in topThree) {
+      if (entry.rank == rank) return entry;
+    }
+    return null;
+  }
+}
+
+class DashboardLeaderboardSection extends HookWidget {
   const DashboardLeaderboardSection({super.key});
 
   void _openRank() {
@@ -20,9 +44,62 @@ class DashboardLeaderboardSection extends StatelessWidget {
     Get.toNamed(AppConstants.routes.rank);
   }
 
+  PlayerLeaderboardRow _buildCurrentUserFallback(AuthStateController auth) {
+    const sport = SportType.cricket;
+    final user = auth.user;
+    final points = user?.sportRankingPoints
+            .where((e) => e.sportType == sport.name)
+            .map((e) => e.points)
+            .firstOrNull ??
+        0;
+
+    return PlayerLeaderboardRow(
+      rank: 0,
+      id: user?.id ?? '',
+      name: user?.displayName ?? 'You',
+      points: points,
+      avatar: user?.avatar,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<DashboardLeaderboardController>();
+    final auth = Get.find<AuthStateController>();
+
+    final leaderboardQuery = useQuery<_DashboardLeaderboardData, Object>(
+      QueryKeys.dashboardLeaderboard,
+      (_) async {
+        final result = await UserService().getLeaderboard(
+          PlayerLeaderboardQuery(
+            sportType: SportType.cricket,
+            page: 1,
+            limit: 50,
+          ),
+        );
+        final items = result?.data ?? <PlayerLeaderboardRow>[];
+        final topThree = items.where((e) => e.rank >= 1 && e.rank <= 3).toList()
+          ..sort((a, b) => a.rank.compareTo(b.rank));
+
+        final userId = auth.user?.id;
+        PlayerLeaderboardRow? me;
+        if (userId != null && userId.isNotEmpty) {
+          for (final row in items) {
+            if (row.id == userId) {
+              me = row;
+              break;
+            }
+          }
+        }
+        me ??= _buildCurrentUserFallback(auth);
+        final isInTopThree = me.rank >= 1 && me.rank <= 3;
+
+        return _DashboardLeaderboardData(
+          topThree: topThree,
+          currentUserRow: isInTopThree ? null : me,
+        );
+      },
+      retry: _noRetry,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -55,18 +132,23 @@ class DashboardLeaderboardSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        Obx(() {
-          if (controller.isLoading.value && controller.topThree.isEmpty) {
-            return const _LeaderboardSkeleton();
-          }
-
-          return _LeaderboardCard(
-            second: controller.entryForRank(2),
-            first: controller.entryForRank(1),
-            third: controller.entryForRank(3),
-            currentUser: controller.currentUserRow.value,
-          );
-        }),
+        if (leaderboardQuery.isLoading ||
+            (leaderboardQuery.isFetching && leaderboardQuery.data == null))
+          const _LeaderboardSkeleton()
+        else if (leaderboardQuery.isError && leaderboardQuery.data == null)
+          Center(
+            child: TextButton(
+              onPressed: () => leaderboardQuery.refetch(),
+              child: const Text('Retry leaderboard'),
+            ),
+          )
+        else
+          _LeaderboardCard(
+            second: leaderboardQuery.data?.entryForRank(2),
+            first: leaderboardQuery.data?.entryForRank(1),
+            third: leaderboardQuery.data?.entryForRank(3),
+            currentUser: leaderboardQuery.data?.currentUserRow,
+          ),
       ],
     );
   }

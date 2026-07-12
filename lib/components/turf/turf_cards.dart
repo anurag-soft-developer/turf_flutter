@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
 import '../../core/config/constants.dart';
-import '../../turf/feed/turf_list_controller.dart';
 import '../../turf/model/turf_model.dart';
 
 class FeaturedTurfCard extends StatelessWidget {
   final TurfModel turf;
-  final TurfListController controller;
+  final VoidCallback onTap;
 
   static const BorderRadius _cardRadius = BorderRadius.all(Radius.circular(16));
 
   const FeaturedTurfCard({
     super.key,
     required this.turf,
-    required this.controller,
+    required this.onTap,
   });
 
   @override
@@ -23,7 +22,7 @@ class FeaturedTurfCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(borderRadius: _cardRadius),
       child: InkWell(
-        onTap: () => controller.navigateToTurfDetail(turf),
+        onTap: onTap,
         borderRadius: _cardRadius,
         child: Stack(
           fit: StackFit.expand,
@@ -125,9 +124,9 @@ class _FeaturedImageFallback extends StatelessWidget {
 
 class TurfListCard extends StatelessWidget {
   final TurfModel turf;
-  final TurfListController controller;
+  final VoidCallback onTap;
 
-  const TurfListCard({super.key, required this.turf, required this.controller});
+  const TurfListCard({super.key, required this.turf, required this.onTap});
 
   String _formatDistance(double meters) {
     if (meters >= 1000) {
@@ -146,7 +145,7 @@ class TurfListCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
-        onTap: () => controller.navigateToTurfDetail(turf),
+        onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(10),

@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
+import '../../core/query/query_keys.dart';
 import '../../match_up/model/team_match_model.dart';
 import 'football_scoring_api_service.dart';
 import 'model/football_match_event_model.dart';
@@ -35,6 +37,61 @@ class FootballScoringController extends GetxController {
 
   bool get canUndoFootballEvent => footballEvents.isNotEmpty;
 
+  void seedFromQuery({
+    TeamMatchModel? match,
+    List<FootballMatchEvent>? events,
+  }) {
+    if (match != null) {
+      footballMatch.value = match;
+    }
+    if (events != null) {
+      footballEvents.assignAll(events);
+    }
+  }
+
+  void _syncQueryCache({bool includeEvents = true}) {
+    if (!Get.isRegistered<QueryClient>()) return;
+    final client = Get.find<QueryClient>();
+    final id = currentSessionId.value;
+    if (id.isEmpty) return;
+    final match = footballMatch.value;
+    if (match != null) {
+      client.setQueryData<TeamMatchModel, Object>(
+        QueryKeys.footballSession(id),
+        (_) => match,
+      );
+      client.setQueryData<TeamMatchModel, Object>(
+        QueryKeys.matchChallengeDetail(id),
+        (_) => match,
+      );
+    }
+    if (includeEvents) {
+      final events = footballEvents.toList();
+      client.setQueryData<List<FootballMatchEvent>, Object>(
+        QueryKeys.footballEvents(id),
+        (_) => events,
+      );
+    }
+  }
+
+  Future<void> _invalidateQueryCache({bool includeEvents = true}) async {
+    if (!Get.isRegistered<QueryClient>()) return;
+    final client = Get.find<QueryClient>();
+    final id = currentSessionId.value;
+    if (id.isEmpty) return;
+    final futures = <Future<void>>[
+      client.invalidateQueries(queryKey: QueryKeys.footballSession(id)),
+      client.invalidateQueries(queryKey: QueryKeys.matchChallengeDetail(id)),
+    ];
+    if (includeEvents) {
+      futures.add(
+        client.invalidateQueries(queryKey: QueryKeys.footballEvents(id)),
+      );
+    }
+    await Future.wait(futures);
+  }
+
+  /// Thin helper used after mutations / manual refresh.
   Future<void> fetchFootballMatch(String teamMatchId) async {
     if (teamMatchId.isEmpty) {
       errorMessage.value = 'Missing match id.';
@@ -46,10 +103,13 @@ class FootballScoringController extends GetxController {
     footballMatch.value = match;
     if (match == null) {
       errorMessage.value = 'Could not load match.';
+    } else {
+      _syncQueryCache(includeEvents: false);
     }
     isFetchingFootballMatch.value = false;
   }
 
+  /// Thin helper used after mutations / manual refresh.
   Future<void> fetchFootballEvents(
     String teamMatchId, {
     bool resetEventHistory = false,
@@ -65,6 +125,7 @@ class FootballScoringController extends GetxController {
       if (resetEventHistory) {
         _resetEventHistory();
       }
+      _syncQueryCache();
     } catch (error) {
       errorMessage.value = error.toString();
     } finally {
@@ -116,6 +177,7 @@ class FootballScoringController extends GetxController {
     }
     footballMatch.value = match;
     await fetchFootballEvents(sessionId, resetEventHistory: true);
+    _syncQueryCache();
     return true;
   }
 
@@ -150,6 +212,7 @@ class FootballScoringController extends GetxController {
         return false;
       }
       footballMatch.value = match;
+      _syncQueryCache(includeEvents: false);
       return true;
     } catch (error) {
       errorMessage.value = error.toString();
@@ -171,6 +234,7 @@ class FootballScoringController extends GetxController {
       final match = await _apiService.pauseFootballTimer(teamMatchId: sessionId);
       if (match != null) {
         footballMatch.value = match;
+        _syncQueryCache(includeEvents: false);
       }
       return match != null;
     } catch (error) {
@@ -194,6 +258,7 @@ class FootballScoringController extends GetxController {
           await _apiService.resumeFootballTimer(teamMatchId: sessionId);
       if (match != null) {
         footballMatch.value = match;
+        _syncQueryCache(includeEvents: false);
       }
       return match != null;
     } catch (error) {
@@ -223,6 +288,8 @@ class FootballScoringController extends GetxController {
       }
       footballMatch.value = match;
       _resetEventHistory();
+      _syncQueryCache(includeEvents: false);
+      await _invalidateQueryCache(includeEvents: false);
       return true;
     } catch (error) {
       errorMessage.value = error.toString();
@@ -261,6 +328,7 @@ class FootballScoringController extends GetxController {
       if (match != null) {
         footballMatch.value = match;
       }
+      _syncQueryCache();
       return response;
     } catch (error) {
       errorMessage.value = error.toString();
@@ -298,6 +366,7 @@ class FootballScoringController extends GetxController {
       if (match != null) {
         footballMatch.value = match;
       }
+      _syncQueryCache();
       return true;
     } catch (error) {
       errorMessage.value = error.toString();

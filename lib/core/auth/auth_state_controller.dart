@@ -16,22 +16,17 @@ class AuthStateController extends GetxController {
   final RxBool _isLoggedIn = false.obs;
   final RxBool _updatingNotificationSettings = false.obs;
   final RxBool _refreshingUserProfile = false.obs;
-  final RxBool _refreshingPublicProfile = false.obs;
 
   UserModel? get user => _user.value;
   bool get isLoading => _isLoading.value;
   bool get isLoggedIn => _isLoggedIn.value;
   bool get isRefreshingUserProfile => _refreshingUserProfile.value;
-  bool get isRefreshingPublicProfile => _refreshingPublicProfile.value;
 
   /// Use `.value` inside [Obx] so toggles rebuild while PATCH runs.
   RxBool get notificationSettingsUpdating => _updatingNotificationSettings;
 
   /// Use `.value` inside [Obx] so the profile refresh button rebuilds.
   RxBool get refreshingUserProfile => _refreshingUserProfile;
-
-  /// Use `.value` inside [Obx] so the public profile refresh button rebuilds.
-  RxBool get refreshingPublicProfile => _refreshingPublicProfile;
 
   @override
   void onInit() {
@@ -178,22 +173,17 @@ class AuthStateController extends GetxController {
     try {
       final profile = await _authService.getCurrentUserProfile();
       if (profile != null) {
-        _user.value = profile;
+        applyUserProfile(profile);
       }
     } finally {
       _refreshingUserProfile.value = false;
     }
   }
 
-  Future<UserModel?> refreshPublicProfile(String userId) async {
-    if (_refreshingPublicProfile.value) return null;
-
-    _refreshingPublicProfile.value = true;
-    try {
-      return await _userService.getPublicProfile(userId);
-    } finally {
-      _refreshingPublicProfile.value = false;
-    }
+  /// Sync session user from a profile fetch (e.g. flutter_query).
+  void applyUserProfile(UserModel profile) {
+    _user.value = profile;
+    _isLoggedIn.value = true;
   }
 
   Future<bool> updateNotificationSettings({

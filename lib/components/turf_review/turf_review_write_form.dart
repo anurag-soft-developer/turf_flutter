@@ -4,7 +4,7 @@ import 'package:get/get.dart';
 import '../../core/config/constants.dart';
 import '../../turf/model/turf_review_model.dart';
 import '../../turf/reviews/turf_review_service.dart';
-import '../../turf/reviews/turf_reviews_list_controller.dart';
+import 'turf_detail_reviews_section.dart';
 
 class TurfReviewWriteForm extends StatefulWidget {
   const TurfReviewWriteForm({super.key, required this.turfId});
@@ -49,7 +49,7 @@ class _TurfReviewWriteFormState extends State<TurfReviewWriteForm> {
       final created = await _service.createReview(req);
       if (!mounted) return;
       if (created != null) {
-        reloadTurfReviewListsIfRegistered(widget.turfId);
+        await invalidateTurfReviewQueries(widget.turfId);
         Get.snackbar('Thank you', 'Your review was posted');
         closedWithSuccess = true;
         Navigator.of(context).pop();

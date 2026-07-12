@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/services/media_upload_service.dart';
+import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
 import '../../core/config/constants.dart';
+import '../../core/query/query_keys.dart';
 import '../../core/utils/app_snackbar.dart';
 import '../model/team_model.dart';
 import '../team_service.dart';
-import '../details/team_detail_controller.dart';
 
 class AddTeamController extends GetxController {
   final TeamService _teamService = TeamService();
@@ -314,9 +315,7 @@ class AddTeamController extends GetxController {
         if (updated != null) {
           await flushPendingRemoteImageDeletions(_pendingRemoteImageDeletes);
           AppSnackbar.success(title: 'Team updated', message: updated.name);
-          if (Get.isRegistered<TeamDetailController>()) {
-            await Get.find<TeamDetailController>().load();
-          }
+          await _invalidateTeamQueries(updated.id);
           Get.offNamed(AppConstants.routes.myTeams);
         } else {
           AppSnackbar.error(
@@ -353,9 +352,7 @@ class AddTeamController extends GetxController {
             title: 'Team created',
             message: '${created.name} is ready.',
           );
-          if (Get.isRegistered<TeamDetailController>()) {
-            await Get.find<TeamDetailController>().load();
-          }
+          await _invalidateTeamQueries(created.id);
           Get.offNamed(AppConstants.routes.myTeams);
         } else {
           AppSnackbar.error(
@@ -367,5 +364,19 @@ class AddTeamController extends GetxController {
     } finally {
       isSubmitting.value = false;
     }
+  }
+
+  Future<void> _invalidateTeamQueries(String? teamId) async {
+    if (!Get.isRegistered<QueryClient>()) return;
+    final client = Get.find<QueryClient>();
+    final futures = <Future<void>>[
+      client.invalidateQueries(queryKey: QueryKeys.myMemberships),
+    ];
+    if (teamId != null && teamId.isNotEmpty) {
+      futures.add(
+        client.invalidateQueries(queryKey: QueryKeys.teamDetail(teamId)),
+      );
+    }
+    await Future.wait(futures);
   }
 }

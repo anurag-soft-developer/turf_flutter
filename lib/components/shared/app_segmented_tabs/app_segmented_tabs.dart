@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../core/config/constants.dart';
 export 'parent_linked_tab_bar_view.dart';
-export 'segmented_tab_cache_controller.dart';
-
 class AppTabItem {
   const AppTabItem({required this.label, this.icon});
 

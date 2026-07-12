@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
 import '../../components/scoring/cricket/cricket_components.dart';
 import '../../core/config/constants.dart';
+import '../../core/query/query_keys.dart';
 import '../../core/utils/app_snackbar.dart';
 import '../../match_up/matchmaking_service.dart';
 import '../../match_up/announced_players/model/announced_player_model.dart';
 import '../../match_up/model/team_match_model.dart';
+import 'cricket_scoring_api_service.dart';
 import 'cricket_scoring_controller.dart';
+import 'model/cricket_ball_event_model.dart';
 import 'model/cricket_scoring_models.dart';
+
+Duration? _noRetry(int count, Object error) => null;
 
 enum _WicketUiKind { bowled, caught, lbw, runOut, stumped, hitWicket }
 
@@ -22,7 +29,6 @@ class CricketScoreBoardScreen extends StatefulWidget {
 
 class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
   late final CricketScoringController _scoringController;
-  final MatchmakingService _matchmakingService = MatchmakingService();
 
   late final String _teamMatchId;
   String _fromTeamName = '';
@@ -32,8 +38,6 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
 
   /// Empty until the user picks who bats first (start-only flow).
   String _battingTeamId = '';
-
-  bool _isLoadingMeta = true;
 
   /// Default matches backend `CreateCricketSessionSchema` default (20 overs).
   late final TextEditingController _maxOversController;
@@ -49,7 +53,6 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
     final args = (Get.arguments as Map?)?.cast<String, dynamic>() ?? const {};
     _teamMatchId = args['matchId']?.toString() ?? '';
     _scoringController.currentSessionId.value = _teamMatchId;
-    _initialize();
   }
 
   @override
@@ -80,47 +83,8 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
     _toTeamName = m.toTeamHelper.getDisplayName();
   }
 
-  Future<void> _loadTeamMatchMeta() async {
-    if (_teamMatchId.isEmpty) {
-      if (mounted) {
-        setState(() {
-          _isLoadingMeta = false;
-        });
-      }
-      return;
-    }
-    final m = await _matchmakingService.getTeamMatchById(_teamMatchId);
-    if (!mounted) return;
-    if (m != null) {
-      setState(() {
-        _applyTeamLabelsFromMatch(m);
-        _isLoadingMeta = false;
-      });
-    } else {
-      setState(() {
-        _isLoadingMeta = false;
-      });
-    }
-  }
-
   String get _bowlingTeamIdResolved =>
       _battingTeamId == _fromTeamId ? _toTeamId : _fromTeamId;
-
-  Future<void> _initialize() async {
-    await Future.wait([
-      _loadTeamMatchMeta(),
-      _scoringController.fetchCricketMatch(_teamMatchId),
-    ]);
-    if (!mounted) return;
-    final cm = _scoringController.cricketMatch.value;
-    if (_fromTeamId.isEmpty && cm != null) {
-      setState(() => _applyTeamLabelsFromMatch(cm));
-    }
-    if (_teamMatchId.isNotEmpty &&
-        _scoringController.cricketMatch.value?.cricketState != null) {
-      await _scoringController.fetchCricketOvers(_teamMatchId);
-    }
-  }
 
   Future<void> _send(
     CricketOutcome outcome, {
@@ -817,8 +781,6 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
     return 'Team';
   }
 
-  void _retryFetchMatch() => _scoringController.fetchCricketMatch(_teamMatchId);
-
   @override
   Widget build(BuildContext context) {
     final titleMax =
@@ -836,89 +798,199 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
         ),
       ),
       backgroundColor: const Color(AppColors.backgroundColor),
-      body: Obx(() {
-        final loadingMatch = _scoringController.isFetchingCricketMatch.value;
-        final match = _scoringController.cricketMatch.value;
-        final err = _scoringController.errorMessage.value;
+      body: HookBuilder(
+        builder: (context) {
+          final hasMatchId = _teamMatchId.isNotEmpty;
+          final cricketApi = useMemoized(() => CricketScoringApiService());
+          final matchmaking = useMemoized(() => MatchmakingService());
 
-        if (loadingMatch && match == null) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (match == null) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: MatchStatsErrorCard(
-                message: (err != null && err.isNotEmpty)
-                    ? err
-                    : 'No match data loaded.',
-                onRetry: _retryFetchMatch,
-              ),
-            ),
+          final metaQuery = useQuery<TeamMatchModel, Object>(
+            QueryKeys.matchChallengeDetail(_teamMatchId),
+            (_) async {
+              final loaded =
+                  await matchmaking.getTeamMatchById(_teamMatchId);
+              if (loaded == null) {
+                throw Exception('Could not load match.');
+              }
+              return loaded;
+            },
+            enabled: hasMatchId,
+            retry: _noRetry,
           );
-        }
 
-        if (match.cricketState == null) {
-          final metaPending =
-              _isLoadingMeta && _fromTeamId.isEmpty && _toTeamId.isEmpty;
-          return CricketStartSessionPanel(
-            metaPending: metaPending,
-            fromTeamName: _fromTeamName,
-            toTeamName: _toTeamName,
-            fromTeamId: _fromTeamId,
-            toTeamId: _toTeamId,
-            battingTeamId: _battingTeamId,
-            onBattingTeamIdChanged: (id) => setState(() => _battingTeamId = id),
-            maxOversController: _maxOversController,
-            onMaxOversChanged: () => setState(() {}),
-            minOvers: _minOvers,
-            maxOversLimit: _maxOversLimit,
-            isStarting: _scoringController.isCreatingCricketSession.value,
-            canStart: _canSubmitStart,
-            errorText: err,
-            onStart: _startCricketSession,
+          final sessionQuery = useQuery<TeamMatchModel, Object>(
+            QueryKeys.cricketSession(_teamMatchId),
+            (_) async {
+              final loaded =
+                  await cricketApi.getCricketSession(_teamMatchId);
+              if (loaded == null) {
+                throw Exception('Could not load match.');
+              }
+              return loaded;
+            },
+            enabled: hasMatchId,
+            retry: _noRetry,
           );
-        }
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-                children: [
-                  CricketMatchStatsPanel(
-                    controller: _scoringController,
-                    teamLabelForId: _teamLabelForId,
-                    onRetry: _retryFetchMatch,
-                  ),
-                  const SizedBox(height: 10),
-                  CricketLineupCard(controller: _scoringController),
-                  const SizedBox(height: 10),
-                  CricketOversTable(
-                    controller: _scoringController,
-                    innings: match.cricketState!.currentInnings,
-                  ),
-                ],
-              ),
-            ),
-            Material(
-              elevation: 10,
-              shadowColor: Colors.black26,
-              color: const Color(AppColors.backgroundColor),
-              child: SafeArea(
-                top: false,
-                minimum: EdgeInsets.zero,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-                  child: _buildScoringFooter(match),
+          final sessionHasState =
+              sessionQuery.data?.cricketState != null;
+          final oversQuery = useQuery<List<CricketOverEvent>, Object>(
+            QueryKeys.cricketOvers(_teamMatchId),
+            (_) async {
+              final overs = await cricketApi.listCricketOvers(
+                teamMatchId: _teamMatchId,
+              );
+              return List<CricketOverEvent>.from(overs)
+                ..sort((a, b) => a.sequence.compareTo(b.sequence));
+            },
+            enabled: hasMatchId && sessionHasState,
+            retry: _noRetry,
+          );
+
+          useEffect(() {
+            final m = metaQuery.data ?? sessionQuery.data;
+            if (m == null) return null;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              setState(() => _applyTeamLabelsFromMatch(m));
+            });
+            return null;
+          }, [metaQuery.data, sessionQuery.data]);
+
+          useEffect(() {
+            _scoringController.seedFromQuery(
+              match: sessionQuery.data,
+              overs: oversQuery.data,
+            );
+            return null;
+          }, [sessionQuery.data, oversQuery.data]);
+
+          void retryColdLoad() {
+            metaQuery.refetch();
+            sessionQuery.refetch();
+            if (sessionHasState) oversQuery.refetch();
+          }
+
+          if (!hasMatchId) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: MatchStatsErrorCard(
+                  message: 'Missing match id.',
+                  onRetry: () {},
                 ),
               ),
-            ),
-          ],
-        );
-      }),
+            );
+          }
+
+          final coldLoading = sessionQuery.isLoading ||
+              (sessionQuery.isFetching && sessionQuery.data == null) ||
+              (sessionHasState &&
+                  (oversQuery.isLoading ||
+                      (oversQuery.isFetching && oversQuery.data == null)));
+
+          if (coldLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (sessionQuery.isError && sessionQuery.data == null) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: MatchStatsErrorCard(
+                  message: sessionQuery.error?.toString() ??
+                      'No match data loaded.',
+                  onRetry: retryColdLoad,
+                ),
+              ),
+            );
+          }
+
+          final metaPending = (metaQuery.isLoading ||
+                  (metaQuery.isFetching && metaQuery.data == null)) &&
+              _fromTeamId.isEmpty &&
+              _toTeamId.isEmpty;
+
+          return Obx(() {
+            final match = _scoringController.cricketMatch.value;
+            final err = _scoringController.errorMessage.value;
+
+            if (match == null) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: MatchStatsErrorCard(
+                    message: (err != null && err.isNotEmpty)
+                        ? err
+                        : 'No match data loaded.',
+                    onRetry: retryColdLoad,
+                  ),
+                ),
+              );
+            }
+
+            if (match.cricketState == null) {
+              return CricketStartSessionPanel(
+                metaPending: metaPending,
+                fromTeamName: _fromTeamName,
+                toTeamName: _toTeamName,
+                fromTeamId: _fromTeamId,
+                toTeamId: _toTeamId,
+                battingTeamId: _battingTeamId,
+                onBattingTeamIdChanged: (id) =>
+                    setState(() => _battingTeamId = id),
+                maxOversController: _maxOversController,
+                onMaxOversChanged: () => setState(() {}),
+                minOvers: _minOvers,
+                maxOversLimit: _maxOversLimit,
+                isStarting:
+                    _scoringController.isCreatingCricketSession.value,
+                canStart: _canSubmitStart,
+                errorText: err,
+                onStart: _startCricketSession,
+              );
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+                    children: [
+                      CricketMatchStatsPanel(
+                        controller: _scoringController,
+                        teamLabelForId: _teamLabelForId,
+                        onRetry: retryColdLoad,
+                      ),
+                      const SizedBox(height: 10),
+                      CricketLineupCard(controller: _scoringController),
+                      const SizedBox(height: 10),
+                      CricketOversTable(
+                        controller: _scoringController,
+                        innings: match.cricketState!.currentInnings,
+                      ),
+                    ],
+                  ),
+                ),
+                Material(
+                  elevation: 10,
+                  shadowColor: Colors.black26,
+                  color: const Color(AppColors.backgroundColor),
+                  child: SafeArea(
+                    top: false,
+                    minimum: EdgeInsets.zero,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                      child: _buildScoringFooter(match),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          });
+        },
+      ),
     );
   }
 }
