@@ -3,6 +3,7 @@ import 'package:flutter_application_1/core/config/constants.dart';
 import 'package:flutter_application_1/core/models/paginated_response.dart';
 import 'package:flutter_application_1/core/models/user/user_model.dart';
 import 'package:flutter_application_1/core/query/query_keys.dart';
+import '../core/query/query_retry.dart';
 import 'package:flutter_application_1/core/utils/app_snackbar.dart';
 import 'package:flutter_application_1/notification/model/notification_model.dart';
 import 'package:flutter_application_1/notification/notification_router.dart';
@@ -11,8 +12,6 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-
-Duration? _noRetry(int count, Object error) => null;
 
 class NotificationsScreen extends HookWidget {
   const NotificationsScreen({super.key});
@@ -33,7 +32,7 @@ class NotificationsScreen extends HookWidget {
         return result ?? EmptyPaginatedResponse<AppNotification>();
       },
       initialPageParam: 1,
-      retry: _noRetry,
+      retry: noRetry,
       nextPageParamBuilder: (data) {
         final last = data.pages.isNotEmpty ? data.pages.last : null;
         if (last == null || !last.hasNextPage) return null;

@@ -8,11 +8,10 @@ import '../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
 import '../core/config/constants.dart';
 import '../core/models/paginated_response.dart';
 import '../core/query/query_keys.dart';
+import '../core/query/query_retry.dart';
 import 'model/turf_booking_model.dart';
 import 'turf_booking_controller.dart';
 import 'turf_booking_service.dart';
-
-Duration? _noRetry(int count, Object error) => null;
 
 class BookingsScreen extends HookWidget {
   const BookingsScreen({super.key});
@@ -147,7 +146,7 @@ class _BookingsTabPane extends HookWidget {
         return response ?? EmptyPaginatedResponse<TurfBookingModel>();
       },
       initialPageParam: 1,
-      retry: _noRetry,
+      retry: noRetry,
       nextPageParamBuilder: (data) {
         final last = data.pages.isNotEmpty ? data.pages.last : null;
         if (last == null || !last.hasNextPage) return null;

@@ -8,13 +8,12 @@ import '../../core/components/query/query_async_body.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/paginated_response.dart';
 import '../../core/query/query_keys.dart';
+import '../../core/query/query_retry.dart';
 import '../members/model/team_member_model.dart';
 import '../model/team_model.dart';
 import '../team_service.dart';
 import '../utils/team_ui.dart';
 import 'team_join_requests_controller.dart';
-
-Duration? _noRetry(int count, Object error) => null;
 
 class TeamJoinRequestsScreen extends HookWidget {
   const TeamJoinRequestsScreen({super.key});
@@ -26,11 +25,15 @@ class TeamJoinRequestsScreen extends HookWidget {
     final hasTeamId = teamId != null && teamId.isNotEmpty;
     final teamService = TeamService();
 
-    final teamQuery = useQuery<TeamModel?, Object>(
+    final teamQuery = useQuery<TeamModel, Object>(
       QueryKeys.teamDetail(teamId ?? ''),
-      (_) => teamService.findById(teamId!),
+      (_) async {
+        final team = await teamService.findById(teamId!);
+        if (team == null) throw Exception('Team not found');
+        return team;
+      },
       enabled: hasTeamId,
-      retry: _noRetry,
+      retry: noRetry,
     );
 
     final pendingQuery =
@@ -50,7 +53,7 @@ class TeamJoinRequestsScreen extends HookWidget {
         return page ?? EmptyPaginatedResponse<TeamMemberModel>();
       },
       enabled: hasTeamId,
-      retry: _noRetry,
+      retry: noRetry,
     );
 
     final uid = Get.find<AuthStateController>().user?.id;
@@ -90,7 +93,7 @@ class TeamJoinRequestsScreen extends HookWidget {
     required TeamJoinRequestsController c,
     required bool hasTeamId,
     required bool accessDenied,
-    required QueryResult<TeamModel?, Object> teamQuery,
+    required QueryResult<TeamModel, Object> teamQuery,
     required QueryResult<PaginatedResponse<TeamMemberModel>, Object>
         pendingQuery,
   }) {

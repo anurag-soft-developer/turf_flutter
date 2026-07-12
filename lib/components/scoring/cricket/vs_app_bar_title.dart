@@ -28,7 +28,11 @@ class VsAppBarTitle extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.end,
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+              color: Color(AppColors.textColor),
+            ),
           ),
         ),
         Padding(
@@ -36,15 +40,13 @@ class VsAppBarTitle extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-              color: const Color(
-                AppColors.primaryColor,
-              ).withValues(alpha: 0.14),
+              color: Colors.white.withValues(alpha: 0.22),
               borderRadius: BorderRadius.circular(16),
             ),
             child: const Text(
               'VS',
               style: TextStyle(
-                color: Color(AppColors.primaryColor),
+                color: Colors.white,
                 fontWeight: FontWeight.w800,
                 fontSize: 11,
                 letterSpacing: 0.6,
@@ -59,7 +61,11 @@ class VsAppBarTitle extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.start,
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+              color: Color(AppColors.textColor),
+            ),
           ),
         ),
       ],

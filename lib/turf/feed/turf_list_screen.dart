@@ -9,12 +9,11 @@ import '../../components/turf/turf_cards.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/paginated_response.dart';
 import '../../core/query/query_keys.dart';
+import '../../core/query/query_retry.dart';
 import '../../settings/settings_controller.dart';
 import '../model/turf_model.dart';
 import '../turf_service.dart';
 import 'turf_list_controller.dart';
-
-Duration? _noRetry(int count, Object error) => null;
 
 class TurfListScreen extends StatelessWidget {
   const TurfListScreen({super.key});
@@ -114,7 +113,7 @@ class _TurfListQueryBody extends HookWidget {
         return response ?? EmptyPaginatedResponse<TurfModel>();
       },
       initialPageParam: 1,
-      retry: _noRetry,
+      retry: noRetry,
       nextPageParamBuilder: (data) {
         final last = data.pages.isNotEmpty ? data.pages.last : null;
         if (last == null || !last.hasNextPage) return null;

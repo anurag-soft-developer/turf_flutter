@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import '../../components/scoring/cricket/cricket_components.dart';
 import '../../core/config/constants.dart';
 import '../../core/query/query_keys.dart';
+import '../../core/query/query_retry.dart';
 import '../../core/utils/app_snackbar.dart';
 import '../../match_up/matchmaking_service.dart';
 import '../../match_up/announced_players/model/announced_player_model.dart';
@@ -14,8 +15,6 @@ import 'cricket_scoring_api_service.dart';
 import 'cricket_scoring_controller.dart';
 import 'model/cricket_ball_event_model.dart';
 import 'model/cricket_scoring_models.dart';
-
-Duration? _noRetry(int count, Object error) => null;
 
 enum _WicketUiKind { bowled, caught, lbw, runOut, stumped, hitWicket }
 
@@ -815,7 +814,7 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
               return loaded;
             },
             enabled: hasMatchId,
-            retry: _noRetry,
+            retry: noRetry,
           );
 
           final sessionQuery = useQuery<TeamMatchModel, Object>(
@@ -829,7 +828,7 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
               return loaded;
             },
             enabled: hasMatchId,
-            retry: _noRetry,
+            retry: noRetry,
           );
 
           final sessionHasState =
@@ -844,7 +843,7 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
                 ..sort((a, b) => a.sequence.compareTo(b.sequence));
             },
             enabled: hasMatchId && sessionHasState,
-            retry: _noRetry,
+            retry: noRetry,
           );
 
           useEffect(() {

@@ -8,10 +8,9 @@ import '../../components/turf_review/turf_review_tile.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/paginated_response.dart';
 import '../../core/query/query_keys.dart';
+import '../../core/query/query_retry.dart';
 import '../model/turf_review_model.dart';
 import 'turf_review_service.dart';
-
-Duration? _noRetry(int count, Object error) => null;
 
 class TurfReviewsFullScreen extends HookWidget {
   const TurfReviewsFullScreen({super.key});
@@ -33,7 +32,7 @@ class TurfReviewsFullScreen extends HookWidget {
     final statsQuery = useQuery<TurfReviewStats?, Object>(
       QueryKeys.turfReviewStats(turfId),
       (_) => TurfReviewService().getTurfReviewStats(turfId),
-      retry: _noRetry,
+      retry: noRetry,
     );
 
     final reviewsQuery =
@@ -53,7 +52,7 @@ class TurfReviewsFullScreen extends HookWidget {
         return page ?? EmptyPaginatedResponse<TurfReviewModel>();
       },
       initialPageParam: 1,
-      retry: _noRetry,
+      retry: noRetry,
       nextPageParamBuilder: (data) {
         final last = data.pages.isNotEmpty ? data.pages.last : null;
         if (last == null || !last.hasNextPage) return null;

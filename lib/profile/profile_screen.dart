@@ -13,9 +13,8 @@ import '../core/config/constants.dart';
 import '../core/models/user/user_model.dart';
 import '../core/models/user_field_instance.dart';
 import '../core/query/query_keys.dart';
+import '../core/query/query_retry.dart';
 import '../core/services/auth_service.dart';
-
-Duration? _noRetry(int count, Object error) => null;
 
 class ProfileScreen extends HookWidget {
   const ProfileScreen({super.key});
@@ -63,7 +62,7 @@ class ProfileScreen extends HookWidget {
         if (cached != null) return cached;
         throw Exception('Failed to load profile');
       },
-      retry: _noRetry,
+      retry: noRetry,
       seed: authController.user,
     );
 

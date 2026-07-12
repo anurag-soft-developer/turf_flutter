@@ -7,14 +7,13 @@ import '../../components/match_up/team_logo.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/paginated_response.dart';
 import '../../core/query/query_keys.dart';
+import '../../core/query/query_retry.dart';
 import '../../rankings/widgets/rank_sport_filter.dart';
 import '../members/model/team_member_model.dart';
 import '../model/team_model.dart';
 import '../team_service.dart';
 import '../utils/team_ui.dart';
 import 'team_openings_controller.dart';
-
-Duration? _noRetry(int count, Object error) => null;
 
 class TeamOpeningsScreen extends HookWidget {
   const TeamOpeningsScreen({super.key});
@@ -32,7 +31,7 @@ class TeamOpeningsScreen extends HookWidget {
         );
         return result?.data ?? const <TeamMemberModel>[];
       },
-      retry: _noRetry,
+      retry: noRetry,
     );
 
     useEffect(() {
@@ -115,7 +114,7 @@ class _OpeningsFeed extends HookWidget {
         return result ?? EmptyPaginatedResponse<TeamModel>();
       },
       initialPageParam: 1,
-      retry: _noRetry,
+      retry: noRetry,
       nextPageParamBuilder: (data) {
         final last = data.pages.isNotEmpty ? data.pages.last : null;
         if (last == null || !last.hasNextPage) return null;

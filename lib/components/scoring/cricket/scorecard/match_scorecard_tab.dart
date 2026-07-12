@@ -5,6 +5,7 @@ import 'package:flutter_query/flutter_query.dart';
 import '../../../../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
 import '../../../../core/config/constants.dart';
 import '../../../../core/query/query_keys.dart';
+import '../../../../core/query/query_retry.dart';
 import '../../../../match_up/model/team_match_model.dart';
 import '../../../../scoring/cricket/cricket_scoring_api_service.dart';
 import '../../../../scoring/cricket/model/cricket_ball_event_model.dart';
@@ -13,8 +14,6 @@ import '../../../../scoring/football/model/football_match_event_model.dart';
 import '../../../../scoring/football/widgets/football_scorecard.dart';
 import '../../../../team/model/team_model.dart';
 import 'cricket_scorecard.dart';
-
-Duration? _noRetry(int count, Object error) => null;
 
 class MatchScorecardTab extends HookWidget {
   const MatchScorecardTab({
@@ -45,7 +44,7 @@ class MatchScorecardTab extends HookWidget {
         return loaded;
       },
       enabled: supported && isCricket && hasMatchId,
-      retry: _noRetry,
+      retry: noRetry,
     );
 
     final cricketOversQuery = useQuery<List<CricketOverEvent>, Object>(
@@ -59,7 +58,7 @@ class MatchScorecardTab extends HookWidget {
           isCricket &&
           hasMatchId &&
           cricketSessionQuery.data?.cricketState != null,
-      retry: _noRetry,
+      retry: noRetry,
     );
 
     final footballSessionQuery = useQuery<TeamMatchModel, Object>(
@@ -70,7 +69,7 @@ class MatchScorecardTab extends HookWidget {
         return loaded;
       },
       enabled: supported && isFootball && hasMatchId,
-      retry: _noRetry,
+      retry: noRetry,
     );
 
     final footballEventsQuery = useQuery<List<FootballMatchEvent>, Object>(
@@ -85,7 +84,7 @@ class MatchScorecardTab extends HookWidget {
           isFootball &&
           hasMatchId &&
           footballSessionQuery.data?.footballState != null,
-      retry: _noRetry,
+      retry: noRetry,
     );
 
     if (!supported) {

@@ -10,6 +10,7 @@ import '../../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
 import '../../core/components/query/query_async_body.dart';
 import '../../core/config/constants.dart';
 import '../../core/query/query_keys.dart';
+import '../../core/query/query_retry.dart';
 import '../../team/members/model/team_member_model.dart';
 import '../../team/team_service.dart';
 import '../matchmaking_service.dart';
@@ -19,7 +20,6 @@ import 'match_challenge_detail_controller.dart';
 import 'match_challenge_versus_header.dart';
 import 'match_incoming_resolver.dart';
 
-Duration? _noRetry(int count, Object error) => null;
 
 Future<T?>? openMatchChallengeDetail<T>({
   TeamMatchModel? match,
@@ -89,7 +89,7 @@ class MatchChallengeDetailScreen extends HookWidget {
         if (loaded == null) throw Exception('Could not load challenge.');
         return loaded;
       },
-      retry: _noRetry,
+      retry: noRetry,
       seed: controller.initialMatch,
     );
 
@@ -105,7 +105,7 @@ class MatchChallengeDetailScreen extends HookWidget {
         );
         return res?.data ?? const <TeamMemberModel>[];
       },
-      retry: _noRetry,
+      retry: noRetry,
       enabled: needsMemberships,
     );
 
@@ -247,6 +247,7 @@ class _MatchChallengeDetailBody extends StatelessWidget {
               AppSegmentedTabs(
                 controller: controller.detailTabController,
                 padding: const EdgeInsets.fromLTRB(0, 0, 0, 8),
+                fillWidth: true,
                 items: const [
                   AppTabItem(
                     label: 'Details',

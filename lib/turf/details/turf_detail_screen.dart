@@ -8,11 +8,10 @@ import '../../components/turf/turf_detail_scroll_content.dart';
 import '../../core/components/query/query_async_body.dart';
 import '../../core/config/constants.dart';
 import '../../core/query/query_keys.dart';
+import '../../core/query/query_retry.dart';
 import '../model/turf_model.dart';
 import '../turf_service.dart';
 import 'turf_detail_controller.dart';
-
-Duration? _noRetry(int count, Object error) => null;
 
 class TurfDetailScreen extends HookWidget {
   const TurfDetailScreen({super.key});
@@ -35,7 +34,7 @@ class TurfDetailScreen extends HookWidget {
         if (turf == null) throw Exception('Turf not found');
         return turf;
       },
-      retry: _noRetry,
+      retry: noRetry,
     );
 
     useEffect(() {

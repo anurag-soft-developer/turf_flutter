@@ -7,10 +7,9 @@ import 'package:intl/intl.dart';
 
 import '../../core/config/constants.dart';
 import '../../core/query/query_keys.dart';
+import '../../core/query/query_retry.dart';
 import '../../turf/details/turf_detail_controller.dart';
 import '../../turf_booking/turf_booking_service.dart';
-
-Duration? _noRetry(int count, Object error) => null;
 
 class TimeSlotsGrid extends StatelessWidget {
   final TurfDetailController controller;
@@ -96,7 +95,7 @@ class _TimeSlotsQueryBody extends HookWidget {
     final slotsQuery = useQuery<List<TurfTimeSlotListing>, Object>(
       QueryKeys.turfSlots(turfId, dateKey),
       (_) => TurfBookingService().getTimeSlotsForDate(turfId, date),
-      retry: _noRetry,
+      retry: noRetry,
     );
 
     if (slotsQuery.isLoading ||

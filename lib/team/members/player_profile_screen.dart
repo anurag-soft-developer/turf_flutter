@@ -11,9 +11,8 @@ import '../../core/config/constants.dart';
 import '../../core/models/user/user_model.dart';
 import '../../core/models/user_field_instance.dart';
 import '../../core/query/query_keys.dart';
+import '../../core/query/query_retry.dart';
 import '../../core/services/user_service.dart';
-
-Duration? _noRetry(int count, Object error) => null;
 
 /// Route arguments: `{'userId': String}` — public profile user id.
 class PlayerProfileScreen extends HookWidget {
@@ -65,8 +64,6 @@ class PlayerProfileScreen extends HookWidget {
       );
     }
 
-    final ticker = useSingleTickerProvider();
-
     final profileQuery = useQuery<UserModel, Object>(
       QueryKeys.publicProfile(userId),
       (_) async {
@@ -74,19 +71,15 @@ class PlayerProfileScreen extends HookWidget {
         if (user == null) throw Exception('Player not found');
         return user;
       },
-      retry: _noRetry,
+      retry: noRetry,
     );
 
     final availableSports = _availableSports(profileQuery.data);
 
-    final tabController = useMemoized(
-      () => TabController(length: availableSports.length, vsync: ticker),
-      [availableSports.length, ticker],
+    final tabController = useTabController(
+      initialLength: availableSports.length,
+      keys: [availableSports.length],
     );
-
-    useEffect(() {
-      return tabController.dispose;
-    }, [tabController]);
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),

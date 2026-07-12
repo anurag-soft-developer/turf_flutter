@@ -7,6 +7,7 @@ import '../../components/scoring/cricket/match_stats_error_card.dart';
 import '../../components/scoring/cricket/vs_app_bar_title.dart';
 import '../../core/config/constants.dart';
 import '../../core/query/query_keys.dart';
+import '../../core/query/query_retry.dart';
 import '../../core/utils/app_snackbar.dart';
 import '../../match_up/matchmaking_service.dart';
 import '../../match_up/model/team_match_model.dart';
@@ -16,8 +17,6 @@ import 'model/football_match_event_model.dart';
 import 'model/football_scoring_models.dart';
 import 'widgets/football_components.dart';
 import 'widgets/football_event_player_sheet.dart';
-
-Duration? _noRetry(int count, Object error) => null;
 
 class FootballScoreboardScreen extends StatefulWidget {
   const FootballScoreboardScreen({super.key});
@@ -36,7 +35,11 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
   String _fromTeamId = '';
   String _toTeamId = '';
 
-  final TextEditingController _matchMinuteController = TextEditingController();
+  final TextEditingController _matchMinuteController =
+      TextEditingController(text: '90');
+
+  static const int _minMatchMinutes = 5;
+  static const int _maxMatchMinutes = 90;
 
   @override
   void initState() {
@@ -64,9 +67,13 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
     final t = _matchMinuteController.text.trim();
     if (t.isEmpty) return null;
     final n = int.tryParse(t);
-    if (n == null || n < 0 || n > 130) return null;
+    if (n == null || n < _minMatchMinutes || n > _maxMatchMinutes) {
+      return null;
+    }
     return n;
   }
+
+  bool get _canStartSession => _parsedMatchMinute() != null;
 
   Future<void> _onEventTap(FootballEventKind kind) async {
     final match = _controller.footballMatch.value;
@@ -96,6 +103,14 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
 
   Future<void> _startFootballSession() async {
     final minute = _parsedMatchMinute();
+    if (minute == null) {
+      AppSnackbar.info(
+        title: 'Match length',
+        message:
+            'Enter total minutes between $_minMatchMinutes and $_maxMatchMinutes.',
+      );
+      return;
+    }
     await _controller.createFootballSession(
       CreateFootballSessionRequest(matchMinute: minute),
     );
@@ -223,7 +238,7 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
               return loaded;
             },
             enabled: hasMatchId,
-            retry: _noRetry,
+            retry: noRetry,
           );
 
           final sessionQuery = useQuery<TeamMatchModel, Object>(
@@ -237,7 +252,7 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
               return loaded;
             },
             enabled: hasMatchId,
-            retry: _noRetry,
+            retry: noRetry,
           );
 
           final sessionHasState =
@@ -252,7 +267,7 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
                 ..sort((a, b) => a.sequence.compareTo(b.sequence));
             },
             enabled: hasMatchId && sessionHasState,
-            retry: _noRetry,
+            retry: noRetry,
           );
 
           useEffect(() {
@@ -349,12 +364,14 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
             if (match.footballState == null) {
               return FootballStartSessionPanel(
                 metaPending: metaPending,
-                fromTeamName: _fromTeamName,
-                toTeamName: _toTeamName,
                 matchMinuteController: _matchMinuteController,
                 isStarting: _controller.isCreatingFootballSession.value,
+                canStart: _canStartSession,
                 errorText: err,
                 onStart: _startFootballSession,
+                onMinuteChanged: () => setState(() {}),
+                minMinutes: _minMatchMinutes,
+                maxMinutes: _maxMatchMinutes,
               );
             }
 

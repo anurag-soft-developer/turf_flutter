@@ -7,13 +7,13 @@ import '../../core/auth/auth_state_controller.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/paginated_response.dart';
 import '../../core/query/query_keys.dart';
+import '../../core/query/query_retry.dart';
 import '../members/model/team_member_model.dart';
 import '../model/team_model.dart';
 import '../team_service.dart';
 import '../utils/team_ui.dart';
 import 'team_roster_manage_controller.dart';
 
-Duration? _noRetry(int count, Object error) => null;
 
 int _sortMembers(TeamMemberModel a, TeamMemberModel b) {
   int leadershipOrder(LeadershipRole? r) {
@@ -50,11 +50,15 @@ class TeamRosterManageScreen extends HookWidget {
     final hasTeamId = teamId != null && teamId.isNotEmpty;
     final teamService = TeamService();
 
-    final teamQuery = useQuery<TeamModel?, Object>(
+    final teamQuery = useQuery<TeamModel, Object>(
       QueryKeys.teamDetail(teamId ?? ''),
-      (_) => teamService.findById(teamId!),
+      (_) async {
+        final team = await teamService.findById(teamId!);
+        if (team == null) throw Exception('Team not found');
+        return team;
+      },
       enabled: hasTeamId,
-      retry: _noRetry,
+      retry: noRetry,
     );
 
     final activeQuery =
@@ -74,7 +78,7 @@ class TeamRosterManageScreen extends HookWidget {
         return page ?? EmptyPaginatedResponse<TeamMemberModel>();
       },
       enabled: hasTeamId,
-      retry: _noRetry,
+      retry: noRetry,
     );
 
     final suspendedQuery =
@@ -94,14 +98,14 @@ class TeamRosterManageScreen extends HookWidget {
         return page ?? EmptyPaginatedResponse<TeamMemberModel>();
       },
       enabled: hasTeamId,
-      retry: _noRetry,
+      retry: noRetry,
     );
 
     final uid = Get.find<AuthStateController>().user?.id;
     final team = teamQuery.data;
     final accessDenied = !hasTeamId ||
         (teamQuery.isSuccess &&
-            (team == null || uid == null || !team.isOwner(uid)));
+            (uid == null || team == null || !team.isOwner(uid)));
 
     useEffect(() {
       c.syncAccessDenied(accessDenied);
@@ -155,7 +159,7 @@ class TeamRosterManageScreen extends HookWidget {
     required TeamRosterManageController c,
     required bool hasTeamId,
     required bool accessDenied,
-    required QueryResult<TeamModel?, Object> teamQuery,
+    required QueryResult<TeamModel, Object> teamQuery,
     required QueryResult<PaginatedResponse<TeamMemberModel>, Object>
         activeQuery,
     required QueryResult<PaginatedResponse<TeamMemberModel>, Object>

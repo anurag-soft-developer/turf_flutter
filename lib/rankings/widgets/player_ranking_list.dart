@@ -10,10 +10,9 @@ import '../../core/config/constants.dart';
 import '../../core/models/paginated_response.dart';
 import '../../core/models/user/player_stats_models.dart';
 import '../../core/query/query_keys.dart';
+import '../../core/query/query_retry.dart';
 import '../../core/services/user_service.dart';
 import '../model/player_leaderboard_model.dart';
-
-Duration? _noRetry(int count, Object error) => null;
 
 class PlayerRankingList extends HookWidget {
   const PlayerRankingList({super.key, required this.sport});
@@ -38,7 +37,7 @@ class PlayerRankingList extends HookWidget {
         return result ?? EmptyPaginatedResponse<PlayerLeaderboardRow>();
       },
       initialPageParam: 1,
-      retry: _noRetry,
+      retry: noRetry,
       nextPageParamBuilder: (data) {
         final last = data.pages.isNotEmpty ? data.pages.last : null;
         if (last == null || !last.hasNextPage) return null;

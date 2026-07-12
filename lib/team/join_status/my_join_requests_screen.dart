@@ -7,11 +7,10 @@ import '../../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/paginated_response.dart';
 import '../../core/query/query_keys.dart';
+import '../../core/query/query_retry.dart';
 import '../members/model/team_member_model.dart';
 import '../team_service.dart';
 import '../utils/team_ui.dart';
-
-Duration? _noRetry(int count, Object error) => null;
 
 enum JoinRequestStatusTab { pending, accepted, rejected }
 
@@ -122,7 +121,7 @@ class _RequestTabList extends HookWidget {
         return result ?? EmptyPaginatedResponse<TeamMemberModel>();
       },
       initialPageParam: 1,
-      retry: _noRetry,
+      retry: noRetry,
       nextPageParamBuilder: (data) {
         final last = data.pages.isNotEmpty ? data.pages.last : null;
         if (last == null || !last.hasNextPage) return null;

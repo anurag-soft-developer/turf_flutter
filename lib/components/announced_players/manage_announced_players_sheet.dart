@@ -6,14 +6,13 @@ import 'package:get/get.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/paginated_response.dart';
 import '../../core/query/query_keys.dart';
+import '../../core/query/query_retry.dart';
 import '../../core/utils/app_snackbar.dart';
 import '../../match_up/announced_players/announced_players_service.dart';
 import '../../match_up/announced_players/model/announced_player_model.dart';
 import '../../match_up/model/team_match_model.dart';
 import '../../team/members/model/team_member_model.dart';
 import '../../team/members/team_member_service.dart';
-
-Duration? _noRetry(int count, Object error) => null;
 
 /// Opens a modal sheet to toggle active roster members as announced players; persists via matchmaking API.
 Future<void> openManageAnnouncedPlayersSheet({
@@ -108,7 +107,7 @@ class _ManageAnnouncedPlayersSheetBody extends HookWidget {
         );
         return page ?? EmptyPaginatedResponse<TeamMemberModel>();
       },
-      retry: _noRetry,
+      retry: noRetry,
     );
 
     final roster = rosterQuery.data?.data ?? const <TeamMemberModel>[];

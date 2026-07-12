@@ -7,11 +7,10 @@ import 'package:get/get.dart';
 
 import '../../../core/config/constants.dart';
 import '../../../core/query/query_keys.dart';
+import '../../../core/query/query_retry.dart';
 import '../../../settings/settings_controller.dart';
 import '../../../turf/model/turf_model.dart';
 import '../../../turf/turf_service.dart';
-
-Duration? _noRetry(int count, Object error) => null;
 
 class ProposeTurfSheet extends HookWidget {
   final List<String>? sportTypes;
@@ -63,7 +62,7 @@ class ProposeTurfSheet extends HookWidget {
         );
         return response?.data ?? const <TurfModel>[];
       },
-      retry: _noRetry,
+      retry: noRetry,
     );
 
     final turfs = turfsQuery.data ?? const <TurfModel>[];

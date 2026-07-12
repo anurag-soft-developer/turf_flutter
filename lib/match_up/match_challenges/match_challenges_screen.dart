@@ -11,6 +11,7 @@ import '../../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/paginated_response.dart';
 import '../../core/query/query_keys.dart';
+import '../../core/query/query_retry.dart';
 import '../../team/members/model/team_member_model.dart';
 import '../../team/team_service.dart';
 import '../../team/utils/team_ui.dart';
@@ -18,8 +19,6 @@ import '../matchmaking_service.dart';
 import '../model/team_match_model.dart';
 import 'match_challenge_detail_screen.dart';
 import 'match_challenges_controller.dart';
-
-Duration? _noRetry(int count, Object error) => null;
 
 class MatchChallengesScreen extends HookWidget {
   const MatchChallengesScreen({super.key});
@@ -49,7 +48,7 @@ class MatchChallengesScreen extends HookWidget {
         );
         return res?.data ?? const <TeamMemberModel>[];
       },
-      retry: _noRetry,
+      retry: noRetry,
     );
 
     useEffect(() {
@@ -316,7 +315,7 @@ class _ChallengesQueryPane extends HookWidget {
         page: ctx.pageParam,
       ),
       initialPageParam: 1,
-      retry: _noRetry,
+      retry: noRetry,
       nextPageParamBuilder: (data) {
         final last = data.pages.isNotEmpty ? data.pages.last : null;
         if (last == null || !last.hasNextPage) return null;
@@ -470,7 +469,7 @@ class _HistoryQueryPane extends HookWidget {
         page: ctx.pageParam,
       ),
       initialPageParam: 1,
-      retry: _noRetry,
+      retry: noRetry,
       nextPageParamBuilder: (data) {
         final last = data.pages.isNotEmpty ? data.pages.last : null;
         if (last == null || !last.hasNextPage) return null;

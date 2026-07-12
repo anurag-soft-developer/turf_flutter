@@ -9,11 +9,10 @@ import '../../components/rankings/leaderboard_podium.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/paginated_response.dart';
 import '../../core/query/query_keys.dart';
+import '../../core/query/query_retry.dart';
 import '../../team/model/team_leaderboard_model.dart';
 import '../../team/model/team_model.dart';
 import '../../team/team_service.dart';
-
-Duration? _noRetry(int count, Object error) => null;
 
 class TeamsRankingList extends HookWidget {
   const TeamsRankingList({super.key, required this.sport});
@@ -39,7 +38,7 @@ class TeamsRankingList extends HookWidget {
             EmptyPaginatedResponse<TeamLeaderboardRow>();
       },
       initialPageParam: 1,
-      retry: _noRetry,
+      retry: noRetry,
       nextPageParamBuilder: (data) {
         final last = data.pages.isNotEmpty ? data.pages.last : null;
         if (last == null || !last.hasNextPage) return null;

@@ -5,12 +5,11 @@ import 'package:get/get.dart';
 
 import '../../core/config/constants.dart';
 import '../../core/query/query_keys.dart';
+import '../../core/query/query_retry.dart';
 import '../../turf/model/turf_model.dart';
 import '../../turf/turf_service.dart';
 import '../shared/breathing_skeleton.dart';
 import 'turf_cards.dart';
-
-Duration? _noRetry(int count, Object error) => null;
 
 class FeaturedTurfsSection extends HookWidget {
   const FeaturedTurfsSection({super.key});
@@ -41,7 +40,7 @@ class FeaturedTurfsSection extends HookWidget {
         final turfs = await TurfService().getFeaturedTurfs(limit: 5);
         return turfs ?? const <TurfModel>[];
       },
-      retry: _noRetry,
+      retry: noRetry,
     );
 
     final turfs = featuredQuery.data ?? const <TurfModel>[];

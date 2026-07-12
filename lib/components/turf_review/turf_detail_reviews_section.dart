@@ -6,13 +6,13 @@ import 'package:get/get.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/paginated_response.dart';
 import '../../core/query/query_keys.dart';
+import '../../core/query/query_retry.dart';
 import '../../turf/model/turf_review_model.dart';
 import '../../turf/reviews/turf_review_service.dart';
 import 'turf_review_stats_summary.dart';
 import 'turf_review_tile.dart';
 import 'turf_review_write_form.dart';
 
-Duration? _noRetry(int count, Object error) => null;
 
 void openTurfReviewWriteSheet(BuildContext context, String turfId) {
   showModalBottomSheet<void>(
@@ -49,7 +49,7 @@ class TurfDetailReviewsSection extends HookWidget {
     final statsQuery = useQuery<TurfReviewStats?, Object>(
       QueryKeys.turfReviewStats(turfId),
       (_) => TurfReviewService().getTurfReviewStats(turfId),
-      retry: _noRetry,
+      retry: noRetry,
     );
 
     final previewQuery =
@@ -68,7 +68,7 @@ class TurfDetailReviewsSection extends HookWidget {
         );
         return page ?? EmptyPaginatedResponse<TurfReviewModel>();
       },
-      retry: _noRetry,
+      retry: noRetry,
     );
 
     final statsLoading =

@@ -8,13 +8,12 @@ import '../../core/components/bottom_navigation_panel/navigation_controller.dart
 import '../../core/config/constants.dart';
 import '../../core/models/user/player_stats_models.dart';
 import '../../core/query/query_keys.dart';
+import '../../core/query/query_retry.dart';
 import '../../core/services/user_service.dart';
 import '../../rankings/model/player_leaderboard_model.dart';
 import '../rankings/leaderboard_podium.dart';
 import '../rankings/player_avatar.dart';
 import '../shared/breathing_skeleton.dart';
-
-Duration? _noRetry(int count, Object error) => null;
 
 class _DashboardLeaderboardData {
   const _DashboardLeaderboardData({
@@ -98,7 +97,7 @@ class DashboardLeaderboardSection extends HookWidget {
           currentUserRow: isInTopThree ? null : me,
         );
       },
-      retry: _noRetry,
+      retry: noRetry,
     );
 
     return Column(

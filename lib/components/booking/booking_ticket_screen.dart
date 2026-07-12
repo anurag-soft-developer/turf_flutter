@@ -7,11 +7,10 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../core/config/constants.dart';
 import '../../core/query/query_keys.dart';
+import '../../core/query/query_retry.dart';
 import '../../turf_booking/model/turf_booking_model.dart';
 import '../../turf_booking/turf_booking_service.dart';
 import 'booking_reference_card.dart';
-
-Duration? _noRetry(int count, Object error) => null;
 
 class BookingTicketScreen extends HookWidget {
   const BookingTicketScreen({super.key});
@@ -89,7 +88,7 @@ class BookingTicketScreen extends HookWidget {
         if (fetched == null) throw Exception('Could not load booking.');
         return fetched;
       },
-      retry: _noRetry,
+      retry: noRetry,
       seed: seedBooking,
       enabled: seedBooking == null,
     );

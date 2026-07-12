@@ -11,13 +11,12 @@ import '../components/match_up/team_stats_row.dart';
 import '../core/config/constants.dart';
 import '../core/models/paginated_response.dart';
 import '../core/query/query_keys.dart';
+import '../core/query/query_retry.dart';
 import '../rankings/widgets/rank_sport_filter.dart';
 import '../team/members/model/team_member_model.dart';
 import '../team/model/team_model.dart';
 import '../team/team_service.dart';
 import 'match_up_controller.dart';
-
-Duration? _noRetry(int count, Object error) => null;
 
 class MatchUpScreen extends HookWidget {
   const MatchUpScreen({super.key});
@@ -39,7 +38,7 @@ class MatchUpScreen extends HookWidget {
         );
         return result?.data ?? const <TeamMemberModel>[];
       },
-      retry: _noRetry,
+      retry: noRetry,
     );
 
     useEffect(() {
@@ -233,7 +232,7 @@ class _SportFeedSection extends HookWidget {
         );
       },
       initialPageParam: 1,
-      retry: _noRetry,
+      retry: noRetry,
       nextPageParamBuilder: (data) {
         final last = data.pages.isNotEmpty ? data.pages.last : null;
         if (last == null || !last.hasNextPage) return null;

@@ -17,12 +17,12 @@ import '../../core/components/query/query_async_body.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/paginated_response.dart';
 import '../../core/query/query_keys.dart';
+import '../../core/query/query_retry.dart';
 import '../members/model/team_member_model.dart';
 import '../model/team_model.dart';
 import '../team_service.dart';
 import 'team_detail_controller.dart';
 
-Duration? _noRetry(int count, Object error) => null;
 
 String? _argsTeamId() {
   final args = Get.arguments;
@@ -83,7 +83,7 @@ class TeamDetailScreen extends HookWidget {
         );
         return result?.data ?? const <TeamMemberModel>[];
       },
-      retry: _noRetry,
+      retry: noRetry,
     );
 
     final resolvedTeamId = argsTeamId ??
@@ -100,7 +100,7 @@ class TeamDetailScreen extends HookWidget {
         return team;
       },
       enabled: hasTeamId,
-      retry: _noRetry,
+      retry: noRetry,
     );
 
     final rosterQuery =
@@ -120,7 +120,7 @@ class TeamDetailScreen extends HookWidget {
         return page ?? EmptyPaginatedResponse<TeamMemberModel>();
       },
       enabled: hasTeamId,
-      retry: _noRetry,
+      retry: noRetry,
     );
 
     useEffect(() {
