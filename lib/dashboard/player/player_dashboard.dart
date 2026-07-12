@@ -10,7 +10,12 @@ import '../../components/dashboard/team_action_cards.dart';
 import '../../components/turf/featured_section.dart';
 import '../../core/auth/auth_state_controller.dart';
 import '../../core/config/constants.dart';
+import '../../core/models/location_model.dart';
 import '../../core/query/query_keys.dart';
+import '../../core/query/query_retry.dart';
+import '../dashboard_service.dart';
+import '../model/player_dashboard_model.dart';
+import 'player_dashboard_controller.dart';
 
 class PlayerDashboard extends HookWidget {
   const PlayerDashboard({super.key});
@@ -25,12 +30,16 @@ class PlayerDashboard extends HookWidget {
   @override
   Widget build(BuildContext context) {
     final authController = Get.find<AuthStateController>();
+    final dashboardController = Get.find<PlayerDashboardController>();
     final queryClient = useQueryClient();
 
     return RefreshIndicator(
       onRefresh: () async {
+        await dashboardController.resolveLocation();
         await Future.wait([
-          queryClient.invalidateQueries(queryKey: QueryKeys.featuredTurfs),
+          queryClient.invalidateQueries(
+            queryKey: QueryKeys.playerDashboardPrefix,
+          ),
           queryClient.invalidateQueries(
             queryKey: QueryKeys.dashboardLeaderboard,
           ),
@@ -45,8 +54,9 @@ class PlayerDashboard extends HookWidget {
               padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
               child: Obx(() {
                 final name = authController.user?.fullName?.trim();
-                final displayName =
-                    (name != null && name.isNotEmpty) ? name.split(' ').first : 'there';
+                final displayName = (name != null && name.isNotEmpty)
+                    ? name.split(' ').first
+                    : 'there';
 
                 return Text.rich(
                   TextSpan(
@@ -73,24 +83,23 @@ class PlayerDashboard extends HookWidget {
               }),
             ),
             const SizedBox(height: 20),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24),
-              child: BattleModeCard(),
-            ),
-            const SizedBox(height: 28),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24),
-              child: Text(
-                'Nearby turfs',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Color(AppColors.textColor),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            const FeaturedTurfsSection(),
+            Obx(() {
+              final ready = dashboardController.isLocationReady.value;
+              final location = dashboardController.dashboardLocation.value;
+
+              if (!ready) {
+                return const _PlayerDashboardFeedPlaceholder();
+              }
+
+              final locKey = location == null
+                  ? 'no-location'
+                  : '${location.latitude},${location.longitude}';
+
+              return _PlayerDashboardFeed(
+                key: ValueKey(locKey),
+                location: location,
+              );
+            }),
             const SizedBox(height: 16),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 24.0),
@@ -110,6 +119,97 @@ class PlayerDashboard extends HookWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _PlayerDashboardFeedPlaceholder extends StatelessWidget {
+  const _PlayerDashboardFeedPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 24),
+          child: BattleModeCard(nearbyTeamsCount: 0),
+        ),
+        SizedBox(height: 28),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 24),
+          child: Text(
+            'Featured turfs',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Color(AppColors.textColor),
+            ),
+          ),
+        ),
+        SizedBox(height: 12),
+        FeaturedTurfsSection(turfs: [], isLoading: true),
+      ],
+    );
+  }
+}
+
+class _PlayerDashboardFeed extends HookWidget {
+  const _PlayerDashboardFeed({super.key, this.location});
+
+  final LocationModel? location;
+
+  @override
+  Widget build(BuildContext context) {
+    final dashboardQuery = useQuery<PlayerDashboardModel, Object>(
+      QueryKeys.playerDashboard(
+        lat: location?.latitude,
+        lng: location?.longitude,
+      ),
+      (_) async {
+        final data = await DashboardService().getPlayerDashboard(
+          location: location,
+        );
+        if (data == null) {
+          throw Exception('Failed to load dashboard');
+        }
+        return data;
+      },
+      retry: noRetry,
+    );
+
+    final data = dashboardQuery.data ?? PlayerDashboardModel.empty;
+    final isLoading =
+        dashboardQuery.isLoading ||
+        (dashboardQuery.isFetching && dashboardQuery.data == null);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: BattleModeCard(nearbyTeamsCount: data.nearbyTeamsCount),
+        ),
+        const SizedBox(height: 28),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Text(
+            data.turfsTitle,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Color(AppColors.textColor),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        FeaturedTurfsSection(
+          turfs: data.turfs,
+          isLoading: isLoading && data.turfs.isEmpty,
+          hasError: dashboardQuery.isError && data.turfs.isEmpty,
+          onRetry: () => dashboardQuery.refetch(),
+        ),
+      ],
     );
   }
 }

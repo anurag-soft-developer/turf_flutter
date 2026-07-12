@@ -171,15 +171,7 @@ class MatchChallengeDetailController extends GetxController
     isRejectingChallenge.value = false;
     isAcceptingChallenge.value = false;
 
-    if (updated == null) {
-      AppSnackbar.error(
-        title: action == MatchResponseAction.accept
-            ? 'Could not accept'
-            : 'Could not reject',
-        message: 'Try again later.',
-      );
-      return;
-    }
+    if (updated == null) return;
 
     match.value = updated;
     await _invalidateMatchQueries(updated);
@@ -218,13 +210,7 @@ class MatchChallengeDetailController extends GetxController
     );
     isUpdatingSlot.value = false;
 
-    if (updated == null) {
-      AppSnackbar.error(
-        title: 'Update failed',
-        message: 'Could not set the time slot. Please try again.',
-      );
-      return;
-    }
+    if (updated == null) return;
 
     match.value = updated;
     await _invalidateMatchQueries(updated);
@@ -259,13 +245,7 @@ class MatchChallengeDetailController extends GetxController
     );
     isUpdatingTurf.value = false;
 
-    if (updated == null) {
-      AppSnackbar.error(
-        title: 'Update failed',
-        message: 'Could not set the turf. Please try again.',
-      );
-      return;
-    }
+    if (updated == null) return;
 
     match.value = updated;
     await _invalidateMatchQueries(updated);

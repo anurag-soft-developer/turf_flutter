@@ -287,83 +287,70 @@ class AddTeamController extends GetxController {
     final location = _collectLocation();
 
     isSubmitting.value = true;
-    try {
-      if (isEditing) {
-        final updated = await _teamService.update(
-          _editingTeamId!,
-          UpdateTeamRequest(
-            name: nameController.text.trim(),
-            shortName: shortName.isEmpty ? null : shortName,
-            description: description.isEmpty ? null : description,
-            tagline: tagline.isEmpty ? null : tagline,
-            socialLinks: social,
-            foundedYear: founded,
-            genderCategory: genderCategory.value,
-            maxPendingJoinRequests: maxPending,
-            logo: logo,
-            coverImages: covers,
-            tags: tagsVal,
-            preferredPlayDays: playDays,
-            preferredTimeSlot: preferredTimeSlot.value,
-            lookingForMembers: lookingForMembers.value,
-            pinnedNotices: notices,
-            visibility: visibility.value,
-            joinMode: joinMode.value,
-            location: location,
-          ),
-        );
-        if (updated != null) {
-          await flushPendingRemoteImageDeletions(_pendingRemoteImageDeletes);
-          AppSnackbar.success(title: 'Team updated', message: updated.name);
-          await _invalidateTeamQueries(updated.id);
-          Get.offNamed(AppConstants.routes.myTeams);
-        } else {
-          AppSnackbar.error(
-            title: 'Update failed',
-            message: 'Check your connection and try again.',
-          );
-        }
-      } else {
-        final created = await _teamService.create(
-          CreateTeamRequest(
-            name: nameController.text.trim(),
-            shortName: shortName.isEmpty ? null : shortName,
-            description: description.isEmpty ? null : description,
-            tagline: tagline.isEmpty ? null : tagline,
-            socialLinks: social,
-            foundedYear: founded,
-            genderCategory: genderCategory.value,
-            maxPendingJoinRequests: maxPending,
-            logo: logo,
-            coverImages: covers,
-            tags: tagsVal,
-            preferredPlayDays: playDays,
-            preferredTimeSlot: preferredTimeSlot.value,
-            lookingForMembers: lookingForMembers.value,
-            pinnedNotices: notices,
-            sportType: sportType.value,
-            visibility: visibility.value,
-            joinMode: joinMode.value,
-            location: location,
-          ),
-        );
-        if (created != null) {
-          AppSnackbar.success(
-            title: 'Team created',
-            message: '${created.name} is ready.',
-          );
-          await _invalidateTeamQueries(created.id);
-          Get.offNamed(AppConstants.routes.myTeams);
-        } else {
-          AppSnackbar.error(
-            title: 'Could not create team',
-            message: 'Check your connection and try again.',
-          );
-        }
+    if (isEditing) {
+      final updated = await _teamService.update(
+        _editingTeamId!,
+        UpdateTeamRequest(
+          name: nameController.text.trim(),
+          shortName: shortName.isEmpty ? null : shortName,
+          description: description.isEmpty ? null : description,
+          tagline: tagline.isEmpty ? null : tagline,
+          socialLinks: social,
+          foundedYear: founded,
+          genderCategory: genderCategory.value,
+          maxPendingJoinRequests: maxPending,
+          logo: logo,
+          coverImages: covers,
+          tags: tagsVal,
+          preferredPlayDays: playDays,
+          preferredTimeSlot: preferredTimeSlot.value,
+          lookingForMembers: lookingForMembers.value,
+          pinnedNotices: notices,
+          visibility: visibility.value,
+          joinMode: joinMode.value,
+          location: location,
+        ),
+      );
+      if (updated != null) {
+        await flushPendingRemoteImageDeletions(_pendingRemoteImageDeletes);
+        AppSnackbar.success(title: 'Team updated', message: updated.name);
+        await _invalidateTeamQueries(updated.id);
+        Get.offNamed(AppConstants.routes.myTeams);
       }
-    } finally {
-      isSubmitting.value = false;
+    } else {
+      final created = await _teamService.create(
+        CreateTeamRequest(
+          name: nameController.text.trim(),
+          shortName: shortName.isEmpty ? null : shortName,
+          description: description.isEmpty ? null : description,
+          tagline: tagline.isEmpty ? null : tagline,
+          socialLinks: social,
+          foundedYear: founded,
+          genderCategory: genderCategory.value,
+          maxPendingJoinRequests: maxPending,
+          logo: logo,
+          coverImages: covers,
+          tags: tagsVal,
+          preferredPlayDays: playDays,
+          preferredTimeSlot: preferredTimeSlot.value,
+          lookingForMembers: lookingForMembers.value,
+          pinnedNotices: notices,
+          sportType: sportType.value,
+          visibility: visibility.value,
+          joinMode: joinMode.value,
+          location: location,
+        ),
+      );
+      if (created != null) {
+        AppSnackbar.success(
+          title: 'Team created',
+          message: '${created.name} is ready.',
+        );
+        await _invalidateTeamQueries(created.id);
+        Get.offNamed(AppConstants.routes.myTeams);
+      }
     }
+    isSubmitting.value = false;
   }
 
   Future<void> _invalidateTeamQueries(String? teamId) async {

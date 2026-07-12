@@ -49,26 +49,18 @@ class TeamJoinRequestsController extends GetxController {
       return;
     }
     actionMembershipId.value = mid;
-    try {
-      final res = await _teamService.memberService.acceptRequest(
-        _teamId!,
-        mid,
+    final res = await _teamService.memberService.acceptRequest(
+      _teamId!,
+      mid,
+    );
+    if (res != null) {
+      AppSnackbar.success(
+        title: 'Player added',
+        message: 'They are now a member of the team.',
       );
-      if (res != null) {
-        AppSnackbar.success(
-          title: 'Player added',
-          message: 'They are now a member of the team.',
-        );
-        await _invalidateAfterDecision();
-      } else {
-        AppSnackbar.error(
-          title: 'Could not accept',
-          message: 'Try again later.',
-        );
-      }
-    } finally {
-      actionMembershipId.value = null;
+      await _invalidateAfterDecision();
     }
+    actionMembershipId.value = null;
   }
 
   Future<void> reject(TeamMemberModel m) async {
@@ -82,26 +74,18 @@ class TeamJoinRequestsController extends GetxController {
       return;
     }
     actionMembershipId.value = mid;
-    try {
-      final res = await _teamService.memberService.rejectRequest(
-        _teamId!,
-        mid,
+    final res = await _teamService.memberService.rejectRequest(
+      _teamId!,
+      mid,
+    );
+    if (res != null) {
+      AppSnackbar.success(
+        title: 'Request rejected',
+        message: 'The application was rejected.',
       );
-      if (res != null) {
-        AppSnackbar.success(
-          title: 'Request rejected',
-          message: 'The application was rejected.',
-        );
-        await _invalidateAfterDecision();
-      } else {
-        AppSnackbar.error(
-          title: 'Could not reject',
-          message: 'Try again later.',
-        );
-      }
-    } finally {
-      actionMembershipId.value = null;
+      await _invalidateAfterDecision();
     }
+    actionMembershipId.value = null;
   }
 
   Future<void> _invalidateAfterDecision() async {

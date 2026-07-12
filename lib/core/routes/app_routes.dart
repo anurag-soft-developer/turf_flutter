@@ -1,5 +1,5 @@
 import 'package:flutter_application_1/bindings/main_screen_wrapper_binding.dart';
-import 'package:flutter_application_1/bindings/turf_list_binding.dart';
+import 'package:flutter_application_1/bindings/player_dashboard_binding.dart';
 import 'package:flutter_application_1/core/components/bottom_navigation_panel/main_screen_wrapper.dart';
 import 'package:flutter_application_1/core/config/constants.dart';
 import 'package:flutter_application_1/core/guards/auth_guard.dart';
@@ -41,7 +41,7 @@ class AppRoutes {
       name: AppConstants.routes.dashboard,
       page: () => const DashboardScreen(),
       transition: Transition.cupertino,
-      binding: TurfListBinding(),
+      binding: PlayerDashboardBinding(),
       middlewares: [AuthGuard()],
     ),
     GetPage(

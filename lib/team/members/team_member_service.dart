@@ -18,6 +18,14 @@ class TeamMemberService {
     return TeamMemberModel.fromJson(response);
   }
 
+  /// Applicant cancels a pending join request (record is deleted).
+  Future<bool> withdrawJoinRequest(String teamId) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiConstants.teamMember.withdrawRequest(teamId),
+    );
+    return response != null && response['success'] == true;
+  }
+
   Future<PaginatedResponse<TeamMemberModel>?> listForTeam(
     String teamId,
     TeamMemberRosterFilterQuery query,

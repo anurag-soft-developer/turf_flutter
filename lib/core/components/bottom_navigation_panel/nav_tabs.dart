@@ -3,6 +3,7 @@ import 'package:flutter_application_1/match_up/match_up_controller.dart';
 import 'package:flutter_application_1/match_up/match_up_screen.dart';
 import 'package:get/get.dart';
 import '../../../dashboard/dashboard_screen.dart';
+import '../../../dashboard/player/player_dashboard_controller.dart';
 import '../../../turf/feed/turf_list_screen.dart';
 import '../../../rankings/rank_screen.dart';
 import '../../../rankings/rank_controller.dart';
@@ -33,6 +34,9 @@ final List<NavTab> kNavTabs = [
     activeIcon: Icons.dashboard,
     label: 'Dashboard',
     screenBuilder: () => const DashboardScreen(),
+    loadController: () =>
+        _ensure<PlayerDashboardController>(() => PlayerDashboardController()),
+    disposeController: () => _dispose<PlayerDashboardController>(),
   ),
   NavTab(
     icon: Icons.grass_outlined,

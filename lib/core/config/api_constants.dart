@@ -15,6 +15,7 @@ class ApiConstants {
   static const notifications = NotificationEndpoints();
   static const scoring = ScoringEndpoints();
   static const storage = StorageEndpoints();
+  static const dashboard = DashboardEndpoints();
 
   // Headers
   static const Map<String, String> defaultHeaders = {
@@ -109,6 +110,9 @@ class TeamMemberEndpoints {
   String membersBase(String teamId) => '/teams/$teamId/members';
 
   String join(String teamId) => '/teams/$teamId/members/join';
+
+  String withdrawRequest(String teamId) =>
+      '/teams/$teamId/members/withdraw-request';
 
   String leave(String teamId) => '/teams/$teamId/members/leave';
 
@@ -263,4 +267,11 @@ class StorageEndpoints {
 
   /// Owner-scoped deletes (JWT).
   String get delete => '/storage/objects';
+}
+
+/// Aggregated dashboard payloads (`GET /dashboard/*`) — JWT required.
+class DashboardEndpoints {
+  const DashboardEndpoints();
+
+  String get player => '/dashboard/player';
 }

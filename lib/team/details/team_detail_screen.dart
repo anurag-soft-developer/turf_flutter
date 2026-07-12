@@ -552,17 +552,74 @@ class _BottomJoinBar extends StatelessWidget {
       }
 
       if (controller.hasPendingRequest) {
+        final withdrawing = controller.isJoining.value;
         return _bottomBarContainer(
-          child: OutlinedButton.icon(
-            onPressed: null,
-            icon: const Icon(Icons.hourglass_top, size: 20),
-            label: const Text('Join request pending…'),
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size(double.infinity, 50),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
+          child: Row(
+            children: [
+              Expanded(
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.hourglass_top,
+                      size: 20,
+                      color: const Color(AppColors.primaryColor),
+                    ),
+                    const SizedBox(width: 8),
+                    const Flexible(
+                      child: Text(
+                        'Join request pending…',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(AppColors.textColor),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
+              const SizedBox(width: 12),
+              OutlinedButton(
+                onPressed:
+                    withdrawing ? null : controller.withdrawJoinRequest,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(AppColors.errorColor),
+                  disabledForegroundColor: const Color(
+                    AppColors.errorColor,
+                  ).withValues(alpha: 0.5),
+                  side: BorderSide(
+                    color: const Color(AppColors.errorColor).withValues(
+                      alpha: withdrawing ? 0.35 : 0.7,
+                    ),
+                  ),
+                  minimumSize: const Size(0, 40),
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  visualDensity: VisualDensity.compact,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: withdrawing
+                    ? const SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Color(AppColors.errorColor),
+                        ),
+                      )
+                    : const Text(
+                        'Withdraw',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+              ),
+            ],
           ),
         );
       }

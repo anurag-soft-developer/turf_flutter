@@ -104,90 +104,69 @@ class TeamDetailController extends GetxController {
     }
 
     isUpdatingTeamSettings.value = true;
-    try {
-      TeamJoinMode? joinModePatch = joinMode;
-      TeamVisibility? visibilityPatch = visibility;
-      if (visibility == TeamVisibility.private &&
-          t.joinMode == TeamJoinMode.open &&
-          joinMode == null) {
-        joinModePatch = TeamJoinMode.approval;
-      }
-
-      final updated = await _teamService.update(
-        id,
-        UpdateTeamRequest(
-          visibility: visibilityPatch,
-          joinMode: joinModePatch,
-          lookingForMembers: lookingForMembers,
-          teamOpenForMatch: teamOpenForMatch,
-          maxPendingJoinRequests: maxPendingJoinRequests,
-        ),
-      );
-      if (updated != null) {
-        team.value = updated;
-        AppSnackbar.success(
-          title: 'Settings saved',
-          message: 'Team preferences were updated.',
-        );
-        await _invalidateTeamQueries();
-      } else {
-        AppSnackbar.error(title: 'Update failed', message: 'Try again later.');
-      }
-    } finally {
-      isUpdatingTeamSettings.value = false;
+    TeamJoinMode? joinModePatch = joinMode;
+    TeamVisibility? visibilityPatch = visibility;
+    if (visibility == TeamVisibility.private &&
+        t.joinMode == TeamJoinMode.open &&
+        joinMode == null) {
+      joinModePatch = TeamJoinMode.approval;
     }
+
+    final updated = await _teamService.update(
+      id,
+      UpdateTeamRequest(
+        visibility: visibilityPatch,
+        joinMode: joinModePatch,
+        lookingForMembers: lookingForMembers,
+        teamOpenForMatch: teamOpenForMatch,
+        maxPendingJoinRequests: maxPendingJoinRequests,
+      ),
+    );
+    if (updated != null) {
+      team.value = updated;
+      AppSnackbar.success(
+        title: 'Settings saved',
+        message: 'Team preferences were updated.',
+      );
+      await _invalidateTeamQueries();
+    }
+    isUpdatingTeamSettings.value = false;
   }
 
   Future<void> activateTeam() async {
     final id = _teamId;
     if (id == null || !isMyTeamMode || !isOwner) return;
     isActionLoading.value = true;
-    try {
-      final updated = await _teamService.update(
-        id,
-        UpdateTeamRequest(status: TeamStatus.active),
+    final updated = await _teamService.update(
+      id,
+      UpdateTeamRequest(status: TeamStatus.active),
+    );
+    if (updated != null) {
+      AppSnackbar.success(
+        title: 'Team activated',
+        message: '${updated.name} is now active.',
       );
-      if (updated != null) {
-        AppSnackbar.success(
-          title: 'Team activated',
-          message: '${updated.name} is now active.',
-        );
-        await _invalidateTeamQueries();
-      } else {
-        AppSnackbar.error(
-          title: 'Could not activate',
-          message: 'Try again later.',
-        );
-      }
-    } finally {
-      isActionLoading.value = false;
+      await _invalidateTeamQueries();
     }
+    isActionLoading.value = false;
   }
 
   Future<void> deactivateTeam() async {
     final id = _teamId;
     if (id == null || !isMyTeamMode || !isOwner) return;
     isActionLoading.value = true;
-    try {
-      final updated = await _teamService.update(
-        id,
-        UpdateTeamRequest(status: TeamStatus.inactive),
+    final updated = await _teamService.update(
+      id,
+      UpdateTeamRequest(status: TeamStatus.inactive),
+    );
+    if (updated != null) {
+      AppSnackbar.success(
+        title: 'Team deactivated',
+        message: '${updated.name} is now inactive.',
       );
-      if (updated != null) {
-        AppSnackbar.success(
-          title: 'Team deactivated',
-          message: '${updated.name} is now inactive.',
-        );
-        await _invalidateTeamQueries();
-      } else {
-        AppSnackbar.error(
-          title: 'Could not deactivate',
-          message: 'Try again later.',
-        );
-      }
-    } finally {
-      isActionLoading.value = false;
+      await _invalidateTeamQueries();
     }
+    isActionLoading.value = false;
   }
 
   // ── Member actions ────────────────────────────────────────────────────────
@@ -196,29 +175,21 @@ class TeamDetailController extends GetxController {
     final id = _teamId;
     if (id == null || !isMyTeamMode || !isMember) return;
     isActionLoading.value = true;
-    try {
-      final res = await _teamService.memberService.leave(id);
-      if (res != null && res.success) {
-        AppSnackbar.success(title: 'Left team', message: res.message);
-        await _invalidateTeamQueries(
-          teamId: id,
-          includeJoinRequests: true,
-        );
-        if (isMyTeamMode) {
-          team.value = null;
-          members.clear();
-          myMembership.value = null;
-          _teamId = null;
-        }
-      } else {
-        AppSnackbar.error(
-          title: 'Could not leave',
-          message: 'Try again later.',
-        );
+    final res = await _teamService.memberService.leave(id);
+    if (res != null && res.success) {
+      AppSnackbar.success(title: 'Left team', message: res.message);
+      await _invalidateTeamQueries(
+        teamId: id,
+        includeJoinRequests: true,
+      );
+      if (isMyTeamMode) {
+        team.value = null;
+        members.clear();
+        myMembership.value = null;
+        _teamId = null;
       }
-    } finally {
-      isActionLoading.value = false;
     }
+    isActionLoading.value = false;
   }
 
   // ── Visitor actions ───────────────────────────────────────────────────────
@@ -227,26 +198,34 @@ class TeamDetailController extends GetxController {
     final id = _teamId;
     if (id == null || isMyTeamMode || isMember || hasPendingRequest) return;
     isJoining.value = true;
-    try {
-      final result = await _teamService.memberService.join(id);
-      if (result != null) {
-        myMembership.value = result;
-        AppSnackbar.success(
-          title: 'Request sent',
-          message: result.status == TeamMemberStatus.active
-              ? 'You have joined the team.'
-              : 'Your join request was submitted.',
-        );
-        await _invalidateTeamQueries(includeJoinRequests: true);
-      } else {
-        AppSnackbar.error(
-          title: 'Request failed',
-          message: 'Unable to send join request. Try again later.',
-        );
-      }
-    } finally {
-      isJoining.value = false;
+    final result = await _teamService.memberService.join(id);
+    if (result != null) {
+      myMembership.value = result;
+      AppSnackbar.success(
+        title: 'Request sent',
+        message: result.status == TeamMemberStatus.active
+            ? 'You have joined the team.'
+            : 'Your join request was submitted.',
+      );
+      await _invalidateTeamQueries(includeJoinRequests: true);
     }
+    isJoining.value = false;
+  }
+
+  Future<void> withdrawJoinRequest() async {
+    final id = _teamId;
+    if (id == null || isMyTeamMode || !hasPendingRequest) return;
+    isJoining.value = true;
+    final ok = await _teamService.memberService.withdrawJoinRequest(id);
+    if (ok) {
+      myMembership.value = null;
+      AppSnackbar.success(
+        title: 'Request withdrawn',
+        message: 'Your join request was withdrawn.',
+      );
+      await _invalidateTeamQueries(includeJoinRequests: true);
+    }
+    isJoining.value = false;
   }
 
   Future<void> _invalidateTeamQueries({

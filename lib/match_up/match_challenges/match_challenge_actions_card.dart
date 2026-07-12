@@ -131,13 +131,7 @@ class _MatchChallengeActionsCardState extends State<MatchChallengeActionsCard> {
     setState(() => _isCancelling = false);
     _syncBusy();
 
-    if (updated == null) {
-      AppSnackbar.error(
-        title: 'Could not cancel',
-        message: 'Please try again later.',
-      );
-      return;
-    }
+    if (updated == null) return;
     widget.onMatchUpdated(updated);
     AppSnackbar.success(
       title: 'Match cancelled',
@@ -250,13 +244,7 @@ class _MatchChallengeActionsCardState extends State<MatchChallengeActionsCard> {
     setState(() => _isRecordingResult = false);
     _syncBusy();
 
-    if (updated == null) {
-      AppSnackbar.error(
-        title: 'Could not save result',
-        message: 'Please try again later.',
-      );
-      return;
-    }
+    if (updated == null) return;
     widget.onMatchUpdated(updated);
 
     if (outcome == MatchResultOutcome.ongoing &&

@@ -99,15 +99,6 @@ class TurfService {
     return turf;
   }
 
-  Future<List<TurfModel>?> getFeaturedTurfs({int limit = 5}) async {
-    final result = await searchTurfs(
-      sort: 'averageRating',
-      limit: limit,
-      minRating: 4.0,
-    );
-    return result?.data;
-  }
-
   /// Turfs owned by the current user (e.g. match-up propose turf).
   Future<PaginatedResponse<TurfModel>?> getMyTurfs({
     int page = 1,

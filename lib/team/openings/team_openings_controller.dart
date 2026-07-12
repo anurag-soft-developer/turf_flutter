@@ -48,7 +48,7 @@ class TeamOpeningsController extends GetxController {
       case TeamMemberStatus.active:
         return 'On team';
       case TeamMemberStatus.pending:
-        return 'Pending';
+        return 'Withdraw';
       case TeamMemberStatus.rejected:
         return 'Join again';
       case TeamMemberStatus.resigned:
@@ -61,48 +61,72 @@ class TeamOpeningsController extends GetxController {
   bool canTapJoin(String teamId) {
     final m = membershipForTeam(teamId);
     if (m == null) return true;
-    return m.status == TeamMemberStatus.rejected ||
+    return m.status == TeamMemberStatus.pending ||
+        m.status == TeamMemberStatus.rejected ||
         m.status == TeamMemberStatus.resigned ||
         m.status == TeamMemberStatus.removed;
+  }
+
+  Future<void> onJoinAction(String teamId) async {
+    final m = membershipForTeam(teamId);
+    if (m?.status == TeamMemberStatus.pending) {
+      await withdrawJoinRequest(teamId);
+      return;
+    }
+    await requestJoin(teamId);
   }
 
   Future<void> requestJoin(String teamId) async {
     final m = membershipForTeam(teamId);
     if (m != null &&
         (m.status == TeamMemberStatus.active ||
-            m.status == TeamMemberStatus.pending)) {
+            m.status == TeamMemberStatus.pending ||
+            m.status == TeamMemberStatus.suspended)) {
       return;
     }
     if (joiningTeamIds.contains(teamId)) return;
     joiningTeamIds.add(teamId);
-    try {
-      final result = await _teamService.memberService.join(teamId);
-      if (result != null) {
-        final id = result.teamId;
-        if (id != null) myMembershipByTeamId[id] = result;
-        AppSnackbar.success(
-          title: 'Request sent',
-          message: result.status == TeamMemberStatus.active
-              ? 'You have joined the team.'
-              : 'Your join request was submitted.',
-        );
-        if (Get.isRegistered<QueryClient>()) {
-          final client = Get.find<QueryClient>();
-          await Future.wait([
-            client.invalidateQueries(
-              queryKey: QueryKeys.teamOpenings(selectedSport.value.name),
-            ),
-            client.invalidateQueries(queryKey: QueryKeys.myMemberships),
-          ]);
-        }
-      } else {
-        AppSnackbar.error(
-          title: 'Request failed',
-          message: 'Unable to send join request. Try again later.',
-        );
-      }
-    } finally {
-      joiningTeamIds.remove(teamId);
+    final result = await _teamService.memberService.join(teamId);
+    if (result != null) {
+      final id = result.teamId;
+      if (id != null) myMembershipByTeamId[id] = result;
+      AppSnackbar.success(
+        title: 'Request sent',
+        message: result.status == TeamMemberStatus.active
+            ? 'You have joined the team.'
+            : 'Your join request was submitted.',
+      );
+      await _invalidateJoinQueries();
     }
+    joiningTeamIds.remove(teamId);
+  }
+
+  Future<void> withdrawJoinRequest(String teamId) async {
+    final m = membershipForTeam(teamId);
+    if (m == null || m.status != TeamMemberStatus.pending) return;
+    if (joiningTeamIds.contains(teamId)) return;
+    joiningTeamIds.add(teamId);
+    final ok = await _teamService.memberService.withdrawJoinRequest(teamId);
+    if (ok) {
+      myMembershipByTeamId.remove(teamId);
+      AppSnackbar.success(
+        title: 'Request withdrawn',
+        message: 'Your join request was withdrawn.',
+      );
+      await _invalidateJoinQueries();
+    }
+    joiningTeamIds.remove(teamId);
+  }
+
+  Future<void> _invalidateJoinQueries() async {
+    if (!Get.isRegistered<QueryClient>()) return;
+    final client = Get.find<QueryClient>();
+    await Future.wait([
+      client.invalidateQueries(
+        queryKey: QueryKeys.teamOpenings(selectedSport.value.name),
+      ),
+      client.invalidateQueries(queryKey: QueryKeys.myMemberships),
+      client.invalidateQueries(queryKey: QueryKeys.myJoinRequests('pending')),
+    ]);
   }
 }

@@ -105,30 +105,22 @@ class MatchChallengesController extends GetxController {
     if (_isMatchExpiredByDeadline(match)) return;
 
     acceptingMatchId.value = matchId;
-    try {
-      final updated = await _matchmakingService.respond(
-        matchId,
-        RespondMatchRequest(
-          actorTeamId: actorId,
-          action: MatchResponseAction.accept,
-        ),
+    final updated = await _matchmakingService.respond(
+      matchId,
+      RespondMatchRequest(
+        actorTeamId: actorId,
+        action: MatchResponseAction.accept,
+      ),
+    );
+    if (updated != null) {
+      AppSnackbar.success(
+        title: 'Challenge accepted',
+        message:
+            'You can continue scheduling from match details when available.',
       );
-      if (updated != null) {
-        AppSnackbar.success(
-          title: 'Challenge accepted',
-          message:
-              'You can continue scheduling from match details when available.',
-        );
-        await invalidateChallengeQueries();
-      } else {
-        AppSnackbar.error(
-          title: 'Could not accept',
-          message: 'Try again later.',
-        );
-      }
-    } finally {
-      acceptingMatchId.value = null;
+      await invalidateChallengeQueries();
     }
+    acceptingMatchId.value = null;
   }
 
   Future<void> rejectChallenge(TeamMatchModel match) async {
@@ -144,29 +136,21 @@ class MatchChallengesController extends GetxController {
     if (_isMatchExpiredByDeadline(match)) return;
 
     rejectingMatchId.value = matchId;
-    try {
-      final updated = await _matchmakingService.respond(
-        matchId,
-        RespondMatchRequest(
-          actorTeamId: actorId,
-          action: MatchResponseAction.reject,
-        ),
+    final updated = await _matchmakingService.respond(
+      matchId,
+      RespondMatchRequest(
+        actorTeamId: actorId,
+        action: MatchResponseAction.reject,
+      ),
+    );
+    if (updated != null) {
+      AppSnackbar.success(
+        title: 'Challenge rejected',
+        message: 'The match request was declined.',
       );
-      if (updated != null) {
-        AppSnackbar.success(
-          title: 'Challenge rejected',
-          message: 'The match request was declined.',
-        );
-        await invalidateChallengeQueries();
-      } else {
-        AppSnackbar.error(
-          title: 'Could not reject',
-          message: 'Try again later.',
-        );
-      }
-    } finally {
-      rejectingMatchId.value = null;
+      await invalidateChallengeQueries();
     }
+    rejectingMatchId.value = null;
   }
 
   static bool _isMatchExpiredByDeadline(TeamMatchModel m) {

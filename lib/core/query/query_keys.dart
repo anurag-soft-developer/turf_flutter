@@ -3,6 +3,15 @@ class QueryKeys {
 
   static const featuredTurfs = ['featuredTurfs'];
 
+  /// Prefix `playerDashboard` — invalidate with [playerDashboardPrefix] to refetch all variants.
+  static const playerDashboardPrefix = ['playerDashboard'];
+
+  static List<Object?> playerDashboard({double? lat, double? lng}) => [
+        ...playerDashboardPrefix,
+        lat ?? 'none',
+        lng ?? 'none',
+      ];
+
   static List<Object?> turfSearch({
     String? search,
     List<String>? sportTypes,

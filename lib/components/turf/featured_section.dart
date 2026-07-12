@@ -1,18 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
 import '../../core/config/constants.dart';
-import '../../core/query/query_keys.dart';
-import '../../core/query/query_retry.dart';
 import '../../turf/model/turf_model.dart';
-import '../../turf/turf_service.dart';
 import '../shared/breathing_skeleton.dart';
 import 'turf_cards.dart';
 
 class FeaturedTurfsSection extends HookWidget {
-  const FeaturedTurfsSection({super.key});
+  const FeaturedTurfsSection({
+    super.key,
+    required this.turfs,
+    this.isLoading = false,
+    this.hasError = false,
+    this.onRetry,
+  });
+
+  final List<TurfModel> turfs;
+  final bool isLoading;
+  final bool hasError;
+  final VoidCallback? onRetry;
 
   static const double _viewportFraction = 0.88;
   static const double _itemHorizontalPadding = 6;
@@ -34,32 +41,19 @@ class FeaturedTurfsSection extends HookWidget {
       return () => pageController.removeListener(onPageChanged);
     }, [pageController]);
 
-    final featuredQuery = useQuery<List<TurfModel>, Object>(
-      QueryKeys.featuredTurfs,
-      (_) async {
-        final turfs = await TurfService().getFeaturedTurfs(limit: 5);
-        return turfs ?? const <TurfModel>[];
-      },
-      retry: noRetry,
-    );
-
-    final turfs = featuredQuery.data ?? const <TurfModel>[];
-    final isLoading = featuredQuery.isLoading ||
-        (featuredQuery.isFetching && turfs.isEmpty);
-
-    if (isLoading) {
+    if (isLoading && turfs.isEmpty) {
       return const _FeaturedTurfsSkeleton(
         viewportFraction: _viewportFraction,
         itemHorizontalPadding: _itemHorizontalPadding,
       );
     }
 
-    if (featuredQuery.isError && turfs.isEmpty) {
+    if (hasError && turfs.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24),
         child: TextButton(
-          onPressed: () => featuredQuery.refetch(),
-          child: const Text('Retry featured turfs'),
+          onPressed: onRetry,
+          child: const Text('Retry turfs'),
         ),
       );
     }

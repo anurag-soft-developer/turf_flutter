@@ -31,7 +31,7 @@ final List<GetPage<dynamic>> matchUpRoutes = [
     middlewares: [AuthGuard()],
   ),
   GetPage(
-    name: AppConstants.routes.matchUpMatches,
+    name: AppConstants.routes.matches,
     page: () => const MatchesScreen(),
     binding: MatchesBinding(),
     transition: Transition.cupertino,

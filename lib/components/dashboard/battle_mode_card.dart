@@ -4,10 +4,16 @@ import 'package:get/get.dart';
 import '../../core/config/constants.dart';
 
 class BattleModeCard extends StatelessWidget {
-  const BattleModeCard({super.key});
+  const BattleModeCard({super.key, this.nearbyTeamsCount = 0});
+
+  final int nearbyTeamsCount;
 
   @override
   Widget build(BuildContext context) {
+    final teamsLabel = nearbyTeamsCount == 1
+        ? '1 Team battling near you'
+        : '$nearbyTeamsCount Teams battling near you';
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
@@ -49,9 +55,9 @@ class BattleModeCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          const Text(
-            '3 Teams battling near you',
-            style: TextStyle(
+          Text(
+            teamsLabel,
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -70,13 +76,15 @@ class BattleModeCard extends StatelessWidget {
           Align(
             alignment: Alignment.centerLeft,
             child: ElevatedButton(
-              onPressed: () =>
-                  Get.toNamed(AppConstants.routes.matchUpChallenges),
+              onPressed: () => Get.toNamed(AppConstants.routes.matchUp),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: const Color(AppColors.primaryColor),
                 elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 shape: RoundedRectangleBorder(

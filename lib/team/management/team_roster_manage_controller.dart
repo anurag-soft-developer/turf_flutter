@@ -73,26 +73,18 @@ class TeamRosterManageController extends GetxController {
     }
     final mid = m.id;
     if (mid != null) actionTargetId.value = mid;
-    try {
-      final ok = await _teamService.memberService.removeMember(
-        _teamId!,
-        target,
+    final ok = await _teamService.memberService.removeMember(
+      _teamId!,
+      target,
+    );
+    if (ok) {
+      AppSnackbar.success(
+        title: 'Removed',
+        message: 'Player was removed from the team.',
       );
-      if (ok) {
-        AppSnackbar.success(
-          title: 'Removed',
-          message: 'Player was removed from the team.',
-        );
-        await _invalidateRoster();
-      } else {
-        AppSnackbar.error(
-          title: 'Remove failed',
-          message: 'Try again later.',
-        );
-      }
-    } finally {
-      actionTargetId.value = null;
+      await _invalidateRoster();
     }
+    actionTargetId.value = null;
   }
 
   Future<void> suspendMember(TeamMemberModel m) async {
@@ -100,26 +92,18 @@ class TeamRosterManageController extends GetxController {
     final mid = m.id;
     if (mid == null || mid.isEmpty) return;
     actionTargetId.value = mid;
-    try {
-      final res = await _teamService.memberService.suspendMember(
-        _teamId!,
-        mid,
+    final res = await _teamService.memberService.suspendMember(
+      _teamId!,
+      mid,
+    );
+    if (res != null) {
+      AppSnackbar.success(
+        title: 'Suspended',
+        message: 'Player is suspended from the team.',
       );
-      if (res != null) {
-        AppSnackbar.success(
-          title: 'Suspended',
-          message: 'Player is suspended from the team.',
-        );
-        await _invalidateRoster();
-      } else {
-        AppSnackbar.error(
-          title: 'Could not suspend',
-          message: 'Try again later.',
-        );
-      }
-    } finally {
-      actionTargetId.value = null;
+      await _invalidateRoster();
     }
+    actionTargetId.value = null;
   }
 
   Future<void> unsuspendMember(TeamMemberModel m) async {
@@ -127,26 +111,18 @@ class TeamRosterManageController extends GetxController {
     final mid = m.id;
     if (mid == null || mid.isEmpty) return;
     actionTargetId.value = mid;
-    try {
-      final res = await _teamService.memberService.unsuspendMember(
-        _teamId!,
-        mid,
+    final res = await _teamService.memberService.unsuspendMember(
+      _teamId!,
+      mid,
+    );
+    if (res != null) {
+      AppSnackbar.success(
+        title: 'Restored',
+        message: 'Player is active again.',
       );
-      if (res != null) {
-        AppSnackbar.success(
-          title: 'Restored',
-          message: 'Player is active again.',
-        );
-        await _invalidateRoster();
-      } else {
-        AppSnackbar.error(
-          title: 'Could not unsuspend',
-          message: 'Try again later.',
-        );
-      }
-    } finally {
-      actionTargetId.value = null;
+      await _invalidateRoster();
     }
+    actionTargetId.value = null;
   }
 
   Future<void> assignCaptain(TeamMemberModel m) async {
@@ -175,27 +151,19 @@ class TeamRosterManageController extends GetxController {
     if (mid == null || mid.isEmpty) return;
 
     actionTargetId.value = mid;
-    try {
-      final res = await _teamService.memberService.updateMember(
-        _teamId!,
-        mid,
-        request,
+    final res = await _teamService.memberService.updateMember(
+      _teamId!,
+      mid,
+      request,
+    );
+    if (res != null) {
+      AppSnackbar.success(
+        title: successTitle,
+        message: '${leadershipRoleLabel(request.leadershipRole)} assigned.',
       );
-      if (res != null) {
-        AppSnackbar.success(
-          title: successTitle,
-          message: '${leadershipRoleLabel(request.leadershipRole)} assigned.',
-        );
-        await _invalidateRoster();
-      } else {
-        AppSnackbar.error(
-          title: 'Update failed',
-          message: 'Try again later.',
-        );
-      }
-    } finally {
-      actionTargetId.value = null;
+      await _invalidateRoster();
     }
+    actionTargetId.value = null;
   }
 
   Future<void> _invalidateRoster() async {

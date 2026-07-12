@@ -97,8 +97,7 @@ class _OpeningsFeed extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    final query =
-        useInfiniteQuery<PaginatedResponse<TeamModel>, Object, int>(
+    final query = useInfiniteQuery<PaginatedResponse<TeamModel>, Object, int>(
       QueryKeys.teamOpenings(sport.name),
       (ctx) async {
         final result = await TeamService().findMany(
@@ -123,8 +122,7 @@ class _OpeningsFeed extends HookWidget {
     );
 
     final items =
-        query.data?.pages.expand((p) => p.data).toList() ??
-        const <TeamModel>[];
+        query.data?.pages.expand((p) => p.data).toList() ?? const <TeamModel>[];
 
     if (query.isLoading || (query.isFetching && items.isEmpty)) {
       return const Center(
@@ -223,7 +221,7 @@ class _OpeningsFeed extends HookWidget {
                       team: team,
                       label: controller.joinButtonLabel(id) ?? 'Join',
                       onJoin: controller.canTapJoin(id)
-                          ? () => controller.requestJoin(id)
+                          ? () => controller.onJoinAction(id)
                           : null,
                       isJoining: controller.joiningTeamIds.contains(id),
                     );
@@ -302,11 +300,7 @@ class _RecruitingTeamCard extends StatelessWidget {
                     Wrap(
                       spacing: 8,
                       runSpacing: 4,
-                      children: [
-                        _Chip(text: teamJoinModeLabel(team.joinMode)),
-                        if (team.lookingForMembers)
-                          const _Chip(text: 'Recruiting', highlighted: true),
-                      ],
+                      children: [_Chip(text: teamJoinModeLabel(team.joinMode))],
                     ),
                     if (team.tagline != null && team.tagline!.isNotEmpty) ...[
                       const SizedBox(height: 6),
@@ -329,11 +323,17 @@ class _RecruitingTeamCard extends StatelessWidget {
                 style: FilledButton.styleFrom(
                   backgroundColor: const Color(AppColors.primaryColor),
                   foregroundColor: Colors.white,
+                  disabledBackgroundColor: const Color(
+                    AppColors.primaryColor,
+                  ).withValues(alpha: 0.45),
+                  disabledForegroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
                     vertical: 8,
                   ),
                   minimumSize: const Size(0, 36),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  visualDensity: VisualDensity.compact,
                 ),
                 child: isJoining
                     ? const SizedBox(
@@ -348,9 +348,11 @@ class _RecruitingTeamCard extends StatelessWidget {
                       )
                     : Text(
                         label,
+                        softWrap: false,
                         style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
+                          color: Colors.white,
                         ),
                       ),
               ),

@@ -49,7 +49,7 @@ class AppMenuScreen extends StatelessWidget {
       AppMenuItem(
         title: 'Matches',
         icon: Icons.emoji_events_rounded,
-        onTap: () => _navigateTo(AppConstants.routes.matchUpMatches),
+        onTap: () => _navigateTo(AppConstants.routes.matches),
       ),
       AppMenuItem(
         title: 'Notifications',
@@ -191,8 +191,7 @@ class AppMenuScreen extends StatelessWidget {
               CircleAvatar(
                 radius: 28,
                 backgroundColor: Colors.white,
-                backgroundImage:
-                    avatar != null ? NetworkImage(avatar) : null,
+                backgroundImage: avatar != null ? NetworkImage(avatar) : null,
                 child: avatar == null
                     ? const Icon(
                         Icons.person_rounded,
@@ -242,7 +241,10 @@ class AppMenuScreen extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 textStyle: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -306,15 +308,15 @@ class AppMenuScreen extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: (item.backgroundColor ??
-                          const Color(AppColors.primaryColor))
-                      .withValues(alpha: 0.12),
+                  color:
+                      (item.backgroundColor ??
+                              const Color(AppColors.primaryColor))
+                          .withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   item.icon,
-                  color:
-                      item.iconColor ?? const Color(AppColors.primaryColor),
+                  color: item.iconColor ?? const Color(AppColors.primaryColor),
                 ),
               ),
               const SizedBox(height: 12),
@@ -334,9 +336,7 @@ class AppMenuScreen extends StatelessWidget {
   }
 
   Widget _buildMenuList(List<AppMenuItem> items) {
-    return Column(
-      children: items.map(_buildListTile).toList(),
-    );
+    return Column(children: items.map(_buildListTile).toList());
   }
 
   Widget _buildListTile(AppMenuItem item) {
@@ -353,8 +353,9 @@ class AppMenuScreen extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color:
-                    const Color(AppColors.dividerColor).withValues(alpha: 0.6),
+                color: const Color(
+                  AppColors.dividerColor,
+                ).withValues(alpha: 0.6),
               ),
             ),
             child: Row(
@@ -363,13 +364,15 @@ class AppMenuScreen extends StatelessWidget {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: const Color(AppColors.primaryColor)
-                        .withValues(alpha: 0.12),
+                    color: const Color(
+                      AppColors.primaryColor,
+                    ).withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
                     item.icon,
-                    color: item.iconColor ?? const Color(AppColors.primaryColor),
+                    color:
+                        item.iconColor ?? const Color(AppColors.primaryColor),
                     size: 22,
                   ),
                 ),

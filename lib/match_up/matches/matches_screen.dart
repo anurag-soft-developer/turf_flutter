@@ -52,24 +52,24 @@ class MatchesScreen extends HookWidget {
 
     final query =
         useInfiniteQuery<PaginatedResponse<TeamMatchModel>, Object, int>(
-      QueryKeys.matches(
-        scope: activeFilters.scope.name,
-        status: activeFilters.status.name,
-        search: search,
-      ),
-      (ctx) => _fetchMatchesPage(
-        filters: activeFilters,
-        search: search,
-        page: ctx.pageParam,
-      ),
-      initialPageParam: 1,
-      retry: noRetry,
-      nextPageParamBuilder: (data) {
-        final last = data.pages.isNotEmpty ? data.pages.last : null;
-        if (last == null || !last.hasNextPage) return null;
-        return last.page + 1;
-      },
-    );
+          QueryKeys.matches(
+            scope: activeFilters.scope.name,
+            status: activeFilters.status.name,
+            search: search,
+          ),
+          (ctx) => _fetchMatchesPage(
+            filters: activeFilters,
+            search: search,
+            page: ctx.pageParam,
+          ),
+          initialPageParam: 1,
+          retry: noRetry,
+          nextPageParamBuilder: (data) {
+            final last = data.pages.isNotEmpty ? data.pages.last : null;
+            if (last == null || !last.hasNextPage) return null;
+            return last.page + 1;
+          },
+        );
 
     final matches =
         query.data?.pages.expand((p) => p.data).toList() ??
