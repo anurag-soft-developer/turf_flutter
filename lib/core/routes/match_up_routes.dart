@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
 import 'package:flutter_application_1/bindings/match_challenges_binding.dart';
+import 'package:flutter_application_1/bindings/matches_binding.dart';
 import 'package:flutter_application_1/bindings/match_up_binding.dart';
 import 'package:flutter_application_1/bindings/scoring_binding.dart';
 import 'package:flutter_application_1/core/config/constants.dart';
 import 'package:flutter_application_1/core/guards/auth_guard.dart';
 import 'package:flutter_application_1/match_up/match_challenges/match_challenges_screen.dart';
 import 'package:flutter_application_1/match_up/match_up_screen.dart';
+import 'package:flutter_application_1/match_up/matches/matches_screen.dart';
 import 'package:flutter_application_1/match_up/messages/match_challenge_messages_screen.dart';
 import 'package:flutter_application_1/match_up/model/team_match_model.dart';
 import 'package:flutter_application_1/scoring/cricket/cricket_scoreboard_screen.dart';
@@ -25,6 +27,13 @@ final List<GetPage<dynamic>> matchUpRoutes = [
     name: AppConstants.routes.matchUpChallenges,
     page: () => const MatchChallengesScreen(),
     binding: MatchChallengesBinding(),
+    transition: Transition.cupertino,
+    middlewares: [AuthGuard()],
+  ),
+  GetPage(
+    name: AppConstants.routes.matchUpMatches,
+    page: () => const MatchesScreen(),
+    binding: MatchesBinding(),
     transition: Transition.cupertino,
     middlewares: [AuthGuard()],
   ),

@@ -60,11 +60,15 @@ class TeamMemberRosterFilterQuery {
 /// Query for `GET /team-members/me` ([MyMembershipsFilterDto]).
 class MyTeamMembershipsFilterQuery {
   final TeamMemberStatus? status;
+
+  /// Case-insensitive filter on team name / shortName.
+  final String? search;
   final int page;
   final int limit;
 
   const MyTeamMembershipsFilterQuery({
     this.status,
+    this.search,
     this.page = 1,
     this.limit = 20,
   });
@@ -75,6 +79,10 @@ class MyTeamMembershipsFilterQuery {
       'limit': limit.toString(),
     };
     if (status != null) params['status'] = status!.name;
+    final trimmedSearch = search?.trim();
+    if (trimmedSearch != null && trimmedSearch.isNotEmpty) {
+      params['search'] = trimmedSearch;
+    }
     return params;
   }
 }

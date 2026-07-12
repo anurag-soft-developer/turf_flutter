@@ -58,6 +58,7 @@ class Routes {
   final String editProfile = '/edit-profile';
   final String matchUp = '/match-up';
   final String matchUpChallenges = '/match-up/challenges';
+  final String matchUpMatches = '/match-up/matches';
   final String matchChallengeMessages = '/match-up/challenge-messages';
   final String cricketScoreBoard = '/match-up/cricket-scoreboard';
   final String footballScoreBoard = '/match-up/football-scoreboard';

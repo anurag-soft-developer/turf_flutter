@@ -47,6 +47,9 @@ enum MatchProposalStatus { pending, accepted, rejected, withdrawn, expired }
 /// Backend `ListNegotiationsFilterSchema.type`.
 enum NegotiationListType { incoming, outgoing, all }
 
+/// Backend `ListNegotiationsFilterSchema.scope`.
+enum NegotiationListScope { mine, all }
+
 /// Backend `matchResponseActionSchema`.
 enum MatchResponseAction { accept, reject }
 
@@ -470,6 +473,12 @@ class ListNegotiationsFilterQuery {
   /// When non-empty, sent as `statuses=a,b` (preferred over [status] for multiple).
   final List<TeamMatchStatus>? statuses;
 
+  /// `mine` (default) or `all` — platform-wide listing.
+  final NegotiationListScope scope;
+
+  /// Case-insensitive filter on either team's name / shortName.
+  final String? search;
+
   /// Same format as turf search: `createdAt:desc`, optional multi: `a:asc,b:desc`.
   final String? sort;
   final int page;
@@ -481,6 +490,8 @@ class ListNegotiationsFilterQuery {
     this.type = NegotiationListType.all,
     this.status,
     this.statuses,
+    this.scope = NegotiationListScope.mine,
+    this.search,
     this.sort,
     this.page = 1,
     this.limit = 10,
@@ -490,6 +501,7 @@ class ListNegotiationsFilterQuery {
     final clampedLimit = limit.clamp(1, kMatchmakingListRequestsMaxLimit);
     final params = <String, dynamic>{
       'type': type.name,
+      'scope': scope.name,
       'page': page.toString(),
       'limit': clampedLimit.toString(),
     };
@@ -507,6 +519,10 @@ class ListNegotiationsFilterQuery {
       params['statuses'] = statusList.join(',');
     } else if (status != null) {
       params['status'] = _$teamMatchStatusToApiString(status!);
+    }
+    final searchParam = search?.trim();
+    if (searchParam != null && searchParam.isNotEmpty) {
+      params['search'] = searchParam;
     }
     final sortParam = sort;
     if (sortParam != null && sortParam.isNotEmpty) {

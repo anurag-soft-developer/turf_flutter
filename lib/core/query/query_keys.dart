@@ -37,7 +37,8 @@ class QueryKeys {
   static const myMemberships = ['myMemberships'];
 
   /// Paginated active memberships (My Teams). Shares prefix with [myMemberships].
-  static const myMembershipsActive = ['myMemberships', 'active'];
+  static List<Object?> myMembershipsActive({String? search}) =>
+      ['myMemberships', 'active', search ?? ''];
 
   static List<Object?> matchUpOpponents({
     required String sport,
@@ -59,6 +60,18 @@ class QueryKeys {
         'matchChallenges',
         tab,
         teamFilter ?? 'all',
+      ];
+
+  static List<Object?> matches({
+    required String scope,
+    String? status,
+    String? search,
+  }) =>
+      [
+        'matches',
+        scope,
+        status ?? 'all',
+        search ?? '',
       ];
 
   static List<Object?> bookings({

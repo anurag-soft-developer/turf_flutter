@@ -26,8 +26,9 @@ class MatchChallengesScreen extends HookWidget {
   static const _tabs = [
     AppTabItem(label: 'Received'),
     AppTabItem(label: 'Sent'),
-    AppTabItem(label: 'Completed'),
+    AppTabItem(label: 'Live'),
     AppTabItem(label: 'Upcoming'),
+    AppTabItem(label: 'Completed'),
     AppTabItem(label: 'Archive'),
   ];
 
@@ -175,14 +176,14 @@ class MatchChallengesScreen extends HookWidget {
                       _SentChallengeCard(match: m, controller: c),
                 ),
                 _HistoryQueryPane(
-                  key: ValueKey('completed|$filterKey'),
-                  tab: MatchChallengesTab.completed,
+                  key: ValueKey('live|$filterKey'),
+                  tab: MatchChallengesTab.live,
                   teamFilter: filterKey,
-                  isHistory: true,
-                  emptyIcon: Icons.history,
-                  emptyTitle: 'No match history',
+                  isHistory: false,
+                  emptyIcon: Icons.sensors,
+                  emptyTitle: 'No live matches',
                   emptySubtitle:
-                      'Completed matches will appear here once your team finishes a game.',
+                      'Matches that are currently ongoing will appear here.',
                 ),
                 _HistoryQueryPane(
                   key: ValueKey('upcoming|$filterKey'),
@@ -192,7 +193,17 @@ class MatchChallengesScreen extends HookWidget {
                   emptyIcon: Icons.event_available,
                   emptyTitle: 'No upcoming matches',
                   emptySubtitle:
-                      'Scheduled or live matches show up here once a time is set.',
+                      'Scheduled matches show up here once a time is set.',
+                ),
+                _HistoryQueryPane(
+                  key: ValueKey('completed|$filterKey'),
+                  tab: MatchChallengesTab.completed,
+                  teamFilter: filterKey,
+                  isHistory: true,
+                  emptyIcon: Icons.history,
+                  emptyTitle: 'No match history',
+                  emptySubtitle:
+                      'Completed matches will appear here once your team finishes a game.',
                 ),
                 _HistoryQueryPane(
                   key: ValueKey('archive|$filterKey'),
@@ -253,15 +264,24 @@ Future<PaginatedResponse<TeamMatchModel>> _fetchChallengesPage({
         ),
       );
       return completed ?? EmptyPaginatedResponse<TeamMatchModel>();
+    case MatchChallengesTab.live:
+      final live = await service.listRequests(
+        ListNegotiationsFilterQuery(
+          teamIds: teamIds,
+          type: NegotiationListType.all,
+          statuses: const [TeamMatchStatus.ongoing],
+          page: page,
+          limit: pageSize,
+          sort: 'updatedAt:desc',
+        ),
+      );
+      return live ?? EmptyPaginatedResponse<TeamMatchModel>();
     case MatchChallengesTab.upcoming:
       final upcoming = await service.listRequests(
         ListNegotiationsFilterQuery(
           teamIds: teamIds,
           type: NegotiationListType.all,
-          statuses: const [
-            TeamMatchStatus.scheduleFinalized,
-            TeamMatchStatus.ongoing,
-          ],
+          statuses: const [TeamMatchStatus.scheduleFinalized],
           page: page,
           limit: pageSize,
           sort: 'createdAt:asc',
@@ -566,6 +586,7 @@ class _HistoryQueryPane extends HookWidget {
                 match: m,
                 selectedTeamId: selectedTeamId,
                 isHistory: isHistory,
+                personalizeForTeam: true,
                 onTap: () async {
                   await openMatchChallengeDetail(
                     match: m,

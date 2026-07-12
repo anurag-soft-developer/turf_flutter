@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
+import '../../components/shared/app_search_field.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/paginated_response.dart';
 import '../../core/query/query_keys.dart';
@@ -16,13 +19,36 @@ class MyTeamsScreen extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
+    final searchController = useTextEditingController();
+    final searchText = useState('');
+    final debouncedSearch = useState('');
+
+    useEffect(() {
+      void listener() {
+        searchText.value = searchController.text;
+      }
+
+      searchController.addListener(listener);
+      return () => searchController.removeListener(listener);
+    }, [searchController]);
+
+    useEffect(() {
+      final timer = Timer(const Duration(milliseconds: 350), () {
+        debouncedSearch.value = searchText.value.trim();
+      });
+      return timer.cancel;
+    }, [searchText.value]);
+
+    final search = debouncedSearch.value;
+
     final query =
         useInfiniteQuery<PaginatedResponse<TeamMemberModel>, Object, int>(
-      QueryKeys.myMembershipsActive,
+      QueryKeys.myMembershipsActive(search: search),
       (ctx) async {
         final result = await TeamService().memberService.myMemberships(
           MyTeamMembershipsFilterQuery(
             status: TeamMemberStatus.active,
+            search: search.isEmpty ? null : search,
             page: ctx.pageParam,
             limit: 20,
           ),
@@ -55,13 +81,30 @@ class MyTeamsScreen extends HookWidget {
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
-      body: _buildBody(query, memberships),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: AppSearchField(
+              controller: searchController,
+              hintText: 'Search by team name',
+              onCleared: () {
+                searchText.value = '';
+                debouncedSearch.value = '';
+              },
+            ),
+          ),
+          Expanded(child: _buildBody(query, memberships, search)),
+        ],
+      ),
     );
   }
 
   Widget _buildBody(
     InfiniteQueryResult<PaginatedResponse<TeamMemberModel>, Object, int> query,
     List<TeamMemberModel> memberships,
+    String search,
   ) {
     if (query.isLoading || (query.isFetching && memberships.isEmpty)) {
       return const Center(
@@ -93,7 +136,7 @@ class MyTeamsScreen extends HookWidget {
     }
 
     if (memberships.isEmpty) {
-      return _EmptyState();
+      return _EmptyState(hasSearch: search.isNotEmpty);
     }
 
     return RefreshIndicator(
@@ -111,7 +154,7 @@ class MyTeamsScreen extends HookWidget {
         },
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
           children: [
             for (var i = 0; i < memberships.length; i++) ...[
               if (i > 0) const SizedBox(height: 12),
@@ -256,8 +299,46 @@ class _TeamCard extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
+  const _EmptyState({required this.hasSearch});
+
+  final bool hasSearch;
+
   @override
   Widget build(BuildContext context) {
+    if (hasSearch) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(24),
+        children: const [
+          SizedBox(height: 80),
+          Icon(
+            Icons.search_off_rounded,
+            size: 52,
+            color: Color(AppColors.textSecondaryColor),
+          ),
+          SizedBox(height: 20),
+          Text(
+            'No teams found',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: Color(AppColors.textColor),
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Try a different team name.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              color: Color(AppColors.textSecondaryColor),
+            ),
+          ),
+        ],
+      );
+    }
+
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [

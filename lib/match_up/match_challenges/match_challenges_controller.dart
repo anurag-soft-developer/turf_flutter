@@ -7,7 +7,7 @@ import '../../team/members/model/team_member_model.dart';
 import '../matchmaking_service.dart';
 import '../model/team_match_model.dart';
 
-enum MatchChallengesTab { received, sent, completed, upcoming, archive }
+enum MatchChallengesTab { received, sent, live, upcoming, completed, archive }
 
 /// UI + accept/reject mutations. List fetching is owned by flutter_query on the screen.
 class MatchChallengesController extends GetxController {
