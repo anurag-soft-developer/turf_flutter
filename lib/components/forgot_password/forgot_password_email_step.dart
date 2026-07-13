@@ -5,7 +5,7 @@ import '../../core/utils/validators.dart';
 import '../../core/config/constants.dart';
 
 class ForgotPasswordEmailStep extends StatelessWidget {
-  final TextEditingController emailController;
+  final TextEditingController identifierController;
   final GlobalKey<FormState> formKey;
   final VoidCallback onSendOtp;
   final VoidCallback onBackToLogin;
@@ -13,7 +13,7 @@ class ForgotPasswordEmailStep extends StatelessWidget {
 
   const ForgotPasswordEmailStep({
     super.key,
-    required this.emailController,
+    required this.identifierController,
     required this.formKey,
     required this.onSendOtp,
     required this.onBackToLogin,
@@ -31,7 +31,6 @@ class ForgotPasswordEmailStep extends StatelessWidget {
           children: [
             const SizedBox(height: 20),
 
-            // Icon
             Center(
               child: Container(
                 width: 80,
@@ -49,7 +48,6 @@ class ForgotPasswordEmailStep extends StatelessWidget {
             ),
             const SizedBox(height: 32),
 
-            // Title
             const Text(
               'Forgot Password?',
               style: TextStyle(
@@ -60,9 +58,8 @@ class ForgotPasswordEmailStep extends StatelessWidget {
             ),
             const SizedBox(height: 8),
 
-            // Subtitle
             const Text(
-              'Enter your email address and we\'ll send you a 6-digit OTP to reset your password.',
+              'Enter your email or phone number and we\'ll send a 6-digit OTP by email or SMS to reset your password.',
               style: TextStyle(
                 fontSize: 16,
                 color: Color(AppColors.textSecondaryColor),
@@ -71,21 +68,19 @@ class ForgotPasswordEmailStep extends StatelessWidget {
             ),
             const SizedBox(height: 40),
 
-            // Email Field
             CustomTextField(
-              controller: emailController,
-              labelText: 'Email Address',
-              hintText: 'Enter your email',
-              keyboardType: TextInputType.emailAddress,
+              controller: identifierController,
+              labelText: 'Email or phone',
+              hintText: 'you@email.com or +919876543210',
+              keyboardType: TextInputType.text,
               prefixIcon: const Icon(
-                Icons.email_outlined,
+                Icons.person_outline,
                 color: Color(AppColors.textSecondaryColor),
               ),
-              validator: Validators.validateEmail,
+              validator: Validators.validateEmailOrPhone,
             ),
             const SizedBox(height: 32),
 
-            // Send OTP Button
             CustomButton(
               text: 'Send OTP',
               onPressed: onSendOtp,
@@ -93,7 +88,6 @@ class ForgotPasswordEmailStep extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // Back to Login
             Center(
               child: TextButton(
                 onPressed: onBackToLogin,

@@ -1,6 +1,7 @@
 import 'package:validators/validators.dart' as validator;
 
 import '../config/constants.dart';
+import 'phone_util.dart';
 
 class Validators {
   /// Matches NestJS: `(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]` with length 8–50.
@@ -18,6 +19,45 @@ class Validators {
     }
 
     return null;
+  }
+
+  /// Accepts email (`@`) or phone with country code (leading `+`).
+  static String? validateEmailOrPhone(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Email or phone is required';
+    }
+
+    final trimmed = value.trim();
+    if (trimmed.contains('@')) {
+      if (!validator.isEmail(trimmed)) {
+        return 'Enter a valid email address';
+      }
+      return null;
+    }
+
+    if (trimmed.startsWith('+')) {
+      try {
+        normalizePhone(trimmed);
+        return null;
+      } on FormatException catch (e) {
+        return e.message;
+      }
+    }
+
+    return 'Enter an email or phone with country code (e.g. +919876543210)';
+  }
+
+  /// Optional profile phone: empty allowed; otherwise must be E.164 with `+`.
+  static String? validateOptionalPhone(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return null;
+    }
+    try {
+      normalizePhone(value.trim());
+      return null;
+    } on FormatException catch (e) {
+      return e.message;
+    }
   }
 
   /// Rules aligned with [passwordRegex] / NestJS. Empty input returns only the required message.

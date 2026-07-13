@@ -7,25 +7,25 @@ import '../../core/utils/validators.dart';
 import '../../core/config/constants.dart';
 
 class ForgotPasswordOtpStep extends StatelessWidget {
-  final String email;
+  final String destination;
   final TextEditingController otpController;
   final TextEditingController newPasswordController;
   final TextEditingController confirmPasswordController;
   final GlobalKey<FormState> formKey;
   final VoidCallback onResetPassword;
-  final VoidCallback onChangeEmail;
+  final VoidCallback onChangeIdentifier;
   final VoidCallback onResendOtp;
   final bool isLoading;
 
   const ForgotPasswordOtpStep({
     super.key,
-    required this.email,
+    required this.destination,
     required this.otpController,
     required this.newPasswordController,
     required this.confirmPasswordController,
     required this.formKey,
     required this.onResetPassword,
-    required this.onChangeEmail,
+    required this.onChangeIdentifier,
     required this.onResendOtp,
     required this.isLoading,
   });
@@ -41,7 +41,6 @@ class ForgotPasswordOtpStep extends StatelessWidget {
           children: [
             const SizedBox(height: 20),
 
-            // Icon
             Center(
               child: Container(
                 width: 80,
@@ -59,7 +58,6 @@ class ForgotPasswordOtpStep extends StatelessWidget {
             ),
             const SizedBox(height: 32),
 
-            // Title
             const Text(
               'Enter Verification Code',
               style: TextStyle(
@@ -70,7 +68,6 @@ class ForgotPasswordOtpStep extends StatelessWidget {
             ),
             const SizedBox(height: 8),
 
-            // Subtitle
             RichText(
               text: TextSpan(
                 style: const TextStyle(
@@ -81,7 +78,7 @@ class ForgotPasswordOtpStep extends StatelessWidget {
                 children: [
                   const TextSpan(text: 'We sent a 6-digit OTP to '),
                   TextSpan(
-                    text: email,
+                    text: destination,
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
                       color: Color(AppColors.primaryColor),
@@ -95,11 +92,9 @@ class ForgotPasswordOtpStep extends StatelessWidget {
             ),
             const SizedBox(height: 40),
 
-            // OTP Field
             OtpInputField(controller: otpController),
             const SizedBox(height: 24),
 
-            // New Password Field
             PasswordTextField(
               controller: newPasswordController,
               labelText: 'New Password',
@@ -111,7 +106,6 @@ class ForgotPasswordOtpStep extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // Confirm Password Field
             CustomTextField(
               controller: confirmPasswordController,
               labelText: 'Confirm Password',
@@ -128,7 +122,6 @@ class ForgotPasswordOtpStep extends StatelessWidget {
             ),
             const SizedBox(height: 32),
 
-            // Reset Password Button
             CustomButton(
               text: 'Reset Password',
               onPressed: onResetPassword,
@@ -136,14 +129,13 @@ class ForgotPasswordOtpStep extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // Actions Row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 TextButton(
-                  onPressed: onChangeEmail,
+                  onPressed: onChangeIdentifier,
                   child: const Text(
-                    'Change Email',
+                    'Change email or phone',
                     style: TextStyle(
                       color: Color(AppColors.textSecondaryColor),
                       fontWeight: FontWeight.w600,

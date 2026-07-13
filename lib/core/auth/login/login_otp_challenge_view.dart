@@ -8,7 +8,8 @@ import '../../utils/validators.dart';
 class LoginOtpChallengeView extends StatelessWidget {
   const LoginOtpChallengeView({
     super.key,
-    required this.email,
+    required this.destination,
+    required this.channel,
     required this.formKey,
     required this.otpController,
     required this.onVerify,
@@ -16,7 +17,8 @@ class LoginOtpChallengeView extends StatelessWidget {
     required this.isLoading,
   });
 
-  final String email;
+  final String destination;
+  final String channel;
   final GlobalKey<FormState> formKey;
   final TextEditingController otpController;
   final VoidCallback onVerify;
@@ -25,6 +27,8 @@ class LoginOtpChallengeView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final channelLabel = channel == 'sms' ? 'phone' : 'email';
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
       child: Form(
@@ -50,11 +54,11 @@ class LoginOtpChallengeView extends StatelessWidget {
                   height: 1.5,
                 ),
                 children: [
-                  const TextSpan(
-                    text: 'Enter the verification code we sent to ',
+                  TextSpan(
+                    text: 'Enter the verification code we sent to your $channelLabel ',
                   ),
                   TextSpan(
-                    text: email,
+                    text: destination,
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
                       color: Color(AppColors.primaryColor),

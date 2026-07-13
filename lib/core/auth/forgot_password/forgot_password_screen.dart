@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/utils/app_snackbar.dart';
+import 'package:flutter_application_1/core/utils/phone_util.dart';
 import 'package:get/get.dart';
 import '../auth_state_controller.dart';
 import '../../../components/shared/loading_overlay.dart';
@@ -19,23 +20,31 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final PageController _pageController = PageController();
   int _currentStep = 0;
 
-  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _identifierController = TextEditingController();
   final TextEditingController _otpController = TextEditingController();
   final TextEditingController _newPasswordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
 
-  final GlobalKey<FormState> _emailFormKey = GlobalKey<FormState>();
+  final GlobalKey<FormState> _identifierFormKey = GlobalKey<FormState>();
   final GlobalKey<FormState> _resetFormKey = GlobalKey<FormState>();
+
+  AuthIdentifier? _resolvedIdentifier;
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _identifierController.dispose();
     _otpController.dispose();
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
     _pageController.dispose();
     super.dispose();
+  }
+
+  String get _destinationDisplay {
+    final id = _resolvedIdentifier;
+    if (id == null) return _identifierController.text.trim();
+    return id.email ?? id.phone ?? _identifierController.text.trim();
   }
 
   @override
@@ -66,20 +75,20 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               physics: const NeverScrollableScrollPhysics(),
               children: [
                 ForgotPasswordEmailStep(
-                  emailController: _emailController,
-                  formKey: _emailFormKey,
+                  identifierController: _identifierController,
+                  formKey: _identifierFormKey,
                   onSendOtp: _sendOtp,
                   onBackToLogin: () => Get.back(),
                   isLoading: authController.isLoading,
                 ),
                 ForgotPasswordOtpStep(
-                  email: _emailController.text,
+                  destination: _destinationDisplay,
                   otpController: _otpController,
                   newPasswordController: _newPasswordController,
                   confirmPasswordController: _confirmPasswordController,
                   formKey: _resetFormKey,
                   onResetPassword: _resetPassword,
-                  onChangeEmail: _onChangeEmail,
+                  onChangeIdentifier: _onChangeIdentifier,
                   onResendOtp: _resendOtp,
                   isLoading: authController.isLoading,
                 ),
@@ -91,9 +100,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     );
   }
 
-  void _onChangeEmail() {
+  void _onChangeIdentifier() {
     setState(() {
       _currentStep = 0;
+      _resolvedIdentifier = null;
     });
     _pageController.animateToPage(
       0,
@@ -102,11 +112,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     );
   }
 
-  void _sendOtp() async {
-    if (!_emailFormKey.currentState!.validate()) return;
+  Future<void> _sendOtp() async {
+    if (!_identifierFormKey.currentState!.validate()) return;
+
+    final identifier = resolveIdentifier(_identifierController.text);
+    _resolvedIdentifier = identifier;
 
     final success = await authController.sendOtpForPasswordReset(
-      _emailController.text.trim(),
+      email: identifier.email,
+      phone: identifier.phone,
     );
 
     if (success) {
@@ -121,11 +135,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     }
   }
 
-  void _resetPassword() async {
+  Future<void> _resetPassword() async {
     if (!_resetFormKey.currentState!.validate()) return;
 
+    final identifier =
+        _resolvedIdentifier ?? resolveIdentifier(_identifierController.text);
+
     final success = await authController.resetPasswordWithOtp(
-      email: _emailController.text.trim(),
+      email: identifier.email,
+      phone: identifier.phone,
       otp: _otpController.text.trim(),
       newPassword: _newPasswordController.text.trim(),
     );
@@ -139,7 +157,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     }
   }
 
-  void _resendOtp() async {
-    await authController.sendOtpForPasswordReset(_emailController.text.trim());
+  Future<void> _resendOtp() async {
+    final identifier =
+        _resolvedIdentifier ?? resolveIdentifier(_identifierController.text);
+    await authController.sendOtpForPasswordReset(
+      email: identifier.email,
+      phone: identifier.phone,
+    );
   }
 }

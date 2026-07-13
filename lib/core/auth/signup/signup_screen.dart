@@ -66,17 +66,17 @@ class SignupScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 24),
 
-                    // Email Field
+                    // Email or phone
                     CustomTextField(
-                      controller: signupController.emailController,
-                      labelText: 'Email',
-                      hintText: 'Enter your email',
-                      keyboardType: TextInputType.emailAddress,
+                      controller: signupController.identifierController,
+                      labelText: 'Email or phone',
+                      hintText: 'you@email.com or +919876543210',
+                      keyboardType: TextInputType.text,
                       prefixIcon: const Icon(
-                        Icons.email_outlined,
+                        Icons.person_outline,
                         color: Color(AppColors.textSecondaryColor),
                       ),
-                      validator: Validators.validateEmail,
+                      validator: Validators.validateEmailOrPhone,
                     ),
                     const SizedBox(height: 24),
 
@@ -105,19 +105,6 @@ class SignupScreen extends StatelessWidget {
                       validator: (value) => Validators.validateConfirmPassword(
                         value,
                         signupController.passwordController.text,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Phone Number Field (Optional)
-                    CustomTextField(
-                      controller: signupController.phoneController,
-                      labelText: 'Phone Number (Optional)',
-                      hintText: 'Enter your phone number',
-                      keyboardType: TextInputType.phone,
-                      prefixIcon: const Icon(
-                        Icons.phone_outlined,
-                        color: Color(AppColors.textSecondaryColor),
                       ),
                     ),
                     const SizedBox(height: 32),

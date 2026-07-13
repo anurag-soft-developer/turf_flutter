@@ -66,7 +66,6 @@ class ProfileController extends GetxController {
     final result = await _authController.updateUserProfile(
       fullName: fullNameController.text.trim(),
       bio: bioController.text.trim(),
-      phone: phoneController.text.trim(),
     );
 
     _isLoading.value = false;

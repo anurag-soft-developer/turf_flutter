@@ -98,6 +98,34 @@ class EditProfileScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 24),
 
+                        if (authController.user?.email != null &&
+                            authController.user!.email!.isNotEmpty) ...[
+                          CustomTextField(
+                            controller: profileController.emailController,
+                            labelText: 'Email',
+                            enabled: false,
+                            prefixIcon: const Icon(
+                              Icons.email_outlined,
+                              color: Color(AppColors.textSecondaryColor),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+
+                        if (authController.user?.phone != null &&
+                            authController.user!.phone!.isNotEmpty) ...[
+                          CustomTextField(
+                            controller: profileController.phoneController,
+                            labelText: 'Phone',
+                            enabled: false,
+                            prefixIcon: const Icon(
+                              Icons.phone_outlined,
+                              color: Color(AppColors.textSecondaryColor),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+
                         // Bio
                         CustomTextField(
                           controller: profileController.bioController,
@@ -108,20 +136,6 @@ class EditProfileScreen extends StatelessWidget {
                           maxLength: 500,
                           prefixIcon: const Icon(
                             Icons.description_outlined,
-                            color: Color(AppColors.textSecondaryColor),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-
-                        // Phone
-                        CustomTextField(
-                          controller: profileController.phoneController,
-                          labelText: 'Phone Number',
-                          hintText: 'Enter your phone number',
-                          keyboardType: TextInputType.phone,
-                          maxLength: 12,
-                          prefixIcon: const Icon(
-                            Icons.phone_outlined,
                             color: Color(AppColors.textSecondaryColor),
                           ),
                         ),

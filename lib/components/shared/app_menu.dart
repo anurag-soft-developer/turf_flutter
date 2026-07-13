@@ -217,7 +217,9 @@ class AppMenuScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      authController.user?.email ?? '',
+                      authController.user?.email ??
+                          authController.user?.phone ??
+                          '',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(

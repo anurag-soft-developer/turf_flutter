@@ -29,7 +29,8 @@ class LoginScreen extends StatelessWidget {
                 final challenge = loginController.pendingOtpChallenge.value;
                 if (challenge != null) {
                   return LoginOtpChallengeView(
-                    email: challenge.email,
+                    destination: challenge.destination,
+                    channel: challenge.channel,
                     formKey: loginController.otpFormKey,
                     otpController: loginController.otpController,
                     onVerify: loginController.verifyLoginOtp,
@@ -66,17 +67,17 @@ class LoginScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 40),
 
-                        // Email Field
+                        // Email or phone
                         CustomTextField(
-                          controller: loginController.emailController,
-                          labelText: 'Email',
-                          hintText: 'Enter your email',
-                          keyboardType: TextInputType.emailAddress,
+                          controller: loginController.identifierController,
+                          labelText: 'Email or phone',
+                          hintText: 'you@email.com or +919876543210',
+                          keyboardType: TextInputType.text,
                           prefixIcon: const Icon(
-                            Icons.email_outlined,
+                            Icons.person_outline,
                             color: Color(AppColors.textSecondaryColor),
                           ),
-                          validator: Validators.validateEmail,
+                          validator: Validators.validateEmailOrPhone,
                         ),
                         const SizedBox(height: 24),
 

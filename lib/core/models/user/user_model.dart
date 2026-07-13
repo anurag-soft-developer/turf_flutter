@@ -116,6 +116,8 @@ class UserModel {
   final bool? isVerified;
   @JsonKey(name: 'isEmailVerified')
   final bool? isEmailVerified;
+  @JsonKey(name: 'isPhoneVerified')
+  final bool? isPhoneVerified;
   final String? phone;
   @JsonKey(name: 'lastLogin')
   final String? lastLogin;
@@ -154,6 +156,7 @@ class UserModel {
     this.isActive,
     this.isVerified,
     this.isEmailVerified,
+    this.isPhoneVerified,
     this.phone,
     this.lastLogin,
     this.createdAt,
@@ -185,6 +188,7 @@ class UserModel {
     bool? isActive,
     bool? isVerified,
     bool? isEmailVerified,
+    bool? isPhoneVerified,
     String? phone,
     String? lastLogin,
     String? createdAt,
@@ -210,6 +214,7 @@ class UserModel {
       isActive: isActive ?? this.isActive,
       isVerified: isVerified ?? this.isVerified,
       isEmailVerified: isEmailVerified ?? this.isEmailVerified,
+      isPhoneVerified: isPhoneVerified ?? this.isPhoneVerified,
       phone: phone ?? this.phone,
       lastLogin: lastLogin ?? this.lastLogin,
       createdAt: createdAt ?? this.createdAt,
@@ -229,7 +234,8 @@ class UserModel {
   }
 
   // Helper getter for backward compatibility and display
-  String get displayName => fullName ?? email?.split('@').first ?? 'User';
+  String get displayName =>
+      fullName ?? email?.split('@').first ?? phone ?? 'User';
 
   // Helper getter for created date parsing
   DateTime? get createdAtDate {
@@ -292,18 +298,24 @@ class LoginOtpChallengeResponse {
   final String message;
   @JsonKey(name: 'requiresOtp')
   final bool requiresOtp;
-  final String email;
+  final String channel;
+  final String? email;
+  final String? phone;
 
   LoginOtpChallengeResponse({
     required this.message,
     required this.requiresOtp,
-    required this.email,
+    required this.channel,
+    this.email,
+    this.phone,
   });
 
   factory LoginOtpChallengeResponse.fromJson(Map<String, dynamic> json) =>
       _$LoginOtpChallengeResponseFromJson(json);
 
   Map<String, dynamic> toJson() => _$LoginOtpChallengeResponseToJson(this);
+
+  String get destination => email ?? phone ?? '';
 }
 
 class LoginResult {
@@ -321,12 +333,13 @@ class LoginResult {
       LoginResult._(otpChallenge: challenge);
 }
 
-@JsonSerializable()
+@JsonSerializable(includeIfNull: false)
 class LoginRequest {
-  final String email;
+  final String? email;
+  final String? phone;
   final String password;
 
-  LoginRequest({required this.email, required this.password});
+  LoginRequest({this.email, this.phone, required this.password});
 
   factory LoginRequest.fromJson(Map<String, dynamic> json) =>
       _$LoginRequestFromJson(json);
@@ -334,19 +347,19 @@ class LoginRequest {
   Map<String, dynamic> toJson() => _$LoginRequestToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(includeIfNull: false)
 class RegisterRequest {
-  final String email;
+  final String? email;
+  final String? phone;
   final String password;
   @JsonKey(name: 'fullName')
   final String fullName;
-  final String? phone;
 
   RegisterRequest({
-    required this.email,
+    this.email,
+    this.phone,
     required this.password,
     required this.fullName,
-    this.phone,
   });
 
   factory RegisterRequest.fromJson(Map<String, dynamic> json) =>
@@ -355,12 +368,13 @@ class RegisterRequest {
   Map<String, dynamic> toJson() => _$RegisterRequestToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(includeIfNull: false)
 class VerifyLoginOtpRequest {
-  final String email;
+  final String? email;
+  final String? phone;
   final String otp;
 
-  VerifyLoginOtpRequest({required this.email, required this.otp});
+  VerifyLoginOtpRequest({this.email, this.phone, required this.otp});
 
   factory VerifyLoginOtpRequest.fromJson(Map<String, dynamic> json) =>
       _$VerifyLoginOtpRequestFromJson(json);

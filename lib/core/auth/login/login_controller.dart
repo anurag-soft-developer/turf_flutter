@@ -1,5 +1,6 @@
 import 'package:flutter_application_1/core/models/user/user_model.dart';
 import 'package:flutter_application_1/core/utils/exception_handler.dart';
+import 'package:flutter_application_1/core/utils/phone_util.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
@@ -16,19 +17,19 @@ class LoginController extends GetxController {
 
   bool get isLoading => _isLoading.value;
 
-  final TextEditingController emailController = TextEditingController();
+  final TextEditingController identifierController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController otpController = TextEditingController();
 
   final GlobalKey<FormState> loginFormKey = GlobalKey<FormState>();
   final GlobalKey<FormState> otpFormKey = GlobalKey<FormState>();
 
-  /// When non-null, show the login OTP step (2FA / email OTP challenge).
+  /// When non-null, show the login OTP step (2FA challenge).
   final Rxn<LoginOtpChallengeResponse> pendingOtpChallenge = Rxn();
 
   @override
   void onClose() {
-    emailController.dispose();
+    identifierController.dispose();
     passwordController.dispose();
     otpController.dispose();
     super.onClose();
@@ -40,8 +41,10 @@ class LoginController extends GetxController {
 
       _isLoading.value = true;
 
+      final identifier = resolveIdentifier(identifierController.text);
       final result = await _authService.signInWithEmailAndPassword(
-        email: emailController.text.trim(),
+        email: identifier.email,
+        phone: identifier.phone,
         password: passwordController.text.trim(),
       );
 
@@ -78,6 +81,7 @@ class LoginController extends GetxController {
 
       final user = await _authService.verifyLoginOtp(
         email: challenge.email,
+        phone: challenge.phone,
         otp: otpController.text.trim(),
       );
 
@@ -102,7 +106,7 @@ class LoginController extends GetxController {
   }
 
   void _clearControllers() {
-    emailController.clear();
+    identifierController.clear();
     passwordController.clear();
   }
 

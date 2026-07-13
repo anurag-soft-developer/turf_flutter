@@ -1,4 +1,5 @@
 import 'package:flutter_application_1/core/utils/exception_handler.dart';
+import 'package:flutter_application_1/core/utils/phone_util.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
@@ -15,23 +16,20 @@ class SignupController extends GetxController {
 
   bool get isLoading => _isLoading.value;
 
-  final TextEditingController emailController = TextEditingController();
+  final TextEditingController identifierController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController confirmPasswordController =
       TextEditingController();
   final TextEditingController fullNameController = TextEditingController();
-  final TextEditingController phoneController = TextEditingController();
 
-  // Form key
   final GlobalKey<FormState> signupFormKey = GlobalKey<FormState>();
 
   @override
   void onClose() {
-    emailController.dispose();
+    identifierController.dispose();
     passwordController.dispose();
     confirmPasswordController.dispose();
     fullNameController.dispose();
-    phoneController.dispose();
     super.onClose();
   }
 
@@ -41,13 +39,12 @@ class SignupController extends GetxController {
 
       _isLoading.value = true;
 
+      final identifier = resolveIdentifier(identifierController.text);
       final result = await _authService.signUpWithEmailAndPassword(
-        email: emailController.text.trim(),
+        email: identifier.email,
+        phone: identifier.phone,
         password: passwordController.text.trim(),
         fullName: fullNameController.text.trim(),
-        phone: phoneController.text.trim().isNotEmpty
-            ? phoneController.text.trim()
-            : null,
       );
 
       if (result != null) {
@@ -64,11 +61,10 @@ class SignupController extends GetxController {
   }
 
   void _clearControllers() {
-    emailController.clear();
+    identifierController.clear();
     passwordController.clear();
     confirmPasswordController.clear();
     fullNameController.clear();
-    phoneController.clear();
   }
 
   void goToLogin() {

@@ -36,16 +36,16 @@ class AuthService {
   }
 
   Future<UserModel?> signUpWithEmailAndPassword({
-    required String email,
+    String? email,
+    String? phone,
     required String password,
     required String fullName,
-    String? phone,
   }) async {
     final registerRequest = RegisterRequest(
       email: email,
+      phone: phone,
       password: password,
       fullName: fullName,
-      phone: phone,
     );
 
     final response = await _apiService.post<Map<String, dynamic>>(
@@ -66,10 +66,15 @@ class AuthService {
   }
 
   Future<LoginResult?> signInWithEmailAndPassword({
-    required String email,
+    String? email,
+    String? phone,
     required String password,
   }) async {
-    final loginRequest = LoginRequest(email: email, password: password);
+    final loginRequest = LoginRequest(
+      email: email,
+      phone: phone,
+      password: password,
+    );
 
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiConstants.auth.login,
@@ -94,10 +99,15 @@ class AuthService {
   }
 
   Future<UserModel?> verifyLoginOtp({
-    required String email,
+    String? email,
+    String? phone,
     required String otp,
   }) async {
-    final request = VerifyLoginOtpRequest(email: email, otp: otp);
+    final request = VerifyLoginOtpRequest(
+      email: email,
+      phone: phone,
+      otp: otp,
+    );
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiConstants.auth.verifyLoginOtp,
       data: request.toJson(),
@@ -153,23 +163,35 @@ class AuthService {
     ExceptionHandler.showSuccessToast('Password reset email sent');
   }
 
-  Future<bool> sendOtpForPasswordReset(String email) async {
+  Future<bool> sendOtpForPasswordReset({
+    String? email,
+    String? phone,
+  }) async {
     final response = await _apiService.post(
       ApiConstants.auth.forgotPassword,
-      data: {'email': email},
+      data: {
+        if (email != null) 'email': email,
+        if (phone != null) 'phone': phone,
+      },
     );
 
     return response != null;
   }
 
   Future<bool> resetPasswordWithOtp({
-    required String email,
+    String? email,
+    String? phone,
     required String otp,
     required String newPassword,
   }) async {
     final response = await _apiService.post(
       ApiConstants.auth.resetPassword,
-      data: {'email': email, 'otp': otp, 'password': newPassword},
+      data: {
+        if (email != null) 'email': email,
+        if (phone != null) 'phone': phone,
+        'otp': otp,
+        'password': newPassword,
+      },
     );
 
     return response != null;

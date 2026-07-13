@@ -96,21 +96,29 @@ class AuthStateController extends GetxController {
     _isLoading.value = false;
   }
 
-  Future<bool> sendOtpForPasswordReset(String email) async {
+  Future<bool> sendOtpForPasswordReset({
+    String? email,
+    String? phone,
+  }) async {
     _isLoading.value = true;
-    final success = await _authService.sendOtpForPasswordReset(email);
+    final success = await _authService.sendOtpForPasswordReset(
+      email: email,
+      phone: phone,
+    );
     _isLoading.value = false;
     return success;
   }
 
   Future<bool> resetPasswordWithOtp({
-    required String email,
+    String? email,
+    String? phone,
     required String otp,
     required String newPassword,
   }) async {
     _isLoading.value = true;
     final success = await _authService.resetPasswordWithOtp(
       email: email,
+      phone: phone,
       otp: otp,
       newPassword: newPassword,
     );
