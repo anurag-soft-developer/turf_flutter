@@ -21,7 +21,8 @@ class Validators {
     return null;
   }
 
-  /// Accepts email (`@`) or phone with country code (leading `+`).
+  /// Accepts email (`@`), E.164 phone (`+…`), or a national phone number.
+  /// Country code for national numbers is confirmed on submit via dialog.
   static String? validateEmailOrPhone(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'Email or phone is required';
@@ -44,7 +45,11 @@ class Validators {
       }
     }
 
-    return 'Enter an email or phone with country code (e.g. +919876543210)';
+    if (looksLikePhone(trimmed)) {
+      return null;
+    }
+
+    return 'Enter a valid email or phone number';
   }
 
   /// Optional profile phone: empty allowed; otherwise must be E.164 with `+`.

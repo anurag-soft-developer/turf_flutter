@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/utils/app_snackbar.dart';
 import 'package:flutter_application_1/core/utils/phone_util.dart';
+import 'package:flutter_application_1/components/shared/confirm_phone_dialog.dart';
 import 'package:get/get.dart';
 import '../auth_state_controller.dart';
 import '../../../components/shared/loading_overlay.dart';
@@ -115,7 +116,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   Future<void> _sendOtp() async {
     if (!_identifierFormKey.currentState!.validate()) return;
 
-    final identifier = resolveIdentifier(_identifierController.text);
+    final identifier = await resolveAuthIdentifier(
+      context,
+      _identifierController.text,
+    );
+    if (identifier == null) return;
+
+    if (identifier.phone != null) {
+      _identifierController.text = identifier.phone!;
+    }
+
     _resolvedIdentifier = identifier;
 
     final success = await authController.sendOtpForPasswordReset(

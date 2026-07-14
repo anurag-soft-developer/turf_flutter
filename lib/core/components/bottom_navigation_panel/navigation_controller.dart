@@ -21,9 +21,9 @@ class NavigationController extends GetxController {
     _loadControllerForCurrentTab();
   }
 
-  /// Switches to the Turfs tab and optionally applies a sport filter.
+  /// Switches to the Turves tab and optionally applies a sport filter.
   void goToTurfs({String? sportFilter}) {
-    final turfsIndex = kNavTabs.indexWhere((tab) => tab.label == 'Turfs');
+    final turfsIndex = kNavTabs.indexWhere((tab) => tab.label == 'Turves');
     if (turfsIndex < 0) return;
 
     if (sportFilter != null) {

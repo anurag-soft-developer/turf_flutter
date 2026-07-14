@@ -70,7 +70,7 @@ class SignupScreen extends StatelessWidget {
                     CustomTextField(
                       controller: signupController.identifierController,
                       labelText: 'Email or phone',
-                      hintText: 'you@email.com or +919876543210',
+                      hintText: 'you@email.com or 9876543210',
                       keyboardType: TextInputType.text,
                       prefixIcon: const Icon(
                         Icons.person_outline,

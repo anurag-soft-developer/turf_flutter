@@ -1,6 +1,6 @@
 import 'package:flutter_application_1/core/models/user/user_model.dart';
 import 'package:flutter_application_1/core/utils/exception_handler.dart';
-import 'package:flutter_application_1/core/utils/phone_util.dart';
+import 'package:flutter_application_1/components/shared/confirm_phone_dialog.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
@@ -39,9 +39,21 @@ class LoginController extends GetxController {
     try {
       if (!loginFormKey.currentState!.validate()) return;
 
+      final context = Get.context;
+      if (context == null) return;
+
+      final identifier = await resolveAuthIdentifier(
+        context,
+        identifierController.text,
+      );
+      if (identifier == null) return;
+
+      if (identifier.phone != null) {
+        identifierController.text = identifier.phone!;
+      }
+
       _isLoading.value = true;
 
-      final identifier = resolveIdentifier(identifierController.text);
       final result = await _authService.signInWithEmailAndPassword(
         email: identifier.email,
         phone: identifier.phone,

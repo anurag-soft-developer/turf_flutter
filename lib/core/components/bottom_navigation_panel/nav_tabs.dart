@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/match_up/match_up_controller.dart';
 import 'package:flutter_application_1/match_up/match_up_screen.dart';
+import 'package:flutter_application_1/match_up/matches/matches_controller.dart';
+import 'package:flutter_application_1/match_up/matches/matches_screen.dart';
 import 'package:get/get.dart';
 import '../../../dashboard/dashboard_screen.dart';
 import '../../../dashboard/player/player_dashboard_controller.dart';
 import '../../../turf/feed/turf_list_screen.dart';
 import '../../../rankings/rank_screen.dart';
 import '../../../rankings/rank_controller.dart';
-import '../../../profile/profile_screen.dart';
 import '../../../turf/feed/turf_list_controller.dart';
 
 class NavTab {
@@ -41,11 +42,20 @@ final List<NavTab> kNavTabs = [
   NavTab(
     icon: Icons.grass_outlined,
     activeIcon: Icons.grass,
-    label: 'Turfs',
+    label: 'Turves',
     screenBuilder: () => const TurfListScreen(),
     loadController: () =>
         _ensure<TurfListController>(() => TurfListController()),
     disposeController: () => _dispose<TurfListController>(),
+  ),
+  NavTab(
+    icon: Icons.sports_score_outlined,
+    activeIcon: Icons.sports_score,
+    label: 'Matches',
+    screenBuilder: () => const MatchesScreen(),
+    loadController: () =>
+        _ensure<MatchesController>(() => MatchesController()),
+    disposeController: () => _dispose<MatchesController>(),
   ),
   NavTab(
     icon: Icons.sports_soccer_outlined,
@@ -62,12 +72,6 @@ final List<NavTab> kNavTabs = [
     screenBuilder: () => const RankScreen(),
     loadController: () => _ensure<RankController>(() => RankController()),
     disposeController: () => _dispose<RankController>(),
-  ),
-  NavTab(
-    icon: Icons.person_outline,
-    activeIcon: Icons.person,
-    label: 'Profile',
-    screenBuilder: () => const ProfileScreen(),
   ),
 ];
 
