@@ -13,6 +13,7 @@ class ApiConstants {
   static const teamMembershipSelf = TeamMembershipSelfEndpoints();
   static const matchmaking = MatchmakingEndpoints();
   static const notifications = NotificationEndpoints();
+  static const followings = FollowingsEndpoints();
   static const scoring = ScoringEndpoints();
   static const storage = StorageEndpoints();
   static const dashboard = DashboardEndpoints();
@@ -150,6 +151,17 @@ class NotificationEndpoints {
   String get deleteAll => '/notifications/all';
   String byId(String id) => '/notifications/$id';
   String markRead(String id) => '/notifications/$id/read';
+}
+
+/// `GET/POST/DELETE /followings/*` — JWT required.
+class FollowingsEndpoints {
+  const FollowingsEndpoints();
+
+  String get base => '/followings';
+  String get request => '/followings/request';
+  String byId(String id) => '/followings/$id';
+  String userFollowers(String userId) => '/followings/users/$userId/followers';
+  String userFollowing(String userId) => '/followings/users/$userId/following';
 }
 
 /// `GET/POST /matchmaking/*` — JWT required.

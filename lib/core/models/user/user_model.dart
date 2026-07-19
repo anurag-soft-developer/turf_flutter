@@ -145,6 +145,10 @@ class UserModel {
   final Map<NotificationModule, bool>? notificationModules;
   @JsonKey(name: 'fcmTokens', defaultValue: [])
   final List<FcmTokenEntry> fcmTokens;
+  @JsonKey(name: 'followerCount', defaultValue: 0)
+  final int followerCount;
+  @JsonKey(name: 'followingCount', defaultValue: 0)
+  final int followingCount;
 
   UserModel({
     this.id,
@@ -171,6 +175,8 @@ class UserModel {
     this.notificationsEnabled,
     this.notificationModules,
     this.fcmTokens = const [],
+    this.followerCount = 0,
+    this.followingCount = 0,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) =>
@@ -203,6 +209,8 @@ class UserModel {
     bool? notificationsEnabled,
     Map<NotificationModule, bool>? notificationModules,
     List<FcmTokenEntry>? fcmTokens,
+    int? followerCount,
+    int? followingCount,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -230,6 +238,9 @@ class UserModel {
           smsNotificationsEnabled ?? this.smsNotificationsEnabled,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
       notificationModules: notificationModules ?? this.notificationModules,
+      fcmTokens: fcmTokens ?? this.fcmTokens,
+      followerCount: followerCount ?? this.followerCount,
+      followingCount: followingCount ?? this.followingCount,
     );
   }
 

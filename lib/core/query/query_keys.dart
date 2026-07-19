@@ -139,6 +139,13 @@ class QueryKeys {
   static List<Object> publicProfile(String userId) =>
       ['publicProfile', userId];
 
+  static List<Object> followers(String userId) => ['followers', userId];
+
+  static List<Object> following(String userId) => ['following', userId];
+
+  /// Logged-in user's outgoing follow edge towards [userId].
+  static List<Object> followStatus(String userId) => ['followStatus', userId];
+
   static List<Object> bookingDetail(String bookingId) =>
       ['bookingDetail', bookingId];
 }

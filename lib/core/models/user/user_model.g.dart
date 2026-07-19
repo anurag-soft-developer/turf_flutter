@@ -65,6 +65,8 @@ UserModel _$UserModelFromJson(Map<String, dynamic> json) => UserModel(
           ?.map((e) => FcmTokenEntry.fromJson(e as Map<String, dynamic>))
           .toList() ??
       [],
+  followerCount: (json['followerCount'] as num?)?.toInt() ?? 0,
+  followingCount: (json['followingCount'] as num?)?.toInt() ?? 0,
 );
 
 Map<String, dynamic> _$UserModelToJson(UserModel instance) => <String, dynamic>{
@@ -96,6 +98,8 @@ Map<String, dynamic> _$UserModelToJson(UserModel instance) => <String, dynamic>{
     instance.notificationModules,
   ),
   'fcmTokens': instance.fcmTokens.map((e) => e.toJson()).toList(),
+  'followerCount': instance.followerCount,
+  'followingCount': instance.followingCount,
 };
 
 AuthResponse _$AuthResponseFromJson(Map<String, dynamic> json) => AuthResponse(

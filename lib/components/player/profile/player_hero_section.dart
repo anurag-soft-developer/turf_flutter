@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import '../../../core/config/constants.dart';
 import '../../../core/models/user_field_instance.dart';
+import '../follow/follow_button.dart';
+import '../follow/follow_stat_button.dart';
 
 class PlayerHeroSection extends StatelessWidget {
   const PlayerHeroSection({super.key, required this.helper});
@@ -68,7 +71,7 @@ class PlayerHeroSection extends StatelessWidget {
 
     return Container(
       constraints: BoxConstraints(
-        minHeight: 280,
+        minHeight: 240,
         maxHeight: MediaQuery.of(context).size.height * 0.45,
       ),
       clipBehavior: Clip.antiAlias,
@@ -93,83 +96,141 @@ class PlayerHeroSection extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const SizedBox(height: 30), // Space for app bar
-              // Avatar
-              CircleAvatar(
-                radius: 50,
-                backgroundColor: Colors.white.withValues(alpha: 0.2),
-                backgroundImage:
-                    helper.getAvatar() != null && helper.getAvatar()!.isNotEmpty
-                    ? NetworkImage(helper.getAvatar()!)
-                    : null,
-                child: helper.getAvatar() == null || helper.getAvatar()!.isEmpty
-                    ? const Icon(Icons.person, size: 60, color: Colors.white)
-                    : null,
+              // Avatar beside name + follow stats to keep the hero compact.
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 42,
+                    backgroundColor: Colors.white.withValues(alpha: 0.2),
+                    backgroundImage:
+                        helper.getAvatar() != null &&
+                            helper.getAvatar()!.isNotEmpty
+                        ? NetworkImage(helper.getAvatar()!)
+                        : null,
+                    child:
+                        helper.getAvatar() == null ||
+                            helper.getAvatar()!.isEmpty
+                        ? const Icon(
+                            Icons.person,
+                            size: 48,
+                            color: Colors.white,
+                          )
+                        : null,
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        // Follower / following stats
+                        Builder(
+                          builder: (context) {
+                            final userId = helper.getId();
+                            final canNavigate =
+                                userId != null && userId.isNotEmpty;
+
+                            void openList(String path) {
+                              if (!canNavigate) return;
+                              Get.toNamed(
+                                Uri(
+                                  path: path,
+                                  queryParameters: {'name': title},
+                                ).toString(),
+                              );
+                            }
+
+                            return Row(
+                              children: [
+                                FollowStatButton(
+                                  count: model?.followerCount ?? 0,
+                                  label: 'Followers',
+                                  onTap: canNavigate
+                                      ? () => openList(
+                                          AppConstants.routes
+                                              .followers(userId),
+                                        )
+                                      : null,
+                                ),
+                                Container(
+                                  width: 1,
+                                  height: 28,
+                                  color: Colors.white.withValues(alpha: 0.3),
+                                ),
+                                FollowStatButton(
+                                  count: model?.followingCount ?? 0,
+                                  label: 'Following',
+                                  onTap: canNavigate
+                                      ? () => openList(
+                                          AppConstants.routes
+                                              .following(userId),
+                                        )
+                                      : null,
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
 
-              const SizedBox(height: 8),
-
-              // Name
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                  letterSpacing: -0.5,
-                ),
-              ),
-
-              // Email
-              // if (helper.getEmail() != null) ...[
-              //   const SizedBox(height: 2),
-              //   Text(
-              //     helper.getEmail()!,
-              //     textAlign: TextAlign.center,
-              //     style: TextStyle(
-              //       fontSize: 14,
-              //       color: Colors.white.withValues(alpha: 0.9),
-              //       fontWeight: FontWeight.w500,
-              //     ),
-              //   ),
-              // ],
+              const SizedBox(height: 12),
 
               // Bio preview
               if (model?.bio != null && model!.bio!.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                Builder(
-                  builder: (context) {
-                    final bio = model.bio!;
-                    final isLong = bio.length > _bioPreviewMaxChars;
-                    final preview = isLong
-                        ? '${bio.substring(0, _bioPreviewMaxChars)}...'
-                        : bio;
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Builder(
+                    builder: (context) {
+                      final bio = model.bio!;
+                      final isLong = bio.length > _bioPreviewMaxChars;
+                      final preview = isLong
+                          ? '${bio.substring(0, _bioPreviewMaxChars)}...'
+                          : bio;
 
-                    final textStyle = TextStyle(
-                      fontSize: 14,
-                      color: Colors.white.withValues(alpha: 0.8),
-                      height: 1.3,
-                    );
+                      final textStyle = TextStyle(
+                        fontSize: 14,
+                        color: Colors.white.withValues(alpha: 0.8),
+                        height: 1.3,
+                      );
 
-                    final textWidget = Text(
-                      preview,
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: textStyle,
-                    );
+                      final textWidget = Text(
+                        preview,
+                        textAlign: TextAlign.left,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: textStyle,
+                      );
 
-                    if (!isLong) return textWidget;
+                      if (!isLong) return textWidget;
 
-                    return GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () => _showFullBio(context, bio),
-                      child: textWidget,
-                    );
-                  },
+                      return GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => _showFullBio(context, bio),
+                        child: textWidget,
+                      );
+                    },
+                  ),
                 ),
               ],
-              const SizedBox(height: 30),
+              const SizedBox(height: 12),
+              // Hides itself on the logged-in user's own profile.
+              FollowButton(targetUserId: helper.getId()),
             ],
           ),
         ),
