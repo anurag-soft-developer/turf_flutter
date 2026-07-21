@@ -230,7 +230,7 @@ class PlayerHeroSection extends StatelessWidget {
               ],
               const SizedBox(height: 12),
               // Hides itself on the logged-in user's own profile.
-              FollowButton(targetUserId: helper.getId()),
+              FollowButton(targetId: helper.getId()),
             ],
           ),
         ),

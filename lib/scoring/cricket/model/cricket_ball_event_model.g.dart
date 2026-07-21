@@ -66,7 +66,7 @@ const _$CricketWicketKindEnumMap = {
 
 CricketOverEvent _$CricketOverEventFromJson(Map<String, dynamic> json) =>
     CricketOverEvent(
-      id: json['_id'] == null ? '' : _mongoIdFromJson(json['_id']),
+      id: json['_id'] == null ? '' : mongoIdFromJson(json['_id']),
       teamMatchId: const TeamMatchRefConverter().fromJson(json['teamMatchId']),
       bowlerUserId: const UserConverter().fromJson(json['bowlerUserId']),
       sequence: (json['sequence'] as num).toInt(),

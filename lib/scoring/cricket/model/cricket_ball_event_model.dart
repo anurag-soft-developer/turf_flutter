@@ -2,17 +2,9 @@ import 'package:json_annotation/json_annotation.dart';
 
 import '../../../core/models/team_match/team_match_ref_converter.dart';
 import '../../../core/models/user_field_converters.dart';
+import '../../../core/utils/mongo_id_util.dart';
 
 part 'cricket_ball_event_model.g.dart';
-
-String _mongoIdFromJson(dynamic json) {
-  if (json == null) return '';
-  if (json is Map) {
-    final oid = json[r'$oid'];
-    if (oid != null) return oid.toString();
-  }
-  return json.toString();
-}
 
 /// Backend `CricketWicketKind` strings (`run_out`, …).
 @JsonEnum(fieldRename: FieldRename.snake)
@@ -86,7 +78,7 @@ class CricketBallEvent {
 /// Persisted over row from `POST .../balls` and `GET .../overs`.
 @JsonSerializable(explicitToJson: true)
 class CricketOverEvent {
-  @JsonKey(name: '_id', fromJson: _mongoIdFromJson, defaultValue: '')
+  @JsonKey(name: '_id', fromJson: mongoIdFromJson, defaultValue: '')
   final String id;
 
   @JsonKey(name: 'teamMatchId')

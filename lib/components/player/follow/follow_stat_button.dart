@@ -7,11 +7,15 @@ class FollowStatButton extends StatelessWidget {
     required this.count,
     required this.label,
     this.onTap,
+    this.padding = const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+    this.crossAxisAlignment = CrossAxisAlignment.center,
   });
 
   final int count;
   final String label;
   final VoidCallback? onTap;
+  final EdgeInsetsGeometry padding;
+  final CrossAxisAlignment crossAxisAlignment;
 
   @override
   Widget build(BuildContext context) {
@@ -19,9 +23,10 @@ class FollowStatButton extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        padding: padding,
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: crossAxisAlignment,
           children: [
             Row(
               mainAxisSize: MainAxisSize.min,

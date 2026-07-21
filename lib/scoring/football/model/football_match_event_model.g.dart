@@ -8,7 +8,7 @@ part of 'football_match_event_model.dart';
 
 FootballMatchEvent _$FootballMatchEventFromJson(Map<String, dynamic> json) =>
     FootballMatchEvent(
-      id: json['_id'] == null ? '' : _mongoIdFromJson(json['_id']),
+      id: json['_id'] == null ? '' : mongoIdFromJson(json['_id']),
       teamMatchId: const TeamMatchRefConverter().fromJson(json['teamMatchId']),
       sequence: (json['sequence'] as num).toInt(),
       innings: (json['innings'] as num?)?.toInt() ?? 1,

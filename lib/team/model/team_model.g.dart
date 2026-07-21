@@ -374,6 +374,9 @@ TeamModel _$TeamModelFromJson(Map<String, dynamic> json) => TeamModel(
           ?.map((e) => TeamEarnedBadge.fromJson(e as Map<String, dynamic>))
           .toList() ??
       [],
+  followerCount: json['followerCount'] == null
+      ? 0
+      : _intFromJson(json['followerCount']),
   createdAt: json['createdAt'] as String?,
   updatedAt: json['updatedAt'] as String?,
 );
@@ -413,6 +416,7 @@ Map<String, dynamic> _$TeamModelToJson(TeamModel instance) => <String, dynamic>{
   'rankingPoints': instance.rankingPoints,
   'sportStats': _sportStatsMapToJson(instance.sportStats),
   'badges': instance.badges.map((e) => e.toJson()).toList(),
+  'followerCount': instance.followerCount,
   'createdAt': instance.createdAt,
   'updatedAt': instance.updatedAt,
 };

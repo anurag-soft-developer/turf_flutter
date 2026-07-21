@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import '../../../core/config/constants.dart';
+import '../../../core/services/followings_service.dart';
 import '../../../team/model/team_model.dart';
 import '../../../team/utils/team_media_url.dart';
 import '../../../team/utils/team_ui.dart';
+import '../../player/follow/follow_button.dart';
+import '../../player/follow/follow_stat_button.dart';
 
 class TeamHeroHeader extends StatefulWidget {
   const TeamHeroHeader({super.key, required this.team});
@@ -18,10 +22,23 @@ class _TeamHeroHeaderState extends State<TeamHeroHeader> {
   final PageController _pageCtrl = PageController();
   int _current = 0;
 
+  static const double _coverHeight = 280;
+
   @override
   void dispose() {
     _pageCtrl.dispose();
     super.dispose();
+  }
+
+  void _openFollowers() {
+    final teamId = widget.team.id;
+    if (teamId == null || teamId.isEmpty) return;
+    Get.toNamed(
+      Uri(
+        path: AppConstants.routes.teamFollowers(teamId),
+        queryParameters: {'name': widget.team.name},
+      ).toString(),
+    );
   }
 
   @override
@@ -31,16 +48,21 @@ class _TeamHeroHeaderState extends State<TeamHeroHeader> {
         .whereType<String>()
         .toList();
     final logoUrl = resolveTeamMediaUrl(widget.team.logo);
+    final canOpenFollowers =
+        widget.team.id != null && widget.team.id!.isNotEmpty;
+    final hasShortName =
+        widget.team.shortName != null && widget.team.shortName!.isNotEmpty;
 
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        // Cover image / carousel
-        _buildCoverArea(covers),
+    return SizedBox(
+      height: _coverHeight,
+      width: double.infinity,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          _buildCoverArea(covers),
 
-        // Gradient overlay — IgnorePointer so swipes reach the PageView
-        Positioned.fill(
-          child: IgnorePointer(
+          // Gradient — non-interactive so cover swipes work.
+          const IgnorePointer(
             child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -48,56 +70,35 @@ class _TeamHeroHeaderState extends State<TeamHeroHeader> {
                   end: Alignment.bottomCenter,
                   colors: [
                     Colors.transparent,
-                    Colors.black.withValues(alpha: 0.55),
+                    Color(0x8C000000),
                   ],
-                  stops: const [0.3, 1.0],
+                  stops: [0.35, 1.0],
                 ),
               ),
             ),
           ),
-        ),
 
-        // Content over the cover — IgnorePointer so swipes pass through
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          child: IgnorePointer(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Page dots
-                  if (covers.length > 1)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(
-                          covers.length,
-                          (i) => AnimatedContainer(
-                            duration: const Duration(milliseconds: 250),
-                            margin: const EdgeInsets.symmetric(horizontal: 3),
-                            width: _current == i ? 22 : 7,
-                            height: 7,
-                            decoration: BoxDecoration(
-                              color: _current == i
-                                  ? Colors.white
-                                  : Colors.white.withValues(alpha: 0.45),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
+          Positioned(
+            left: 20,
+            right: 20,
+            bottom: 20,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (covers.length > 1) ...[
+                  IgnorePointer(child: _buildPageDots(covers.length)),
+                  const SizedBox(height: 14),
+                ],
 
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      _buildLogo(logoUrl),
-                      const SizedBox(width: 16),
-                      Expanded(
+                // Identity row: logo + name / chips
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    IgnorePointer(child: _buildLogo(logoUrl)),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: IgnorePointer(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -107,28 +108,29 @@ class _TeamHeroHeaderState extends State<TeamHeroHeader> {
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 22,
+                                fontSize: 20,
                                 fontWeight: FontWeight.w800,
                                 height: 1.2,
                                 letterSpacing: -0.3,
                               ),
                             ),
-                            if (widget.team.shortName != null &&
-                                widget.team.shortName!.isNotEmpty)
+                            if (hasShortName)
                               Padding(
                                 padding: const EdgeInsets.only(top: 2),
                                 child: Text(
                                   widget.team.shortName!,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     color: Colors.white.withValues(alpha: 0.75),
-                                    fontSize: 14,
+                                    fontSize: 13,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
                               ),
                             const SizedBox(height: 8),
                             Wrap(
-                              spacing: 8,
+                              spacing: 6,
                               runSpacing: 6,
                               children: [
                                 _ChipBadge(
@@ -146,22 +148,65 @@ class _TeamHeroHeaderState extends State<TeamHeroHeader> {
                           ],
                         ),
                       ),
-                    ],
-                  ),
-                ],
-              ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 14),
+
+                // Actions row: followers (left) + follow (right)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    FollowStatButton(
+                      count: widget.team.followerCount,
+                      label: 'Followers',
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 4,
+                      ),
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      onTap: canOpenFollowers ? _openFollowers : null,
+                    ),
+                    const Spacer(),
+                    FollowButton(
+                      targetId: widget.team.id,
+                      recipientType: FollowRecipientType.team,
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPageDots(int count) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(
+        count,
+        (i) => AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          margin: const EdgeInsets.symmetric(horizontal: 3),
+          width: _current == i ? 22 : 7,
+          height: 7,
+          decoration: BoxDecoration(
+            color: _current == i
+                ? Colors.white
+                : Colors.white.withValues(alpha: 0.45),
+            borderRadius: BorderRadius.circular(4),
+          ),
         ),
-      ],
+      ),
     );
   }
 
   Widget _buildCoverArea(List<String> covers) {
     if (covers.isEmpty) {
-      return Container(
-        height: 260,
-        width: double.infinity,
+      return DecoratedBox(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -178,26 +223,22 @@ class _TeamHeroHeaderState extends State<TeamHeroHeader> {
       );
     }
 
-    return SizedBox(
-      height: 260,
-      width: double.infinity,
-      child: PageView.builder(
-        controller: _pageCtrl,
-        itemCount: covers.length,
-        onPageChanged: (i) => setState(() => _current = i),
-        itemBuilder: (_, i) => Image.network(
-          covers[i],
-          fit: BoxFit.cover,
-          width: double.infinity,
-          height: 260,
-          errorBuilder: (_, __, ___) => Container(
-            color: const Color(AppColors.primaryColor),
-            child: const Center(
-              child: Icon(
-                Icons.broken_image_outlined,
-                color: Colors.white38,
-                size: 48,
-              ),
+    return PageView.builder(
+      controller: _pageCtrl,
+      itemCount: covers.length,
+      onPageChanged: (i) => setState(() => _current = i),
+      itemBuilder: (_, i) => Image.network(
+        covers[i],
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: _coverHeight,
+        errorBuilder: (_, __, ___) => Container(
+          color: const Color(AppColors.primaryColor),
+          child: const Center(
+            child: Icon(
+              Icons.broken_image_outlined,
+              color: Colors.white38,
+              size: 48,
             ),
           ),
         ),
@@ -219,13 +260,13 @@ class _TeamHeroHeaderState extends State<TeamHeroHeader> {
         ],
       ),
       child: CircleAvatar(
-        radius: 38,
+        radius: 36,
         backgroundColor: Colors.white,
         backgroundImage: logoUrl != null ? NetworkImage(logoUrl) : null,
         child: logoUrl == null
             ? const Icon(
                 Icons.shield_outlined,
-                size: 36,
+                size: 32,
                 color: Color(AppColors.primaryColor),
               )
             : null,
@@ -245,7 +286,7 @@ class _ChipBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final bgColor = color ?? Colors.white.withValues(alpha: 0.2);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: bgColor.withValues(alpha: 0.25),
         borderRadius: BorderRadius.circular(20),
@@ -257,13 +298,13 @@ class _ChipBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: Colors.white),
-          const SizedBox(width: 5),
+          Icon(icon, size: 13, color: Colors.white),
+          const SizedBox(width: 4),
           Text(
             label,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 12,
+              fontSize: 11,
               fontWeight: FontWeight.w600,
             ),
           ),

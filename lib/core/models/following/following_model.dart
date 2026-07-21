@@ -1,3 +1,4 @@
+import '../../utils/mongo_id_util.dart';
 import '../user/user_model.dart';
 import '../user_field_instance.dart';
 
@@ -26,7 +27,7 @@ class FollowingModel {
 
   factory FollowingModel.fromJson(Map<String, dynamic> json) {
     return FollowingModel(
-      id: json['_id'] as String?,
+      id: mongoIdFromJsonNullable(json['_id'] ?? json['id']),
       requester: _parseUserField(json['requester']),
       recipient: _parseUserField(json['recipient']),
       recipientType: json['recipientType'] as String?,

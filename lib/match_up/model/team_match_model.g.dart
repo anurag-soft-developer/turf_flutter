@@ -20,11 +20,11 @@ Map<String, dynamic> _$TeamMatchTimeSlotToJson(TeamMatchTimeSlot instance) =>
 
 ProposedSlotModel _$ProposedSlotModelFromJson(Map<String, dynamic> json) =>
     ProposedSlotModel(
-      proposalId: _objectIdFromJson(json['proposalId']),
+      proposalId: mongoIdFromJson(json['proposalId']),
       slot: TeamMatchTimeSlot.fromJson(json['slot'] as Map<String, dynamic>),
-      proposedByTeamId: _objectIdFromJson(json['proposedByTeamId']),
+      proposedByTeamId: mongoIdFromJson(json['proposedByTeamId']),
       status: $enumDecode(_$MatchProposalStatusEnumMap, json['status']),
-      decidedByTeamId: _objectIdFromJsonNullable(json['decidedByTeamId']),
+      decidedByTeamId: mongoIdFromJsonNullable(json['decidedByTeamId']),
       decidedAt: json['decidedAt'] == null
           ? null
           : DateTime.parse(json['decidedAt'] as String),
@@ -60,11 +60,11 @@ const _$MatchProposalStatusEnumMap = {
 
 ProposedTurfModel _$ProposedTurfModelFromJson(Map<String, dynamic> json) =>
     ProposedTurfModel(
-      proposalId: _objectIdFromJson(json['proposalId']),
+      proposalId: mongoIdFromJson(json['proposalId']),
       turfId: const TurfConverter().fromJson(json['turfId']),
-      proposedByTeamId: _objectIdFromJson(json['proposedByTeamId']),
+      proposedByTeamId: mongoIdFromJson(json['proposedByTeamId']),
       status: $enumDecode(_$MatchProposalStatusEnumMap, json['status']),
-      decidedByTeamId: _objectIdFromJsonNullable(json['decidedByTeamId']),
+      decidedByTeamId: mongoIdFromJsonNullable(json['decidedByTeamId']),
       decidedAt: json['decidedAt'] == null
           ? null
           : DateTime.parse(json['decidedAt'] as String),
@@ -218,7 +218,7 @@ TeamMatchModel _$TeamMatchModelFromJson(
   toTeam: const TeamRefConverter().fromJson(json['toTeam']),
   sportType: $enumDecode(_$TeamSportTypeEnumMap, json['sportType']),
   status: $enumDecode(_$TeamMatchStatusEnumMap, json['status']),
-  statusUpdatedBy: _objectIdFromJsonNullable(json['statusUpdatedBy']),
+  statusUpdatedBy: mongoIdFromJsonNullable(json['statusUpdatedBy']),
   statusUpdatedAt: json['statusUpdatedAt'] == null
       ? null
       : DateTime.parse(json['statusUpdatedAt'] as String),
@@ -232,10 +232,10 @@ TeamMatchModel _$TeamMatchModelFromJson(
           ?.map((e) => ProposedTurfModel.fromJson(e as Map<String, dynamic>))
           .toList() ??
       [],
-  selectedSlotProposalId: _objectIdFromJsonNullable(
+  selectedSlotProposalId: mongoIdFromJsonNullable(
     json['selectedSlotProposalId'],
   ),
-  selectedTurfProposalId: _objectIdFromJsonNullable(
+  selectedTurfProposalId: mongoIdFromJsonNullable(
     json['selectedTurfProposalId'],
   ),
   winnerTeam: const TeamRefConverter().fromJson(json['winnerTeam']),

@@ -143,8 +143,15 @@ class QueryKeys {
 
   static List<Object> following(String userId) => ['following', userId];
 
-  /// Logged-in user's outgoing follow edge towards [userId].
-  static List<Object> followStatus(String userId) => ['followStatus', userId];
+  static List<Object> teamFollowers(String teamId) =>
+      ['teamFollowers', teamId];
+
+  /// Logged-in user's outgoing follow edge towards a user or team.
+  static List<Object> followStatus(
+    String recipientId, {
+    String recipientType = 'User',
+  }) =>
+      ['followStatus', recipientType, recipientId];
 
   static List<Object> bookingDetail(String bookingId) =>
       ['bookingDetail', bookingId];

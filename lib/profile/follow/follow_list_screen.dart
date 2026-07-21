@@ -11,7 +11,7 @@ import '../../core/query/query_keys.dart';
 import '../../core/query/query_retry.dart';
 import '../../core/services/followings_service.dart';
 
-enum FollowListMode { followers, following }
+enum FollowListMode { followers, following, teamFollowers }
 
 /// Thin route wrapper — `/followers/:userId`.
 class FollowersScreen extends StatelessWidget {
@@ -33,10 +33,24 @@ class FollowingScreen extends StatelessWidget {
   }
 }
 
+/// Thin route wrapper — `/team-followers/:teamId`.
+class TeamFollowersScreen extends StatelessWidget {
+  const TeamFollowersScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const FollowListScreen(mode: FollowListMode.teamFollowers);
+  }
+}
+
 /// Paginated followers/following list.
 ///
-/// Route: `/followers/:userId` or `/following/:userId`, with an optional
-/// `name` query parameter for the app bar title.
+/// Routes:
+/// - `/followers/:userId`
+/// - `/following/:userId`
+/// - `/team-followers/:teamId`
+///
+/// Optional `name` query parameter for the app bar title.
 class FollowListScreen extends HookWidget {
   const FollowListScreen({super.key, required this.mode});
 
@@ -48,40 +62,56 @@ class FollowListScreen extends HookWidget {
     return null;
   }
 
-  bool get _isFollowers => mode == FollowListMode.followers;
+  bool get _isFollowers =>
+      mode == FollowListMode.followers || mode == FollowListMode.teamFollowers;
+
+  bool get _isTeam => mode == FollowListMode.teamFollowers;
 
   @override
   Widget build(BuildContext context) {
-    final userId = useMemoized(() => _parseParam('userId'));
+    final subjectId = useMemoized(
+      () => _parseParam(_isTeam ? 'teamId' : 'userId'),
+    );
     final name = useMemoized(() => _parseParam('name'));
 
     final title = _isFollowers ? 'Followers' : 'Following';
 
-    if (userId == null) {
+    if (subjectId == null) {
       return Scaffold(
         appBar: AppBar(title: Text(title)),
-        body: const Center(child: Text('User not found')),
+        body: Center(
+          child: Text(_isTeam ? 'Team not found' : 'User not found'),
+        ),
       );
     }
 
     final query =
         useInfiniteQuery<PaginatedResponse<FollowingModel>, Object, int>(
-          _isFollowers
-              ? QueryKeys.followers(userId)
-              : QueryKeys.following(userId),
+          switch (mode) {
+            FollowListMode.followers => QueryKeys.followers(subjectId),
+            FollowListMode.following => QueryKeys.following(subjectId),
+            FollowListMode.teamFollowers =>
+              QueryKeys.teamFollowers(subjectId),
+          },
           (ctx) async {
             final service = FollowingsService();
-            final result = _isFollowers
-                ? await service.getFollowers(
-                    userId,
-                    page: ctx.pageParam,
-                    limit: 20,
-                  )
-                : await service.getFollowing(
-                    userId,
-                    page: ctx.pageParam,
-                    limit: 20,
-                  );
+            final result = switch (mode) {
+              FollowListMode.followers => await service.getFollowers(
+                subjectId,
+                page: ctx.pageParam,
+                limit: 20,
+              ),
+              FollowListMode.following => await service.getFollowing(
+                subjectId,
+                page: ctx.pageParam,
+                limit: 20,
+              ),
+              FollowListMode.teamFollowers => await service.getTeamFollowers(
+                subjectId,
+                page: ctx.pageParam,
+                limit: 20,
+              ),
+            };
             return result ?? EmptyPaginatedResponse<FollowingModel>();
           },
           initialPageParam: 1,

@@ -10,31 +10,47 @@ import '../../../core/query/query_keys.dart';
 import '../../../core/query/query_retry.dart';
 import '../../../core/services/followings_service.dart';
 
-/// Self-contained follow/unfollow pill for the profile hero.
+/// Self-contained follow/unfollow pill for user or team profiles.
 ///
-/// Hides itself when [targetUserId] is empty or is the logged-in user.
+/// Hides itself when [targetId] is empty, or when following a user and that
+/// user is the logged-in account.
 class FollowButton extends HookWidget {
-  const FollowButton({super.key, required this.targetUserId});
+  const FollowButton({
+    super.key,
+    required this.targetId,
+    this.recipientType = FollowRecipientType.user,
+  });
 
-  final String? targetUserId;
+  final String? targetId;
+  final FollowRecipientType recipientType;
 
   @override
   Widget build(BuildContext context) {
-    final userId = targetUserId;
+    final id = targetId;
     final myId = Get.isRegistered<AuthStateController>()
         ? AuthStateController.instance.user?.id
         : null;
 
-    if (userId == null || userId.isEmpty || userId == myId) {
+    final isSelfUser =
+        recipientType == FollowRecipientType.user && id != null && id == myId;
+
+    if (id == null || id.isEmpty || isSelfUser) {
       return const SizedBox.shrink();
     }
 
     final queryClient = useQueryClient();
     final isMutating = useState(false);
+    final statusKey = QueryKeys.followStatus(
+      id,
+      recipientType: recipientType.apiValue,
+    );
 
     final statusQuery = useQuery<FollowingModel?, Object>(
-      QueryKeys.followStatus(userId),
-      (_) => FollowingsService().getOutgoingEdge(userId),
+      statusKey,
+      (_) => FollowingsService().getOutgoingEdge(
+        id,
+        recipientType: recipientType,
+      ),
       retry: noRetry,
     );
 
@@ -42,29 +58,58 @@ class FollowButton extends HookWidget {
     final isFollowing = edge != null && edge.isAccepted;
     final busy = isMutating.value || statusQuery.isLoading;
 
+    Future<void> invalidateRelated() async {
+      await Future.wait([
+        if (recipientType == FollowRecipientType.user) ...[
+          queryClient.invalidateQueries(
+            queryKey: QueryKeys.publicProfile(id),
+          ),
+          queryClient.invalidateQueries(queryKey: QueryKeys.followers(id)),
+        ],
+        if (recipientType == FollowRecipientType.team) ...[
+          queryClient.invalidateQueries(queryKey: QueryKeys.teamDetail(id)),
+          queryClient.invalidateQueries(
+            queryKey: QueryKeys.teamFollowers(id),
+          ),
+        ],
+        if (myId != null && myId.isNotEmpty)
+          queryClient.invalidateQueries(queryKey: QueryKeys.following(myId)),
+      ]);
+    }
+
     Future<void> toggle() async {
       if (isMutating.value) return;
       isMutating.value = true;
       try {
         if (isFollowing) {
-          final followingId = edge.id;
-          if (followingId != null && followingId.isNotEmpty) {
-            await FollowingsService().unfollow(followingId);
+          var followingId = edge.id;
+          if (followingId == null || followingId.isEmpty) {
+            final fresh = await FollowingsService().getOutgoingEdge(
+              id,
+              recipientType: recipientType,
+            );
+            followingId = fresh?.id;
           }
+          if (followingId == null || followingId.isEmpty) return;
+
+          final ok = await FollowingsService().unfollow(followingId);
+          if (!ok) return;
+
+          await queryClient.resetQueries(queryKey: statusKey, exact: true);
         } else {
-          await FollowingsService().follow(userId);
+          final created = await FollowingsService().follow(
+            id,
+            recipientType: recipientType,
+          );
+          if (created == null) return;
+
+          queryClient.setQueryData<FollowingModel?, Object>(
+            statusKey,
+            (_) => created,
+          );
         }
-        await Future.wait([
-          queryClient.invalidateQueries(
-            queryKey: QueryKeys.followStatus(userId),
-          ),
-          queryClient.invalidateQueries(
-            queryKey: QueryKeys.publicProfile(userId),
-          ),
-          queryClient.invalidateQueries(queryKey: QueryKeys.followers(userId)),
-          if (myId != null && myId.isNotEmpty)
-            queryClient.invalidateQueries(queryKey: QueryKeys.following(myId)),
-        ]);
+
+        await invalidateRelated();
       } finally {
         isMutating.value = false;
       }

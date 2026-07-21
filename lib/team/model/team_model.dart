@@ -535,6 +535,8 @@ class TeamModel {
   final TeamSportStatsMap sportStats;
   @JsonKey(defaultValue: <TeamEarnedBadge>[])
   final List<TeamEarnedBadge> badges;
+  @JsonKey(name: 'followerCount', fromJson: _intFromJson, defaultValue: 0)
+  final int followerCount;
   @JsonKey(name: 'createdAt')
   final String? createdAt;
   @JsonKey(name: 'updatedAt')
@@ -574,6 +576,7 @@ class TeamModel {
     this.rankingPoints = 0,
     TeamSportStatsMap? sportStats,
     this.badges = const [],
+    this.followerCount = 0,
     this.createdAt,
     this.updatedAt,
   }) : socialLinks = socialLinks ?? const TeamSocialLinks(),

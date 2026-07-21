@@ -1,6 +1,7 @@
 import 'package:flutter_application_1/bindings/team_player_bindings.dart';
 import 'package:flutter_application_1/core/config/constants.dart';
 import 'package:flutter_application_1/core/guards/auth_guard.dart';
+import 'package:flutter_application_1/profile/follow/follow_list_screen.dart';
 import 'package:flutter_application_1/team/add/add_team_screen.dart';
 import 'package:flutter_application_1/team/details/team_detail_screen.dart';
 import 'package:flutter_application_1/team/join_status/my_join_requests_screen.dart';
@@ -78,6 +79,12 @@ final List<GetPage<dynamic>> teamRoutes = [
   GetPage(
     name: AppConstants.routes.teamMemberProfile,
     page: () => const PlayerProfileScreen(),
+    transition: Transition.cupertino,
+    middlewares: [AuthGuard()],
+  ),
+  GetPage(
+    name: AppConstants.routes.teamFollowers(':teamId'),
+    page: () => const TeamFollowersScreen(),
     transition: Transition.cupertino,
     middlewares: [AuthGuard()],
   ),

@@ -2,19 +2,11 @@ import 'package:json_annotation/json_annotation.dart';
 
 import '../../../core/models/team_match/team_match_ref_converter.dart';
 import '../../../core/models/user_field_converters.dart';
+import '../../../core/utils/mongo_id_util.dart';
 import '../../../match_up/model/team_match_model.dart';
 import 'football_scoring_models.dart';
 
 part 'football_match_event_model.g.dart';
-
-String _mongoIdFromJson(dynamic json) {
-  if (json == null) return '';
-  if (json is Map) {
-    final oid = json[r'$oid'];
-    if (oid != null) return oid.toString();
-  }
-  return json.toString();
-}
 
 @JsonEnum(fieldRename: FieldRename.snake)
 enum FootballEventKind {
@@ -45,7 +37,7 @@ MatchFootballPeriod _periodFromJson(dynamic json) =>
 /// Persisted football event from `POST .../events` and `GET .../events`.
 @JsonSerializable(explicitToJson: true)
 class FootballMatchEvent {
-  @JsonKey(name: '_id', fromJson: _mongoIdFromJson, defaultValue: '')
+  @JsonKey(name: '_id', fromJson: mongoIdFromJson, defaultValue: '')
   final String id;
 
   @JsonKey(name: 'teamMatchId')

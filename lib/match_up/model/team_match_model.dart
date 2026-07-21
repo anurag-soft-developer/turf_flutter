@@ -8,6 +8,7 @@ import '../../core/models/turf_booking/turf_booking_ref_converter.dart';
 import '../../core/models/turf_booking/turf_booking_ref_field_instance.dart';
 import '../../core/models/turf_field_converter.dart';
 import '../../core/models/turf_field_instance.dart';
+import '../../core/utils/mongo_id_util.dart';
 import '../../team/model/team_model.dart';
 import '../announced_players/model/announced_player_model.dart';
 
@@ -59,22 +60,6 @@ enum ProposalDecisionAction { accept, reject, withdraw }
 /// Backend `RecordMatchResultSchema.outcome`.
 enum MatchResultOutcome { ongoing, completed, draw }
 
-// --- ObjectId helpers (lean refs vs populated docs) ---
-
-String _objectIdFromJson(dynamic json) {
-  if (json is String) return json;
-  if (json is Map<String, dynamic>) {
-    final id = json['_id'] ?? json['id'];
-    if (id != null) return id.toString();
-  }
-  return json.toString();
-}
-
-String? _objectIdFromJsonNullable(dynamic json) {
-  if (json == null) return null;
-  return _objectIdFromJson(json);
-}
-
 // --- Nested document shapes ---
 
 /// Slot range on a [TeamMatchModel] proposal.
@@ -94,13 +79,13 @@ class TeamMatchTimeSlot {
 /// Backend embedded `proposedSlots[]` item.
 @JsonSerializable(explicitToJson: true)
 class ProposedSlotModel {
-  @JsonKey(name: 'proposalId', fromJson: _objectIdFromJson)
+  @JsonKey(name: 'proposalId', fromJson: mongoIdFromJson)
   final String proposalId;
   final TeamMatchTimeSlot slot;
-  @JsonKey(name: 'proposedByTeamId', fromJson: _objectIdFromJson)
+  @JsonKey(name: 'proposedByTeamId', fromJson: mongoIdFromJson)
   final String proposedByTeamId;
   final MatchProposalStatus status;
-  @JsonKey(name: 'decidedByTeamId', fromJson: _objectIdFromJsonNullable)
+  @JsonKey(name: 'decidedByTeamId', fromJson: mongoIdFromJsonNullable)
   final String? decidedByTeamId;
   final DateTime? decidedAt;
   final String? reason;
@@ -128,17 +113,17 @@ class ProposedSlotModel {
 /// Backend embedded `proposedTurfs[]` item.
 @JsonSerializable(explicitToJson: true)
 class ProposedTurfModel {
-  @JsonKey(name: 'proposalId', fromJson: _objectIdFromJson)
+  @JsonKey(name: 'proposalId', fromJson: mongoIdFromJson)
   final String proposalId;
 
   /// Lean id or populated turf (see [turfIdHelper]).
   @JsonKey(name: 'turfId')
   @TurfConverter()
   final dynamic turfId;
-  @JsonKey(name: 'proposedByTeamId', fromJson: _objectIdFromJson)
+  @JsonKey(name: 'proposedByTeamId', fromJson: mongoIdFromJson)
   final String proposedByTeamId;
   final MatchProposalStatus status;
-  @JsonKey(name: 'decidedByTeamId', fromJson: _objectIdFromJsonNullable)
+  @JsonKey(name: 'decidedByTeamId', fromJson: mongoIdFromJsonNullable)
   final String? decidedByTeamId;
   final DateTime? decidedAt;
   final String? reason;
@@ -348,16 +333,16 @@ class TeamMatchModel {
   final dynamic toTeam;
   final TeamSportType sportType;
   final TeamMatchStatus status;
-  @JsonKey(name: 'statusUpdatedBy', fromJson: _objectIdFromJsonNullable)
+  @JsonKey(name: 'statusUpdatedBy', fromJson: mongoIdFromJsonNullable)
   final String? statusUpdatedBy;
   final DateTime? statusUpdatedAt;
   @JsonKey(defaultValue: <ProposedSlotModel>[])
   final List<ProposedSlotModel> proposedSlots;
   @JsonKey(defaultValue: <ProposedTurfModel>[])
   final List<ProposedTurfModel> proposedTurfs;
-  @JsonKey(name: 'selectedSlotProposalId', fromJson: _objectIdFromJsonNullable)
+  @JsonKey(name: 'selectedSlotProposalId', fromJson: mongoIdFromJsonNullable)
   final String? selectedSlotProposalId;
-  @JsonKey(name: 'selectedTurfProposalId', fromJson: _objectIdFromJsonNullable)
+  @JsonKey(name: 'selectedTurfProposalId', fromJson: mongoIdFromJsonNullable)
   final String? selectedTurfProposalId;
 
   /// Lean id or populated team subset when backend populates `winnerTeam`.

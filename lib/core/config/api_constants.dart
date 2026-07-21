@@ -162,6 +162,7 @@ class FollowingsEndpoints {
   String byId(String id) => '/followings/$id';
   String userFollowers(String userId) => '/followings/users/$userId/followers';
   String userFollowing(String userId) => '/followings/users/$userId/following';
+  String teamFollowers(String teamId) => '/followings/teams/$teamId/followers';
 }
 
 /// `GET/POST /matchmaking/*` — JWT required.

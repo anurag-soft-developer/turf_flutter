@@ -58,6 +58,7 @@ class Routes {
   final String editProfile = '/edit-profile';
   String followers(String userId) => '/followers/$userId';
   String following(String userId) => '/following/$userId';
+  String teamFollowers(String teamId) => '/team-followers/$teamId';
   final String matchUp = '/match-up';
   final String matchUpChallenges = '/match-up/challenges';
   final String matches = '/matches';
