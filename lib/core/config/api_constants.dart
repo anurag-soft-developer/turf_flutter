@@ -52,7 +52,9 @@ class UserEndpoints {
   String get profile => '/users/profile';
   String get updateProfile => '/users/profile';
   String get notificationSettings => '/users/notification-settings';
-  String get fcmTokens => '/users/fcm-tokens';
+  String get fcmDevices => '/users/fcm-devices';
+  String fcmDeviceByKey(String deviceKey) =>
+      '/users/fcm-devices/${Uri.encodeComponent(deviceKey)}';
   String get publicProfiles => '/users/profiles';
   String get leaderboard => '/users/leaderboard';
   String publicProfileByIdentifier(String identifier) =>

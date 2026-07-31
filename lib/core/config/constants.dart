@@ -75,6 +75,7 @@ class StorageKeys {
   final String refreshToken = 'refresh_token';
   final String userData = 'user_data';
   final String isLoggedIn = 'is_logged_in';
+  final String fcmDeviceKey = 'fcm_device_key';
 }
 
 class ErrorMessages {

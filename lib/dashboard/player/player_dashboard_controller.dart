@@ -15,10 +15,28 @@ class PlayerDashboardController extends GetxController {
 
   final RxBool isResolvingLocation = false.obs;
 
+  /// Unread inbox count from the latest player dashboard payload.
+  final RxInt unreadNotificationCount = 0.obs;
+
   @override
   void onInit() {
     super.onInit();
     resolveLocation();
+  }
+
+  void decrementUnreadNotificationCount([int by = 1]) {
+    if (by <= 0) return;
+    final next = unreadNotificationCount.value - by;
+    unreadNotificationCount.value = next < 0 ? 0 : next;
+  }
+
+  void incrementUnreadNotificationCount([int by = 1]) {
+    if (by <= 0) return;
+    unreadNotificationCount.value += by;
+  }
+
+  void clearUnreadNotificationCount() {
+    unreadNotificationCount.value = 0;
   }
 
   Future<void> resolveLocation() async {

@@ -173,6 +173,8 @@ class _PlayerDashboardFeed extends HookWidget {
         if (data == null) {
           throw Exception('Failed to load dashboard');
         }
+        Get.find<PlayerDashboardController>().unreadNotificationCount.value =
+            data.unreadNotificationCount;
         return data;
       },
       retry: noRetry,

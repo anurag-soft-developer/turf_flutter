@@ -4,6 +4,7 @@ import '../services/user_service.dart';
 import '../models/user/user_model.dart';
 import '../config/constants.dart';
 import '../routes/app_routes.dart';
+import '../../notification/notification_session_controller.dart';
 
 class AuthStateController extends GetxController {
   static AuthStateController get instance => Get.find();
@@ -41,6 +42,7 @@ class AuthStateController extends GetxController {
     if (storedUser != null) {
       _user.value = storedUser;
       _isLoggedIn.value = true;
+      await _startNotificationSession();
       if (Get.currentRoute == '/') {
         Get.offAllNamed(AppRoutes.mainRoute);
       }
@@ -49,13 +51,36 @@ class AuthStateController extends GetxController {
     _isLoading.value = false;
   }
 
+  Future<void> _startNotificationSession() async {
+    if (!Get.isRegistered<NotificationSessionController>()) return;
+    try {
+      await NotificationSessionController.instance.startForSession();
+    } catch (_) {
+      // Soft-fail: inbox still works via pull; push may be unavailable.
+    }
+  }
+
+  Future<void> _stopNotificationSession() async {
+    if (!Get.isRegistered<NotificationSessionController>()) return;
+    try {
+      await NotificationSessionController.instance.stopSession();
+    } catch (_) {
+      // Ignore cleanup errors during logout.
+    }
+  }
+
   void setUser(UserModel user) {
     _user.value = user;
     _isLoggedIn.value = true;
+    // Fire-and-forget; login screens navigate immediately after setUser.
+    _startNotificationSession();
   }
 
   Future<void> signOut() async {
     _isLoading.value = true;
+
+    // Remove FCM device + disconnect socket while JWT is still valid.
+    await _stopNotificationSession();
 
     await _authService.signOut();
 

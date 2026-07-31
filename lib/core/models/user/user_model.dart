@@ -41,6 +41,7 @@ NotificationModule? notificationModuleFromApiString(String key) {
     case 'teams':
       return NotificationModule.teams;
     case 'connections':
+    case 'followings':
       return NotificationModule.connections;
     case 'withdrawals':
       return NotificationModule.withdrawals;

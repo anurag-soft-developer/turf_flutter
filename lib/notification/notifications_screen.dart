@@ -5,6 +5,7 @@ import 'package:flutter_application_1/core/models/user/user_model.dart';
 import 'package:flutter_application_1/core/query/query_keys.dart';
 import '../core/query/query_retry.dart';
 import 'package:flutter_application_1/core/utils/app_snackbar.dart';
+import 'package:flutter_application_1/dashboard/player/player_dashboard_controller.dart';
 import 'package:flutter_application_1/notification/model/notification_model.dart';
 import 'package:flutter_application_1/notification/notification_router.dart';
 import 'package:flutter_application_1/notification/notification_service.dart';
@@ -77,6 +78,11 @@ class NotificationsScreen extends HookWidget {
       );
     }
 
+    void adjustDashboardUnread(void Function(PlayerDashboardController c) fn) {
+      if (!Get.isRegistered<PlayerDashboardController>()) return;
+      fn(Get.find<PlayerDashboardController>());
+    }
+
     void markAllReadInCache() {
       if (!Get.isRegistered<QueryClient>()) return;
       final now = DateTime.now().toUtc().toIso8601String();
@@ -137,11 +143,13 @@ class NotificationsScreen extends HookWidget {
             updatedAt: n.updatedAt,
           );
           patchNotificationInCache(optimistic);
+          adjustDashboardUnread((c) => c.decrementUnreadNotificationCount());
 
           final updated = await service.markRead(n.id);
           if (updated != null) {
             patchNotificationInCache(updated);
           } else {
+            adjustDashboardUnread((c) => c.unreadNotificationCount.value++);
             await invalidateNotifications();
           }
         }
@@ -154,7 +162,11 @@ class NotificationsScreen extends HookWidget {
     }
 
     Future<void> markAllRead() async {
+      final previousUnread = Get.isRegistered<PlayerDashboardController>()
+          ? Get.find<PlayerDashboardController>().unreadNotificationCount.value
+          : 0;
       markAllReadInCache();
+      adjustDashboardUnread((c) => c.clearUnreadNotificationCount());
       final res = await service.markAllRead();
       if (res != null) {
         await invalidateNotifications();
@@ -163,6 +175,9 @@ class NotificationsScreen extends HookWidget {
           message: 'Marked ${res.updatedCount} as read.',
         );
       } else {
+        adjustDashboardUnread(
+          (c) => c.unreadNotificationCount.value = previousUnread,
+        );
         await invalidateNotifications();
         AppSnackbar.error(
           title: 'Notifications',

@@ -59,6 +59,10 @@ dependencies:
   flutter_hooks: ^0.21.3+1
   phone_numbers_parser: ^9.0.24
   country_picker: ^2.0.28
+  firebase_core: ^3.15.2
+  firebase_messaging: ^15.2.10
+  flutter_local_notifications: ^19.4.0
+  uuid: ^4.5.1
 
 dev_dependencies:
   flutter_test:

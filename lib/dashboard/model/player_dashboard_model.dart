@@ -4,11 +4,13 @@ class PlayerDashboardModel {
   final String turfsTitle;
   final List<TurfModel> turfs;
   final int nearbyTeamsCount;
+  final int unreadNotificationCount;
 
   const PlayerDashboardModel({
     required this.turfsTitle,
     required this.turfs,
     required this.nearbyTeamsCount,
+    required this.unreadNotificationCount,
   });
 
   factory PlayerDashboardModel.fromJson(Map<String, dynamic> json) {
@@ -22,6 +24,8 @@ class PlayerDashboardModel {
           .map(TurfModel.fromJson)
           .toList(),
       nearbyTeamsCount: (json['nearbyTeamsCount'] as num?)?.toInt() ?? 0,
+      unreadNotificationCount:
+          (json['unreadNotificationCount'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -29,5 +33,6 @@ class PlayerDashboardModel {
     turfsTitle: 'Featured turfs',
     turfs: [],
     nearbyTeamsCount: 0,
+    unreadNotificationCount: 0,
   );
 }

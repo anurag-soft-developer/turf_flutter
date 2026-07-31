@@ -44,9 +44,25 @@ class UserService {
 
   /// Merges or updates a single device by [FcmTokenEntry.deviceKey].
   Future<UserModel?> upsertFcmDevice(FcmTokenEntry device) async {
+    final data = <String, dynamic>{
+      'deviceKey': device.deviceKey,
+      'token': device.token,
+    };
+    if (device.platform != null && device.platform!.isNotEmpty) {
+      data['platform'] = device.platform;
+    }
     final response = await _apiService.patch<Map<String, dynamic>>(
-      ApiConstants.user.fcmTokens,
-      data: device.toJson(),
+      ApiConstants.user.fcmDevices,
+      data: data,
+    );
+    if (response == null) return null;
+    return UserModel.fromJson(response);
+  }
+
+  /// Removes a single FCM device by [deviceKey] (e.g. on logout).
+  Future<UserModel?> deleteFcmDevice(String deviceKey) async {
+    final response = await _apiService.delete<Map<String, dynamic>>(
+      ApiConstants.user.fcmDeviceByKey(deviceKey),
     );
     if (response == null) return null;
     return UserModel.fromJson(response);

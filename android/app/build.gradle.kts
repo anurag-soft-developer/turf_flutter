@@ -11,6 +11,7 @@ android {
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
@@ -24,7 +25,7 @@ android {
         applicationId = "com.example.turf"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        minSdk = maxOf(flutter.minSdkVersion, 23)
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -39,6 +40,15 @@ android {
     }
 }
 
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
+}
+
 flutter {
     source = "../.."
+}
+
+// Apply only when Firebase config is present (add google-services.json from Firebase Console).
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
 }
