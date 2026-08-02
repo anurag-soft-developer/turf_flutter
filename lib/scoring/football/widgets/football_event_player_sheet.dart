@@ -72,6 +72,17 @@ class _FootballEventSheetBodyState extends State<_FootballEventSheetBody> {
       widget.kind == FootballEventKind.redCard ||
       widget.kind == FootballEventKind.penaltyMissed;
 
+  static const TextStyle _titleStyle = TextStyle(
+    fontWeight: FontWeight.w700,
+    fontSize: 18,
+    color: Color(AppColors.textColor),
+  );
+
+  static const TextStyle _labelStyle = TextStyle(
+    fontWeight: FontWeight.w600,
+    color: Color(AppColors.textColor),
+  );
+
   @override
   Widget build(BuildContext context) {
     final bottom = MediaQuery.paddingOf(context).bottom;
@@ -82,13 +93,10 @@ class _FootballEventSheetBodyState extends State<_FootballEventSheetBody> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              eventKindLabel(widget.kind),
-              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
-            ),
+            Text(eventKindLabel(widget.kind), style: _titleStyle),
             const SizedBox(height: 16),
             if (_needsBeneficiaryTeam) ...[
-              const Text('Scoring team', style: TextStyle(fontWeight: FontWeight.w600)),
+              const Text('Scoring team', style: _labelStyle),
               const SizedBox(height: 8),
               _teamPicker(
                 selectedId: _beneficiaryTeamId,
@@ -96,8 +104,9 @@ class _FootballEventSheetBodyState extends State<_FootballEventSheetBody> {
               ),
               const SizedBox(height: 12),
             ],
-            if (_needsTeamOnly || widget.kind == FootballEventKind.substitution) ...[
-              const Text('Team', style: TextStyle(fontWeight: FontWeight.w600)),
+            if (_needsTeamOnly ||
+                widget.kind == FootballEventKind.substitution) ...[
+              const Text('Team', style: _labelStyle),
               const SizedBox(height: 8),
               _teamPicker(
                 selectedId: _teamId,
@@ -180,6 +189,8 @@ class _FootballEventSheetBodyState extends State<_FootballEventSheetBody> {
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(48),
                 backgroundColor: const Color(AppColors.primaryColor),
+                foregroundColor: Colors.white,
+                disabledForegroundColor: Colors.white70,
               ),
               child: const Text('Record event'),
             ),
@@ -248,7 +259,7 @@ class _FootballEventSheetBodyState extends State<_FootballEventSheetBody> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+        Text(label, style: _labelStyle),
         const SizedBox(height: 6),
         OutlinedButton(
           onPressed: players.isEmpty
@@ -257,8 +268,22 @@ class _FootballEventSheetBodyState extends State<_FootballEventSheetBody> {
                   final picked = await _pickPlayer(context, label, players);
                   if (picked != null) onSelected(picked);
                 },
+          style: OutlinedButton.styleFrom(
+            foregroundColor: const Color(AppColors.textColor),
+            disabledForegroundColor: const Color(AppColors.textSecondaryColor),
+            side: BorderSide(
+              color: const Color(AppColors.dividerColor).withValues(alpha: 0.85),
+            ),
+          ),
           child: Text(
-            selectedName ?? (optional ? 'Tap to select (optional)' : 'Tap to select'),
+            selectedName ??
+                (optional ? 'Tap to select (optional)' : 'Tap to select'),
+            style: TextStyle(
+              color: selectedName != null
+                  ? const Color(AppColors.textColor)
+                  : const Color(AppColors.textSecondaryColor),
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
       ],
@@ -282,7 +307,7 @@ class _FootballEventSheetBodyState extends State<_FootballEventSheetBody> {
           children: [
             Padding(
               padding: const EdgeInsets.all(16),
-              child: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+              child: Text(title, style: _titleStyle),
             ),
             Flexible(
               child: ListView.builder(
@@ -291,7 +316,13 @@ class _FootballEventSheetBodyState extends State<_FootballEventSheetBody> {
                 itemBuilder: (_, i) {
                   final p = players[i];
                   return ListTile(
-                    title: Text(p.name),
+                    title: Text(
+                      p.name,
+                      style: const TextStyle(
+                        color: Color(AppColors.textColor),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                     onTap: () => Navigator.pop(ctx, p),
                   );
                 },

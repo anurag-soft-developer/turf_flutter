@@ -2,12 +2,18 @@ enum ScoringSport { cricket, football }
 
 enum ScoringAction { appendBall, appendEvent, undoBall, undoEvent }
 
-/// Known `data.kind` values on cricket / announced-player scoring events.
+/// Known `data.kind` values on cricket / football / announced-player scoring events.
 abstract final class ScoringEventKind {
   static const cricketCreateSession = 'cricket_create_session';
   static const cricketChangeInning = 'cricket_change_inning';
   static const cricketCompleteMatch = 'cricket_complete_match';
   static const cricketUpdateLineup = 'cricket_update_lineup';
+  static const footballCreateSession = 'football_create_session';
+  static const footballAppendEvent = 'football_append_event';
+  static const footballChangeInning = 'football_change_inning';
+  static const footballTimerPause = 'football_timer_pause';
+  static const footballTimerResume = 'football_timer_resume';
+  static const footballCompleteMatch = 'football_complete_match';
   static const announcedPlayersUpdated = 'announced_players_updated';
 }
 
@@ -54,6 +60,24 @@ class ScoringUpdatePayload {
 
   bool get isCricketUpdateLineup =>
       dataKind == ScoringEventKind.cricketUpdateLineup;
+
+  bool get isFootballCreateSession =>
+      dataKind == ScoringEventKind.footballCreateSession;
+
+  bool get isFootballAppendEvent =>
+      dataKind == ScoringEventKind.footballAppendEvent;
+
+  bool get isFootballChangeInning =>
+      dataKind == ScoringEventKind.footballChangeInning;
+
+  bool get isFootballTimerPause =>
+      dataKind == ScoringEventKind.footballTimerPause;
+
+  bool get isFootballTimerResume =>
+      dataKind == ScoringEventKind.footballTimerResume;
+
+  bool get isFootballCompleteMatch =>
+      dataKind == ScoringEventKind.footballCompleteMatch;
 
   factory ScoringUpdatePayload.fromJson(Map<String, dynamic> json) {
     final matchId =

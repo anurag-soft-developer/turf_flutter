@@ -111,6 +111,7 @@ class _FootballMatchTimerState extends State<FootballMatchTimer> {
                     style: const TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.w800,
+                      color: Color(AppColors.textColor),
                       fontFeatures: [FontFeature.tabularFigures()],
                     ),
                   ),

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_query/flutter_query.dart';
@@ -48,10 +50,14 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
     final args = (Get.arguments as Map?)?.cast<String, dynamic>() ?? const {};
     _teamMatchId = args['matchId']?.toString() ?? '';
     _controller.currentSessionId.value = _teamMatchId;
+    if (_teamMatchId.isNotEmpty) {
+      unawaited(_controller.joinLiveSession(_teamMatchId));
+    }
   }
 
   @override
   void dispose() {
+    unawaited(_controller.leaveLiveSession());
     _matchMinuteController.dispose();
     super.dispose();
   }
@@ -441,7 +447,10 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
                             Expanded(
                               child: Text(
                                 'Match completed',
-                                style: TextStyle(fontWeight: FontWeight.w700),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(AppColors.textColor),
+                                ),
                               ),
                             ),
                           ],

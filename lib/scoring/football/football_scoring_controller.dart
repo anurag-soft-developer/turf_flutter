@@ -1,10 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
+import '../../core/auth/auth_state_controller.dart';
 import '../../core/query/query_keys.dart';
 import '../../match_up/model/team_match_model.dart';
+import '../shared/scoring_shared_models.dart';
+import '../shared/scoring_socket_service.dart';
 import 'football_scoring_api_service.dart';
+import 'football_scoring_live_cache.dart';
 import 'model/football_match_event_model.dart';
 import 'model/football_scoring_models.dart';
 
@@ -15,6 +21,8 @@ class FootballScoringController extends GetxController {
 
   final FootballScoringApiService _apiService;
 
+  final RxBool isConnected = false.obs;
+  final RxBool isJoiningSession = false.obs;
   final RxBool isSendingUpdate = false.obs;
   final RxString currentSessionId = ''.obs;
   final RxnString errorMessage = RxnString();
@@ -35,7 +43,20 @@ class FootballScoringController extends GetxController {
       <AppendFootballEventRequest>[];
   final RxBool canRedoFootballEvent = false.obs;
 
+  StreamSubscription<ScoringUpdatePayload>? _scoringSub;
+  String? _joinedMatchId;
+
   bool get canUndoFootballEvent => footballEvents.isNotEmpty;
+
+  ScoringSocketService? get _socket =>
+      Get.isRegistered<ScoringSocketService>()
+          ? Get.find<ScoringSocketService>()
+          : null;
+
+  String? get _currentUserId {
+    if (!Get.isRegistered<AuthStateController>()) return null;
+    return AuthStateController.instance.user?.id;
+  }
 
   void seedFromQuery({
     TeamMatchModel? match,
@@ -47,6 +68,112 @@ class FootballScoringController extends GetxController {
     if (events != null) {
       footballEvents.assignAll(events);
     }
+  }
+
+  Future<void> joinLiveSession(String teamMatchId) async {
+    final id = teamMatchId.trim();
+    if (id.isEmpty) return;
+
+    final previous = _joinedMatchId;
+    if (previous != null && previous != id) {
+      await leaveLiveSession();
+    }
+
+    isJoiningSession.value = true;
+    try {
+      final socket = _socket;
+      if (socket == null) {
+        isConnected.value = false;
+        return;
+      }
+      _scoringSub ??= socket.updates.listen(_onScoringUpdate);
+      await socket.joinMatch(id);
+      _joinedMatchId = id;
+      isConnected.value = socket.isConnected;
+    } catch (e, st) {
+      debugPrint('joinLiveSession failed: $e\n$st');
+      isConnected.value = false;
+    } finally {
+      isJoiningSession.value = false;
+    }
+  }
+
+  Future<void> leaveLiveSession() async {
+    final id = _joinedMatchId;
+    _joinedMatchId = null;
+    await _scoringSub?.cancel();
+    _scoringSub = null;
+    isConnected.value = false;
+    if (id == null || id.isEmpty) return;
+    try {
+      await _socket?.leaveMatch(id);
+    } catch (e, st) {
+      debugPrint('leaveLiveSession failed: $e\n$st');
+    }
+  }
+
+  void _onScoringUpdate(ScoringUpdatePayload payload) {
+    final sessionId = currentSessionId.value;
+    if (sessionId.isEmpty || payload.teamMatchId != sessionId) return;
+    if (payload.sport != ScoringSport.football) return;
+
+    final actorId = payload.actorUserId;
+    final me = _currentUserId;
+    if (me != null && me.isNotEmpty && actorId == me) {
+      // Actor already applied the HTTP response locally.
+      return;
+    }
+
+    try {
+      _applyRemoteUpdate(payload);
+    } catch (e, st) {
+      debugPrint('apply remote scoring update failed: $e\n$st');
+    }
+  }
+
+  void _applyRemoteUpdate(ScoringUpdatePayload payload) {
+    final data = payload.data;
+
+    if (footballMatch.value == null) {
+      final sessionId = currentSessionId.value;
+      if (sessionId.isNotEmpty) {
+        unawaited(fetchFootballMatch(sessionId));
+        if (footballEventsPatchPresent(payload)) {
+          unawaited(fetchFootballEvents(sessionId));
+        }
+      }
+      _patchLiveQueryCache(payload);
+      return;
+    }
+
+    final current = footballMatch.value;
+    if (current != null && footballMatchPatchPresent(data)) {
+      footballMatch.value = patchFootballMatchFromData(current, data);
+    }
+
+    final patchedEvents = patchFootballEventsFromPayload(
+      footballEvents.toList(),
+      payload,
+    );
+    if (patchedEvents != null) {
+      footballEvents.assignAll(patchedEvents);
+      footballEvents.refresh();
+    }
+
+    if (payload.isFootballChangeInning || payload.isFootballCompleteMatch) {
+      _resetEventHistory();
+    }
+
+    _patchLiveQueryCache(payload);
+  }
+
+  void _patchLiveQueryCache(ScoringUpdatePayload payload) {
+    if (!Get.isRegistered<QueryClient>()) return;
+    applyFootballScoringUpdateToCache(
+      Get.find<QueryClient>(),
+      payload,
+      expectedMatchId: currentSessionId.value,
+    );
   }
 
   void _syncQueryCache({bool includeEvents = true}) {
@@ -392,5 +519,11 @@ class FootballScoringController extends GetxController {
     _redoEventRequests.add(request);
     _syncRedoAvailability();
     return false;
+  }
+
+  @override
+  void onClose() {
+    unawaited(leaveLiveSession());
+    super.onClose();
   }
 }

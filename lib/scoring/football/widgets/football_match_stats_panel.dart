@@ -97,7 +97,11 @@ class FootballMatchStatsPanel extends StatelessWidget {
                 ),
                 const Text(
                   '–',
-                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.w300),
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w300,
+                    color: Color(AppColors.textColor),
+                  ),
                 ),
                 Expanded(
                   child: _ScoreColumn(
@@ -137,7 +141,11 @@ class _ScoreColumn extends StatelessWidget {
           teamName,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+            color: Color(AppColors.textColor),
+          ),
         ),
         const SizedBox(height: 4),
         Text(

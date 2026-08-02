@@ -61,7 +61,11 @@ class FootballEventsTimeline extends StatelessWidget {
               padding: EdgeInsets.fromLTRB(16, 14, 16, 8),
               child: Text(
                 'Match events',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                  color: Color(AppColors.textColor),
+                ),
               ),
             ),
             for (var i = 0; i < inningsKeys.length; i++) ...[
@@ -113,6 +117,7 @@ class _InningsSection extends StatelessWidget {
                   style: const TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 13,
+                    color: Color(AppColors.textColor),
                   ),
                 ),
               ),
@@ -159,9 +164,19 @@ class _InningsSection extends StatelessWidget {
               ),
               title: Text(
                 '$minute#${e.sequence} ${eventKindLabel(e.kind)}',
-                style: const TextStyle(fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Color(AppColors.textColor),
+                ),
               ),
-              subtitle: subtitle != null ? Text(subtitle) : null,
+              subtitle: subtitle != null
+                  ? Text(
+                      subtitle,
+                      style: const TextStyle(
+                        color: Color(AppColors.textSecondaryColor),
+                      ),
+                    )
+                  : null,
             );
           },
         ),
