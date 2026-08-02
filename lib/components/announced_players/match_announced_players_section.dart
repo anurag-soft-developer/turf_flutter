@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import '../../core/config/constants.dart';
 import '../../match_up/announced_players/model/announced_player_model.dart';
@@ -54,6 +55,29 @@ class MatchAnnouncedPlayersSection extends StatelessWidget {
       TeamMatchStatus.abandoned,
     };
     return !terminal.contains(m.status);
+  }
+
+  /// Minimum squad size required before scoring can start.
+  static const int minAnnouncedPlayersPerTeam = 5;
+
+  static int announcedCountForTeam(TeamMatchModel m, String teamId) {
+    if (teamId.isEmpty) return 0;
+    return m.announcedPlayers
+        .where((p) => p.teamIdHelper.getId() == teamId)
+        .length;
+  }
+
+  /// True when [teamId] has announced at least [minAnnouncedPlayersPerTeam].
+  static bool teamHasAnnouncedPlayers(TeamMatchModel m, String teamId) {
+    return announcedCountForTeam(m, teamId) >= minAnnouncedPlayersPerTeam;
+  }
+
+  /// True when both challenge teams have announced a full squad.
+  static bool bothTeamsHaveAnnouncedPlayers(TeamMatchModel m) {
+    final fromId = m.fromTeamHelper.getId() ?? '';
+    final toId = m.toTeamHelper.getId() ?? '';
+    return teamHasAnnouncedPlayers(m, fromId) &&
+        teamHasAnnouncedPlayers(m, toId);
   }
 
   @override
@@ -231,91 +255,112 @@ class _AnnouncedPlayerChip extends StatelessWidget {
 
   final AnnouncedPlayerModel player;
 
+  void _openProfile() {
+    final userId = player.userIdHelper.getId();
+    if (userId == null || userId.isEmpty) return;
+    Get.toNamed(
+      AppConstants.routes.teamMemberProfile,
+      arguments: {'userId': userId},
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final avatar = player.avatar;
-    return Container(
-      width: 104,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(AppColors.backgroundColor),
+    final userId = player.userIdHelper.getId();
+    final canOpenProfile = userId != null && userId.isNotEmpty;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: canOpenProfile ? _openProfile : null,
         borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            width: 52,
-            height: 52,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                CircleAvatar(
-                  radius: 26,
-                  backgroundColor: const Color(
-                    AppColors.primaryColor,
-                  ).withValues(alpha: 0.12),
-                  backgroundImage: avatar != null && avatar.isNotEmpty
-                      ? NetworkImage(avatar)
-                      : null,
-                  child: avatar == null || avatar.isEmpty
-                      ? const Icon(
-                          Icons.person,
-                          color: Color(AppColors.primaryColor),
-                          size: 28,
-                        )
-                      : null,
-                ),
-                if (player.isCaption || player.isWiseCaption)
-                  Positioned(
-                    top: -6,
-                    right: -6,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (player.isCaption)
-                          Tooltip(
-                            message: 'Captain',
-                            child: _LeadershipChip(
-                              label: 'C',
-                              foreground: const Color(AppColors.primaryColor),
-                              background: Colors.white,
-                              compact: true,
-                            ),
-                          ),
-                        if (player.isCaption && player.isWiseCaption)
-                          const SizedBox(height: 3),
-                        if (player.isWiseCaption)
-                          Tooltip(
-                            message: 'Vice-captain',
-                            child: _LeadershipChip(
-                              label: 'VC',
-                              foreground: const Color(AppColors.secondaryColor),
-                              background: Colors.white,
-                              compact: true,
-                            ),
-                          ),
-                      ],
+        child: Ink(
+          width: 104,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+          decoration: BoxDecoration(
+            color: const Color(AppColors.backgroundColor),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 52,
+                height: 52,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    CircleAvatar(
+                      radius: 26,
+                      backgroundColor: const Color(
+                        AppColors.primaryColor,
+                      ).withValues(alpha: 0.12),
+                      backgroundImage: avatar != null && avatar.isNotEmpty
+                          ? NetworkImage(avatar)
+                          : null,
+                      child: avatar == null || avatar.isEmpty
+                          ? const Icon(
+                              Icons.person,
+                              color: Color(AppColors.primaryColor),
+                              size: 28,
+                            )
+                          : null,
                     ),
-                  ),
-              ],
-            ),
+                    if (player.isCaption || player.isWiseCaption)
+                      Positioned(
+                        top: -6,
+                        right: -6,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (player.isCaption)
+                              Tooltip(
+                                message: 'Captain',
+                                child: _LeadershipChip(
+                                  label: 'C',
+                                  foreground:
+                                      const Color(AppColors.primaryColor),
+                                  background: Colors.white,
+                                  compact: true,
+                                ),
+                              ),
+                            if (player.isCaption && player.isWiseCaption)
+                              const SizedBox(height: 3),
+                            if (player.isWiseCaption)
+                              Tooltip(
+                                message: 'Vice-captain',
+                                child: _LeadershipChip(
+                                  label: 'VC',
+                                  foreground:
+                                      const Color(AppColors.secondaryColor),
+                                  background: Colors.white,
+                                  compact: true,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                player.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  height: 1.2,
+                  color: Color(AppColors.textColor),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            player.name,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              height: 1.2,
-              color: Color(AppColors.textColor),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

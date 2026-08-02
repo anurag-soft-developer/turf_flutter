@@ -3,6 +3,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
+import '../../components/announced_players/manage_announced_players_sheet.dart';
 import '../../components/announced_players/match_announced_players_section.dart';
 import '../../components/scoring/cricket/scorecard/match_scorecard_tab.dart';
 import '../../components/challenges/match_challenge_respond_actions.dart';
@@ -357,6 +358,68 @@ class _MatchChallengeDetailBody extends StatelessWidget {
                     () {
                       final ongoing =
                           currentMatch.status == TeamMatchStatus.ongoing;
+                      final myTeamId = controller.myTeamId;
+                      final fromId =
+                          currentMatch.fromTeamHelper.getId() ?? '';
+                      final toId = currentMatch.toTeamHelper.getId() ?? '';
+                      final opponentId =
+                          myTeamId == fromId ? toId : fromId;
+                      final myReady =
+                          MatchAnnouncedPlayersSection.teamHasAnnouncedPlayers(
+                            currentMatch,
+                            myTeamId,
+                          );
+                      final opponentReady =
+                          MatchAnnouncedPlayersSection.teamHasAnnouncedPlayers(
+                            currentMatch,
+                            opponentId,
+                          );
+                      final canAnnounce =
+                          MatchAnnouncedPlayersSection
+                              .allowsAnnouncedPlayerEdits(currentMatch) &&
+                          myTeamId.isNotEmpty;
+
+                      if (!ongoing && !(myReady && opponentReady)) {
+                        if (myReady && !opponentReady) {
+                          return Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Text(
+                              'Awaiting opponent squad',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Color(AppColors.textSecondaryColor),
+                              ),
+                            ),
+                          );
+                        }
+
+                        return SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: controller.actionBusy || !canAnnounce
+                                ? null
+                                : () => openManageAnnouncedPlayersSheet(
+                                      context: context,
+                                      match: currentMatch,
+                                      actorTeamId: myTeamId,
+                                      onSaved: controller.scheduleMatchUpdate,
+                                    ),
+                            icon: const Icon(Icons.groups_outlined),
+                            label: const Text('Announce players'),
+                          ),
+                        );
+                      }
+
                       return SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(
