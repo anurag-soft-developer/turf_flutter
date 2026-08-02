@@ -1,5 +1,6 @@
 import 'package:flutter_application_1/notification/notification_socket_service.dart';
 import 'package:flutter_application_1/notification/push_notification_service.dart';
+import 'package:flutter_application_1/scoring/shared/scoring_socket_service.dart';
 import 'package:get/get.dart';
 
 /// Owns push + socket lifecycle for an authenticated session.
@@ -9,6 +10,11 @@ class NotificationSessionController extends GetxController {
   final PushNotificationService _push = Get.find<PushNotificationService>();
   final NotificationSocketService _socket =
       Get.find<NotificationSocketService>();
+
+  ScoringSocketService? get _scoringSocket =>
+      Get.isRegistered<ScoringSocketService>()
+          ? Get.find<ScoringSocketService>()
+          : null;
 
   Future<void> startForSession() async {
     // Services are idempotent; always attempt so a prior soft-fail can recover.
@@ -22,5 +28,13 @@ class NotificationSessionController extends GetxController {
     // Remove FCM device while auth token is still valid.
     await _push.stop();
     await _socket.stop();
+    await _scoringSocket?.stop();
+  }
+
+  Future<void> reconnectSocketsWithFreshToken() async {
+    await Future.wait([
+      _socket.reconnectWithFreshToken(),
+      if (_scoringSocket != null) _scoringSocket!.reconnectWithFreshToken(),
+    ]);
   }
 }

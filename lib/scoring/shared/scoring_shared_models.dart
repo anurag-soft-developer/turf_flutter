@@ -1,6 +1,15 @@
 enum ScoringSport { cricket, football }
 
-enum ScoringAction { appendBall, appendEvent }
+enum ScoringAction { appendBall, appendEvent, undoBall, undoEvent }
+
+/// Known `data.kind` values on cricket / announced-player scoring events.
+abstract final class ScoringEventKind {
+  static const cricketCreateSession = 'cricket_create_session';
+  static const cricketChangeInning = 'cricket_change_inning';
+  static const cricketCompleteMatch = 'cricket_complete_match';
+  static const cricketUpdateLineup = 'cricket_update_lineup';
+  static const announcedPlayersUpdated = 'announced_players_updated';
+}
 
 class ScoringMatchRef {
   final String teamMatchId;
@@ -28,6 +37,23 @@ class ScoringUpdatePayload {
     required this.data,
     required this.createdAt,
   });
+
+  String? get dataKind => data['kind']?.toString();
+
+  bool get isAnnouncedPlayersUpdated =>
+      dataKind == ScoringEventKind.announcedPlayersUpdated;
+
+  bool get isCricketCreateSession =>
+      dataKind == ScoringEventKind.cricketCreateSession;
+
+  bool get isCricketChangeInning =>
+      dataKind == ScoringEventKind.cricketChangeInning;
+
+  bool get isCricketCompleteMatch =>
+      dataKind == ScoringEventKind.cricketCompleteMatch;
+
+  bool get isCricketUpdateLineup =>
+      dataKind == ScoringEventKind.cricketUpdateLineup;
 
   factory ScoringUpdatePayload.fromJson(Map<String, dynamic> json) {
     final matchId =
@@ -67,14 +93,19 @@ String _sportToApi(ScoringSport sport) {
 }
 
 ScoringAction _actionFromApi(String? value) {
-  return value == 'append_event'
-      ? ScoringAction.appendEvent
-      : ScoringAction.appendBall;
+  return switch (value) {
+    'append_event' => ScoringAction.appendEvent,
+    'undo_ball' => ScoringAction.undoBall,
+    'undo_event' => ScoringAction.undoEvent,
+    _ => ScoringAction.appendBall,
+  };
 }
 
 String _actionToApi(ScoringAction action) {
   return switch (action) {
     ScoringAction.appendBall => 'append_ball',
     ScoringAction.appendEvent => 'append_event',
+    ScoringAction.undoBall => 'undo_ball',
+    ScoringAction.undoEvent => 'undo_event',
   };
 }

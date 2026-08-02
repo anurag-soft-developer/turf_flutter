@@ -236,6 +236,7 @@ class _CricketLineupCardState extends State<CricketLineupCard> {
                     style: const TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 17,
+                      color: Color(AppColors.textColor),
                     ),
                   ),
                 ),
@@ -277,7 +278,14 @@ class _CricketLineupCardState extends State<CricketLineupCard> {
                                 )
                               : null,
                         ),
-                        title: Text(p.name),
+                        title: Text(
+                          p.name,
+                          style: TextStyle(
+                            color: disabled
+                                ? const Color(AppColors.textSecondaryColor)
+                                : const Color(AppColors.textColor),
+                          ),
+                        ),
                         subtitle: disabled
                             ? Text(
                                 dismissed.contains(uid)

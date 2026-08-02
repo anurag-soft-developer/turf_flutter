@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_query/flutter_query.dart';
@@ -52,10 +54,14 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
     final args = (Get.arguments as Map?)?.cast<String, dynamic>() ?? const {};
     _teamMatchId = args['matchId']?.toString() ?? '';
     _scoringController.currentSessionId.value = _teamMatchId;
+    if (_teamMatchId.isNotEmpty) {
+      unawaited(_scoringController.joinLiveSession(_teamMatchId));
+    }
   }
 
   @override
   void dispose() {
+    unawaited(_scoringController.leaveLiveSession());
     _maxOversController.dispose();
     super.dispose();
   }
@@ -355,6 +361,7 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
                 style: const TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 16,
+                  color: Color(AppColors.textColor),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -370,7 +377,18 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
                       height: 44,
                       child: OutlinedButton(
                         onPressed: () => Navigator.pop(ctx, i),
-                        child: Text('$i'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(AppColors.textColor),
+                          side: const BorderSide(
+                            color: Color(AppColors.dividerColor),
+                          ),
+                        ),
+                        child: Text(
+                          '$i',
+                          style: const TextStyle(
+                            color: Color(AppColors.textColor),
+                          ),
+                        ),
                       ),
                     ),
                 ],
@@ -443,21 +461,34 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
                 padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
                 child: Text(
                   'Incoming batsman',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                    color: Color(AppColors.textColor),
+                  ),
                 ),
               ),
               for (final player in candidates)
                 ListTile(
                   leading: CircleAvatar(
+                    backgroundColor: const Color(
+                      AppColors.primaryColor,
+                    ).withValues(alpha: 0.12),
                     backgroundImage:
                         player.avatar != null && player.avatar!.isNotEmpty
                         ? NetworkImage(player.avatar!)
                         : null,
                     child: player.avatar == null || player.avatar!.isEmpty
-                        ? const Icon(Icons.person)
+                        ? const Icon(
+                            Icons.person,
+                            color: Color(AppColors.primaryColor),
+                          )
                         : null,
                   ),
-                  title: Text(player.name),
+                  title: Text(
+                    player.name,
+                    style: const TextStyle(color: Color(AppColors.textColor)),
+                  ),
                   onTap: () => Navigator.pop(ctx, player),
                 ),
             ],
@@ -508,21 +539,31 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
                   style: const TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 16,
+                    color: Color(AppColors.textColor),
                   ),
                 ),
               ),
               for (final player in candidates)
                 ListTile(
                   leading: CircleAvatar(
+                    backgroundColor: const Color(
+                      AppColors.primaryColor,
+                    ).withValues(alpha: 0.12),
                     backgroundImage:
                         player.avatar != null && player.avatar!.isNotEmpty
                         ? NetworkImage(player.avatar!)
                         : null,
                     child: player.avatar == null || player.avatar!.isEmpty
-                        ? const Icon(Icons.person)
+                        ? const Icon(
+                            Icons.person,
+                            color: Color(AppColors.primaryColor),
+                          )
                         : null,
                   ),
-                  title: Text(player.name),
+                  title: Text(
+                    player.name,
+                    style: const TextStyle(color: Color(AppColors.textColor)),
+                  ),
                   onTap: () => Navigator.pop(ctx, player),
                 ),
             ],
@@ -560,31 +601,53 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
               const SizedBox(height: 10),
               const Text(
                 'Wicket type',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                  color: Color(AppColors.textColor),
+                ),
               ),
               const SizedBox(height: 8),
               ListTile(
-                title: const Text('Bowled'),
+                title: const Text(
+                  'Bowled',
+                  style: TextStyle(color: Color(AppColors.textColor)),
+                ),
                 onTap: () => Navigator.pop(ctx, _WicketUiKind.bowled),
               ),
               ListTile(
-                title: const Text('Caught'),
+                title: const Text(
+                  'Caught',
+                  style: TextStyle(color: Color(AppColors.textColor)),
+                ),
                 onTap: () => Navigator.pop(ctx, _WicketUiKind.caught),
               ),
               ListTile(
-                title: const Text('LBW'),
+                title: const Text(
+                  'LBW',
+                  style: TextStyle(color: Color(AppColors.textColor)),
+                ),
                 onTap: () => Navigator.pop(ctx, _WicketUiKind.lbw),
               ),
               ListTile(
-                title: const Text('Run out'),
+                title: const Text(
+                  'Run out',
+                  style: TextStyle(color: Color(AppColors.textColor)),
+                ),
                 onTap: () => Navigator.pop(ctx, _WicketUiKind.runOut),
               ),
               ListTile(
-                title: const Text('Stumped'),
+                title: const Text(
+                  'Stumped',
+                  style: TextStyle(color: Color(AppColors.textColor)),
+                ),
                 onTap: () => Navigator.pop(ctx, _WicketUiKind.stumped),
               ),
               ListTile(
-                title: const Text('Hit wicket'),
+                title: const Text(
+                  'Hit wicket',
+                  style: TextStyle(color: Color(AppColors.textColor)),
+                ),
                 onTap: () => Navigator.pop(ctx, _WicketUiKind.hitWicket),
               ),
             ],
@@ -651,14 +714,24 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
                 const SizedBox(height: 10),
                 const Text(
                   'Who is out?',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                    color: Color(AppColors.textColor),
+                  ),
                 ),
                 ListTile(
-                  title: Text('Striker ($strikerName)'),
+                  title: Text(
+                    'Striker ($strikerName)',
+                    style: const TextStyle(color: Color(AppColors.textColor)),
+                  ),
                   onTap: () => Navigator.pop(ctx, strikerId),
                 ),
                 ListTile(
-                  title: Text('Non-striker ($nonName)'),
+                  title: Text(
+                    'Non-striker ($nonName)',
+                    style: const TextStyle(color: Color(AppColors.textColor)),
+                  ),
                   onTap: () => Navigator.pop(ctx, nonStrikerId),
                 ),
               ],
@@ -685,14 +758,23 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
                 const SizedBox(height: 10),
                 const Text(
                   'Fielder assist?',
-                  style: TextStyle(fontWeight: FontWeight.w700),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: Color(AppColors.textColor),
+                  ),
                 ),
                 ListTile(
-                  title: const Text('Skip'),
+                  title: const Text(
+                    'Skip',
+                    style: TextStyle(color: Color(AppColors.textColor)),
+                  ),
                   onTap: () => Navigator.pop(ctx, false),
                 ),
                 ListTile(
-                  title: const Text('Pick fielder'),
+                  title: const Text(
+                    'Pick fielder',
+                    style: TextStyle(color: Color(AppColors.textColor)),
+                  ),
                   onTap: () => Navigator.pop(ctx, true),
                 ),
               ],

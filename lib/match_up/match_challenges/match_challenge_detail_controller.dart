@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
@@ -7,6 +9,9 @@ import '../../components/challenges/praposals/propose_turf_sheet.dart';
 import '../../core/config/constants.dart';
 import '../../core/query/query_keys.dart';
 import '../../core/utils/app_snackbar.dart';
+import '../../scoring/cricket/cricket_scoring_live_cache.dart';
+import '../../scoring/shared/scoring_shared_models.dart';
+import '../../scoring/shared/scoring_socket_service.dart';
 import '../../team/utils/team_ui.dart';
 import '../../team/model/team_model.dart' show TeamSportType;
 import '../matchmaking_service.dart';
@@ -37,6 +42,9 @@ class MatchChallengeDetailController extends GetxController
   final RxBool isRejectingChallenge = false.obs;
   final RxBool isAcceptingChallenge = false.obs;
   final RxBool actionsChildBusy = false.obs;
+
+  StreamSubscription<ScoringUpdatePayload>? _scoringSub;
+  String? _joinedLiveMatchId;
 
   String? get resolvedMatchId {
     final fromMatch = match.value?.id ?? initialMatch?.id;
@@ -93,6 +101,11 @@ class MatchChallengeDetailController extends GetxController
 
   bool get canUseScheduleControls => canEditSchedule && !actionsChildBusy.value;
 
+  ScoringSocketService? get _socket =>
+      Get.isRegistered<ScoringSocketService>()
+          ? Get.find<ScoringSocketService>()
+          : null;
+
   @override
   void onInit() {
     super.onInit();
@@ -103,10 +116,14 @@ class MatchChallengeDetailController extends GetxController
     if (explicitIsIncoming != null) {
       isIncoming.value = explicitIsIncoming!;
     }
+    if (isCricketMatch) {
+      unawaited(_ensureLiveCricketUpdates());
+    }
   }
 
   @override
   void onClose() {
+    unawaited(_teardownLiveCricketUpdates());
     detailTabController.dispose();
     super.onClose();
   }
@@ -114,6 +131,53 @@ class MatchChallengeDetailController extends GetxController
   void syncMatch(TeamMatchModel? value) {
     if (value == null) return;
     match.value = value;
+    if (value.sportType == TeamSportType.cricket) {
+      unawaited(_ensureLiveCricketUpdates());
+    }
+  }
+
+  Future<void> _ensureLiveCricketUpdates() async {
+    final matchId = resolvedMatchId?.trim();
+    if (matchId == null || matchId.isEmpty) return;
+    if (_joinedLiveMatchId == matchId && _scoringSub != null) return;
+
+    final socket = _socket;
+    if (socket == null) return;
+
+    if (_joinedLiveMatchId != null && _joinedLiveMatchId != matchId) {
+      await _teardownLiveCricketUpdates();
+    }
+
+    _scoringSub ??= socket.updates.listen(_onScoringUpdate);
+    await socket.joinMatch(matchId);
+    _joinedLiveMatchId = matchId;
+  }
+
+  Future<void> _teardownLiveCricketUpdates() async {
+    final id = _joinedLiveMatchId;
+    _joinedLiveMatchId = null;
+    await _scoringSub?.cancel();
+    _scoringSub = null;
+    if (id == null || id.isEmpty) return;
+    try {
+      await _socket?.leaveMatch(id);
+    } catch (e, st) {
+      debugPrint('detail leaveLiveMatch failed: $e\n$st');
+    }
+  }
+
+  void _onScoringUpdate(ScoringUpdatePayload payload) {
+    final matchId = _joinedLiveMatchId ?? resolvedMatchId;
+    if (matchId == null || matchId.isEmpty) return;
+    if (payload.teamMatchId != matchId) return;
+    if (payload.sport != ScoringSport.cricket) return;
+    if (!Get.isRegistered<QueryClient>()) return;
+
+    applyCricketScoringUpdateToCache(
+      Get.find<QueryClient>(),
+      payload,
+      expectedMatchId: matchId,
+    );
   }
 
   void syncIsIncoming(bool value) {

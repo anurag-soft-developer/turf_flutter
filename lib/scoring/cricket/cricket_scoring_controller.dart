@@ -4,9 +4,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
+import '../../core/auth/auth_state_controller.dart';
 import '../../core/query/query_keys.dart';
 import '../../match_up/model/team_match_model.dart';
+import '../shared/scoring_shared_models.dart';
+import '../shared/scoring_socket_service.dart';
 import 'cricket_scoring_api_service.dart';
+import 'cricket_scoring_live_cache.dart';
 import 'model/cricket_ball_event_model.dart';
 import 'model/cricket_scoring_models.dart';
 
@@ -40,8 +44,21 @@ class CricketScoringController extends GetxController {
       <AppendCricketBallRequest>[];
   final RxBool canRedoCricketBall = false.obs;
 
+  StreamSubscription<ScoringUpdatePayload>? _scoringSub;
+  String? _joinedMatchId;
+
   bool get canUndoCricketBall =>
       cricketOvers.any((over) => over.ballEvents.isNotEmpty);
+
+  ScoringSocketService? get _socket =>
+      Get.isRegistered<ScoringSocketService>()
+          ? Get.find<ScoringSocketService>()
+          : null;
+
+  String? get _currentUserId {
+    if (!Get.isRegistered<AuthStateController>()) return null;
+    return AuthStateController.instance.user?.id;
+  }
 
   void seedFromQuery({
     TeamMatchModel? match,
@@ -53,6 +70,113 @@ class CricketScoringController extends GetxController {
     if (overs != null) {
       cricketOvers.assignAll(overs);
     }
+  }
+
+  Future<void> joinLiveSession(String teamMatchId) async {
+    final id = teamMatchId.trim();
+    if (id.isEmpty) return;
+
+    final previous = _joinedMatchId;
+    if (previous != null && previous != id) {
+      await leaveLiveSession();
+    }
+
+    isJoiningSession.value = true;
+    try {
+      final socket = _socket;
+      if (socket == null) {
+        isConnected.value = false;
+        return;
+      }
+      _scoringSub ??= socket.updates.listen(_onScoringUpdate);
+      await socket.joinMatch(id);
+      _joinedMatchId = id;
+      isConnected.value = socket.isConnected;
+    } catch (e, st) {
+      debugPrint('joinLiveSession failed: $e\n$st');
+      isConnected.value = false;
+    } finally {
+      isJoiningSession.value = false;
+    }
+  }
+
+  Future<void> leaveLiveSession() async {
+    final id = _joinedMatchId;
+    _joinedMatchId = null;
+    await _scoringSub?.cancel();
+    _scoringSub = null;
+    isConnected.value = false;
+    if (id == null || id.isEmpty) return;
+    try {
+      await _socket?.leaveMatch(id);
+    } catch (e, st) {
+      debugPrint('leaveLiveSession failed: $e\n$st');
+    }
+  }
+
+  void _onScoringUpdate(ScoringUpdatePayload payload) {
+    final sessionId = currentSessionId.value;
+    if (sessionId.isEmpty || payload.teamMatchId != sessionId) return;
+    if (payload.sport != ScoringSport.cricket) return;
+
+    final actorId = payload.actorUserId;
+    final me = _currentUserId;
+    if (me != null && me.isNotEmpty && actorId == me) {
+      // Actor already applied the HTTP response locally.
+      return;
+    }
+
+    try {
+      _applyRemoteUpdate(payload);
+    } catch (e, st) {
+      debugPrint('apply remote scoring update failed: $e\n$st');
+    }
+  }
+
+  void _applyRemoteUpdate(ScoringUpdatePayload payload) {
+    final data = payload.data;
+
+    if (cricketMatch.value == null) {
+      final sessionId = currentSessionId.value;
+      if (sessionId.isNotEmpty) {
+        unawaited(fetchCricketMatch(sessionId));
+        if (payload.action == ScoringAction.appendBall ||
+            payload.action == ScoringAction.undoBall) {
+          unawaited(fetchCricketOvers(sessionId));
+        }
+      }
+      _patchLiveQueryCache(payload);
+      return;
+    }
+
+    final current = cricketMatch.value;
+    if (current != null && cricketMatchPatchPresent(data)) {
+      cricketMatch.value = patchCricketMatchFromData(current, data);
+    }
+
+    final patchedOvers = patchCricketOversFromPayload(
+      cricketOvers.toList(),
+      payload,
+    );
+    if (patchedOvers != null) {
+      cricketOvers.assignAll(patchedOvers);
+      cricketOvers.refresh();
+    }
+
+    if (payload.isCricketChangeInning || payload.isCricketCompleteMatch) {
+      _resetCricketBallHistory();
+    }
+
+    _patchLiveQueryCache(payload);
+  }
+
+  void _patchLiveQueryCache(ScoringUpdatePayload payload) {
+    if (!Get.isRegistered<QueryClient>()) return;
+    applyCricketScoringUpdateToCache(
+      Get.find<QueryClient>(),
+      payload,
+      expectedMatchId: currentSessionId.value,
+    );
   }
 
   void _syncQueryCache({bool includeOvers = true}) {
@@ -140,22 +264,14 @@ class CricketScoringController extends GetxController {
   }
 
   void upsertCricketOver(CricketOverEvent over) {
-    cricketOvers.removeWhere((o) {
-      if (over.id.isNotEmpty && o.id.isNotEmpty && o.id == over.id) {
-        return true;
-      }
-      return o.innings == over.innings &&
-          o.overAfter == over.overAfter &&
-          o.sequence == over.sequence;
-    });
-    cricketOvers.add(over);
-    cricketOvers.sort((a, b) => a.sequence.compareTo(b.sequence));
+    cricketOvers.assignAll(upsertCricketOverInList(cricketOvers.toList(), over));
     cricketOvers.refresh();
   }
 
   void removeCricketOver(String overId) {
-    if (overId.isEmpty) return;
-    cricketOvers.removeWhere((over) => over.id == overId);
+    cricketOvers.assignAll(
+      removeCricketOverFromList(cricketOvers.toList(), overId),
+    );
     cricketOvers.refresh();
   }
 
@@ -363,5 +479,11 @@ class CricketScoringController extends GetxController {
     _redoBallRequests.add(request);
     _syncRedoAvailability();
     return false;
+  }
+
+  @override
+  void onClose() {
+    unawaited(leaveLiveSession());
+    super.onClose();
   }
 }
