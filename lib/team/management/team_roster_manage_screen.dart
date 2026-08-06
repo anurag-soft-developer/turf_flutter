@@ -274,17 +274,7 @@ class TeamRosterManageScreen extends HookWidget {
       );
     }
 
-    if (members.isEmpty) {
-      return const Center(
-        child: Text(
-          'No members in the roster yet.',
-          style: TextStyle(
-            color: Color(AppColors.textSecondaryColor),
-            fontSize: 15,
-          ),
-        ),
-      );
-    }
+    final teamId = c.teamId!;
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -296,25 +286,44 @@ class TeamRosterManageScreen extends HookWidget {
       },
       child: Obx(() {
         final busyId = c.actionTargetId.value;
-        return ListView.separated(
+        return ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-          itemCount: members.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 8),
-          itemBuilder: (context, i) {
-            final m = members[i];
-            final busy = busyId != null && busyId == m.id;
-            return _RosterRow(
-              member: m,
-              isBusy: busy,
-              isSelf: c.isSelf(m),
-              onOpenProfile: () => c.openProfile(m),
-              onAssignCaptain: () => c.assignCaptain(m),
-              onAssignViceCaptain: () => c.assignViceCaptain(m),
-              onRemove: () => _confirmRemove(context, c, m),
-              onSuspend: () => _confirmSuspend(context, c, m),
-              onUnsuspend: () => c.unsuspendMember(m),
-            );
-          },
+          children: [
+            _RosterQuickActions(teamId: teamId),
+            const SizedBox(height: 16),
+            if (members.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 48),
+                child: Center(
+                  child: Text(
+                    'No members in the roster yet.',
+                    style: TextStyle(
+                      color: Color(AppColors.textSecondaryColor),
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+              )
+            else
+              ...List.generate(members.length, (i) {
+                final m = members[i];
+                final busy = busyId != null && busyId == m.id;
+                return Padding(
+                  padding: EdgeInsets.only(top: i == 0 ? 0 : 8),
+                  child: _RosterRow(
+                    member: m,
+                    isBusy: busy,
+                    isSelf: c.isSelf(m),
+                    onOpenProfile: () => c.openProfile(m),
+                    onAssignCaptain: () => c.assignCaptain(m),
+                    onAssignViceCaptain: () => c.assignViceCaptain(m),
+                    onRemove: () => _confirmRemove(context, c, m),
+                    onSuspend: () => _confirmSuspend(context, c, m),
+                    onUnsuspend: () => c.unsuspendMember(m),
+                  ),
+                );
+              }),
+          ],
         );
       }),
     );
@@ -375,6 +384,69 @@ class TeamRosterManageScreen extends HookWidget {
               c.suspendMember(m);
             },
             child: const Text('Suspend'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RosterQuickActions extends StatelessWidget {
+  const _RosterQuickActions({required this.teamId});
+
+  final String teamId;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          OutlinedButton.icon(
+            onPressed: () => Get.toNamed(
+              AppConstants.routes.teamInvites,
+              arguments: {'teamId': teamId},
+            ),
+            icon: const Icon(Icons.person_add_alt_1_outlined, size: 14),
+            label: const Text('Invite'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(AppColors.primaryColor),
+              side: const BorderSide(color: Color(AppColors.primaryColor)),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              textStyle: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+          OutlinedButton.icon(
+            onPressed: () => Get.toNamed(
+              AppConstants.routes.teamJoinRequests,
+              arguments: {'teamId': teamId},
+            ),
+            icon: const Icon(Icons.group_add_outlined, size: 14),
+            label: const Text('Join requests'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(AppColors.primaryColor),
+              side: const BorderSide(color: Color(AppColors.primaryColor)),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              textStyle: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
           ),
         ],
       ),

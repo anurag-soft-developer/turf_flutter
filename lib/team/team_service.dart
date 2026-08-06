@@ -1,6 +1,7 @@
 import '../core/config/api_constants.dart';
 import '../core/models/paginated_response.dart';
 import '../core/services/api_service.dart';
+import 'invites/team_invite_service.dart';
 import 'members/team_member_service.dart';
 import 'model/team_leaderboard_model.dart';
 import 'model/team_model.dart';
@@ -14,6 +15,9 @@ class TeamService {
 
   /// Team roster / membership API (`/teams/:id/members`, `/team-members/me`).
   final TeamMemberService memberService = TeamMemberService();
+
+  /// Team invites API (`/teams/:id/invites`, `/team-invites/me`).
+  final TeamInviteService inviteService = TeamInviteService();
 
   Future<TeamModel?> create(CreateTeamRequest request) async {
     final response = await _apiService.post<Map<String, dynamic>>(

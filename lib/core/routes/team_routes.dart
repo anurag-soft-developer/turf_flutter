@@ -4,6 +4,8 @@ import 'package:flutter_application_1/core/guards/auth_guard.dart';
 import 'package:flutter_application_1/profile/follow/follow_list_screen.dart';
 import 'package:flutter_application_1/team/add/add_team_screen.dart';
 import 'package:flutter_application_1/team/details/team_detail_screen.dart';
+import 'package:flutter_application_1/team/invites/my_invitations_screen.dart';
+import 'package:flutter_application_1/team/invites/team_invites_screen.dart';
 import 'package:flutter_application_1/team/join_status/my_join_requests_screen.dart';
 import 'package:flutter_application_1/team/management/team_join_requests_screen.dart';
 import 'package:flutter_application_1/team/management/team_roster_manage_screen.dart';
@@ -42,6 +44,13 @@ final List<GetPage<dynamic>> teamRoutes = [
     middlewares: [AuthGuard()],
   ),
   GetPage(
+    name: AppConstants.routes.myInvitations,
+    page: () => const MyInvitationsScreen(),
+    binding: MyInvitationsBinding(),
+    transition: Transition.cupertino,
+    middlewares: [AuthGuard()],
+  ),
+  GetPage(
     name: AppConstants.routes.addTeam,
     page: () => const AddTeamScreen(),
     binding: AddTeamBinding(),
@@ -73,6 +82,13 @@ final List<GetPage<dynamic>> teamRoutes = [
     name: AppConstants.routes.teamRosterManage,
     page: () => const TeamRosterManageScreen(),
     binding: TeamRosterManageBinding(),
+    transition: Transition.cupertino,
+    middlewares: [AuthGuard()],
+  ),
+  GetPage(
+    name: AppConstants.routes.teamInvites,
+    page: () => const TeamInvitesScreen(),
+    binding: TeamInvitesBinding(),
     transition: Transition.cupertino,
     middlewares: [AuthGuard()],
   ),

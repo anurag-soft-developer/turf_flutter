@@ -88,6 +88,27 @@ class NotificationRouter {
       case 'team_join_rejected':
         await Get.toNamed(AppConstants.routes.myJoinRequests);
         return;
+      case 'team_invite':
+        await Get.toNamed(AppConstants.routes.myInvitations);
+        return;
+      case 'team_invite_accepted':
+        if (teamId == null || teamId.isEmpty) {
+          return _fallback(notification.module, kind);
+        }
+        await Get.toNamed(
+          AppConstants.routes.teamInvites,
+          arguments: {'teamId': teamId},
+        );
+        return;
+      case 'team_invite_rejected':
+        if (teamId == null || teamId.isEmpty) {
+          return _fallback(notification.module, kind);
+        }
+        await Get.toNamed(
+          AppConstants.routes.teamInvites,
+          arguments: {'teamId': teamId},
+        );
+        return;
       default:
         if (teamId == null || teamId.isEmpty) {
           return _fallback(notification.module, kind);

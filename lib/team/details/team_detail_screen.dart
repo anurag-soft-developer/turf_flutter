@@ -349,30 +349,86 @@ class TeamDetailScreen extends HookWidget {
                             isOwner &&
                             t.id != null &&
                             t.id!.isNotEmpty
-                        ? TextButton.icon(
-                            onPressed: () => Get.toNamed(
-                              AppConstants.routes.teamRosterManage,
-                              arguments: {'teamId': t.id!},
-                            ),
-                            style: TextButton.styleFrom(
-                              foregroundColor: const Color(
-                                AppColors.primaryColor,
+                        ? PopupMenuButton<String>(
+                            tooltip: 'Squad actions',
+                            offset: const Offset(0, 36),
+                            color: const Color(AppColors.surfaceColor),
+                            surfaceTintColor: Colors.transparent,
+                            onSelected: (value) {
+                              if (value == 'manage') {
+                                Get.toNamed(
+                                  AppConstants.routes.teamRosterManage,
+                                  arguments: {'teamId': t.id!},
+                                );
+                              } else if (value == 'invite') {
+                                Get.toNamed(
+                                  AppConstants.routes.teamInvites,
+                                  arguments: {'teamId': t.id!},
+                                );
+                              } else if (value == 'join_requests') {
+                                Get.toNamed(
+                                  AppConstants.routes.teamJoinRequests,
+                                  arguments: {'teamId': t.id!},
+                                );
+                              }
+                            },
+                            itemBuilder: (context) => const [
+                              PopupMenuItem(
+                                value: 'manage',
+                                child: Text(
+                                  'Manage members',
+                                  style: TextStyle(
+                                    color: Color(AppColors.textColor),
+                                  ),
+                                ),
                               ),
+                              PopupMenuItem(
+                                value: 'invite',
+                                child: Text(
+                                  'Invite members',
+                                  style: TextStyle(
+                                    color: Color(AppColors.textColor),
+                                  ),
+                                ),
+                              ),
+                              PopupMenuItem(
+                                value: 'join_requests',
+                                child: Text(
+                                  'Join requests',
+                                  style: TextStyle(
+                                    color: Color(AppColors.textColor),
+                                  ),
+                                ),
+                              ),
+                            ],
+                            child: Padding(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 10,
                                 vertical: 6,
                               ),
-                              visualDensity: VisualDensity.compact,
-                            ),
-                            icon: const Icon(
-                              Icons.manage_accounts,
-                              size: 16,
-                            ),
-                            label: const Text(
-                              'Manage',
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w700,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: const [
+                                  Icon(
+                                    Icons.manage_accounts,
+                                    size: 16,
+                                    color: Color(AppColors.primaryColor),
+                                  ),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'Manage',
+                                    style: TextStyle(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(AppColors.primaryColor),
+                                    ),
+                                  ),
+                                  Icon(
+                                    Icons.arrow_drop_down,
+                                    size: 18,
+                                    color: Color(AppColors.primaryColor),
+                                  ),
+                                ],
                               ),
                             ),
                           )
@@ -380,16 +436,6 @@ class TeamDetailScreen extends HookWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                if (controller.isMyTeamMode &&
-                    isOwner &&
-                    t.id != null &&
-                    t.id!.isNotEmpty) ...[
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: _PendingRequestsNotifierCard(teamId: t.id!),
-                  ),
-                  const SizedBox(height: 12),
-                ],
                 _MembersHorizontalList(members: members),
                 const SizedBox(height: 28),
                 if (t.socialLinks.instagram != null ||
@@ -740,91 +786,6 @@ class _MembersHorizontalList extends StatelessWidget {
               ),
             ),
         ],
-      ),
-    );
-  }
-}
-
-class _PendingRequestsNotifierCard extends StatelessWidget {
-  const _PendingRequestsNotifierCard({required this.teamId});
-
-  final String teamId;
-
-  @override
-  Widget build(BuildContext context) {
-    const placeholderCount = '--';
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: () => Get.toNamed(
-          AppConstants.routes.teamJoinRequests,
-          arguments: {'teamId': teamId},
-        ),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            color: const Color(AppColors.primaryColor).withValues(alpha: 0.07),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: const Color(
-                AppColors.primaryColor,
-              ).withValues(alpha: 0.22),
-            ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: const Color(
-                    AppColors.primaryColor,
-                  ).withValues(alpha: 0.16),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.notifications_active_outlined,
-                  size: 18,
-                  color: Color(AppColors.primaryColor),
-                ),
-              ),
-              const SizedBox(width: 10),
-              const Expanded(
-                child: Text(
-                  'Players applied to join: --',
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w600,
-                    color: Color(AppColors.textColor),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: const Text(
-                  placeholderCount,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    color: Color(AppColors.primaryColor),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 6),
-              const Icon(
-                Icons.chevron_right,
-                size: 18,
-                color: Color(AppColors.textSecondaryColor),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

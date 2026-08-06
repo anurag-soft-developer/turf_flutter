@@ -107,6 +107,12 @@ class QueryKeys {
   static List<Object> myJoinRequests(String status) =>
       ['myJoinRequests', status];
 
+  static List<Object> myInvitations(String status) =>
+      ['myInvitations', status];
+
+  static List<Object?> teamInvites(String teamId, {String? status}) =>
+      ['teamInvites', teamId, status];
+
   static List<Object> turfReviewStats(String turfId) =>
       ['turfReviewStats', turfId];
 

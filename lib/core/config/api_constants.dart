@@ -11,6 +11,7 @@ class ApiConstants {
   static const team = TeamEndpoints();
   static const teamMember = TeamMemberEndpoints();
   static const teamMembershipSelf = TeamMembershipSelfEndpoints();
+  static const teamInvite = TeamInviteEndpoints();
   static const matchmaking = MatchmakingEndpoints();
   static const notifications = NotificationEndpoints();
   static const followings = FollowingsEndpoints();
@@ -142,6 +143,23 @@ class TeamMembershipSelfEndpoints {
   const TeamMembershipSelfEndpoints();
 
   String get myMemberships => '/team-members/me';
+}
+
+class TeamInviteEndpoints {
+  const TeamInviteEndpoints();
+
+  String create(String teamId) => '/teams/$teamId/invites';
+
+  String listForTeam(String teamId) => '/teams/$teamId/invites';
+
+  String revoke(String teamId, String inviteId) =>
+      '/teams/$teamId/invites/$inviteId/revoke';
+
+  String get myInvites => '/team-invites/me';
+
+  String accept(String inviteId) => '/team-invites/$inviteId/accept';
+
+  String reject(String inviteId) => '/team-invites/$inviteId/reject';
 }
 
 /// `GET/PATCH/DELETE /notifications/*` — JWT required.

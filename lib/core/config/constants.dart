@@ -48,12 +48,14 @@ class Routes {
   final String myTeam = '/my-team';
   final String teamOpenings = '/team-openings';
   final String myJoinRequests = '/my-join-requests';
+  final String myInvitations = '/my-invitations';
   final String rank = '/rank';
   final String addTeam = '/add-team';
   final String editTeam = '/edit-team';
   final String teamProfile = '/team-profile';
   final String teamJoinRequests = '/team-join-requests';
   final String teamRosterManage = '/team-roster-manage';
+  final String teamInvites = '/team-invites';
   final String teamMemberProfile = '/team-member-profile';
   final String editProfile = '/edit-profile';
   String followers(String userId) => '/followers/$userId';
