@@ -15,10 +15,11 @@ class PlayerDashboardModel {
 
   factory PlayerDashboardModel.fromJson(Map<String, dynamic> json) {
     final rawTurfs = json['turfs'] as List<dynamic>? ?? const [];
+    final rawTitle = (json['turfsTitle'] as String?)?.trim();
     return PlayerDashboardModel(
-      turfsTitle: (json['turfsTitle'] as String?)?.trim().isNotEmpty == true
-          ? json['turfsTitle'] as String
-          : 'Featured turfs',
+      turfsTitle: _normalizeTurvesTitle(
+        rawTitle == null || rawTitle.isEmpty ? null : rawTitle,
+      ),
       turfs: rawTurfs
           .whereType<Map<String, dynamic>>()
           .map(TurfModel.fromJson)
@@ -29,8 +30,13 @@ class PlayerDashboardModel {
     );
   }
 
+  static String _normalizeTurvesTitle(String? title) {
+    if (title == null || title.isEmpty) return 'Featured turves';
+    return title.replaceAll(RegExp(r'\bturfs\b', caseSensitive: false), 'turves');
+  }
+
   static const empty = PlayerDashboardModel(
-    turfsTitle: 'Featured turfs',
+    turfsTitle: 'Featured turves',
     turfs: [],
     nearbyTeamsCount: 0,
     unreadNotificationCount: 0,

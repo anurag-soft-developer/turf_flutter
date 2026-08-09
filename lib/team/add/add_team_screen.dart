@@ -52,95 +52,156 @@ class _CreateTeamStepper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Theme(
-      data: Theme.of(context).copyWith(
-        brightness: Brightness.light,
-        canvasColor: Colors.white,
-        shadowColor: Colors.transparent,
-        colorScheme: const ColorScheme.light(
-          primary: Color(AppColors.primaryColor),
-          onPrimary: Colors.white,
-          secondary: Color(AppColors.primaryColor),
-          onSecondary: Colors.white,
-          surface: Colors.white,
-          onSurface: Color(AppColors.textColor),
-          onSurfaceVariant: Color(AppColors.textSecondaryColor),
-        ),
-        textTheme: Theme.of(context).textTheme.apply(
-          bodyColor: const Color(AppColors.textColor),
-          displayColor: const Color(AppColors.textColor),
-        ).copyWith(
-          bodyLarge: const TextStyle(
-            color: Color(AppColors.textColor),
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
-          bodyMedium: const TextStyle(
-            color: Color(AppColors.textColor),
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-          ),
-          bodySmall: const TextStyle(
-            color: Color(AppColors.textSecondaryColor),
-            fontSize: 12,
+    return Column(
+      children: [
+        Obx(
+          () => _CompactStepHeader(
+            currentStep: controller.currentStep.value,
+            onStepTap: (step) {
+              if (step < controller.currentStep.value) {
+                controller.currentStep.value = step;
+              }
+            },
           ),
         ),
-      ),
-      child: Column(
-        children: [
-          Expanded(
-            child: Obx(
-              () => Stepper(
-                type: StepperType.horizontal,
-                elevation: 0,
-                currentStep: controller.currentStep.value,
-                onStepTapped: (step) {
-                  if (step < controller.currentStep.value) {
-                    controller.currentStep.value = step;
-                  }
-                },
-                controlsBuilder: (context, details) => const SizedBox.shrink(),
-                steps: [
-                  Step(
-                    title: Text(
-                      'Sport',
-                      style: TextStyle(
-                        color: controller.currentStep.value >= 0
-                            ? const Color(AppColors.textColor)
-                            : const Color(AppColors.textSecondaryColor),
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
-                    ),
-                    isActive: controller.currentStep.value >= 0,
-                    state: controller.currentStep.value > 0
-                        ? StepState.complete
-                        : StepState.indexed,
-                    content: _SportTypeStep(controller: controller),
+        Expanded(
+          child: Obx(() {
+            final step = controller.currentStep.value;
+            return SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: step == 0
+                  ? _SportTypeStep(controller: controller)
+                  : _CreateDetailsStep(controller: controller),
+            );
+          }),
+        ),
+        _CreateStepBottomBar(controller: controller),
+      ],
+    );
+  }
+}
+
+class _CompactStepHeader extends StatelessWidget {
+  final int currentStep;
+  final ValueChanged<int> onStepTap;
+
+  const _CompactStepHeader({
+    required this.currentStep,
+    required this.onStepTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+        child: Row(
+          children: [
+            _CompactStepChip(
+              index: 0,
+              label: 'Sport',
+              isActive: currentStep >= 0,
+              isComplete: currentStep > 0,
+              onTap: () => onStepTap(0),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  height: 2,
+                  decoration: BoxDecoration(
+                    color: currentStep > 0
+                        ? const Color(AppColors.primaryColor)
+                        : const Color(AppColors.dividerColor),
+                    borderRadius: BorderRadius.circular(1),
                   ),
-                  Step(
-                    title: Text(
-                      'Details',
-                      style: TextStyle(
-                        color: controller.currentStep.value >= 1
-                            ? const Color(AppColors.textColor)
-                            : const Color(AppColors.textSecondaryColor),
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
-                    ),
-                    isActive: controller.currentStep.value >= 1,
-                    state: controller.currentStep.value >= 1
-                        ? StepState.indexed
-                        : StepState.disabled,
-                    content: _CreateDetailsStep(controller: controller),
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
-          _CreateStepBottomBar(controller: controller),
-        ],
+            _CompactStepChip(
+              index: 1,
+              label: 'Details',
+              isActive: currentStep >= 1,
+              isComplete: false,
+              onTap: () => onStepTap(1),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CompactStepChip extends StatelessWidget {
+  final int index;
+  final String label;
+  final bool isActive;
+  final bool isComplete;
+  final VoidCallback onTap;
+
+  const _CompactStepChip({
+    required this.index,
+    required this.label,
+    required this.isActive,
+    required this.isComplete,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isActive
+        ? const Color(AppColors.primaryColor)
+        : const Color(AppColors.textSecondaryColor);
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 22,
+              height: 22,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isActive
+                    ? const Color(AppColors.primaryColor)
+                    : Colors.transparent,
+                border: Border.all(color: color, width: 1.5),
+              ),
+              child: isComplete
+                  ? const Icon(
+                      Icons.check_rounded,
+                      size: 13,
+                      color: Colors.white,
+                    )
+                  : Text(
+                      '${index + 1}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: isActive ? Colors.white : color,
+                      ),
+                    ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: isActive
+                    ? const Color(AppColors.textColor)
+                    : const Color(AppColors.textSecondaryColor),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -370,7 +431,7 @@ class _CreateDetailsStep extends StatelessWidget {
           radius: 52,
         ),
         const SizedBox(height: 20),
-        _BasicInfoSection(controller: controller),
+        _BasicInfoSection(controller: controller, compact: true),
       ],
     );
   }
@@ -402,7 +463,7 @@ class _EditTeamBody extends StatelessWidget {
             radius: 52,
           ),
           const SizedBox(height: 24),
-          _BasicInfoSection(controller: controller),
+          _BasicInfoSection(controller: controller, compact: false),
           const SizedBox(height: 24),
           _ScheduleSection(controller: controller),
           const SizedBox(height: 24),
@@ -430,8 +491,12 @@ class _EditTeamBody extends StatelessWidget {
 
 class _BasicInfoSection extends StatelessWidget {
   final AddTeamController controller;
+  final bool compact;
 
-  const _BasicInfoSection({required this.controller});
+  const _BasicInfoSection({
+    required this.controller,
+    this.compact = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -448,51 +513,53 @@ class _BasicInfoSection extends StatelessWidget {
             return null;
           },
         ),
-        const SizedBox(height: 16),
-        TurfFormField(
-          controller: controller.shortNameController,
-          labelText: 'Short Name',
-          hintText: 'e.g. NHF',
-        ),
-        const SizedBox(height: 16),
-        TurfFormField(
-          controller: controller.taglineController,
-          labelText: 'Tagline',
-          hintText: 'e.g. We play to win!',
-        ),
-        const SizedBox(height: 16),
-        TurfFormField(
-          controller: controller.descriptionController,
-          labelText: 'Description',
-          hintText: 'What is your team about?',
-          autoExpand: true,
-          minLines: 3,
-          maxLines: 5,
-          keyboardType: TextInputType.multiline,
-        ),
-        const SizedBox(height: 16),
-        TurfFormField(
-          controller: controller.foundedYearController,
-          labelText: 'Founded Year',
-          hintText: 'e.g. 2020',
-          keyboardType: TextInputType.number,
-          validator: (v) {
-            if (v == null || v.trim().isEmpty) return null;
-            final n = int.tryParse(v.trim());
-            if (n == null || n < 1800 || n > DateTime.now().year) {
-              return 'Enter a valid year';
-            }
-            return null;
-          },
-        ),
-        const SizedBox(height: 16),
-        _NullableDropdown<TeamGenderCategory>(
-          label: 'Gender Category',
-          value: controller.genderCategory,
-          items: TeamGenderCategory.values,
-          itemLabel: (g) => g.name.capitalizeFirst!,
-          onChanged: (v) => controller.genderCategory.value = v,
-        ),
+        if (!compact) ...[
+          const SizedBox(height: 16),
+          TurfFormField(
+            controller: controller.shortNameController,
+            labelText: 'Short Name',
+            hintText: 'e.g. NHF',
+          ),
+          const SizedBox(height: 16),
+          TurfFormField(
+            controller: controller.taglineController,
+            labelText: 'Tagline',
+            hintText: 'e.g. We play to win!',
+          ),
+          const SizedBox(height: 16),
+          TurfFormField(
+            controller: controller.descriptionController,
+            labelText: 'Description',
+            hintText: 'What is your team about?',
+            autoExpand: true,
+            minLines: 3,
+            maxLines: 5,
+            keyboardType: TextInputType.multiline,
+          ),
+          const SizedBox(height: 16),
+          TurfFormField(
+            controller: controller.foundedYearController,
+            labelText: 'Founded Year',
+            hintText: 'e.g. 2020',
+            keyboardType: TextInputType.number,
+            validator: (v) {
+              if (v == null || v.trim().isEmpty) return null;
+              final n = int.tryParse(v.trim());
+              if (n == null || n < 1800 || n > DateTime.now().year) {
+                return 'Enter a valid year';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          _NullableDropdown<TeamGenderCategory>(
+            label: 'Gender Category',
+            value: controller.genderCategory,
+            items: TeamGenderCategory.values,
+            itemLabel: (g) => g.name.capitalizeFirst!,
+            onChanged: (v) => controller.genderCategory.value = v,
+          ),
+        ],
         const SizedBox(height: 16),
         LocationAutocompleteField(
           controller: controller.addressController,

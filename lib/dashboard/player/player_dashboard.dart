@@ -13,6 +13,7 @@ import '../../core/config/constants.dart';
 import '../../core/models/location_model.dart';
 import '../../core/query/query_keys.dart';
 import '../../core/query/query_retry.dart';
+import '../../settings/settings_controller.dart';
 import '../dashboard_service.dart';
 import '../model/player_dashboard_model.dart';
 import 'player_dashboard_controller.dart';
@@ -30,12 +31,12 @@ class PlayerDashboard extends HookWidget {
   @override
   Widget build(BuildContext context) {
     final authController = Get.find<AuthStateController>();
-    final dashboardController = Get.find<PlayerDashboardController>();
+    final settings = Get.find<SettingsController>();
     final queryClient = useQueryClient();
 
     return RefreshIndicator(
       onRefresh: () async {
-        await dashboardController.resolveLocation();
+        await settings.resolveLocation();
         await Future.wait([
           queryClient.invalidateQueries(
             queryKey: QueryKeys.playerDashboardPrefix,
@@ -84,8 +85,8 @@ class PlayerDashboard extends HookWidget {
             ),
             const SizedBox(height: 20),
             Obx(() {
-              final ready = dashboardController.isLocationReady.value;
-              final location = dashboardController.dashboardLocation.value;
+              final ready = settings.isLocationReady.value;
+              final location = settings.nearbyLocation.value;
 
               if (!ready) {
                 return const _PlayerDashboardFeedPlaceholder();
@@ -93,7 +94,8 @@ class PlayerDashboard extends HookWidget {
 
               final locKey = location == null
                   ? 'no-location'
-                  : '${location.latitude},${location.longitude}';
+                  : '${location.latitude.toStringAsFixed(4)},'
+                      '${location.longitude.toStringAsFixed(4)}';
 
               return _PlayerDashboardFeed(
                 key: ValueKey(locKey),
@@ -139,7 +141,7 @@ class _PlayerDashboardFeedPlaceholder extends StatelessWidget {
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 24),
           child: Text(
-            'Featured turfs',
+            'Featured turves',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -163,8 +165,12 @@ class _PlayerDashboardFeed extends HookWidget {
   Widget build(BuildContext context) {
     final dashboardQuery = useQuery<PlayerDashboardModel, Object>(
       QueryKeys.playerDashboard(
-        lat: location?.latitude,
-        lng: location?.longitude,
+        lat: location == null
+            ? null
+            : double.parse(location!.latitude.toStringAsFixed(4)),
+        lng: location == null
+            ? null
+            : double.parse(location!.longitude.toStringAsFixed(4)),
       ),
       (_) async {
         final data = await DashboardService().getPlayerDashboard(
@@ -173,17 +179,19 @@ class _PlayerDashboardFeed extends HookWidget {
         if (data == null) {
           throw Exception('Failed to load dashboard');
         }
-        Get.find<PlayerDashboardController>().unreadNotificationCount.value =
-            data.unreadNotificationCount;
+        if (Get.isRegistered<PlayerDashboardController>()) {
+          Get.find<PlayerDashboardController>().unreadNotificationCount.value =
+              data.unreadNotificationCount;
+        }
         return data;
       },
-      retry: noRetry,
+      retry: shortRetry,
+      staleDuration: const StaleDuration(minutes: 5),
+      gcDuration: const GcDuration(minutes: 30),
     );
 
     final data = dashboardQuery.data ?? PlayerDashboardModel.empty;
-    final isLoading =
-        dashboardQuery.isLoading ||
-        (dashboardQuery.isFetching && dashboardQuery.data == null);
+    final isLoading = dashboardQuery.isLoading && data.turfs.isEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -207,7 +215,7 @@ class _PlayerDashboardFeed extends HookWidget {
         const SizedBox(height: 12),
         FeaturedTurfsSection(
           turfs: data.turfs,
-          isLoading: isLoading && data.turfs.isEmpty,
+          isLoading: isLoading,
           hasError: dashboardQuery.isError && data.turfs.isEmpty,
           onRetry: () => dashboardQuery.refetch(),
         ),

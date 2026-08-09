@@ -53,7 +53,7 @@ class FeaturedTurfsSection extends HookWidget {
         padding: const EdgeInsets.symmetric(horizontal: 24),
         child: TextButton(
           onPressed: onRetry,
-          child: const Text('Retry turfs'),
+          child: const Text('Retry turves'),
         ),
       );
     }

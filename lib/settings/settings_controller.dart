@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
+import 'dart:async';
 import 'dart:convert';
 import '../core/utils/app_snackbar.dart';
 import '../core/models/location_model.dart';
@@ -11,6 +12,16 @@ class SettingsController extends GetxController {
   final RxBool _notificationsEnabled = true.obs;
   final Rxn<LocationModel> _selectedCityLocation = Rxn<LocationModel>();
   final RxBool _isDetectingCityLocation = false.obs;
+
+  /// Location for nearby APIs after [resolveLocation]; null when permission denied.
+  final Rxn<LocationModel> nearbyLocation = Rxn<LocationModel>();
+
+  /// True after the first [resolveLocation] attempt completes.
+  final RxBool isLocationReady = false.obs;
+
+  final RxBool isResolvingLocation = false.obs;
+
+  Completer<void>? _resolveLocationCompleter;
 
   final TextEditingController cityController = TextEditingController();
 
@@ -26,7 +37,40 @@ class SettingsController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _loadSettings();
+    _bootstrapLocation();
+  }
+
+  Future<void> _bootstrapLocation() async {
+    // Prefs must load before resolve so a saved city is available if GPS fails.
+    await _loadSettings();
+    await resolveLocation();
+  }
+
+  /// Detects GPS (if allowed) and publishes [nearbyLocation] for nearby queries.
+  Future<void> resolveLocation({bool requestPermission = true}) async {
+    final inFlight = _resolveLocationCompleter;
+    if (inFlight != null) return inFlight.future;
+
+    final completer = Completer<void>();
+    _resolveLocationCompleter = completer;
+    isResolvingLocation.value = true;
+    try {
+      await detectCurrentCityLocation(requestPermission: requestPermission);
+
+      final permission = await Geolocator.checkPermission();
+      final granted =
+          permission == LocationPermission.always ||
+          permission == LocationPermission.whileInUse;
+
+      nearbyLocation.value = granted ? _selectedCityLocation.value : null;
+      completer.complete();
+    } catch (e, st) {
+      completer.completeError(e, st);
+    } finally {
+      isResolvingLocation.value = false;
+      isLocationReady.value = true;
+      _resolveLocationCompleter = null;
+    }
   }
 
   Future<void> _loadSettings() async {
@@ -87,6 +131,11 @@ class SettingsController extends GetxController {
       zip: zip,
       country: country,
     );
+
+    // Keep nearby queries in sync when GPS/city updates after the first resolve.
+    if (nearbyLocation.value != null) {
+      nearbyLocation.value = _selectedCityLocation.value;
+    }
 
     try {
       final prefs = await SharedPreferences.getInstance();
