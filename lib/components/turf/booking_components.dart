@@ -236,29 +236,48 @@ class TimeSlotCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isBooked = slot.isBooked;
-    final isDisabled = !slot.isAvailable || isBooked;
+    final isHeld = slot.isHeld && !isBooked;
+    final isDisabled = !slot.isAvailable || isBooked || isHeld;
+
+    Color? backgroundColor;
+    Color borderColor;
+    Color primaryTextColor;
+    Color priceColor;
+
+    if (isBooked) {
+      backgroundColor = Colors.red[50];
+      borderColor = Colors.red[200]!;
+      primaryTextColor = Colors.red[700]!;
+      priceColor = Colors.red[700]!;
+    } else if (isHeld) {
+      backgroundColor = Colors.orange[50];
+      borderColor = Colors.orange[200]!;
+      primaryTextColor = Colors.orange[800]!;
+      priceColor = Colors.orange[800]!;
+    } else if (!slot.isAvailable) {
+      backgroundColor = Colors.grey[100];
+      borderColor = Colors.grey[300]!;
+      primaryTextColor = Colors.grey[600]!;
+      priceColor = Colors.grey[600]!;
+    } else if (isSelected) {
+      backgroundColor = const Color(AppColors.primaryColor);
+      borderColor = const Color(AppColors.primaryColor);
+      primaryTextColor = Colors.white;
+      priceColor = Colors.white;
+    } else {
+      backgroundColor = Colors.white;
+      borderColor = Colors.grey[300]!;
+      primaryTextColor = const Color(AppColors.textColor);
+      priceColor = const Color(AppColors.primaryColor);
+    }
 
     return GestureDetector(
       onTap: isDisabled ? null : onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: isBooked
-              ? Colors.red[50]
-              : !slot.isAvailable
-              ? Colors.grey[100]
-              : isSelected
-              ? const Color(AppColors.primaryColor)
-              : Colors.white,
+          color: backgroundColor,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: isBooked
-                ? Colors.red[200]!
-                : !slot.isAvailable
-                ? Colors.grey[300]!
-                : isSelected
-                ? const Color(AppColors.primaryColor)
-                : Colors.grey[300]!,
-          ),
+          border: Border.all(color: borderColor),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -268,13 +287,7 @@ class TimeSlotCard extends StatelessWidget {
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
-                color: isBooked
-                    ? Colors.red[700]
-                    : !slot.isAvailable
-                    ? Colors.grey[600]
-                    : isSelected
-                    ? Colors.white
-                    : const Color(AppColors.textColor),
+                color: primaryTextColor,
               ),
             ),
             const SizedBox(height: 4),
@@ -282,13 +295,7 @@ class TimeSlotCard extends StatelessWidget {
               '₹${slot.price.toStringAsFixed(0)}',
               style: TextStyle(
                 fontSize: 13,
-                color: isBooked
-                    ? Colors.red[700]
-                    : !slot.isAvailable
-                    ? Colors.grey[600]
-                    : isSelected
-                    ? Colors.white
-                    : const Color(AppColors.primaryColor),
+                color: priceColor,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -298,6 +305,15 @@ class TimeSlotCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 11,
                   color: Colors.red[700],
+                  fontWeight: FontWeight.w600,
+                ),
+              )
+            else if (isHeld)
+              Text(
+                'On hold',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.orange[800],
                   fontWeight: FontWeight.w600,
                 ),
               )

@@ -42,6 +42,19 @@ class TurfBookingService {
     return TurfBookingModel.fromJson(response);
   }
 
+  /// Release an unpaid payment hold when checkout fails or is dismissed.
+  Future<TurfBookingModel?> abandonPayment(String bookingId) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiConstants.turfBooking.abandonPayment(bookingId),
+    );
+
+    if (response == null) {
+      return null;
+    }
+
+    return TurfBookingModel.fromJson(response);
+  }
+
   /// Get current user's bookings
   Future<PaginatedResponse<TurfBookingModel>?> findBookings({
     String? turf,

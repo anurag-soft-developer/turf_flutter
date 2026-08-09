@@ -69,6 +69,7 @@ class TurfBookingEndpoints {
   // String get create => '/turf-bookings';
   String get createOrder => '/turf-bookings/create-order';
   String get verifyPayment => '/turf-bookings/verify-payment';
+  String abandonPayment(String id) => '/turf-bookings/$id/abandon-payment';
   String get playerBookings => '/turf-bookings/player-bookings';
   String get checkAvailability => '/turf-bookings/check-availability';
 

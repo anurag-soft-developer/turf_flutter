@@ -56,6 +56,13 @@ class TurfDetailController extends GetxController {
 
   @override
   void onClose() {
+    final pendingId = _pendingBookingId;
+    _pendingBookingId = null;
+    _pendingOrderId = null;
+    if (pendingId != null) {
+      // Fire-and-forget: app may be leaving mid-checkout.
+      _bookingService.abandonPayment(pendingId);
+    }
     _razorpay.clear();
     super.onClose();
   }
@@ -151,7 +158,20 @@ class TurfDetailController extends GetxController {
     }
   }
 
-  void _handlePaymentError(PaymentFailureResponse response) {
+  Future<void> _handlePaymentError(PaymentFailureResponse response) async {
+    final bookingId = _pendingBookingId;
+    _pendingBookingId = null;
+    _pendingOrderId = null;
+
+    if (bookingId != null) {
+      try {
+        await _bookingService.abandonPayment(bookingId);
+        await _invalidateAfterBooking();
+      } catch (_) {
+        // Hold will expire via server cleanup if abandon fails.
+      }
+    }
+
     final message = response.message?.isNotEmpty == true
         ? response.message!
         : 'Payment was not completed.';

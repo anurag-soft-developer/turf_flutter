@@ -81,6 +81,7 @@ class TurfTimeSlotListing {
   final bool isAvailable;
   final double price;
   final bool isBooked;
+  final bool isHeld;
 
   TurfTimeSlotListing({
     required this.startTime,
@@ -88,6 +89,7 @@ class TurfTimeSlotListing {
     required this.isAvailable,
     required this.price,
     required this.isBooked,
+    this.isHeld = false,
   });
 
   factory TurfTimeSlotListing.fromJson(Map<String, dynamic> json) {
@@ -97,6 +99,7 @@ class TurfTimeSlotListing {
       isAvailable: json['isAvailable'] as bool,
       price: (json['price'] as num).toDouble(),
       isBooked: json['isBooked'] as bool,
+      isHeld: json['isHeld'] as bool? ?? false,
     );
   }
 
