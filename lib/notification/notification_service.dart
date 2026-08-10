@@ -67,9 +67,18 @@ class NotificationService {
     return MarkAllReadResponse.fromJson(response);
   }
 
-  Future<DeleteNotificationResponse?> deleteOne(String id) async {
+  /// Deletes one or many notifications via `DELETE /notifications/:id`
+  /// where `:id` is a single id or comma-separated ids (`id1,id2`).
+  Future<DeleteNotificationResponse?> delete(List<String> ids) async {
+    final unique = ids
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toSet()
+        .toList();
+    if (unique.isEmpty) return null;
+
     final response = await _apiService.delete<Map<String, dynamic>>(
-      ApiConstants.notifications.byId(id),
+      ApiConstants.notifications.byId(unique.join(',')),
     );
     if (response == null) return null;
     return DeleteNotificationResponse.fromJson(response);

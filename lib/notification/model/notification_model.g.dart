@@ -79,8 +79,14 @@ Map<String, dynamic> _$DeleteAllNotificationsResponseToJson(
 
 DeleteNotificationResponse _$DeleteNotificationResponseFromJson(
   Map<String, dynamic> json,
-) => DeleteNotificationResponse(deleted: json['deleted'] as bool);
+) => DeleteNotificationResponse(
+  deleted: json['deleted'] as bool,
+  deletedCount: (json['deletedCount'] as num?)?.toInt() ?? 0,
+);
 
 Map<String, dynamic> _$DeleteNotificationResponseToJson(
   DeleteNotificationResponse instance,
-) => <String, dynamic>{'deleted': instance.deleted};
+) => <String, dynamic>{
+  'deleted': instance.deleted,
+  'deletedCount': instance.deletedCount,
+};

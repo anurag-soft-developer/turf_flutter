@@ -164,6 +164,7 @@ class TeamInviteEndpoints {
 }
 
 /// `GET/PATCH/DELETE /notifications/*` — JWT required.
+/// `DELETE /notifications/:id` accepts one id or comma-separated ids.
 class NotificationEndpoints {
   const NotificationEndpoints();
 

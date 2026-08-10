@@ -131,8 +131,13 @@ class DeleteAllNotificationsResponse {
 @JsonSerializable()
 class DeleteNotificationResponse {
   final bool deleted;
+  @JsonKey(name: 'deletedCount')
+  final int deletedCount;
 
-  const DeleteNotificationResponse({required this.deleted});
+  const DeleteNotificationResponse({
+    required this.deleted,
+    this.deletedCount = 0,
+  });
 
   factory DeleteNotificationResponse.fromJson(Map<String, dynamic> json) =>
       _$DeleteNotificationResponseFromJson(json);
