@@ -64,6 +64,7 @@ class Routes {
   final String matchUp = '/match-up';
   final String matchUpChallenges = '/match-up/challenges';
   final String matches = '/matches';
+  final String exploreSearch = '/explore/search';
   final String matchChallengeMessages = '/match-up/challenge-messages';
   final String cricketScoreBoard = '/match-up/cricket-scoreboard';
   final String footballScoreBoard = '/match-up/football-scoreboard';
@@ -78,6 +79,7 @@ class StorageKeys {
   final String userData = 'user_data';
   final String isLoggedIn = 'is_logged_in';
   final String fcmDeviceKey = 'fcm_device_key';
+  final String exploreSearchHistory = 'explore_search_history';
 }
 
 class ErrorMessages {

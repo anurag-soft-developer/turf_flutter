@@ -83,6 +83,20 @@ class QueryKeys {
         search ?? '',
       ];
 
+  static List<Object?> explore({
+    required String mode,
+    required String category,
+    String? q,
+    List<String>? filterParts,
+  }) =>
+      [
+        'explore',
+        mode,
+        category,
+        q ?? '',
+        ...(filterParts ?? const <String>[]),
+      ];
+
   static List<Object?> bookings({
     required String tab,
     String? paymentStatus,

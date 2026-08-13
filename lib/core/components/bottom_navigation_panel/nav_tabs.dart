@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/bindings/explore_binding.dart';
+import 'package:flutter_application_1/explore/explore_screen.dart';
 import 'package:flutter_application_1/match_up/match_up_controller.dart';
 import 'package:flutter_application_1/match_up/match_up_screen.dart';
-import 'package:flutter_application_1/match_up/matches/matches_controller.dart';
-import 'package:flutter_application_1/match_up/matches/matches_screen.dart';
 import 'package:get/get.dart';
 import '../../../dashboard/dashboard_screen.dart';
 import '../../../dashboard/player/player_dashboard_controller.dart';
@@ -49,13 +49,11 @@ final List<NavTab> kNavTabs = [
     disposeController: () => _dispose<TurfListController>(),
   ),
   NavTab(
-    icon: Icons.sports_score_outlined,
-    activeIcon: Icons.sports_score,
-    label: 'Matches',
-    screenBuilder: () => const MatchesScreen(),
-    loadController: () =>
-        _ensure<MatchesController>(() => MatchesController()),
-    disposeController: () => _dispose<MatchesController>(),
+    icon: Icons.explore_outlined,
+    activeIcon: Icons.explore,
+    label: 'Explore',
+    screenBuilder: () => const ExploreScreen(),
+    loadController: () => ExploreBinding().dependencies(),
   ),
   NavTab(
     icon: Icons.sports_soccer_outlined,

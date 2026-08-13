@@ -18,6 +18,7 @@ class ApiConstants {
   static const scoring = ScoringEndpoints();
   static const storage = StorageEndpoints();
   static const dashboard = DashboardEndpoints();
+  static const explore = ExploreEndpoints();
 
   // Headers
   static const Map<String, String> defaultHeaders = {
@@ -309,4 +310,11 @@ class DashboardEndpoints {
   const DashboardEndpoints();
 
   String get player => '/dashboard/player';
+}
+
+/// Unified explore feed and search (`GET /explore`) — JWT required.
+class ExploreEndpoints {
+  const ExploreEndpoints();
+
+  String get base => '/explore';
 }
