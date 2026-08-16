@@ -238,6 +238,9 @@ TeamMatchModel _$TeamMatchModelFromJson(
   selectedTurfProposalId: mongoIdFromJsonNullable(
     json['selectedTurfProposalId'],
   ),
+  venueLocation: json['venueLocation'] == null
+      ? null
+      : LocationModel.fromJson(json['venueLocation'] as Map<String, dynamic>),
   winnerTeam: const TeamRefConverter().fromJson(json['winnerTeam']),
   notes: json['notes'] as String?,
   turfBookingId: const TurfBookingRefConverter().fromJson(
@@ -287,6 +290,7 @@ Map<String, dynamic> _$TeamMatchModelToJson(
   'proposedTurfs': instance.proposedTurfs.map((e) => e.toJson()).toList(),
   'selectedSlotProposalId': instance.selectedSlotProposalId,
   'selectedTurfProposalId': instance.selectedTurfProposalId,
+  'venueLocation': instance.venueLocation?.toJson(),
   'winnerTeam': const TeamRefConverter().toJson(instance.winnerTeam),
   'notes': instance.notes,
   'turfBookingId': const TurfBookingRefConverter().toJson(

@@ -345,6 +345,9 @@ class TeamMatchModel {
   @JsonKey(name: 'selectedTurfProposalId', fromJson: mongoIdFromJsonNullable)
   final String? selectedTurfProposalId;
 
+  /// Copied from the selected turf when a venue is locked in.
+  final LocationModel? venueLocation;
+
   /// Lean id or populated team subset when backend populates `winnerTeam`.
   @JsonKey(name: 'winnerTeam')
   @TeamRefConverter()
@@ -379,6 +382,7 @@ class TeamMatchModel {
     this.proposedTurfs = const [],
     this.selectedSlotProposalId,
     this.selectedTurfProposalId,
+    this.venueLocation,
     this.winnerTeam,
     this.notes,
     this.turfBookingId,

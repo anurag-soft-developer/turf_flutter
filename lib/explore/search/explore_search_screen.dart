@@ -2,17 +2,15 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:flutter_query/flutter_query.dart';
+import 'package:get/get.dart';
 
 import '../../components/shared/app_search_field.dart';
 import '../../core/config/constants.dart';
-import '../../core/query/query_keys.dart';
-import '../../core/query/query_retry.dart';
-import '../explore_service.dart';
+import '../../settings/settings_controller.dart';
 import '../model/explore_category.dart';
 import '../model/explore_filters.dart';
-import '../model/explore_item.dart';
-import '../widgets/explore_list.dart';
+import '../widgets/explore_feed_body.dart';
+import 'explore_search_all_body.dart';
 import 'explore_search_category_tabs.dart';
 import 'explore_search_filters_bar.dart';
 import 'explore_search_history.dart';
@@ -29,6 +27,7 @@ class ExploreSearchScreen extends HookWidget {
     final category = useState(ExploreCategory.all);
     final filters = useState(ExploreFilters.all);
     final historyItems = useState<List<String>>(const []);
+    final settings = Get.find<SettingsController>();
 
     final historyStore = useMemoized(() => ExploreSearchHistoryStore.instance);
 
@@ -77,46 +76,6 @@ class ExploreSearchScreen extends HookWidget {
     final canFetch = queryText.isNotEmpty;
     final isDebouncing = searchText.value.trim().isNotEmpty && !canFetch;
 
-    final exploreQuery =
-        useInfiniteQuery<ExplorePaginatedResponse, Object, int>(
-      QueryKeys.explore(
-        mode: 'search',
-        category: activeCategory.apiValue,
-        q: queryText,
-        filterParts: activeFilters.toQueryKeyParts(),
-      ),
-      (ctx) async {
-        final result = await ExploreService().fetch(
-          q: queryText,
-          category: activeCategory,
-          page: ctx.pageParam,
-          limit: 20,
-          filters: activeFilters,
-        );
-        return result ??
-            ExplorePaginatedResponse(
-              data: const [],
-              totalDocuments: 0,
-              page: ctx.pageParam,
-              limit: 20,
-              totalPages: 0,
-            );
-      },
-      initialPageParam: 1,
-      retry: noRetry,
-      enabled: canFetch,
-      nextPageParamBuilder: (data) {
-        final last = data.pages.isNotEmpty ? data.pages.last : null;
-        if (last == null || !last.hasNextPage) return null;
-        return last.page + 1;
-      },
-    );
-
-    final items = canFetch
-        ? exploreQuery.data?.pages.expand((p) => p.data).toList() ??
-            const <ExploreItem>[]
-        : const <ExploreItem>[];
-
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
       appBar: AppBar(
@@ -129,7 +88,7 @@ class ExploreSearchScreen extends HookWidget {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: AppSearchField(
               controller: searchController,
-              hintText: 'Search matches, teams, or players',
+              hintText: 'Search matches, teams, players, or posts',
               autofocus: true,
               onCleared: () {
                 searchText.value = '';
@@ -140,7 +99,11 @@ class ExploreSearchScreen extends HookWidget {
           if (canFetch) ...[
             ExploreSearchCategoryTabs(
               category: activeCategory,
-              onChanged: (next) => category.value = next,
+              includeAll: true,
+              onChanged: (next) {
+                category.value = next;
+                filters.value = ExploreFilters.all;
+              },
             ),
             ExploreSearchFiltersBar(
               category: activeCategory,
@@ -148,15 +111,35 @@ class ExploreSearchScreen extends HookWidget {
               onChanged: (next) => filters.value = next,
             ),
             Expanded(
-              child: ExploreList(
-                query: exploreQuery,
-                items: items,
-                emptyTitle: 'No results found',
-                emptySubtitle:
-                    'Try another keyword or switch the category filter.',
-                emptyIcon: Icons.search_off_outlined,
-                errorMessage: 'Failed to load search results',
-              ),
+              child: Obx(() {
+                final location = settings.nearbyLocation.value;
+                if (activeCategory == ExploreCategory.all) {
+                  return ExploreSearchAllBody(
+                    key: ValueKey(
+                      'search-all|$queryText|${activeFilters.toQueryKeyParts().join(',')}|${location?.latitude}|${location?.longitude}',
+                    ),
+                    q: queryText,
+                    filters: activeFilters,
+                    location: location,
+                    onViewMore: (next) => category.value = next,
+                  );
+                }
+                return ExploreFeedBody(
+                  key: ValueKey(
+                    'search|$queryText|${activeCategory.apiValue}|${activeFilters.toQueryKeyParts().join(',')}|${location?.latitude}|${location?.longitude}',
+                  ),
+                  mode: 'search',
+                  category: activeCategory,
+                  filters: activeFilters,
+                  q: queryText,
+                  location: location,
+                  emptyTitle: 'No results found',
+                  emptySubtitle:
+                      'Try another keyword or switch the category filter.',
+                  emptyIcon: Icons.search_off_outlined,
+                  errorMessage: 'Failed to load search results',
+                );
+              }),
             ),
           ] else
             Expanded(

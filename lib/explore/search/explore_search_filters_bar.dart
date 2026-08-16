@@ -31,7 +31,10 @@ class ExploreSearchFiltersBar extends StatelessWidget {
           filters: filters,
           onChanged: onChanged,
         ),
-      ExploreCategory.all || ExploreCategory.player => const SizedBox.shrink(),
+      ExploreCategory.all ||
+      ExploreCategory.player ||
+      ExploreCategory.post =>
+        const SizedBox.shrink(),
     };
   }
 }

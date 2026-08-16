@@ -63,8 +63,11 @@ class Routes {
   String teamFollowers(String teamId) => '/team-followers/$teamId';
   final String matchUp = '/match-up';
   final String matchUpChallenges = '/match-up/challenges';
+  String matchChallengeDetail([String id = ':id']) =>
+      '/match-up/challenges/detail/$id';
   final String matches = '/matches';
   final String exploreSearch = '/explore/search';
+  String explorePost([String id = ':id']) => '/explore/post/$id';
   final String matchChallengeMessages = '/match-up/challenge-messages';
   final String cricketScoreBoard = '/match-up/cricket-scoreboard';
   final String footballScoreBoard = '/match-up/football-scoreboard';

@@ -2,7 +2,10 @@ enum ExploreCategory {
   all,
   match,
   team,
-  player;
+  player,
+  post;
 
   String get apiValue => name;
+
+  bool get isConcrete => this != ExploreCategory.all;
 }

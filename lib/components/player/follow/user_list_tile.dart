@@ -7,9 +7,10 @@ import '../../rankings/player_avatar.dart';
 
 /// Avatar + name row that navigates to the user's public profile.
 class UserListTile extends StatelessWidget {
-  const UserListTile({super.key, required this.helper});
+  const UserListTile({super.key, required this.helper, this.onOpen});
 
   final UserFieldInstance helper;
+  final VoidCallback? onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -38,10 +39,13 @@ class UserListTile extends StatelessWidget {
       ),
       onTap: userId == null || userId.isEmpty
           ? null
-          : () => Get.toNamed(
-              AppConstants.routes.teamMemberProfile,
-              arguments: {'userId': userId},
-            ),
+          : () {
+              onOpen?.call();
+              Get.toNamed(
+                AppConstants.routes.teamMemberProfile,
+                arguments: {'userId': userId},
+              );
+            },
     );
   }
 }

@@ -164,6 +164,9 @@ const double kDefaultNearbyRadiusKm = 10;
 const double kMinNearbyRadiusKm = 0.1;
 const double kMaxNearbyRadiusKm = 500;
 
+/// Backend explore `nearbyLocationQuerySchema` default when `location` is sent.
+const double kExploreNearbyRadiusKm = 100;
+
 /// Flat query entries for `location: nearbyLocationQuerySchema` (e.g. `location[nearbyLat]`).
 Map<String, String> nearbyLocationQueryParameters({
   required double nearbyLat,

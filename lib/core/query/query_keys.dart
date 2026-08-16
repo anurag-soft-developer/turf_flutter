@@ -88,6 +88,8 @@ class QueryKeys {
     required String category,
     String? q,
     List<String>? filterParts,
+    double? lat,
+    double? lng,
   }) =>
       [
         'explore',
@@ -95,6 +97,8 @@ class QueryKeys {
         category,
         q ?? '',
         ...(filterParts ?? const <String>[]),
+        lat ?? 'none',
+        lng ?? 'none',
       ];
 
   static List<Object?> bookings({
@@ -143,6 +147,8 @@ class QueryKeys {
 
   static List<Object> matchChallengeDetail(String matchId) =>
       ['matchChallengeDetail', matchId];
+
+  static List<Object> explorePost(String postId) => ['explorePost', postId];
 
   static List<Object> cricketSession(String matchId) =>
       ['cricketSession', matchId];

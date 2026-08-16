@@ -19,6 +19,8 @@ class ApiConstants {
   static const storage = StorageEndpoints();
   static const dashboard = DashboardEndpoints();
   static const explore = ExploreEndpoints();
+  static const engagement = EngagementEndpoints();
+  static const posts = PostEndpoints();
 
   // Headers
   static const Map<String, String> defaultHeaders = {
@@ -317,4 +319,18 @@ class ExploreEndpoints {
   const ExploreEndpoints();
 
   String get base => '/explore';
+}
+
+class PostEndpoints {
+  const PostEndpoints();
+
+  String byId(String id) => '/posts/$id';
+}
+
+/// Impressions / likes (`POST /engagement/batch`, `POST`/`DELETE /likes`) — JWT required.
+class EngagementEndpoints {
+  const EngagementEndpoints();
+
+  String get batch => '/engagement/batch';
+  String get likes => '/likes';
 }

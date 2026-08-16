@@ -12,6 +12,7 @@ import '../../core/components/query/query_async_body.dart';
 import '../../core/config/constants.dart';
 import '../../core/query/query_keys.dart';
 import '../../core/query/query_retry.dart';
+import '../../core/routes/route_query.dart';
 import '../../team/members/model/team_member_model.dart';
 import '../../team/team_service.dart';
 import '../matchmaking_service.dart';
@@ -27,21 +28,19 @@ Future<T?>? openMatchChallengeDetail<T>({
   String? matchId,
   bool? isIncoming,
 }) {
+  final id = (matchId ?? match?.id)?.trim();
   assert(
-    match != null || (matchId != null && matchId.isNotEmpty),
+    id != null && id.isNotEmpty,
     'Provide match or matchId',
   );
-  return Get.to<T>(
-    () => const MatchChallengeDetailScreen(),
-    binding: BindingsBuilder(
-      () => Get.lazyPut(
-        () => MatchChallengeDetailController(
-          initialMatch: match,
-          matchIdArg: matchId,
-          explicitIsIncoming: isIncoming,
-        ),
-      ),
-    ),
+  if (id == null || id.isEmpty) return null;
+
+  return Get.toNamed<T>(
+    AppConstants.routes.matchChallengeDetail(id),
+    arguments: {
+      if (isIncoming != null) 'isIncoming': isIncoming,
+    },
+    preventDuplicates: false,
   );
 }
 
@@ -50,8 +49,7 @@ class MatchChallengeDetailScreen extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<MatchChallengeDetailController>();
-    final matchId = controller.resolvedMatchId;
+    final matchId = routeParam('id');
 
     if (matchId == null || matchId.isEmpty) {
       return Scaffold(
@@ -83,6 +81,8 @@ class MatchChallengeDetailScreen extends HookWidget {
       );
     }
 
+    final controller = Get.find<MatchChallengeDetailController>(tag: matchId);
+
     final matchQuery = useQuery<TeamMatchModel, Object>(
       QueryKeys.matchChallengeDetail(matchId),
       (_) async {
@@ -91,7 +91,6 @@ class MatchChallengeDetailScreen extends HookWidget {
         return loaded;
       },
       retry: noRetry,
-      seed: controller.initialMatch,
     );
 
     final needsMemberships = controller.explicitIsIncoming == null;

@@ -8,6 +8,7 @@ import '../../components/challenges/praposals/propose_time_slot_sheet.dart';
 import '../../components/challenges/praposals/propose_turf_sheet.dart';
 import '../../core/config/constants.dart';
 import '../../core/query/query_keys.dart';
+import '../../core/routes/route_query.dart';
 import '../../core/utils/app_snackbar.dart';
 import '../../scoring/cricket/cricket_scoring_live_cache.dart';
 import '../../scoring/football/football_scoring_live_cache.dart';
@@ -21,15 +22,10 @@ import '../model/team_match_model.dart';
 /// Tab + mutation state for challenge detail. Match data is owned by flutter_query.
 class MatchChallengeDetailController extends GetxController
     with GetSingleTickerProviderStateMixin {
-  MatchChallengeDetailController({
-    this.initialMatch,
-    this.matchIdArg,
-    this.explicitIsIncoming,
-  });
+  MatchChallengeDetailController();
 
-  final TeamMatchModel? initialMatch;
-  final String? matchIdArg;
-  final bool? explicitIsIncoming;
+  late final String? matchIdArg;
+  late final bool? explicitIsIncoming;
 
   final Rxn<TeamMatchModel> match = Rxn<TeamMatchModel>();
   final RxBool isIncoming = false.obs;
@@ -48,7 +44,7 @@ class MatchChallengeDetailController extends GetxController
   String? _joinedLiveMatchId;
 
   String? get resolvedMatchId {
-    final fromMatch = match.value?.id ?? initialMatch?.id;
+    final fromMatch = match.value?.id;
     if (fromMatch != null && fromMatch.isNotEmpty) return fromMatch;
     final arg = matchIdArg?.trim();
     if (arg != null && arg.isNotEmpty) return arg;
@@ -111,8 +107,12 @@ class MatchChallengeDetailController extends GetxController
   void onInit() {
     super.onInit();
     detailTabController = TabController(length: 3, vsync: this);
-    if (initialMatch != null) {
-      match.value = initialMatch;
+    matchIdArg = routeParam('id');
+    final args = Get.arguments;
+    if (args is Map && args['isIncoming'] is bool) {
+      explicitIsIncoming = args['isIncoming'] as bool;
+    } else {
+      explicitIsIncoming = routeParamBool('isIncoming');
     }
     if (explicitIsIncoming != null) {
       isIncoming.value = explicitIsIncoming!;

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:flutter_application_1/bindings/explore_binding.dart';
+import 'package:flutter_application_1/bindings/match_challenge_detail_binding.dart';
 import 'package:flutter_application_1/bindings/match_challenges_binding.dart';
 import 'package:flutter_application_1/bindings/match_up_binding.dart';
 import 'package:flutter_application_1/bindings/scoring_binding.dart';
@@ -8,6 +9,8 @@ import 'package:flutter_application_1/core/config/constants.dart';
 import 'package:flutter_application_1/core/guards/auth_guard.dart';
 import 'package:flutter_application_1/explore/explore_screen.dart';
 import 'package:flutter_application_1/explore/search/explore_search_screen.dart';
+import 'package:flutter_application_1/explore/widgets/explore_post_viewer_screen.dart';
+import 'package:flutter_application_1/match_up/match_challenges/match_challenge_detail_screen.dart';
 import 'package:flutter_application_1/match_up/match_challenges/match_challenges_screen.dart';
 import 'package:flutter_application_1/match_up/match_up_screen.dart';
 import 'package:flutter_application_1/match_up/messages/match_challenge_messages_screen.dart';
@@ -42,6 +45,20 @@ final List<GetPage<dynamic>> matchUpRoutes = [
     name: AppConstants.routes.exploreSearch,
     page: () => const ExploreSearchScreen(),
     binding: ExploreBinding(),
+    transition: Transition.cupertino,
+    middlewares: [AuthGuard()],
+  ),
+  GetPage(
+    name: AppConstants.routes.explorePost(),
+    page: () => const ExplorePostViewerScreen(),
+    binding: ExploreBinding(),
+    transition: Transition.cupertino,
+    middlewares: [AuthGuard()],
+  ),
+  GetPage(
+    name: AppConstants.routes.matchChallengeDetail(),
+    page: () => const MatchChallengeDetailScreen(),
+    binding: MatchChallengeDetailBinding(),
     transition: Transition.cupertino,
     middlewares: [AuthGuard()],
   ),

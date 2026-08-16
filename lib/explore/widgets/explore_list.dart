@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_query/flutter_query.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 
 import '../../components/match_history/match_history_placeholders.dart';
 import '../../core/config/constants.dart';
+import '../../engagement/engagement_service.dart';
 import '../model/explore_item.dart';
 import 'explore_item_tile.dart';
 
@@ -119,7 +121,22 @@ class ExploreList extends StatelessWidget {
               );
             }
 
-            return ExploreItemTile(item: items[i]);
+            return VisibilityDetector(
+              key: Key(
+                'explore-${items[i].engagementType.apiValue}-${items[i].entityId ?? i}',
+              ),
+              onVisibilityChanged: (info) {
+                if (info.visibleFraction < 0.5) return;
+                final item = items[i];
+                final id = item.entityId;
+                if (id == null || id.isEmpty) return;
+                EngagementService().trackImpression(
+                  entityType: item.engagementType,
+                  entityId: id,
+                );
+              },
+              child: ExploreItemTile(item: items[i]),
+            );
           },
         ),
       ),

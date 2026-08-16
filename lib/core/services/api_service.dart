@@ -261,6 +261,29 @@ class ApiService {
     }
   }
 
+  /// POST with 204 No Content or empty body (avoids treating null body as error).
+  Future<bool> postNoContent(
+    String endpoint, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    try {
+      final response = await _dio.post<dynamic>(
+        endpoint,
+        data: data,
+        queryParameters: queryParameters,
+        options: Options(
+          validateStatus: (status) =>
+              status != null && status >= 200 && status < 300,
+        ),
+      );
+      return response.statusCode == 204 || response.statusCode == 200;
+    } catch (e) {
+      ExceptionHandler.handleException(e);
+      return false;
+    }
+  }
+
   /// DELETE with 204 No Content or empty body (avoids treating null body as error).
   Future<bool> deleteResource(
     String endpoint, {

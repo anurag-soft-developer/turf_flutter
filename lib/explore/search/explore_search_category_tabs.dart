@@ -8,37 +8,45 @@ class ExploreSearchCategoryTabs extends StatelessWidget {
     super.key,
     required this.category,
     required this.onChanged,
+    this.includeAll = false,
   });
 
   final ExploreCategory category;
   final ValueChanged<ExploreCategory> onChanged;
+  final bool includeAll;
 
-  static const _tabs = <ExploreCategory>[
-    ExploreCategory.all,
+  static const _concreteTabs = <ExploreCategory>[
     ExploreCategory.match,
     ExploreCategory.team,
     ExploreCategory.player,
+    ExploreCategory.post,
   ];
 
-  static String _label(ExploreCategory value) => switch (value) {
+  static String label(ExploreCategory value) => switch (value) {
         ExploreCategory.all => 'All',
         ExploreCategory.match => 'Matches',
         ExploreCategory.team => 'Teams',
         ExploreCategory.player => 'Players',
+        ExploreCategory.post => 'Posts',
       };
 
   @override
   Widget build(BuildContext context) {
+    final tabs = <ExploreCategory>[
+      if (includeAll) ExploreCategory.all,
+      ..._concreteTabs,
+    ];
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       child: Row(
         children: [
-          for (final tab in _tabs) ...[
+          for (final tab in tabs) ...[
             Padding(
               padding: const EdgeInsets.only(right: 8),
               child: ChoiceChip(
-                label: Text(_label(tab)),
+                label: Text(label(tab)),
                 selected: category == tab,
                 onSelected: (_) => onChanged(tab),
                 selectedColor: const Color(AppColors.primaryColor).withValues(
