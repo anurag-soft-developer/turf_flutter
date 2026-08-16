@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../core/components/bottom_navigation_panel/navigation_controller.dart';
@@ -15,9 +14,6 @@ class TurfListController extends GetxController {
 
   final SettingsController settings = Get.find();
 
-  final TextEditingController searchController = TextEditingController();
-
-  final RxBool isSearching = false.obs;
   final RxList<String> selectedSportTypes = <String>[].obs;
   final RxList<String> selectedAmenities = <String>[].obs;
   final RxDouble minPrice = 0.0.obs;
@@ -60,7 +56,6 @@ class TurfListController extends GetxController {
   @override
   void onClose() {
     _sliderFilterDebounce?.cancel();
-    searchController.dispose();
     super.onClose();
   }
 
@@ -69,10 +64,7 @@ class TurfListController extends GetxController {
   }
 
   void notifySearch() {
-    isSearching.value = true;
     _bumpFilters();
-    // Cleared by screen after query key changes; keep true briefly for UI.
-    Future.microtask(() => isSearching.value = false);
   }
 
   /// Alias used by filter UI widgets.
@@ -138,7 +130,6 @@ class TurfListController extends GetxController {
   }
 
   void clearFilters() {
-    searchController.clear();
     settings.clearCityLocation();
     selectedSportTypes.clear();
     selectedAmenities.clear();

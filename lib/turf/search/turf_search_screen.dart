@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/components/shared/user_avatar_app_bar_action.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
@@ -10,92 +9,99 @@ import '../../core/config/constants.dart';
 import '../../core/models/paginated_response.dart';
 import '../../core/query/query_keys.dart';
 import '../../core/query/query_retry.dart';
+import '../../core/components/search/app_search_screen.dart';
+import '../../core/services/search/search_history_store.dart';
 import '../../settings/settings_controller.dart';
+import '../feed/turf_list_controller.dart';
 import '../model/turf_model.dart';
 import '../turf_service.dart';
-import 'turf_list_controller.dart';
 
-class TurfListScreen extends StatelessWidget {
-  const TurfListScreen({super.key});
+class TurfSearchScreen extends StatelessWidget {
+  const TurfSearchScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final TurfListController controller = Get.find();
+    final controller = Get.find<TurfListController>();
 
-    return Scaffold(
-      backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        leading: const UserAvatarAppBarAction(),
-        title: const Text(
-          'Find Turfs',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: const Color(AppColors.primaryColor),
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            tooltip: 'Search',
-            icon: const Icon(Icons.search),
-            onPressed: () => Get.toNamed(AppConstants.routes.turfSearch),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          TurfSearchSection(controller: controller),
-          Expanded(
-            child: Obx(() {
-              final settings = Get.find<SettingsController>();
-              final city = settings.selectedCityLocation.value;
-              final queryKey = QueryKeys.turfSearch(
-                search: '',
-                sportTypes: controller.selectedSportTypes.toList(),
-                amenities: controller.selectedAmenities.toList(),
-                city: city == null
-                    ? ''
-                    : '${city.latitude},${city.longitude}',
-                minPrice: controller.minPrice.value,
-                maxPrice: controller.maxPrice.value,
-                minRating: controller.selectedRating.value,
-                sortBy: controller.sortBy.value,
-              );
-              // Touch revision so Obx rebuilds when filters bump without list change.
-              controller.filterRevision.value;
-
-              return _TurfListQueryBody(
-                key: ValueKey(queryKey.join('|')),
-                queryKey: queryKey,
-                controller: controller,
-              );
-            }),
-          ),
-        ],
+    return AppSearchScreen(
+      historyScope: SearchHistoryScope.turfs,
+      title: 'Search Turfs',
+      hintText: 'Search turfs by name',
+      headerBuilder: (context, query) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: QuickFiltersRow(controller: controller),
+        );
+      },
+      resultsBuilder: (context, query) => _TurfSearchResults(
+        query: query,
+        controller: controller,
       ),
     );
   }
 }
 
-class _TurfListQueryBody extends HookWidget {
-  const _TurfListQueryBody({
-    super.key,
-    required this.queryKey,
+class _TurfSearchResults extends HookWidget {
+  const _TurfSearchResults({
+    required this.query,
     required this.controller,
   });
 
-  final List<Object?> queryKey;
+  final String query;
   final TurfListController controller;
 
   @override
   Widget build(BuildContext context) {
+    final settings = Get.find<SettingsController>();
     final turfService = TurfService();
 
-    final turfsQuery = useInfiniteQuery<PaginatedResponse<TurfModel>, Object, int>(
+    return Obx(() {
+      final city = settings.selectedCityLocation.value;
+      controller.filterRevision.value;
+      final queryKey = QueryKeys.turfSearch(
+        search: query,
+        sportTypes: controller.selectedSportTypes.toList(),
+        amenities: controller.selectedAmenities.toList(),
+        city: city == null ? '' : '${city.latitude},${city.longitude}',
+        minPrice: controller.minPrice.value,
+        maxPrice: controller.maxPrice.value,
+        minRating: controller.selectedRating.value,
+        sortBy: controller.sortBy.value,
+      );
+
+      return _TurfSearchQueryBody(
+        key: ValueKey(queryKey.join('|')),
+        queryKey: queryKey,
+        query: query,
+        controller: controller,
+        turfService: turfService,
+      );
+    });
+  }
+}
+
+class _TurfSearchQueryBody extends HookWidget {
+  const _TurfSearchQueryBody({
+    super.key,
+    required this.queryKey,
+    required this.query,
+    required this.controller,
+    required this.turfService,
+  });
+
+  final List<Object?> queryKey;
+  final String query;
+  final TurfListController controller;
+  final TurfService turfService;
+
+  @override
+  Widget build(BuildContext context) {
+    final turfsQuery =
+        useInfiniteQuery<PaginatedResponse<TurfModel>, Object, int>(
       queryKey,
       (ctx) async {
         final response = await turfService.searchTurfs(
-          globalSearchText: null,
+          globalSearchText: query,
           sportTypes: controller.selectedSportTypes.isNotEmpty
               ? controller.selectedSportTypes.toList()
               : null,
@@ -137,11 +143,12 @@ class _TurfListQueryBody extends HookWidget {
   }
 
   Widget _buildList(
-    InfiniteQueryResult<PaginatedResponse<TurfModel>, Object, int> query,
+    InfiniteQueryResult<PaginatedResponse<TurfModel>, Object, int> queryResult,
     List<TurfModel> turfs,
   ) {
     if (turfs.isEmpty &&
-        (query.isLoading || (query.isFetching && query.data == null))) {
+        (queryResult.isLoading ||
+            (queryResult.isFetching && queryResult.data == null))) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         children: const [
@@ -157,14 +164,14 @@ class _TurfListQueryBody extends HookWidget {
       );
     }
 
-    if (query.isError && turfs.isEmpty) {
+    if (queryResult.isError && turfs.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
           const SizedBox(height: 120),
           Center(
             child: ElevatedButton(
-              onPressed: () => query.refetch(),
+              onPressed: () => queryResult.refetch(),
               child: const Text('Retry'),
             ),
           ),
@@ -188,8 +195,8 @@ class _TurfListQueryBody extends HookWidget {
       onNotification: (notification) {
         if (notification.metrics.pixels >=
             notification.metrics.maxScrollExtent - 200) {
-          if (query.hasNextPage && !query.isFetchingNextPage) {
-            query.fetchNextPage();
+          if (queryResult.hasNextPage && !queryResult.isFetchingNextPage) {
+            queryResult.fetchNextPage();
           }
         }
         return false;
@@ -197,7 +204,7 @@ class _TurfListQueryBody extends HookWidget {
       child: ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        itemCount: turfs.length + (query.isFetchingNextPage ? 1 : 0),
+        itemCount: turfs.length + (queryResult.isFetchingNextPage ? 1 : 0),
         itemBuilder: (context, index) {
           if (index == turfs.length) {
             return const Center(

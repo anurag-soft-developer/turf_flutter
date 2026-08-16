@@ -22,6 +22,9 @@ class ExploreSearchCategoryTabs extends StatelessWidget {
     ExploreCategory.post,
   ];
 
+  /// Theme-matched indigo tint (between washed-out and solid primary).
+  static const _selectedBg = Color(0xFFE0E7FF);
+
   static String label(ExploreCategory value) => switch (value) {
         ExploreCategory.all => 'All',
         ExploreCategory.match => 'Matches',
@@ -30,12 +33,21 @@ class ExploreSearchCategoryTabs extends StatelessWidget {
         ExploreCategory.post => 'Posts',
       };
 
+  static IconData icon(ExploreCategory value) => switch (value) {
+        ExploreCategory.all => Icons.grid_view_rounded,
+        ExploreCategory.match => Icons.sports_outlined,
+        ExploreCategory.team => Icons.groups_outlined,
+        ExploreCategory.player => Icons.person_outline,
+        ExploreCategory.post => Icons.dynamic_feed_outlined,
+      };
+
   @override
   Widget build(BuildContext context) {
     final tabs = <ExploreCategory>[
       if (includeAll) ExploreCategory.all,
       ..._concreteTabs,
     ];
+    final primary = const Color(AppColors.primaryColor);
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -46,22 +58,33 @@ class ExploreSearchCategoryTabs extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(right: 8),
               child: ChoiceChip(
+                avatar: Icon(
+                  icon(tab),
+                  size: 16,
+                  color: category == tab
+                      ? primary
+                      : const Color(AppColors.textSecondaryColor),
+                ),
                 label: Text(label(tab)),
                 selected: category == tab,
                 onSelected: (_) => onChanged(tab),
-                selectedColor: const Color(AppColors.primaryColor).withValues(
-                  alpha: 0.15,
-                ),
+                showCheckmark: false,
+                color: WidgetStateProperty.resolveWith((states) {
+                  if (states.contains(WidgetState.selected)) {
+                    return _selectedBg;
+                  }
+                  return Colors.white;
+                }),
                 labelStyle: TextStyle(
                   color: category == tab
-                      ? const Color(AppColors.primaryColor)
+                      ? primary
                       : const Color(AppColors.textSecondaryColor),
                   fontWeight:
                       category == tab ? FontWeight.w600 : FontWeight.w500,
                 ),
                 side: BorderSide(
                   color: category == tab
-                      ? const Color(AppColors.primaryColor)
+                      ? primary
                       : const Color(AppColors.dividerColor),
                 ),
                 backgroundColor: Colors.white,

@@ -15,6 +15,7 @@ import 'package:flutter_application_1/match_up/match_challenges/match_challenges
 import 'package:flutter_application_1/match_up/match_up_screen.dart';
 import 'package:flutter_application_1/match_up/messages/match_challenge_messages_screen.dart';
 import 'package:flutter_application_1/match_up/model/team_match_model.dart';
+import 'package:flutter_application_1/match_up/search/match_up_search_screen.dart';
 import 'package:flutter_application_1/scoring/cricket/cricket_scoreboard_screen.dart';
 import 'package:flutter_application_1/scoring/football/football_scoreboard_screen.dart';
 import 'package:get/get.dart';
@@ -23,6 +24,13 @@ final List<GetPage<dynamic>> matchUpRoutes = [
   GetPage(
     name: AppConstants.routes.matchUp,
     page: () => const MatchUpScreen(),
+    binding: MatchUpBinding(),
+    transition: Transition.cupertino,
+    middlewares: [AuthGuard()],
+  ),
+  GetPage(
+    name: AppConstants.routes.matchUpSearch,
+    page: () => const MatchUpSearchScreen(),
     binding: MatchUpBinding(),
     transition: Transition.cupertino,
     middlewares: [AuthGuard()],

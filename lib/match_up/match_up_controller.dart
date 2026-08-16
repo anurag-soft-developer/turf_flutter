@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
-import '../core/query/query_keys.dart';
 import '../team/members/model/team_member_model.dart';
 import '../team/model/team_model.dart';
 import 'matchmaking_service.dart';
@@ -12,10 +11,7 @@ import 'model/team_match_model.dart';
 class MatchUpController extends GetxController {
   final MatchmakingService _matchmakingService = MatchmakingService();
 
-  final TextEditingController searchController = TextEditingController();
-
   final Rx<TeamSportType> selectedSport = TeamSportType.cricket.obs;
-  final RxBool isSearching = false.obs;
   final RxBool isSendingRequest = false.obs;
   final RxList<TeamMemberModel> myMemberships = <TeamMemberModel>[].obs;
   final Rx<TeamMemberFieldInstance?> selectedTeam =
@@ -39,29 +35,12 @@ class MatchUpController extends GetxController {
 
   bool get hasTeamForSport => myTeamsForSport.isNotEmpty;
 
-  String? get searchQuery {
-    final text = searchController.text.trim();
-    return text.isEmpty ? null : text;
-  }
-
-  @override
-  void onClose() {
-    searchController.dispose();
-    super.onClose();
-  }
-
   void syncMemberships(List<TeamMemberModel> memberships) {
     myMemberships.assignAll(memberships);
     _autoSelectTeam();
   }
 
   void bumpFeed() => feedRevision.value++;
-
-  void searchTeams() {
-    isSearching.value = true;
-    bumpFeed();
-    Future.microtask(() => isSearching.value = false);
-  }
 
   void switchSport(TeamSportType sport) {
     if (selectedSport.value == sport) return;
@@ -117,11 +96,7 @@ class MatchUpController extends GetxController {
         _markTeamChallenged(myTeam.id!, opponent.id!);
         if (Get.isRegistered<QueryClient>()) {
           await Get.find<QueryClient>().invalidateQueries(
-            queryKey: QueryKeys.matchUpOpponents(
-              sport: selectedSport.value.name,
-              fromTeamId: myTeam.id,
-              search: searchQuery,
-            ),
+            queryKey: const ['matchUpOpponents'],
           );
         }
         Get.snackbar(

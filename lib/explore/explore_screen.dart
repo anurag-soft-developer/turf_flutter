@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:get/get.dart';
 
-import '../../core/config/constants.dart';
-import '../../settings/settings_controller.dart';
+import '../components/shared/user_avatar_app_bar_action.dart';
+import '../core/config/constants.dart';
+import '../settings/settings_controller.dart';
 import 'model/explore_category.dart';
 import 'model/explore_filters.dart';
 import 'search/explore_search_category_tabs.dart';
@@ -22,6 +23,8 @@ class ExploreScreen extends HookWidget {
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
       appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: const UserAvatarAppBarAction(),
         title: const Text('Explore'),
         actions: [
           IconButton(

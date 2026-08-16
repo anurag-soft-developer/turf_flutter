@@ -67,6 +67,8 @@ class Routes {
       '/match-up/challenges/detail/$id';
   final String matches = '/matches';
   final String exploreSearch = '/explore/search';
+  final String turfSearch = '/turf/search';
+  final String matchUpSearch = '/match-up/search';
   String explorePost([String id = ':id']) => '/explore/post/$id';
   final String matchChallengeMessages = '/match-up/challenge-messages';
   final String cricketScoreBoard = '/match-up/cricket-scoreboard';
@@ -82,7 +84,9 @@ class StorageKeys {
   final String userData = 'user_data';
   final String isLoggedIn = 'is_logged_in';
   final String fcmDeviceKey = 'fcm_device_key';
-  final String exploreSearchHistory = 'explore_search_history';
+  final String searchHistoryExplore = 'search_history_explore';
+  final String searchHistoryTurfs = 'search_history_turfs';
+  final String searchHistoryMatchUp = 'search_history_match_up';
 }
 
 class ErrorMessages {

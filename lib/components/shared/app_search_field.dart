@@ -7,16 +7,20 @@ class AppSearchField extends StatelessWidget {
   const AppSearchField({
     super.key,
     required this.controller,
+    this.focusNode,
     this.hintText = 'Search',
     this.onChanged,
+    this.onSubmitted,
     this.onCleared,
     this.textInputAction = TextInputAction.search,
     this.autofocus = false,
   });
 
   final TextEditingController controller;
+  final FocusNode? focusNode;
   final String hintText;
   final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onSubmitted;
   final VoidCallback? onCleared;
   final TextInputAction textInputAction;
   final bool autofocus;
@@ -29,9 +33,11 @@ class AppSearchField extends StatelessWidget {
         final hasText = value.text.isNotEmpty;
         return TextField(
           controller: controller,
+          focusNode: focusNode,
           autofocus: autofocus,
           textInputAction: textInputAction,
           onChanged: onChanged,
+          onSubmitted: onSubmitted,
           style: const TextStyle(
             color: Color(AppColors.textColor),
             fontSize: 15,

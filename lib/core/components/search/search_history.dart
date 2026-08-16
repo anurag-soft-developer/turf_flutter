@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../core/config/constants.dart';
+import '../../config/constants.dart';
 
-class ExploreSearchHistory extends StatelessWidget {
-  const ExploreSearchHistory({
+class SearchHistory extends StatelessWidget {
+  const SearchHistory({
     super.key,
     required this.items,
     required this.onSelect,

@@ -5,12 +5,20 @@ import 'package:flutter_application_1/core/guards/auth_guard.dart';
 import 'package:flutter_application_1/turf/details/turf_detail_screen.dart';
 import 'package:flutter_application_1/turf/feed/turf_list_screen.dart';
 import 'package:flutter_application_1/turf/reviews/turf_reviews_full_screen.dart';
+import 'package:flutter_application_1/turf/search/turf_search_screen.dart';
 import 'package:get/get.dart';
 
 final List<GetPage<dynamic>> turfRoutes = [
   GetPage(
     name: AppConstants.routes.turfList,
     page: () => const TurfListScreen(),
+    binding: TurfListBinding(),
+    transition: Transition.cupertino,
+    middlewares: [AuthGuard()],
+  ),
+  GetPage(
+    name: AppConstants.routes.turfSearch,
+    page: () => const TurfSearchScreen(),
     binding: TurfListBinding(),
     transition: Transition.cupertino,
     middlewares: [AuthGuard()],

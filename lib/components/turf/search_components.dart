@@ -3,38 +3,7 @@ import 'package:get/get.dart';
 import '../../core/config/constants.dart';
 import '../../turf/feed/turf_list_controller.dart';
 import '../../core/components/bottom_sheets/city_picker_bottom_sheet.dart';
-import '../shared/custom_text_field.dart';
 import 'turf_filter_bottom_sheets.dart';
-
-class TurfSearchBar extends StatelessWidget {
-  final TurfListController controller;
-
-  const TurfSearchBar({super.key, required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomTextField(
-      controller: controller.searchController,
-      hintText: 'Search turfs by name',
-      prefixIcon: const Icon(Icons.search, color: Colors.grey),
-      suffixIcon: Obx(
-        () => controller.isSearching.value
-            ? const Padding(
-                padding: EdgeInsets.all(14),
-                child: SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 1.5),
-                ),
-              )
-            : IconButton(
-                onPressed: controller.searchTurfs,
-                icon: const Icon(Icons.send),
-              ),
-      ),
-    );
-  }
-}
 
 class QuickFilterChip extends StatelessWidget {
   final String label;
@@ -52,31 +21,33 @@ class QuickFilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foregroundColor = isSelected
-        ? Colors.white
-        : const Color(AppColors.primaryColor);
+    final primary = const Color(AppColors.primaryColor);
+    // Theme-matched indigo tint (between washed-out and solid primary).
+    const selectedBg = Color(0xFFE0E7FF);
 
     return FilterChip(
       avatar: icon == null
           ? null
-          : Icon(icon, size: 16, color: foregroundColor),
+          : Icon(icon, size: 16, color: primary),
       label: Text(
         label,
         style: TextStyle(
-          color: foregroundColor,
-          fontWeight: FontWeight.w500,
+          color: primary,
+          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
         ),
       ),
       selected: isSelected,
       onSelected: (_) => onTap(),
       backgroundColor: Colors.white,
-      selectedColor: const Color(AppColors.secondaryColor),
-      checkmarkColor: Colors.white,
-      showCheckmark: icon == null,
+      color: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return selectedBg;
+        }
+        return Colors.white;
+      }),
+      showCheckmark: false,
       side: BorderSide(
-        color: isSelected
-            ? const Color(AppColors.secondaryColor)
-            : const Color(AppColors.primaryColor),
+        color: isSelected ? primary : primary.withValues(alpha: 0.55),
       ),
     );
   }
@@ -98,15 +69,14 @@ class FilterFieldChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final borderColor = isActive
-        ? const Color(AppColors.secondaryColor)
-        : const Color(AppColors.primaryColor);
+    final primary = const Color(AppColors.primaryColor);
+    const selectedBg = Color(0xFFE0E7FF);
 
     return ActionChip(
       padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
       avatar: icon == null
           ? null
-          : Icon(icon, size: 16, color: borderColor),
+          : Icon(icon, size: 16, color: primary),
       label: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -116,19 +86,19 @@ class FilterFieldChip extends StatelessWidget {
               label,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: borderColor,
+                color: primary,
                 fontWeight: FontWeight.w600,
               ),
             ),
           ),
           const SizedBox(width: 6),
-          Icon(Icons.arrow_drop_down, color: borderColor),
+          Icon(Icons.arrow_drop_down, color: primary),
         ],
       ),
-      backgroundColor: isActive
-          ? const Color(AppColors.secondaryColor).withValues(alpha: 0.12)
-          : Colors.white,
-      side: BorderSide(color: borderColor),
+      backgroundColor: isActive ? selectedBg : Colors.white,
+      side: BorderSide(
+        color: isActive ? primary : primary.withValues(alpha: 0.55),
+      ),
       onPressed: onPressed,
     );
   }
@@ -269,13 +239,7 @@ class TurfSearchSection extends StatelessWidget {
           bottomRight: Radius.circular(20),
         ),
       ),
-      child: Column(
-        children: [
-          TurfSearchBar(controller: controller),
-          const SizedBox(height: 12),
-          QuickFiltersRow(controller: controller),
-        ],
-      ),
+      child: QuickFiltersRow(controller: controller),
     );
   }
 }

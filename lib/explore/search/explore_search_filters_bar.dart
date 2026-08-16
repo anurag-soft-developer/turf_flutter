@@ -154,7 +154,7 @@ class _FilterChip extends StatelessWidget {
             )
           : null,
       backgroundColor: selected
-          ? const Color(AppColors.primaryColor).withValues(alpha: 0.12)
+          ? const Color(0xFFE0E7FF)
           : Colors.white,
       side: BorderSide(
         color: selected

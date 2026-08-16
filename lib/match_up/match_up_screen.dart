@@ -5,7 +5,6 @@ import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
 import '../components/match_up/my_team_selector.dart';
-import '../components/match_up/team_search_components.dart';
 import '../components/match_up/team_logo.dart';
 import '../components/match_up/team_stats_row.dart';
 import '../core/config/constants.dart';
@@ -59,6 +58,11 @@ class MatchUpScreen extends HookWidget {
           title: const Text('Match Up'),
           actions: [
             IconButton(
+              tooltip: 'Search',
+              icon: const Icon(Icons.search),
+              onPressed: () => Get.toNamed(AppConstants.routes.matchUpSearch),
+            ),
+            IconButton(
               tooltip: 'Challenges',
               icon: const Icon(Icons.inbox_outlined),
               onPressed: () =>
@@ -83,6 +87,13 @@ class MatchUpScreen extends HookWidget {
           automaticallyImplyLeading: false,
           leading: const UserAvatarAppBarAction(),
           title: const Text('Match Up'),
+          actions: [
+            IconButton(
+              tooltip: 'Search',
+              icon: const Icon(Icons.search),
+              onPressed: () => Get.toNamed(AppConstants.routes.matchUpSearch),
+            ),
+          ],
         ),
         body: Center(
           child: ElevatedButton(
@@ -101,6 +112,11 @@ class MatchUpScreen extends HookWidget {
         title: const Text('Match Up'),
         actions: [
           IconButton(
+            tooltip: 'Search',
+            icon: const Icon(Icons.search),
+            onPressed: () => Get.toNamed(AppConstants.routes.matchUpSearch),
+          ),
+          IconButton(
             tooltip: 'Challenges',
             icon: const Icon(Icons.inbox_outlined),
             onPressed: () => Get.toNamed(AppConstants.routes.matchUpChallenges),
@@ -111,13 +127,10 @@ class MatchUpScreen extends HookWidget {
         final sport = c.selectedSport.value;
         final teamsForSport = c.myTeamsForSport;
         c.feedRevision.value;
-        c.searchController.text;
         final fromTeamId = c.selectedTeam.value?.id;
-        final search = c.searchQuery;
 
         return Column(
           children: [
-            TeamSearchSection(controller: c),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: SportFilterPicker(
@@ -131,12 +144,12 @@ class MatchUpScreen extends HookWidget {
             Expanded(
               child: _SportFeedSection(
                 key: ValueKey(
-                  '${sport.name}|${fromTeamId ?? ''}|${search ?? ''}|${c.feedRevision.value}',
+                  '${sport.name}|${fromTeamId ?? ''}|${c.feedRevision.value}',
                 ),
                 sport: sport,
                 hasTeams: teamsForSport.isNotEmpty,
                 fromTeamId: fromTeamId,
-                search: search,
+                search: null,
                 controller: c,
                 onChallenge: (team) => _confirmChallenge(context, c, team),
               ),
