@@ -1,5 +1,6 @@
 import 'package:json_annotation/json_annotation.dart';
 
+import '../../utils/date_util.dart';
 import 'player_stats_models.dart';
 
 export 'player_stats_models.dart';
@@ -249,35 +250,11 @@ class UserModel {
   String get displayName =>
       fullName ?? email?.split('@').first ?? phone ?? 'User';
 
-  // Helper getter for created date parsing
-  DateTime? get createdAtDate {
-    if (createdAt == null) return null;
-    try {
-      return DateTime.parse(createdAt!);
-    } catch (e) {
-      return null;
-    }
-  }
+  DateTime? get createdAtDate => parseApiDate(createdAt);
 
-  // Helper getter for updated date parsing
-  DateTime? get updatedAtDate {
-    if (updatedAt == null) return null;
-    try {
-      return DateTime.parse(updatedAt!);
-    } catch (e) {
-      return null;
-    }
-  }
+  DateTime? get updatedAtDate => parseApiDate(updatedAt);
 
-  // Helper getter for last login date parsing
-  DateTime? get lastLoginDate {
-    if (lastLogin == null) return null;
-    try {
-      return DateTime.parse(lastLogin!);
-    } catch (e) {
-      return null;
-    }
-  }
+  DateTime? get lastLoginDate => parseApiDate(lastLogin);
 
   @override
   String toString() {

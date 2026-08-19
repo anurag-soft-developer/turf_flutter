@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/components/shared/app_network_image.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
@@ -234,7 +235,7 @@ class _TicketContent extends StatelessWidget {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: booking.turfHelper.getMainImage() != null
-                              ? Image.network(
+                              ? AppNetworkImage(
                                   booking.turfHelper.getMainImage()!,
                                   width: 50,
                                   height: 50,
@@ -253,32 +254,26 @@ class _TicketContent extends StatelessWidget {
                                       ),
                                     );
                                   },
-                                  loadingBuilder:
-                                      (context, child, loadingProgress) {
-                                    if (loadingProgress == null) {
-                                      return child;
-                                    }
-                                    return Container(
-                                      width: 50,
-                                      height: 50,
-                                      color: Colors.white.withValues(
-                                        alpha: 0.2,
-                                      ),
-                                      child: const Center(
-                                        child: SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            valueColor:
-                                                AlwaysStoppedAnimation<Color>(
-                                              Colors.white,
-                                            ),
+                                  placeholder: Container(
+                                    width: 50,
+                                    height: 50,
+                                    color: Colors.white.withValues(
+                                      alpha: 0.2,
+                                    ),
+                                    child: const Center(
+                                      child: SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                            Colors.white,
                                           ),
                                         ),
                                       ),
-                                    );
-                                  },
+                                    ),
+                                  ),
                                 )
                               : const Icon(
                                   Icons.grass,

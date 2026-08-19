@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/components/shared/app_network_image.dart';
 import 'package:get/get.dart';
 
 import '../../components/match_history/match_card.dart';
@@ -214,7 +215,7 @@ class ExplorePostTile extends StatelessWidget {
                   CircleAvatar(
                     radius: 18,
                     backgroundImage: (author.getAvatar() ?? '').isNotEmpty
-                        ? NetworkImage(author.getAvatar()!)
+                        ? AppNetworkImage.provider(author.getAvatar()!)
                         : null,
                     child: (author.getAvatar() ?? '').isEmpty
                         ? Text(
@@ -293,7 +294,7 @@ class ExplorePostTile extends StatelessWidget {
                             child: Icon(Icons.play_circle_outline, size: 44),
                           ),
                         )
-                      : Image.network(
+                      : AppNetworkImage(
                           media.url,
                           height: 180,
                           width: double.infinity,

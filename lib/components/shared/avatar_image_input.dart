@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'app_network_image.dart';
 import 'package:get/get.dart';
 
 import '../../core/config/constants.dart';
@@ -62,7 +63,7 @@ class AvatarImageInput extends StatelessWidget {
                 return CircleAvatar(
                   radius: radius,
                   backgroundColor: backgroundColor,
-                  backgroundImage: url != null ? NetworkImage(url) : null,
+                  backgroundImage: url != null ? AppNetworkImage.provider(url) : null,
                   child: url == null
                       ? Icon(
                           placeholderIcon,

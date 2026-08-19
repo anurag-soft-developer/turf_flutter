@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/components/shared/app_network_image.dart';
 
 import '../../core/config/constants.dart';
 import '../../core/models/team/team_member_field_instance.dart';
@@ -162,7 +163,7 @@ class MyTeamSelector extends StatelessWidget {
               color: Color(AppColors.primaryColor),
             )
           : ClipOval(
-              child: Image.network(
+              child: AppNetworkImage(
                 sel.logo,
                 width: 22,
                 height: 22,

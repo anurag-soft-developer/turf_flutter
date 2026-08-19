@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'app_network_image.dart';
 import 'package:get/get.dart';
 
 import '../../core/auth/auth_state_controller.dart';
@@ -80,6 +81,16 @@ class AppMenuScreen extends StatelessWidget {
         title: 'About',
         icon: Icons.info_outline_rounded,
         onTap: () => _navigateTo(AppConstants.routes.about),
+      ),
+      AppMenuItem(
+        title: 'Terms & Conditions',
+        icon: Icons.description_outlined,
+        onTap: () => _navigateTo(AppConstants.routes.termsOfService),
+      ),
+      AppMenuItem(
+        title: 'Privacy Policy',
+        icon: Icons.policy_outlined,
+        onTap: () => _navigateTo(AppConstants.routes.privacyPolicy),
       ),
     ];
   }
@@ -201,7 +212,7 @@ class AppMenuScreen extends StatelessWidget {
               CircleAvatar(
                 radius: 28,
                 backgroundColor: Colors.white,
-                backgroundImage: avatar != null ? NetworkImage(avatar) : null,
+                backgroundImage: avatar != null ? AppNetworkImage.provider(avatar) : null,
                 child: avatar == null
                     ? const Icon(
                         Icons.person_rounded,
@@ -294,7 +305,7 @@ class AppMenuScreen extends StatelessWidget {
             ),
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(

@@ -40,6 +40,7 @@ class Routes {
   final String accessDenied = '/access-denied';
   final String turfList = '/turf-list';
   final String turfDetail = '/turf-detail';
+  final String turfSlotSelection = '/turf-detail/slots';
   final String myBookings = '/my-bookings';
   final String bookingTicket = '/booking-ticket';
   final String turfReviews = '/turf-reviews';
@@ -121,8 +122,8 @@ class OtpConstants {
 }
 
 class AppColors {
-  static const int primaryColor = 0xFF6366F1;
-  static const int secondaryColor = 0xFF8B5CF6;
+  static const int primaryColor = 0xFF38761D;
+  static const int secondaryColor = 0xFF1d7654;
   static const int accentColor = 0xFFF59E0B;
   static const int backgroundColor = 0xFFF9FAFB;
   static const int surfaceColor = 0xFFFFFFFF;

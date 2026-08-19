@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/components/shared/app_network_image.dart';
 import 'package:get/get.dart';
 
 import '../../components/scoring/cricket/cricket_match_stats_panel.dart'
@@ -215,7 +216,7 @@ class _AvatarWithResultBadge extends StatelessWidget {
               AppColors.primaryColor,
             ).withValues(alpha: 0.12),
             backgroundImage: logoUrl != null && logoUrl!.isNotEmpty
-                ? NetworkImage(logoUrl!)
+                ? AppNetworkImage.provider(logoUrl!)
                 : null,
             child: logoUrl == null || logoUrl!.isEmpty
                 ? const Icon(

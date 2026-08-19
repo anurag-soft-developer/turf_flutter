@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/components/shared/app_network_image.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
@@ -275,7 +276,7 @@ class _MembershipRow extends StatelessWidget {
           ),
           clipBehavior: Clip.antiAlias,
           child: logo != null
-              ? Image.network(
+              ? AppNetworkImage(
                   logo,
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => _initials(teamName),

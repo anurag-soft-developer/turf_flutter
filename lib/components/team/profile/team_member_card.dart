@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/components/shared/app_network_image.dart';
 import 'package:get/get.dart';
 
 import '../../../core/config/constants.dart';
@@ -60,7 +61,7 @@ class TeamMemberCard extends StatelessWidget {
                     AppColors.primaryColor,
                   ).withValues(alpha: 0.1),
                   backgroundImage: avatar != null && avatar.isNotEmpty
-                      ? NetworkImage(avatar)
+                      ? AppNetworkImage.provider(avatar)
                       : null,
                   child: avatar == null || avatar.isEmpty
                       ? const Icon(

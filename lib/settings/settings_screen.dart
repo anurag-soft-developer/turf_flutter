@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_application_1/components/shared/loading_overlay.dart';
 import 'package:get/get.dart';
 import '../core/auth/auth_state_controller.dart';
@@ -58,77 +59,22 @@ class SettingsScreen extends StatelessWidget {
               Get.toNamed(AppConstants.routes.twoFactorAuth);
             },
           ),
-          SettingItem(
-            title: 'Privacy Settings',
-            subtitle: 'Manage your privacy preferences',
-            icon: Icons.privacy_tip_outlined,
-            onTap: () {
-              AppSnackbar.comingSoon(feature: 'Privacy settings');
-            },
-          ),
-        ],
-      ),
-      SettingSection(
-        title: 'Account Information',
-        items: [
-          SettingItem(
-            title: 'User ID',
-            subtitle: authController.user?.id?.substring(0, 8) ?? 'N/A',
-            icon: Icons.badge_outlined,
-            onTap: () {},
-          ),
-          SettingItem(
-            title: 'Account Created',
-            subtitle: authController.user?.createdAtDate != null
-                ? '${authController.user!.createdAtDate!.day}/${authController.user!.createdAtDate!.month}/${authController.user!.createdAtDate!.year}'
-                : 'Unknown',
-            icon: Icons.calendar_today_outlined,
-            onTap: () {},
-          ),
-          SettingItem(
-            title: 'Last Sign In',
-            subtitle: authController.user?.lastLoginDate != null
-                ? '${authController.user!.lastLoginDate!.day}/${authController.user!.lastLoginDate!.month}/${authController.user!.lastLoginDate!.year}'
-                : 'Unknown',
-            icon: Icons.access_time,
-            onTap: () {},
-          ),
         ],
       ),
       SettingSection(
         title: 'Account Actions',
         items: [
           SettingItem(
-            title: 'Download Data',
-            subtitle: 'Export your account data',
-            icon: Icons.download,
-            onTap: () {
-              AppSnackbar.comingSoon(feature: 'Data download');
-            },
+            title: 'Clear Cache',
+            subtitle: 'Clear cached images and search history',
+            icon: Icons.cleaning_services_outlined,
+            onTap: () => _showClearCacheDialog(context, settingsController),
           ),
           SettingItem(
             title: 'Sign Out',
             subtitle: 'Sign out from your account',
             icon: Icons.logout,
             onTap: () => _showSignOutDialog(context, authController),
-            isRed: true,
-          ),
-        ],
-      ),
-      SettingSection(
-        title: 'Advanced',
-        items: [
-          SettingItem(
-            title: 'Clear Cache',
-            subtitle: 'Clear app cache and temporary files',
-            icon: Icons.cleaning_services_outlined,
-            onTap: () => _showClearCacheDialog(context, settingsController),
-          ),
-          SettingItem(
-            title: 'Delete Account',
-            subtitle: 'Permanently delete your account',
-            icon: Icons.delete_outline,
-            onTap: () => _showDeleteAccountDialog(context),
             isRed: true,
           ),
         ],
@@ -151,6 +97,8 @@ class SettingsScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                _AccountInformationSection(authController: authController),
+                const SizedBox(height: 32),
                 _ManageNotificationsEntry(),
                 const SizedBox(height: 32),
                 // Loop through setting sections
@@ -234,7 +182,7 @@ class SettingsScreen extends StatelessWidget {
       AlertDialog(
         title: const Text('Clear Cache'),
         content: const Text(
-          'Are you sure you want to clear the app cache? This will remove temporary files and may improve app performance.',
+          'This will remove cached images and search history. You will stay signed in.',
         ),
         actions: [
           TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
@@ -244,30 +192,6 @@ class SettingsScreen extends StatelessWidget {
               settingsController.clearCache();
             },
             child: const Text('Clear Cache'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showDeleteAccountDialog(BuildContext context) {
-    Get.dialog(
-      AlertDialog(
-        title: const Text(
-          'Delete Account',
-          style: TextStyle(color: Colors.red),
-        ),
-        content: const Text(
-          'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently lost.',
-        ),
-        actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () {
-              Get.back();
-              AppSnackbar.comingSoon(feature: 'Account deletion');
-            },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -293,6 +217,135 @@ class SettingsScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _AccountInformationSection extends StatelessWidget {
+  final AuthStateController authController;
+
+  const _AccountInformationSection({required this.authController});
+
+  String _formatDate(DateTime? date) {
+    if (date == null) return 'Unknown';
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
+  void _copy(String label, String value) {
+    if (value.isEmpty) return;
+    Clipboard.setData(ClipboardData(text: value));
+    AppSnackbar.success(title: 'Copied', message: '$label copied');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = authController.user;
+    final userId = user?.id;
+    final createdAt = _formatDate(user?.createdAtDate);
+    final lastSignIn = _formatDate(user?.lastLoginDate);
+
+    final items = [
+      _ReadOnlyInfoItem(
+        title: 'User ID',
+        displayValue: userId ?? 'Unknown',
+        copyValue: userId,
+        icon: Icons.badge_outlined,
+      ),
+      _ReadOnlyInfoItem(
+        title: 'Account Created',
+        displayValue: createdAt,
+        copyValue: createdAt == 'Unknown' ? null : createdAt,
+        icon: Icons.calendar_today_outlined,
+      ),
+      _ReadOnlyInfoItem(
+        title: 'Last Sign In',
+        displayValue: lastSignIn,
+        copyValue: lastSignIn == 'Unknown' ? null : lastSignIn,
+        icon: Icons.access_time,
+      ),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Account Information',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Color(AppColors.textColor),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Card(
+          elevation: 1,
+          color: const Color(AppColors.surfaceColor),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            children: [
+              for (int i = 0; i < items.length; i++) ...[
+                if (i > 0)
+                  const Divider(height: 1, color: Color(AppColors.dividerColor)),
+                _ReadOnlyInfoTile(
+                  item: items[i],
+                  onCopy: items[i].copyValue == null
+                      ? null
+                      : () => _copy(items[i].title, items[i].copyValue!),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ReadOnlyInfoItem {
+  final String title;
+  final String displayValue;
+  final String? copyValue;
+  final IconData icon;
+
+  const _ReadOnlyInfoItem({
+    required this.title,
+    required this.displayValue,
+    required this.copyValue,
+    required this.icon,
+  });
+}
+
+class _ReadOnlyInfoTile extends StatelessWidget {
+  final _ReadOnlyInfoItem item;
+  final VoidCallback? onCopy;
+
+  const _ReadOnlyInfoTile({required this.item, this.onCopy});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      title: Text(
+        item.title,
+        style: const TextStyle(color: Color(AppColors.textColor)),
+      ),
+      subtitle: Text(
+        item.displayValue,
+        style: const TextStyle(color: Color(AppColors.textSecondaryColor)),
+      ),
+      leading: Icon(item.icon, color: const Color(AppColors.primaryColor)),
+      trailing: onCopy == null
+          ? null
+          : IconButton(
+              tooltip: 'Copy ${item.title}',
+              icon: const Icon(
+                Icons.copy,
+                size: 20,
+                color: Color(AppColors.primaryColor),
+              ),
+              onPressed: onCopy,
+            ),
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'app_network_image.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_application_1/core/config/constants.dart';
 import 'package:get/get.dart';
@@ -478,7 +479,7 @@ class _ImageInputState extends State<ImageInput> {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
+                  child: AppNetworkImage(
                     url,
                     width: 100,
                     height: 100,

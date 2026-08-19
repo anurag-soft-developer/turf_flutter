@@ -5,8 +5,10 @@ import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:async';
 import 'dart:convert';
+import '../core/cache/app_image_cache.dart';
 import '../core/utils/app_snackbar.dart';
 import '../core/models/location_model.dart';
+import '../core/services/search/search_history_store.dart';
 
 class SettingsController extends GetxController {
   final RxBool _notificationsEnabled = true.obs;
@@ -271,9 +273,14 @@ class SettingsController extends GetxController {
 
   Future<void> clearCache() async {
     try {
+      await AppImageCache.clear();
+      await Future.wait([
+        for (final scope in SearchHistoryScope.values)
+          SearchHistoryStore(scope).clear(),
+      ]);
       AppSnackbar.success(
         title: 'Cache Cleared',
-        message: 'Application cache has been cleared successfully',
+        message: 'Cached files have been cleared',
       );
     } catch (e) {
       AppSnackbar.error(title: 'Error', message: 'Failed to clear cache');

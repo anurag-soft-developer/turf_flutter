@@ -429,35 +429,45 @@ class BookingSummaryCard extends StatelessWidget {
 
 class BookingFloatingButton extends StatelessWidget {
   final TurfDetailController controller;
+  final bool opensSlotPicker;
 
-  const BookingFloatingButton({super.key, required this.controller});
+  const BookingFloatingButton({
+    super.key,
+    required this.controller,
+    this.opensSlotPicker = false,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Obx(
-      () => controller.selectedTimeSlots.isNotEmpty
-          ? FloatingActionButton.extended(
-              onPressed: controller.isBookingLoading.value
-                  ? null
-                  : controller.bookTimeSlots,
-              backgroundColor: const Color(AppColors.primaryColor),
-              foregroundColor: Colors.white,
-              icon: controller.isBookingLoading.value
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : const Icon(Icons.book_online),
-              label: Text(
-                controller.isBookingLoading.value ? 'Booking...' : 'Book Now',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            )
-          : const SizedBox.shrink(),
-    );
+    return Obx(() {
+      final isLoading = controller.isBookingLoading.value;
+      return FloatingActionButton.extended(
+        onPressed: isLoading ? null : _onPressed,
+        backgroundColor: const Color(AppColors.primaryColor),
+        foregroundColor: Colors.white,
+        icon: isLoading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : Icon(opensSlotPicker ? Icons.event_available : Icons.book_online),
+        label: Text(
+          isLoading ? 'Booking...' : 'Book Now',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+      );
+    });
+  }
+
+  void _onPressed() {
+    if (opensSlotPicker) {
+      Get.toNamed(AppConstants.routes.turfSlotSelection);
+      return;
+    }
+    controller.bookTimeSlots();
   }
 }

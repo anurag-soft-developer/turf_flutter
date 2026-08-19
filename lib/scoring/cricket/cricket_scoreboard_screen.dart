@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/components/shared/app_network_image.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
@@ -476,7 +477,7 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
                     ).withValues(alpha: 0.12),
                     backgroundImage:
                         player.avatar != null && player.avatar!.isNotEmpty
-                        ? NetworkImage(player.avatar!)
+                        ? AppNetworkImage.provider(player.avatar!)
                         : null,
                     child: player.avatar == null || player.avatar!.isEmpty
                         ? const Icon(
@@ -551,7 +552,7 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
                     ).withValues(alpha: 0.12),
                     backgroundImage:
                         player.avatar != null && player.avatar!.isNotEmpty
-                        ? NetworkImage(player.avatar!)
+                        ? AppNetworkImage.provider(player.avatar!)
                         : null,
                     child: player.avatar == null || player.avatar!.isEmpty
                         ? const Icon(

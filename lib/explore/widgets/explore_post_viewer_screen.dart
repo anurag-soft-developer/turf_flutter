@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/components/shared/app_network_image.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
@@ -123,7 +124,7 @@ class _ExplorePostViewerBody extends StatelessWidget {
             CircleAvatar(
               radius: 20,
               backgroundImage: (author.getAvatar() ?? '').isNotEmpty
-                  ? NetworkImage(author.getAvatar()!)
+                  ? AppNetworkImage.provider(author.getAvatar()!)
                   : null,
               child: (author.getAvatar() ?? '').isEmpty
                   ? Text(
@@ -206,7 +207,7 @@ class _ExplorePostViewerBody extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             child: media.kind == MediaKind.video
                 ? _VideoPlaceholder(caption: media.caption)
-                : Image.network(
+                : AppNetworkImage(
                     media.url,
                     fit: BoxFit.cover,
                     errorBuilder: (_, _, _) => const SizedBox(

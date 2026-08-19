@@ -51,11 +51,14 @@ class TurfDetailScreen extends HookWidget {
           onRefresh: controller.refreshData,
           child: TurfDetailScrollContent(
             controller: controller,
-            showBookingSection: true,
+            showBookingSection: false,
           ),
         ),
       ),
-      floatingActionButton: BookingFloatingButton(controller: controller),
+      floatingActionButton: BookingFloatingButton(
+        controller: controller,
+        opensSlotPicker: true,
+      ),
     );
   }
 }

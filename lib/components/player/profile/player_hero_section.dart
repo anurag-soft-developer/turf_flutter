@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/components/shared/app_network_image.dart';
 import 'package:get/get.dart';
 
 import '../../../core/config/constants.dart';
@@ -105,7 +106,7 @@ class PlayerHeroSection extends StatelessWidget {
                     backgroundImage:
                         helper.getAvatar() != null &&
                             helper.getAvatar()!.isNotEmpty
-                        ? NetworkImage(helper.getAvatar()!)
+                        ? AppNetworkImage.provider(helper.getAvatar()!)
                         : null,
                     child:
                         helper.getAvatar() == null ||

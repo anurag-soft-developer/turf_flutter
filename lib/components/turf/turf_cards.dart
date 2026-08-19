@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/components/shared/app_network_image.dart';
 import '../../core/config/constants.dart';
 import '../../turf/model/turf_model.dart';
 
@@ -28,7 +29,7 @@ class FeaturedTurfCard extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             if (turf.mainImage != null)
-              Image.network(
+              AppNetworkImage(
                 turf.mainImage!,
                 fit: BoxFit.cover,
                 width: double.infinity,
@@ -160,7 +161,7 @@ class TurfListCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                   image: turf.mainImage != null
                       ? DecorationImage(
-                          image: NetworkImage(turf.mainImage!),
+                          image: AppNetworkImage.provider(turf.mainImage!),
                           fit: BoxFit.cover,
                         )
                       : null,

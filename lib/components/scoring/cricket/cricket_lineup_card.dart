@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/components/shared/app_network_image.dart';
 import 'package:get/get.dart';
 
 import '../../../core/config/constants.dart';
@@ -269,7 +270,7 @@ class _CricketLineupCardState extends State<CricketLineupCard> {
                           ).withValues(alpha: 0.12),
                           backgroundImage:
                               p.avatar != null && p.avatar!.isNotEmpty
-                              ? NetworkImage(p.avatar!)
+                              ? AppNetworkImage.provider(p.avatar!)
                               : null,
                           child: p.avatar == null || p.avatar!.isEmpty
                               ? const Icon(
@@ -577,7 +578,7 @@ class _BatsmanCard extends StatelessWidget {
                         ).withValues(alpha: 0.12),
                         backgroundImage:
                             avatarUrl != null && avatarUrl.isNotEmpty
-                            ? NetworkImage(avatarUrl)
+                            ? AppNetworkImage.provider(avatarUrl)
                             : null,
                         child: avatarUrl == null || avatarUrl.isEmpty
                             ? Icon(
@@ -693,7 +694,7 @@ class _BowlerCard extends StatelessWidget {
                         ).withValues(alpha: 0.12),
                         backgroundImage:
                             avatarUrl != null && avatarUrl.isNotEmpty
-                            ? NetworkImage(avatarUrl)
+                            ? AppNetworkImage.provider(avatarUrl)
                             : null,
                         child: avatarUrl == null || avatarUrl.isEmpty
                             ? Icon(

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/components/shared/app_network_image.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
@@ -212,7 +213,7 @@ class _TurfTile extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: turf.mainImage != null
-                  ? Image.network(
+                  ? AppNetworkImage(
                       turf.mainImage!,
                       width: 56,
                       height: 56,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'app_network_image.dart';
 import 'package:get/get.dart';
 
 import '../../core/auth/auth_state_controller.dart';
@@ -42,7 +43,7 @@ class UserAvatarAppBarAction extends StatelessWidget {
                   radius: size / 2,
                   backgroundColor: Colors.white,
                   backgroundImage:
-                      avatar != null ? NetworkImage(avatar) : null,
+                      avatar != null ? AppNetworkImage.provider(avatar) : null,
                   child: avatar == null
                       ? Icon(
                           Icons.person,

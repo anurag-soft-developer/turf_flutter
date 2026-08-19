@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/components/shared/app_network_image.dart';
 import 'package:get/get.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/location_model.dart';
@@ -24,17 +25,19 @@ class TurfImageCarousel extends StatelessWidget {
         backgroundColor: const Color(AppColors.primaryColor),
         foregroundColor: Colors.white,
         flexibleSpace: FlexibleSpaceBar(
-          title: Text(
-            turf.displayName,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              shadows: [
-                Shadow(
-                  offset: Offset(0, 1),
-                  blurRadius: 3,
-                  color: Colors.black54,
-                ),
-              ],
+          title: IgnorePointer(
+            child: Text(
+              turf.displayName,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                shadows: [
+                  Shadow(
+                    offset: Offset(0, 1),
+                    blurRadius: 3,
+                    color: Colors.black54,
+                  ),
+                ],
+              ),
             ),
           ),
           background: hasImages
@@ -46,7 +49,7 @@ class TurfImageCarousel extends StatelessWidget {
                       itemCount: turf.images!.length,
                       onPageChanged: controller.changeImageIndex,
                       itemBuilder: (context, index) {
-                        return Image.network(
+                        return AppNetworkImage(
                           turf.images![index],
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) =>
@@ -80,26 +83,30 @@ class TurfImageCarousel extends StatelessWidget {
                         bottom: 20,
                         left: 0,
                         right: 0,
-                        child: Obx(
-                          () => Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: turf.images!.asMap().entries.map((entry) {
-                              return Container(
-                                width: 8,
-                                height: 8,
-                                margin: const EdgeInsets.symmetric(
-                                  horizontal: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color:
-                                      controller.currentImageIndex.value ==
-                                          entry.key
-                                      ? Colors.white
-                                      : Colors.white.withValues(alpha: 0.5),
-                                ),
-                              );
-                            }).toList(),
+                        child: IgnorePointer(
+                          child: Obx(
+                            () => Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: turf.images!.asMap().entries.map((
+                                entry,
+                              ) {
+                                return Container(
+                                  width: 8,
+                                  height: 8,
+                                  margin: const EdgeInsets.symmetric(
+                                    horizontal: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color:
+                                        controller.currentImageIndex.value ==
+                                            entry.key
+                                        ? Colors.white
+                                        : Colors.white.withValues(alpha: 0.5),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
                           ),
                         ),
                       ),

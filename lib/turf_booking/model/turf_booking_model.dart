@@ -106,6 +106,15 @@ class TurfTimeSlotListing {
   String get timeDisplay {
     return '${DateTime.parse(startTime).hour.toString().padLeft(2, '0')}:${DateTime.parse(startTime).minute.toString().padLeft(2, '0')} - ${DateTime.parse(endTime).hour.toString().padLeft(2, '0')}:${DateTime.parse(endTime).minute.toString().padLeft(2, '0')}';
   }
+
+  @override
+  bool operator ==(Object other) =>
+      other is TurfTimeSlotListing &&
+      startTime == other.startTime &&
+      endTime == other.endTime;
+
+  @override
+  int get hashCode => Object.hash(startTime, endTime);
 }
 
 // Enums

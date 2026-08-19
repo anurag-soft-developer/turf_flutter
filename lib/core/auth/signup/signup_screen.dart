@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/components/shared/app_network_image.dart';
 import 'package:get/get.dart';
 import 'signup_controller.dart';
 import '../auth_state_controller.dart';
@@ -176,9 +177,9 @@ class SignupScreen extends StatelessWidget {
                       icon: Container(
                         width: 20,
                         height: 20,
-                        decoration: const BoxDecoration(
+                        decoration: BoxDecoration(
                           image: DecorationImage(
-                            image: NetworkImage(
+                            image: AppNetworkImage.provider(
                               'https://developers.google.com/identity/images/g-logo.png',
                             ),
                             fit: BoxFit.cover,

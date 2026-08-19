@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 
 import '../../config/constants.dart';
 
@@ -127,80 +126,10 @@ class AboutScreen extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 28),
-            const Text(
-              'Legal',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.8,
-                color: Color(AppColors.textSecondaryColor),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Card(
-              elevation: 1,
-              color: const Color(AppColors.surfaceColor),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                children: [
-                  _legalTile(
-                    title: 'Terms & Conditions',
-                    subtitle: 'Rules for using the service',
-                    icon: Icons.description_outlined,
-                    onTap: () =>
-                        Get.toNamed(AppConstants.routes.termsOfService),
-                  ),
-                  const Divider(
-                    height: 1,
-                    color: Color(AppColors.dividerColor),
-                  ),
-                  _legalTile(
-                    title: 'Privacy Policy',
-                    subtitle: 'How we handle your data',
-                    icon: Icons.policy_outlined,
-                    onTap: () => Get.toNamed(AppConstants.routes.privacyPolicy),
-                  ),
-                ],
-              ),
-            ),
             const SizedBox(height: 32),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _legalTile({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      title: Text(
-        title,
-        style: const TextStyle(
-          fontWeight: FontWeight.w600,
-          color: Color(AppColors.textColor),
-        ),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: const TextStyle(
-          fontSize: 13,
-          color: Color(AppColors.textSecondaryColor),
-        ),
-      ),
-      leading: Icon(icon, color: const Color(AppColors.primaryColor)),
-      trailing: const Icon(
-        Icons.chevron_right,
-        color: Color(AppColors.textSecondaryColor),
-      ),
-      onTap: onTap,
     );
   }
 }

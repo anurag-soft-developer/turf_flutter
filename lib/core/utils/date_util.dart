@@ -86,3 +86,51 @@ String _oneDecimal(double value) {
   }
   return rounded.toStringAsFixed(1);
 }
+
+DateTime? parseApiDate(String? raw) {
+  if (raw == null) return null;
+  final trimmed = raw.trim();
+  if (trimmed.isEmpty) return null;
+
+  final iso = DateTime.tryParse(trimmed);
+  if (iso != null) return iso;
+
+  final fromRaw = _tryIntlJsDate(trimmed);
+  if (fromRaw != null) return fromRaw;
+
+  final withoutParen = trimmed.replaceAll(RegExp(r' \([^)]*\)$'), '');
+  if (withoutParen != trimmed) {
+    final fromOffset = _tryIntlJsDate(withoutParen);
+    if (fromOffset != null) return fromOffset;
+  }
+
+  final withoutZone = trimmed.split(RegExp(' GMT')).first.trim();
+  return _tryIntlJsDateTimeOnly(withoutZone);
+}
+
+DateTime? _tryIntlJsDate(String input) {
+  for (final pattern in const [
+    "EEE MMM d yyyy HH:mm:ss 'GMT'Z",
+    "EEE MMM dd yyyy HH:mm:ss 'GMT'Z",
+  ]) {
+    try {
+      return DateFormat(pattern, 'en_US').parse(input);
+    } catch (_) {}
+    try {
+      return DateFormat(pattern, 'en_US').parseLoose(input);
+    } catch (_) {}
+  }
+  return null;
+}
+
+DateTime? _tryIntlJsDateTimeOnly(String input) {
+  for (final pattern in const [
+    'EEE MMM d yyyy HH:mm:ss',
+    'EEE MMM dd yyyy HH:mm:ss',
+  ]) {
+    try {
+      return DateFormat(pattern, 'en_US').parseLoose(input);
+    } catch (_) {}
+  }
+  return null;
+}

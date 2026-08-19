@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/components/shared/app_network_image.dart';
 import 'package:get/get.dart';
 
 import '../../../core/config/constants.dart';
@@ -227,7 +228,7 @@ class _TeamHeroHeaderState extends State<TeamHeroHeader> {
       controller: _pageCtrl,
       itemCount: covers.length,
       onPageChanged: (i) => setState(() => _current = i),
-      itemBuilder: (_, i) => Image.network(
+      itemBuilder: (_, i) => AppNetworkImage(
         covers[i],
         fit: BoxFit.cover,
         width: double.infinity,
@@ -262,7 +263,7 @@ class _TeamHeroHeaderState extends State<TeamHeroHeader> {
       child: CircleAvatar(
         radius: 36,
         backgroundColor: Colors.white,
-        backgroundImage: logoUrl != null ? NetworkImage(logoUrl) : null,
+        backgroundImage: logoUrl != null ? AppNetworkImage.provider(logoUrl) : null,
         child: logoUrl == null
             ? const Icon(
                 Icons.shield_outlined,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/components/shared/app_network_image.dart';
 import 'package:flutter_application_1/core/utils/date_util.dart';
 import 'package:get/get.dart';
 
@@ -81,7 +82,7 @@ class TurfReviewTile extends StatelessWidget {
                   ).withValues(alpha: 0.15),
                   child: ClipOval(
                     child: profilePicture != null
-                        ? Image.network(
+                        ? AppNetworkImage(
                             profilePicture,
                             width: 36,
                             height: 36,
