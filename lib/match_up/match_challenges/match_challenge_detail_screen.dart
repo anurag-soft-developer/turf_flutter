@@ -13,6 +13,7 @@ import '../../core/config/constants.dart';
 import '../../core/query/query_keys.dart';
 import '../../core/query/query_retry.dart';
 import '../../core/routes/route_query.dart';
+import '../../core/utils/map_launch_util.dart';
 import '../../team/members/model/team_member_model.dart';
 import '../../team/team_service.dart';
 import '../matchmaking_service.dart';
@@ -217,6 +218,10 @@ class _MatchChallengeDetailBody extends StatelessWidget {
     final turfSummary = acceptedTurf != null
         ? acceptedTurf.turfIdHelper.getDisplayName()
         : 'Not set';
+    final turfLocation = acceptedTurf?.turfIdHelper.getLocation();
+    final turfAddress = turfLocation?.address.trim();
+    final hasTurfLocation =
+        turfAddress != null && turfAddress.isNotEmpty;
 
     final showScoreboardBar =
         (controller.isCricketMatch || controller.isFootballMatch) &&
@@ -298,6 +303,9 @@ class _MatchChallengeDetailBody extends StatelessWidget {
                                     icon: Icons.grass,
                                     label: 'Turf',
                                     value: turfSummary,
+                                    location: hasTurfLocation
+                                        ? turfLocation
+                                        : null,
                                     canEdit: controller.canUseScheduleControls,
                                     isLoading: controller.isUpdatingTurf.value,
                                     otherFieldBusy:
@@ -484,6 +492,7 @@ class _ScheduleLine extends StatelessWidget {
     required this.isLoading,
     required this.otherFieldBusy,
     required this.onEditPressed,
+    this.location,
     this.editTooltip,
     this.editIcon = Icons.edit_outlined,
   });
@@ -491,6 +500,7 @@ class _ScheduleLine extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
+  final LocationModel? location;
   final bool canEdit;
   final bool isLoading;
   final bool otherFieldBusy;
@@ -529,6 +539,10 @@ class _ScheduleLine extends StatelessWidget {
                       : const Color(AppColors.textColor),
                 ),
               ),
+              if (location != null) ...[
+                const SizedBox(height: 4),
+                _CompactTurfLocation(location: location!),
+              ],
             ],
           ),
         ),
@@ -558,6 +572,66 @@ class _ScheduleLine extends StatelessWidget {
             visualDensity: VisualDensity.compact,
           ),
       ],
+    );
+  }
+}
+
+class _CompactTurfLocation extends StatelessWidget {
+  const _CompactTurfLocation({required this.location});
+
+  final LocationModel location;
+
+  @override
+  Widget build(BuildContext context) {
+    final canOpenMaps = canOpenLocationInMaps(location);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: canOpenMaps ? () => openLocationInMaps(location) : null,
+        borderRadius: BorderRadius.circular(6),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Row(
+            children: [
+              Icon(
+                Icons.location_on,
+                size: 14,
+                color: canOpenMaps
+                    ? const Color(AppColors.primaryColor)
+                    : const Color(AppColors.textSecondaryColor),
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  location.address,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.2,
+                    color: canOpenMaps
+                        ? const Color(AppColors.primaryColor)
+                        : const Color(AppColors.textSecondaryColor),
+                    decoration: canOpenMaps
+                        ? TextDecoration.underline
+                        : TextDecoration.none,
+                    decorationColor: const Color(AppColors.primaryColor),
+                  ),
+                ),
+              ),
+              if (canOpenMaps) ...[
+                const SizedBox(width: 4),
+                const Icon(
+                  Icons.open_in_new,
+                  size: 12,
+                  color: Color(AppColors.primaryColor),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

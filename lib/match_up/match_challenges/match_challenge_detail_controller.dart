@@ -14,7 +14,6 @@ import '../../scoring/cricket/cricket_scoring_live_cache.dart';
 import '../../scoring/football/football_scoring_live_cache.dart';
 import '../../scoring/shared/scoring_shared_models.dart';
 import '../../scoring/shared/scoring_socket_service.dart';
-import '../../team/utils/team_ui.dart';
 import '../../team/model/team_model.dart' show TeamSportType;
 import '../matchmaking_service.dart';
 import '../model/team_match_model.dart';
@@ -304,7 +303,7 @@ class MatchChallengeDetailController extends GetxController
       isScrollControlled: true,
       backgroundColor: Colors.white,
       builder: (_) => ProposeTurfSheet(
-        sportTypes: [teamSportLabel(match.value!.sportType)],
+        sportTypes: [match.value!.sportType.name],
       ),
     );
     if (selectedTurfId == null || selectedTurfId.isEmpty) return;

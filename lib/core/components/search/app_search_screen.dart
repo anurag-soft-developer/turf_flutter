@@ -22,14 +22,12 @@ class AppSearchScreen extends HookWidget {
     required this.historyScope,
     required this.hintText,
     required this.resultsBuilder,
-    this.title = 'Search',
     this.headerBuilder,
     this.autofocus = true,
   });
 
   final SearchHistoryScope historyScope;
   final String hintText;
-  final String title;
   final AppSearchResultsBuilder resultsBuilder;
   final AppSearchHeaderBuilder? headerBuilder;
   final bool autofocus;
@@ -87,21 +85,24 @@ class AppSearchScreen extends HookWidget {
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(title: Text(title)),
+      appBar: AppBar(
+        titleSpacing: 0,
+        toolbarHeight: 64,
+        title: Padding(
+          padding: const EdgeInsets.only(right: 12),
+          child: AppSearchField(
+            controller: searchController,
+            focusNode: focusNode,
+            hintText: hintText,
+            autofocus: autofocus,
+            onSubmitted: submit,
+            onCleared: clearSubmitted,
+          ),
+        ),
+      ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: AppSearchField(
-              controller: searchController,
-              focusNode: focusNode,
-              hintText: hintText,
-              autofocus: autofocus,
-              onSubmitted: submit,
-              onCleared: clearSubmitted,
-            ),
-          ),
           if (showResults && headerBuilder != null)
             headerBuilder!(context, query),
           Expanded(

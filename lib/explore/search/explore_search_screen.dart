@@ -23,7 +23,6 @@ class ExploreSearchScreen extends HookWidget {
 
     return AppSearchScreen(
       historyScope: SearchHistoryScope.explore,
-      title: 'Search',
       hintText: 'Search matches, teams, players, or posts',
       headerBuilder: (context, query) {
         return Column(

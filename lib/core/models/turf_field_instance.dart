@@ -32,8 +32,13 @@ class TurfFieldInstance {
 
   /// Gets the address
   String? getAddress() {
+    return getLocation()?.address;
+  }
+
+  /// Gets the location model when turf is populated
+  LocationModel? getLocation() {
     if (_turfField is TurfModel) {
-      return _turfField.location?.address;
+      return _turfField.location;
     }
     return null;
   }

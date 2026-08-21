@@ -6,7 +6,6 @@ import '../../../core/config/constants.dart';
 import '../../../core/services/followings_service.dart';
 import '../../../team/model/team_model.dart';
 import '../../../team/utils/team_media_url.dart';
-import '../../../team/utils/team_ui.dart';
 import '../../player/follow/follow_button.dart';
 import '../../player/follow/follow_stat_button.dart';
 
@@ -129,23 +128,20 @@ class _TeamHeroHeaderState extends State<TeamHeroHeader> {
                                   ),
                                 ),
                               ),
-                            const SizedBox(height: 8),
-                            Wrap(
-                              spacing: 6,
-                              runSpacing: 6,
-                              children: [
-                                _ChipBadge(
-                                  icon: Icons.sports,
-                                  label: teamSportLabel(widget.team.sportType),
-                                ),
-                                if (widget.team.lookingForMembers)
-                                  const _ChipBadge(
+                            if (widget.team.lookingForMembers) ...[
+                              const SizedBox(height: 8),
+                              const Wrap(
+                                spacing: 6,
+                                runSpacing: 6,
+                                children: [
+                                  _ChipBadge(
                                     icon: Icons.person_add_alt_1,
-                                    label: 'Recruiting',
+                                    label: 'Looking for players',
                                     color: Color(AppColors.successColor),
                                   ),
-                              ],
-                            ),
+                                ],
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -207,19 +203,16 @@ class _TeamHeroHeaderState extends State<TeamHeroHeader> {
 
   Widget _buildCoverArea(List<String> covers) {
     if (covers.isEmpty) {
-      return DecoratedBox(
+      return const DecoratedBox(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              const Color(AppColors.primaryColor),
-              const Color(AppColors.secondaryColor),
+              Color(AppColors.primaryColor),
+              Color(AppColors.secondaryColor),
             ],
           ),
-        ),
-        child: const Center(
-          child: Icon(Icons.shield_outlined, size: 72, color: Colors.white24),
         ),
       );
     }

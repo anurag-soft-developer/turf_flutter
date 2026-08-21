@@ -25,7 +25,6 @@ class MatchUpSearchScreen extends StatelessWidget {
 
     return AppSearchScreen(
       historyScope: SearchHistoryScope.matchUp,
-      title: 'Search Teams',
       hintText: 'Search teams by name',
       headerBuilder: (context, query) {
         return Padding(

@@ -25,7 +25,6 @@ class TurfSearchScreen extends StatelessWidget {
 
     return AppSearchScreen(
       historyScope: SearchHistoryScope.turfs,
-      title: 'Search Turfs',
       hintText: 'Search turfs by name',
       headerBuilder: (context, query) {
         return Padding(
