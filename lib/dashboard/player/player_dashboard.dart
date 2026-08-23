@@ -190,6 +190,16 @@ class _PlayerDashboardFeed extends HookWidget {
       gcDuration: const GcDuration(minutes: 30),
     );
 
+    // Sync bell badge from cached/fetched data (queryFn may not re-run on cache hit).
+    useEffect(() {
+      final count = dashboardQuery.data?.unreadNotificationCount;
+      if (count != null && Get.isRegistered<PlayerDashboardController>()) {
+        Get.find<PlayerDashboardController>().unreadNotificationCount.value =
+            count;
+      }
+      return null;
+    }, [dashboardQuery.data?.unreadNotificationCount]);
+
     final data = dashboardQuery.data ?? PlayerDashboardModel.empty;
     final isLoading = dashboardQuery.isLoading && data.turfs.isEmpty;
 

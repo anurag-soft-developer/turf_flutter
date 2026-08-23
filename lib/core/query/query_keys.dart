@@ -12,6 +12,8 @@ class QueryKeys {
         lng ?? 'none',
       ];
 
+  static const turfSearchPrefix = ['turfSearch'];
+
   static List<Object?> turfSearch({
     String? search,
     List<String>? sportTypes,
@@ -23,7 +25,7 @@ class QueryKeys {
     String? sortBy,
   }) =>
       [
-        'turfSearch',
+        ...turfSearchPrefix,
         search ?? '',
         ...(sportTypes ?? const <String>[]),
         ...(amenities ?? const <String>[]),
@@ -36,18 +38,24 @@ class QueryKeys {
 
   static const dashboardLeaderboard = ['dashboardLeaderboard', 'cricket'];
 
+  static const playerLeaderboardPrefix = ['playerLeaderboard'];
+
   static List<Object> playerLeaderboard(String sport) =>
-      ['playerLeaderboard', sport];
+      [...playerLeaderboardPrefix, sport];
+
+  static const teamLeaderboardPrefix = ['teamLeaderboard'];
 
   static List<Object> teamLeaderboard(String sport) =>
-      ['teamLeaderboard', sport];
+      [...teamLeaderboardPrefix, sport];
 
   /// Non-paginated memberships snapshot (Match Up, Team Openings CTA state).
   static const myMemberships = ['myMemberships'];
 
   /// Paginated active memberships (My Teams). Shares prefix with [myMemberships].
   static List<Object?> myMembershipsActive({String? search}) =>
-      ['myMemberships', 'active', search ?? ''];
+      [...myMemberships, 'active', search ?? ''];
+
+  static const matchUpOpponentsPrefix = ['matchUpOpponents'];
 
   static List<Object?> matchUpOpponents({
     required String sport,
@@ -55,21 +63,25 @@ class QueryKeys {
     String? search,
   }) =>
       [
-        'matchUpOpponents',
+        ...matchUpOpponentsPrefix,
         sport,
         fromTeamId ?? '',
         search ?? '',
       ];
+
+  static const matchChallengesPrefix = ['matchChallenges'];
 
   static List<Object?> matchChallenges({
     required String tab,
     String? teamFilter,
   }) =>
       [
-        'matchChallenges',
+        ...matchChallengesPrefix,
         tab,
         teamFilter ?? 'all',
       ];
+
+  static const matchesPrefix = ['matches'];
 
   static List<Object?> matches({
     required String scope,
@@ -77,11 +89,13 @@ class QueryKeys {
     String? search,
   }) =>
       [
-        'matches',
+        ...matchesPrefix,
         scope,
         status ?? 'all',
         search ?? '',
       ];
+
+  static const explorePrefix = ['explore'];
 
   static List<Object?> explore({
     required String mode,
@@ -92,7 +106,7 @@ class QueryKeys {
     double? lng,
   }) =>
       [
-        'explore',
+        ...explorePrefix,
         mode,
         category,
         q ?? '',
@@ -101,84 +115,136 @@ class QueryKeys {
         lng ?? 'none',
       ];
 
+  static const bookingsPrefix = ['bookings'];
+
   static List<Object?> bookings({
     required String tab,
     String? paymentStatus,
   }) =>
       [
-        'bookings',
+        ...bookingsPrefix,
         tab,
         paymentStatus ?? '',
       ];
 
-  static List<Object> teamOpenings(String sport) => ['teamOpenings', sport];
+  static const teamOpeningsPrefix = ['teamOpenings'];
 
-  static List<Object> turfDetail(String turfId) => ['turfDetail', turfId];
+  static List<Object> teamOpenings(String sport) =>
+      [...teamOpeningsPrefix, sport];
+
+  static const turfDetailPrefix = ['turfDetail'];
+
+  static List<Object> turfDetail(String turfId) =>
+      [...turfDetailPrefix, turfId];
+
+  static const turfSlotsPrefix = ['turfSlots'];
 
   /// [date] must be `yyyy-MM-dd`.
   static List<Object> turfSlots(String turfId, String date) =>
-      ['turfSlots', turfId, date];
+      [...turfSlotsPrefix, turfId, date];
 
   static const profile = ['profile'];
 
+  static const myJoinRequestsPrefix = ['myJoinRequests'];
+
   /// Pending / accepted / rejected join-request tabs.
   static List<Object> myJoinRequests(String status) =>
-      ['myJoinRequests', status];
+      [...myJoinRequestsPrefix, status];
+
+  static const myInvitationsPrefix = ['myInvitations'];
 
   static List<Object> myInvitations(String status) =>
-      ['myInvitations', status];
+      [...myInvitationsPrefix, status];
+
+  static const teamInvitesPrefix = ['teamInvites'];
 
   static List<Object?> teamInvites(String teamId, {String? status}) =>
-      ['teamInvites', teamId, status];
+      [...teamInvitesPrefix, teamId, status];
+
+  static const turfReviewStatsPrefix = ['turfReviewStats'];
 
   static List<Object> turfReviewStats(String turfId) =>
-      ['turfReviewStats', turfId];
+      [...turfReviewStatsPrefix, turfId];
+
+  static const turfReviewsPrefix = ['turfReviews'];
 
   /// Preview and full share the `['turfReviews', turfId]` prefix for invalidation.
   static List<Object> turfReviews(String turfId, {bool preview = false}) =>
-      ['turfReviews', turfId, preview ? 'preview' : 'full'];
+      [...turfReviewsPrefix, turfId, preview ? 'preview' : 'full'];
 
   static const notifications = ['notifications'];
 
-  static List<Object> teamDetail(String teamId) => ['teamDetail', teamId];
+  static const teamDetailPrefix = ['teamDetail'];
+
+  static List<Object> teamDetail(String teamId) =>
+      [...teamDetailPrefix, teamId];
+
+  static const teamRosterPrefix = ['teamRoster'];
 
   static List<Object?> teamRoster(String teamId, {String? status}) =>
-      ['teamRoster', teamId, status];
+      [...teamRosterPrefix, teamId, status];
+
+  static const matchChallengeDetailPrefix = ['matchChallengeDetail'];
 
   static List<Object> matchChallengeDetail(String matchId) =>
-      ['matchChallengeDetail', matchId];
+      [...matchChallengeDetailPrefix, matchId];
 
-  static List<Object> explorePost(String postId) => ['explorePost', postId];
+  static const explorePostPrefix = ['explorePost'];
+
+  static List<Object> explorePost(String postId) =>
+      [...explorePostPrefix, postId];
+
+  static const cricketSessionPrefix = ['cricketSession'];
 
   static List<Object> cricketSession(String matchId) =>
-      ['cricketSession', matchId];
+      [...cricketSessionPrefix, matchId];
+
+  static const cricketOversPrefix = ['cricketOvers'];
 
   static List<Object> cricketOvers(String matchId) =>
-      ['cricketOvers', matchId];
+      [...cricketOversPrefix, matchId];
+
+  static const footballSessionPrefix = ['footballSession'];
 
   static List<Object> footballSession(String matchId) =>
-      ['footballSession', matchId];
+      [...footballSessionPrefix, matchId];
+
+  static const footballEventsPrefix = ['footballEvents'];
 
   static List<Object> footballEvents(String matchId) =>
-      ['footballEvents', matchId];
+      [...footballEventsPrefix, matchId];
+
+  static const publicProfilePrefix = ['publicProfile'];
 
   static List<Object> publicProfile(String userId) =>
-      ['publicProfile', userId];
+      [...publicProfilePrefix, userId];
 
-  static List<Object> followers(String userId) => ['followers', userId];
+  static const followersPrefix = ['followers'];
 
-  static List<Object> following(String userId) => ['following', userId];
+  static List<Object> followers(String userId) =>
+      [...followersPrefix, userId];
+
+  static const followingPrefix = ['following'];
+
+  static List<Object> following(String userId) =>
+      [...followingPrefix, userId];
+
+  static const teamFollowersPrefix = ['teamFollowers'];
 
   static List<Object> teamFollowers(String teamId) =>
-      ['teamFollowers', teamId];
+      [...teamFollowersPrefix, teamId];
+
+  static const followStatusPrefix = ['followStatus'];
 
   /// Logged-in user's outgoing follow edge towards a user or team.
   static List<Object> followStatus(
     String recipientId, {
     String recipientType = 'User',
   }) =>
-      ['followStatus', recipientType, recipientId];
+      [...followStatusPrefix, recipientType, recipientId];
+
+  static const bookingDetailPrefix = ['bookingDetail'];
 
   static List<Object> bookingDetail(String bookingId) =>
-      ['bookingDetail', bookingId];
+      [...bookingDetailPrefix, bookingId];
 }

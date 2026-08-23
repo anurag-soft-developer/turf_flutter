@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+
 import 'nav_tabs.dart';
 
 class NavigationController extends GetxController {
@@ -12,7 +13,11 @@ class NavigationController extends GetxController {
   int get tabCount => activeTabs.length;
 
   void changeTab(int index) {
-    if (_currentIndex.value == index || index < 0 || index >= tabCount) {
+    if (index < 0 || index >= tabCount) return;
+
+    // Same tab tapped again → refresh that tab's data.
+    if (_currentIndex.value == index) {
+      activeTabs[index].onRetap?.call();
       return;
     }
 
