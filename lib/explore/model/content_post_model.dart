@@ -18,7 +18,7 @@ enum MediaKind { image, video }
 /// Backend `PostStatus`.
 enum PostStatus { draft, published, archived }
 
-/// Populated media document on a content post.
+/// Embedded media on a content post (`{ url, kind }`; caption kept for parse safety).
 @JsonSerializable()
 class MediaModel {
   @JsonKey(name: '_id', fromJson: mongoIdFromJsonNullable)
@@ -138,4 +138,101 @@ class ContentPostModel {
   TurfFieldInstance get turfHelper => TurfFieldInstance(turf);
 
   MediaModel? get primaryMedia => media.isEmpty ? null : media.first;
+}
+
+/// Body item for `POST /posts` media array.
+class CreatePostMediaInput {
+  final String url;
+  final MediaKind kind;
+
+  const CreatePostMediaInput({
+    required this.url,
+    required this.kind,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'url': url,
+        'kind': kind.name,
+      };
+}
+
+/// Body for `POST /posts` (mirrors backend `CreatePostDto`).
+class CreatePostRequest {
+  final String? title;
+  final String? content;
+  final List<String>? tags;
+  final PostStatus? status;
+  final String? team;
+  final String? match;
+  final List<CreatePostMediaInput>? media;
+
+  const CreatePostRequest({
+    this.title,
+    this.content,
+    this.tags,
+    this.status,
+    this.team,
+    this.match,
+    this.media,
+  });
+
+  Map<String, dynamic> toJson() {
+    final map = <String, dynamic>{};
+    if (title != null) map['title'] = title;
+    if (content != null) map['content'] = content;
+    if (tags != null) map['tags'] = tags;
+    if (status != null) map['status'] = status!.name;
+    if (team != null) map['team'] = team;
+    if (match != null) map['match'] = match;
+    if (media != null) {
+      map['media'] = media!.map((m) => m.toJson()).toList();
+    }
+    return map;
+  }
+}
+
+/// Query params for `GET /posts` (mirrors backend `PostFilterDto`).
+class PostFilterQuery {
+  final String? postedBy;
+  final bool? mine;
+  final PostStatus? status;
+  final String? team;
+  final String? match;
+  final String? turf;
+  final String? search;
+  final int page;
+  final int limit;
+
+  const PostFilterQuery({
+    this.postedBy,
+    this.mine,
+    this.status,
+    this.team,
+    this.match,
+    this.turf,
+    this.search,
+    this.page = 1,
+    this.limit = 10,
+  });
+
+  Map<String, dynamic> toQueryParameters() {
+    final clampedLimit = limit.clamp(1, 50);
+    final params = <String, dynamic>{
+      'page': page.toString(),
+      'limit': clampedLimit.toString(),
+    };
+    if (postedBy != null && postedBy!.isNotEmpty) {
+      params['postedBy'] = postedBy;
+    }
+    if (mine != null) params['mine'] = mine! ? 'true' : 'false';
+    if (status != null) params['status'] = status!.name;
+    if (team != null && team!.isNotEmpty) params['team'] = team;
+    if (match != null && match!.isNotEmpty) params['match'] = match;
+    if (turf != null && turf!.isNotEmpty) params['turf'] = turf;
+    final trimmedSearch = search?.trim();
+    if (trimmedSearch != null && trimmedSearch.isNotEmpty) {
+      params['search'] = trimmedSearch;
+    }
+    return params;
+  }
 }

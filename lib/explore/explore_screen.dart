@@ -16,7 +16,7 @@ class ExploreScreen extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    final category = useState(ExploreCategory.match);
+    final category = useState(ExploreCategory.post);
     final filters = useState(ExploreFilters.all);
     final settings = Get.find<SettingsController>();
 

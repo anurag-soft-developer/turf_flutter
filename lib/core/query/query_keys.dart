@@ -194,6 +194,12 @@ class QueryKeys {
   static List<Object> explorePost(String postId) =>
       [...explorePostPrefix, postId];
 
+  /// Prefix for a user's published posts grid (profile Photos tab).
+  static const userPostsPrefix = ['userPosts'];
+
+  static List<Object> userPosts(String userId) =>
+      [...userPostsPrefix, userId];
+
   static const cricketSessionPrefix = ['cricketSession'];
 
   static List<Object> cricketSession(String matchId) =>

@@ -1,7 +1,9 @@
+import 'package:flutter_application_1/bindings/create_post_binding.dart';
 import 'package:flutter_application_1/bindings/edit_profile_binding.dart';
 import 'package:flutter_application_1/bindings/profile_binding.dart';
 import 'package:flutter_application_1/core/config/constants.dart';
 import 'package:flutter_application_1/core/guards/auth_guard.dart';
+import 'package:flutter_application_1/profile/create_post/create_post_screen.dart';
 import 'package:flutter_application_1/profile/edit_profile_screen.dart';
 import 'package:flutter_application_1/profile/follow/follow_list_screen.dart';
 import 'package:flutter_application_1/profile/profile_screen.dart';
@@ -19,6 +21,13 @@ final List<GetPage<dynamic>> profileRoutes = [
     name: AppConstants.routes.editProfile,
     page: () => const EditProfileScreen(),
     binding: EditProfileBinding(),
+    transition: Transition.cupertino,
+    middlewares: [AuthGuard()],
+  ),
+  GetPage(
+    name: AppConstants.routes.createPost,
+    page: () => const CreatePostScreen(),
+    binding: CreatePostBinding(),
     transition: Transition.cupertino,
     middlewares: [AuthGuard()],
   ),

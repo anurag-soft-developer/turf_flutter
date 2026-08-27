@@ -5,7 +5,6 @@ import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
 import '../../components/player/profile/player_hero_section.dart';
-import '../../components/player/profile/sport_stats_view.dart';
 import '../../core/components/query/query_async_body.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/user/user_model.dart';
@@ -13,6 +12,9 @@ import '../../core/models/user_field_instance.dart';
 import '../../core/query/query_keys.dart';
 import '../../core/query/query_retry.dart';
 import '../../core/services/user_service.dart';
+import '../../profile/widgets/profile_posts_grid.dart';
+import '../../profile/widgets/profile_scroll_scaffold.dart';
+import '../../profile/widgets/profile_stats_sliver.dart';
 
 /// Route arguments: `{'userId': String}` — public profile user id.
 class PlayerProfileScreen extends HookWidget {
@@ -56,6 +58,7 @@ class PlayerProfileScreen extends HookWidget {
   @override
   Widget build(BuildContext context) {
     final userId = useMemoized(() => _parseUserId(Get.arguments));
+    final queryClient = useQueryClient();
 
     if (userId == null || userId.isEmpty) {
       return Scaffold(
@@ -76,7 +79,8 @@ class PlayerProfileScreen extends HookWidget {
 
     final availableSports = _availableSports(profileQuery.data);
 
-    final tabController = useTabController(
+    final outerTabController = useTabController(initialLength: 2);
+    final sportTabController = useTabController(
       initialLength: availableSports.length,
       keys: [availableSports.length],
     );
@@ -89,23 +93,6 @@ class PlayerProfileScreen extends HookWidget {
         elevation: 0,
         foregroundColor: Colors.white,
         title: const Text('Player Profile'),
-        actions: [
-          IconButton(
-            onPressed: profileQuery.isFetching
-                ? null
-                : () => profileQuery.refetch(),
-            icon: profileQuery.isFetching
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : const Icon(Icons.refresh),
-          ),
-        ],
       ),
       body: QueryAsyncBody<UserModel, Object>(
         state: profileQuery,
@@ -114,71 +101,27 @@ class PlayerProfileScreen extends HookWidget {
           final helper = UserFieldInstance(resolved);
           final sports = _availableSports(resolved);
 
-          return NestedScrollView(
-            headerSliverBuilder: (context, innerBoxIsScrolled) {
-              return [
-                SliverToBoxAdapter(child: PlayerHeroSection(helper: helper)),
-                SliverToBoxAdapter(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const SizedBox(height: 24),
-                      PlayerBadgesSection(
-                        badges: helper.getModel()?.badges ?? [],
-                      ),
-                    ],
-                  ),
-                ),
-              ];
-            },
-            body: Column(
-              children: [
-                const SizedBox(height: 24),
-                if (sports.isNotEmpty) ...[
-                  Container(
-                    color: Colors.white,
-                    child: TabBar(
-                      controller: tabController,
-                      labelColor: const Color(AppColors.primaryColor),
-                      unselectedLabelColor: const Color(
-                        AppColors.textSecondaryColor,
-                      ),
-                      indicatorColor: const Color(AppColors.primaryColor),
-                      tabs: sports.map((sport) {
-                        if (sport == SportType.football) {
-                          return const Tab(
-                            icon: Icon(Icons.sports_soccer, size: 20),
-                            text: 'Football',
-                          );
-                        }
-                        return const Tab(
-                          icon: Icon(Icons.sports_cricket, size: 20),
-                          text: 'Cricket',
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                  Expanded(
-                    child: TabBarView(
-                      controller: tabController,
-                      children: sports.map((sport) {
-                        final stats = _statsForSport(resolved, sport);
-                        return SportStatsView(sport: sport, stats: stats);
-                      }).toList(),
-                    ),
-                  ),
-                ] else
-                  const Expanded(
-                    child: Center(
-                      child: Text(
-                        'No sport stats available',
-                        style: TextStyle(
-                          color: Color(AppColors.textSecondaryColor),
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
+          Future<void> onRefresh() async {
+            await Future.wait([
+              profileQuery.refetch(),
+              queryClient.invalidateQueries(
+                queryKey: QueryKeys.userPosts(userId),
+              ),
+            ]);
+          }
+
+          return ProfileScrollScaffold(
+            onRefresh: onRefresh,
+            hero: PlayerHeroSection(helper: helper),
+            badges: PlayerBadgesSection(
+              badges: helper.getModel()?.badges ?? [],
+            ),
+            outerTabController: outerTabController,
+            photosSliver: ProfilePostsGrid(userId: userId),
+            statsSliver: ProfileStatsSliver(
+              sports: sports,
+              sportTabController: sportTabController,
+              statsForSport: (sport) => _statsForSport(resolved, sport),
             ),
           );
         },

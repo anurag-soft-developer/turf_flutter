@@ -16,10 +16,10 @@ class ExploreSearchCategoryTabs extends StatelessWidget {
   final bool includeAll;
 
   static const _concreteTabs = <ExploreCategory>[
+    ExploreCategory.post,
     ExploreCategory.match,
     ExploreCategory.team,
     ExploreCategory.player,
-    ExploreCategory.post,
   ];
 
   /// Theme-matched indigo tint (between washed-out and solid primary).

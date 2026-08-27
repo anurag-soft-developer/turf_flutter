@@ -31,10 +31,10 @@ class ExploreSearchAllBody extends HookWidget {
   final ValueChanged<ExploreCategory> onViewMore;
 
   static const _sectionOrder = <ExploreCategory>[
+    ExploreCategory.post,
     ExploreCategory.match,
     ExploreCategory.team,
     ExploreCategory.player,
-    ExploreCategory.post,
   ];
 
   @override

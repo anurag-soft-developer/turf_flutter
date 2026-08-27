@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../components/shared/avatar_image_input.dart';
-import '../../components/shared/image_input.dart';
 import '../../components/shared/location_autocomplete_field.dart';
 import '../../components/create_turf/section_container.dart';
 import '../../core/models/media_upload_models.dart';
@@ -468,17 +467,6 @@ class _EditTeamBody extends StatelessWidget {
           _ScheduleSection(controller: controller),
           const SizedBox(height: 24),
           _SocialLinksSection(controller: controller),
-          const SizedBox(height: 24),
-          ImageInput(
-            title: 'Cover Images',
-            icon: Icons.image,
-            imageUrls: controller.coverImages,
-            onChange: (_) {},
-            uploadPurpose: MediaUploadPurpose.teamMedia,
-            allowPasteUrl: true,
-            deleteRemoteOnRemove: false,
-            onDeferredRemoteRemoval: controller.queueDeferredRemoteImageDeletion,
-          ),
           const SizedBox(height: 24),
           _SubmitButton(controller: controller),
         ],

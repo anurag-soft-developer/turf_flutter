@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_query/flutter_query.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 
+import '../../components/match_history/match_history_placeholders.dart';
+import '../../core/config/constants.dart';
 import '../../core/models/location_model.dart';
 import '../../core/query/query_keys.dart';
 import '../../core/query/query_retry.dart';
+import '../../engagement/engagement_service.dart';
 import '../explore_service.dart';
 import '../model/explore_category.dart';
 import '../model/explore_filters.dart';
 import '../model/explore_item.dart';
-import 'explore_list.dart';
+import 'explore_item_tile.dart';
 
 class ExploreFeedBody extends HookWidget {
   const ExploreFeedBody({
@@ -78,15 +83,122 @@ class ExploreFeedBody extends HookWidget {
     );
 
     final items =
-        query.data?.pages.expand((p) => p.data).toList() ?? const <ExploreItem>[];
+        query.data?.pages.expand((p) => p.data).toList() ??
+        const <ExploreItem>[];
 
-    return ExploreList(
-      query: query,
-      items: items,
-      emptyTitle: emptyTitle,
-      emptySubtitle: emptySubtitle,
-      emptyIcon: emptyIcon,
-      errorMessage: errorMessage,
+    if (query.isLoading || (query.isFetching && items.isEmpty)) {
+      return const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(
+            Color(AppColors.primaryColor),
+          ),
+        ),
+      );
+    }
+
+    if (query.isError && items.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.error_outline,
+              size: 42,
+              color: Color(AppColors.textSecondaryColor),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              errorMessage,
+              style: const TextStyle(
+                color: Color(AppColors.textSecondaryColor),
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: () => query.refetch(),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (items.isEmpty) {
+      return RefreshIndicator(
+        color: const Color(AppColors.primaryColor),
+        onRefresh: () async {
+          await query.refetch();
+        },
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            SizedBox(
+              height: MediaQuery.sizeOf(context).height * 0.5,
+              child: MatchHistoryEmptyPlaceholder(
+                icon: emptyIcon,
+                title: emptyTitle,
+                subtitle: emptySubtitle,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      color: const Color(AppColors.primaryColor),
+      onRefresh: () async {
+        await query.refetch();
+      },
+      child: NotificationListener<ScrollNotification>(
+        onNotification: (notification) {
+          if (notification.metrics.pixels >=
+              notification.metrics.maxScrollExtent - 200) {
+            if (query.hasNextPage && !query.isFetchingNextPage) {
+              query.fetchNextPage();
+            }
+          }
+          return false;
+        },
+        child: ListView.builder(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          scrollCacheExtent: const ScrollCacheExtent.pixels(800),
+          physics: const AlwaysScrollableScrollPhysics(),
+          itemCount: items.length + (query.isFetchingNextPage ? 1 : 0),
+          itemBuilder: (context, i) {
+            if (i == items.length) {
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Color(AppColors.primaryColor),
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            return VisibilityDetector(
+              key: Key(
+                'explore-${items[i].engagementType.apiValue}-${items[i].entityId ?? i}',
+              ),
+              onVisibilityChanged: (info) {
+                if (info.visibleFraction < 0.5) return;
+                final item = items[i];
+                final id = item.entityId;
+                if (id == null || id.isEmpty) return;
+                EngagementService().trackImpression(
+                  entityType: item.engagementType,
+                  entityId: id,
+                );
+              },
+              child: ExploreItemTile(item: items[i]),
+            );
+          },
+        ),
+      ),
     );
   }
 }

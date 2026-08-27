@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/components/shared/app_network_image.dart';
 import 'package:get/get.dart';
 
 import '../../components/match_history/match_card.dart';
@@ -13,10 +12,8 @@ import '../../engagement/engagement_service.dart';
 import '../../match_up/match_challenges/match_challenge_detail_screen.dart';
 import '../../match_up/model/team_match_model.dart';
 import '../../team/model/team_model.dart';
-import '../model/content_post_model.dart';
 import '../model/explore_item.dart';
-import 'explore_like_button.dart';
-import 'explore_post_viewer_screen.dart';
+import 'content_post_card.dart';
 
 class ExploreItemTile extends StatelessWidget {
   const ExploreItemTile({super.key, required this.item});
@@ -47,7 +44,10 @@ class ExploreItemTile extends StatelessWidget {
             ),
           ),
         ),
-      ExplorePostItem(:final post) => ExplorePostTile(post: post),
+      ExplorePostItem(:final post) => Padding(
+          padding: const EdgeInsets.only(bottom: 20),
+          child: ContentPostCard(post: post),
+        ),
     };
   }
 }
@@ -166,168 +166,6 @@ class _ExploreTeamTile extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               TeamStatsRow.fromTeam(team, compact: true),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class ExplorePostTile extends StatelessWidget {
-  const ExplorePostTile({super.key, required this.post});
-
-  final ContentPostModel post;
-
-  @override
-  Widget build(BuildContext context) {
-    final author = post.postedByHelper;
-    final teamName = post.teamHelper.getName();
-    final media = post.primaryMedia;
-    final match = post.match;
-    final turfName = post.turfHelper.getName();
-    final id = post.id ?? '';
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: const Color(AppColors.dividerColor).withValues(alpha: 0.5),
-        ),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () {
-          final id = post.id;
-          if (id != null && id.isNotEmpty) {
-            openExplorePostViewer(id: id);
-          }
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 18,
-                    backgroundImage: (author.getAvatar() ?? '').isNotEmpty
-                        ? AppNetworkImage.provider(author.getAvatar()!)
-                        : null,
-                    child: (author.getAvatar() ?? '').isEmpty
-                        ? Text(
-                            author.getDisplayName().isNotEmpty
-                                ? author.getDisplayName()[0].toUpperCase()
-                                : '?',
-                          )
-                        : null,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          author.getDisplayName(),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 14,
-                            color: Color(AppColors.textColor),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        if (teamName != null)
-                          Text(
-                            teamName,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Color(AppColors.textSecondaryColor),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  ExploreLikeButton(
-                    entityType: EngagementEntityType.post,
-                    entityId: id,
-                  ),
-                ],
-              ),
-              if (post.title.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                Text(
-                  post.title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Color(AppColors.textColor),
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-              if (post.content.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Text(
-                  post.content,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Color(AppColors.textSecondaryColor),
-                  ),
-                ),
-              ],
-              if (media != null) ...[
-                const SizedBox(height: 10),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: media.kind == MediaKind.video
-                      ? Container(
-                          height: 160,
-                          color: Colors.black12,
-                          child: const Center(
-                            child: Icon(Icons.play_circle_outline, size: 44),
-                          ),
-                        )
-                      : AppNetworkImage(
-                          media.url,
-                          height: 180,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => Container(
-                            height: 120,
-                            color: Colors.black12,
-                            child: const Center(
-                              child: Icon(Icons.broken_image_outlined),
-                            ),
-                          ),
-                        ),
-                ),
-              ],
-              if (match != null || turfName != null) ...[
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: [
-                    if (match != null)
-                      Chip(
-                        visualDensity: VisualDensity.compact,
-                        label: Text(match.versusLabel),
-                      ),
-                    if (turfName != null)
-                      Chip(
-                        visualDensity: VisualDensity.compact,
-                        label: Text(turfName),
-                      ),
-                  ],
-                ),
-              ],
             ],
           ),
         ),

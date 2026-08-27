@@ -324,6 +324,8 @@ class ExploreEndpoints {
 class PostEndpoints {
   const PostEndpoints();
 
+  String get list => '/posts';
+
   String byId(String id) => '/posts/$id';
 }
 

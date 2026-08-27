@@ -1,73 +1,60 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/components/shared/app_network_image.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
 import '../../core/components/query/query_async_body.dart';
 import '../../core/config/constants.dart';
+import '../../core/models/paginated_response.dart';
 import '../../core/query/query_keys.dart';
 import '../../core/query/query_retry.dart';
 import '../../core/routes/route_query.dart';
-import '../../engagement/engagement_entity.dart';
-import '../../engagement/engagement_service.dart';
 import '../model/content_post_model.dart';
 import '../post_service.dart';
-import 'explore_like_button.dart';
+import 'content_post_card.dart';
 
-Future<T?> openExplorePostViewer<T>({required String id}) {
+Future<T?> openExplorePostViewer<T>({
+  required String id,
+  String? userId,
+}) {
   return Get.toNamed<T>(
         AppConstants.routes.explorePost(id),
+        arguments: {
+          if (userId != null && userId.isNotEmpty) 'userId': userId,
+        },
         preventDuplicates: false,
       ) ??
       Future.value();
 }
 
-class ExplorePostViewerScreen extends HookWidget {
+class ExplorePostViewerScreen extends StatelessWidget {
   const ExplorePostViewerScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final postId = routeParam('id');
+    final args = (Get.arguments as Map?)?.cast<String, dynamic>() ?? const {};
+    final userIdArg = (args['userId'] as String?)?.trim();
 
     if (postId == null || postId.isEmpty) {
-      return Scaffold(
-        backgroundColor: const Color(AppColors.backgroundColor),
-        appBar: AppBar(title: const Text('Post')),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Post not found.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Color(AppColors.textSecondaryColor),
-                    fontSize: 15,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                OutlinedButton(
-                  onPressed: () => Get.back(),
-                  child: const Text('Go back'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
+      return const _MissingPostScaffold();
     }
 
-    useEffect(() {
-      EngagementService().trackView(
-        entityType: EngagementEntityType.post,
-        entityId: postId,
-      );
-      return null;
-    }, [postId]);
+    if (userIdArg != null && userIdArg.isNotEmpty) {
+      return _AuthorPostsFeed(userId: userIdArg, initialPostId: postId);
+    }
 
+    return _ResolveAuthorThenFeed(postId: postId);
+  }
+}
+
+class _ResolveAuthorThenFeed extends HookWidget {
+  const _ResolveAuthorThenFeed({required this.postId});
+
+  final String postId;
+
+  @override
+  Widget build(BuildContext context) {
     final postQuery = useQuery<ContentPostModel, Object>(
       QueryKeys.explorePost(postId),
       (_) async {
@@ -78,183 +65,272 @@ class ExplorePostViewerScreen extends HookWidget {
       retry: noRetry,
     );
 
+    final post = postQuery.data;
+    final uid = post?.postedByHelper.getId();
+    if (post != null && uid != null && uid.isNotEmpty) {
+      return _AuthorPostsFeed(userId: uid, initialPostId: postId);
+    }
+
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(
-        title: Text(
-          postQuery.data?.title.isNotEmpty == true
-              ? postQuery.data!.title
-              : 'Post',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        actions: [
-          ExploreLikeButton(
-            entityType: EngagementEntityType.post,
-            entityId: postId,
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Post')),
       body: QueryAsyncBody<ContentPostModel, Object>(
         state: postQuery,
         onRetry: () => postQuery.refetch(),
-        data: (post) => _ExplorePostViewerBody(post: post),
+        data: (loaded) => SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+          child: ContentPostCard(post: loaded, popOnDelete: true),
+        ),
       ),
     );
   }
 }
 
-class _ExplorePostViewerBody extends StatelessWidget {
-  const _ExplorePostViewerBody({required this.post});
-
-  final ContentPostModel post;
+class _MissingPostScaffold extends StatelessWidget {
+  const _MissingPostScaffold();
 
   @override
   Widget build(BuildContext context) {
-    final author = post.postedByHelper;
-    final teamName = post.teamHelper.getName();
-    final match = post.match;
-    final turfName = post.turfHelper.getName();
-
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-      children: [
-        Row(
-          children: [
-            CircleAvatar(
-              radius: 20,
-              backgroundImage: (author.getAvatar() ?? '').isNotEmpty
-                  ? AppNetworkImage.provider(author.getAvatar()!)
-                  : null,
-              child: (author.getAvatar() ?? '').isEmpty
-                  ? Text(
-                      author.getDisplayName().isNotEmpty
-                          ? author.getDisplayName()[0].toUpperCase()
-                          : '?',
-                    )
-                  : null,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    author.getDisplayName(),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                      color: Color(AppColors.textColor),
-                    ),
-                  ),
-                  if (teamName != null)
-                    Text(
-                      teamName,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(AppColors.textSecondaryColor),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        if (post.title.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          Text(
-            post.title,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: Color(AppColors.textColor),
-            ),
-          ),
-        ],
-        if (post.content.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          Text(
-            post.content,
-            style: const TextStyle(
-              fontSize: 15,
-              height: 1.4,
-              color: Color(AppColors.textColor),
-            ),
-          ),
-        ],
-        if (match != null || turfName != null) ...[
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
+    return Scaffold(
+      backgroundColor: const Color(AppColors.backgroundColor),
+      appBar: AppBar(title: const Text('Post')),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              if (match != null)
-                Chip(
-                  avatar: const Icon(Icons.sports, size: 16),
-                  label: Text(match.versusLabel),
+              const Text(
+                'Post not found.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Color(AppColors.textSecondaryColor),
+                  fontSize: 15,
                 ),
-              if (turfName != null)
-                Chip(
-                  avatar: const Icon(Icons.place_outlined, size: 16),
-                  label: Text(turfName),
-                ),
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton(
+                onPressed: () => Get.back(),
+                child: const Text('Go back'),
+              ),
             ],
           ),
-        ],
-        const SizedBox(height: 16),
-        for (final media in post.media) ...[
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: media.kind == MediaKind.video
-                ? _VideoPlaceholder(caption: media.caption)
-                : AppNetworkImage(
-                    media.url,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => const SizedBox(
-                      height: 180,
-                      child: Center(child: Icon(Icons.broken_image_outlined)),
-                    ),
-                  ),
-          ),
-          if (media.caption != null && media.caption!.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 6, bottom: 12),
-              child: Text(
-                media.caption!,
-                style: const TextStyle(
-                  color: Color(AppColors.textSecondaryColor),
-                ),
-              ),
-            )
-          else
-            const SizedBox(height: 12),
-        ],
-      ],
+        ),
+      ),
     );
   }
 }
 
-class _VideoPlaceholder extends StatelessWidget {
-  const _VideoPlaceholder({this.caption});
+class _AuthorPostsFeed extends HookWidget {
+  const _AuthorPostsFeed({
+    required this.userId,
+    required this.initialPostId,
+  });
 
-  final String? caption;
+  final String userId;
+  final String initialPostId;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 180,
-      color: Colors.black12,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.play_circle_outline, size: 44),
-          if (caption != null && caption!.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(caption!),
-            ),
-        ],
+    final centerKey = useMemoized(() => GlobalKey(), [initialPostId]);
+    final scrollController = useScrollController();
+
+    final query =
+        useInfiniteQuery<PaginatedResponse<ContentPostModel>, Object, int>(
+      QueryKeys.userPosts(userId),
+      (ctx) async {
+        final result = await PostService().findMany(
+          PostFilterQuery(
+            postedBy: userId,
+            status: PostStatus.published,
+            page: ctx.pageParam,
+            limit: PostService.userPostsPageSize,
+          ),
+        );
+        return result ?? EmptyPaginatedResponse<ContentPostModel>();
+      },
+      initialPageParam: 1,
+      retry: noRetry,
+      nextPageParamBuilder: (data) {
+        final last = data.pages.isNotEmpty ? data.pages.last : null;
+        if (last == null || !last.hasNextPage) return null;
+        return last.page + 1;
+      },
+    );
+
+    final posts =
+        query.data?.pages.expand((p) => p.data).toList() ??
+        const <ContentPostModel>[];
+    final index = posts.indexWhere((p) => p.id == initialPostId);
+    final locating = index < 0 && (query.hasNextPage || query.isFetching);
+
+    useEffect(() {
+      if (index >= 0) return null;
+      if (query.hasNextPage && !query.isFetchingNextPage && !query.isLoading) {
+        query.fetchNextPage();
+      }
+      return null;
+    }, [index, posts.length, query.hasNextPage, query.isFetchingNextPage]);
+
+    final queryRef = useRef(query);
+    queryRef.value = query;
+
+    useEffect(() {
+      void onScroll() {
+        final q = queryRef.value;
+        if (!scrollController.hasClients) return;
+        if (scrollController.position.pixels >=
+            scrollController.position.maxScrollExtent - 400) {
+          if (q.hasNextPage && !q.isFetchingNextPage) {
+            q.fetchNextPage();
+          }
+        }
+      }
+
+      scrollController.addListener(onScroll);
+      return () => scrollController.removeListener(onScroll);
+    }, [scrollController]);
+
+    useEffect(() {
+      if (index < 0) return null;
+      final remainingAfter = posts.length - index - 1;
+      if (remainingAfter < 2 &&
+          query.hasNextPage &&
+          !query.isFetchingNextPage) {
+        query.fetchNextPage();
+      }
+      return null;
+    }, [index, posts.length, query.hasNextPage, query.isFetchingNextPage]);
+
+    return Scaffold(
+      backgroundColor: const Color(AppColors.backgroundColor),
+      appBar: AppBar(
+        title: const Text('Posts'),
       ),
+      body: _feedBody(
+        query: query,
+        posts: posts,
+        index: index,
+        locating: locating,
+        centerKey: centerKey,
+        scrollController: scrollController,
+      ),
+    );
+  }
+
+  Widget _feedBody({
+    required InfiniteQueryResult<PaginatedResponse<ContentPostModel>, Object,
+            int>
+        query,
+    required List<ContentPostModel> posts,
+    required int index,
+    required bool locating,
+    required GlobalKey centerKey,
+    required ScrollController scrollController,
+  }) {
+    if (query.isLoading || (query.isFetching && posts.isEmpty) || locating) {
+      return const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(
+            Color(AppColors.primaryColor),
+          ),
+        ),
+      );
+    }
+
+    if (query.isError && posts.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Failed to load posts',
+                style: TextStyle(color: Color(AppColors.textSecondaryColor)),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => query.refetch(),
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (posts.isEmpty) {
+      return const Center(
+        child: Text(
+          'No photos yet',
+          style: TextStyle(color: Color(AppColors.textSecondaryColor)),
+        ),
+      );
+    }
+
+    final centerIndex = index < 0 ? 0 : index;
+    final before = posts.sublist(0, centerIndex);
+    final current = posts[centerIndex];
+    final after = posts.sublist(centerIndex + 1);
+
+    return CustomScrollView(
+      controller: scrollController,
+      center: centerKey,
+      slivers: [
+        if (before.isNotEmpty)
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, i) {
+                  final post = before[before.length - 1 - i];
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 20),
+                    child: ContentPostCard(post: post, popOnDelete: true),
+                  );
+                },
+                childCount: before.length,
+              ),
+            ),
+          ),
+        SliverPadding(
+          key: centerKey,
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          sliver: SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 20),
+              child: ContentPostCard(post: current, popOnDelete: true),
+            ),
+          ),
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+          sliver: SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, i) {
+                if (i == after.length) {
+                  return const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Center(
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                  );
+                }
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 20),
+                  child: ContentPostCard(post: after[i], popOnDelete: true),
+                );
+              },
+              childCount: after.length + (query.isFetchingNextPage ? 1 : 0),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
