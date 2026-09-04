@@ -149,7 +149,7 @@ class BookingCard extends StatelessWidget {
       Get.toNamed(
         AppConstants.routes.bookingTicket,
         arguments: {
-          'bookingId': booking.id ?? booking.bookingId,
+          'bookingId': booking.id,
           'booking': booking,
         },
       );

@@ -12,10 +12,12 @@ bool canOpenLocationInMaps(LocationModel? location) {
   return _locationMapTargets(location).isNotEmpty;
 }
 
-Uri? buildLocationMapsUri(LocationModel? location) {
+Uri? buildLocationMapsHttpsUri(LocationModel? location) {
   final targets = _locationMapTargets(location);
-  if (targets.isEmpty) return null;
-  return targets.first;
+  for (final uri in targets) {
+    if (uri.scheme == 'https') return uri;
+  }
+  return null;
 }
 
 List<Uri> _locationMapTargets(LocationModel? location) {
@@ -26,9 +28,7 @@ List<Uri> _locationMapTargets(LocationModel? location) {
   if (_hasValidCoordinates(lat, lng)) {
     return [
       Uri.parse('geo:$lat,$lng?q=$lat,$lng'),
-      Uri.parse(
-        'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
-      ),
+      Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng'),
     ];
   }
 
@@ -85,10 +85,7 @@ Future<bool> openLocationInMaps(LocationModel? location) async {
 
 Future<bool> _tryLaunchUri(Uri uri) async {
   try {
-    final launched = await launchUrl(
-      uri,
-      mode: LaunchMode.externalApplication,
-    );
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
     return launched;
   } on PlatformException {
     try {
@@ -103,10 +100,7 @@ Future<bool> _tryLaunchUri(Uri uri) async {
 
 Future<bool> _tryLaunchAndroidIntent(Uri uri) async {
   try {
-    final intent = AndroidIntent(
-      action: 'action_view',
-      data: uri.toString(),
-    );
+    final intent = AndroidIntent(action: 'action_view', data: uri.toString());
     await intent.launch();
     return true;
   } catch (_) {

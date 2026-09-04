@@ -137,7 +137,7 @@ class TurfDetailController extends GetxController {
         Get.toNamed(
           AppConstants.routes.bookingTicket,
           arguments: {
-            'bookingId': verifiedBooking.id ?? verifiedBooking.bookingId,
+            'bookingId': verifiedBooking.id,
             'booking': verifiedBooking,
           },
         );

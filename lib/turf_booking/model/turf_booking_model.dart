@@ -170,8 +170,6 @@ class TurfBookingModel {
   final String? razorpayPaymentId;
   @JsonKey(name: 'razorpayOrderId')
   final String? razorpayOrderId;
-  @JsonKey(name: 'bookingId')
-  final String? bookingId;
   @JsonKey(name: 'paidAt')
   final String? paidAt;
   @JsonKey(name: 'paymentExpiresAt')
@@ -207,7 +205,6 @@ class TurfBookingModel {
     this.paymentStatus,
     this.razorpayPaymentId,
     this.razorpayOrderId,
-    this.bookingId,
     this.paidAt,
     this.paymentExpiresAt,
     this.slotHoldStatus,
@@ -238,7 +235,6 @@ class TurfBookingModel {
     PaymentStatus? paymentStatus,
     String? razorpayPaymentId,
     String? razorpayOrderId,
-    String? bookingId,
     String? paidAt,
     String? paymentExpiresAt,
     SlotHoldStatus? slotHoldStatus,
@@ -263,7 +259,6 @@ class TurfBookingModel {
       paymentStatus: paymentStatus ?? this.paymentStatus,
       razorpayPaymentId: razorpayPaymentId ?? this.razorpayPaymentId,
       razorpayOrderId: razorpayOrderId ?? this.razorpayOrderId,
-      bookingId: bookingId ?? this.bookingId,
       paidAt: paidAt ?? this.paidAt,
       paymentExpiresAt: paymentExpiresAt ?? this.paymentExpiresAt,
       slotHoldStatus: slotHoldStatus ?? this.slotHoldStatus,

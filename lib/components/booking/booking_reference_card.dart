@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/config/constants.dart';
 
-/// Booking reference row: label, short id, copy — same chrome as the ticket screen.
+/// Slim footer: label, full Mongo `_id`, copy.
 class BookingReferenceCard extends StatelessWidget {
   final String? bookingId;
   final EdgeInsetsGeometry margin;
@@ -10,13 +10,12 @@ class BookingReferenceCard extends StatelessWidget {
   const BookingReferenceCard({
     super.key,
     required this.bookingId,
-    this.margin = const EdgeInsets.only(bottom: 24),
+    this.margin = EdgeInsets.zero,
   });
 
   static String displayReference(String? id) {
-    if (id == null || id.isEmpty) return '#N/A';
-    final short = id.length >= 8 ? id.substring(0, 8) : id;
-    return '#$short';
+    if (id == null || id.isEmpty) return 'N/A';
+    return id;
   }
 
   static void copyBookingId(BuildContext context, String? id) {
@@ -39,76 +38,45 @@ class BookingReferenceCard extends StatelessWidget {
 
     return Container(
       margin: margin,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(AppColors.primaryColor).withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const Color(AppColors.primaryColor).withValues(alpha: 0.1),
-          width: 1,
+      padding: const EdgeInsets.only(top: 10),
+      decoration: const BoxDecoration(
+        border: Border(
+          top: BorderSide(color: Color(AppColors.dividerColor)),
         ),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(AppColors.primaryColor).withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(
-              Icons.confirmation_number_outlined,
-              color: Color(AppColors.primaryColor),
-              size: 20,
+          const Text(
+            'Ref',
+            style: TextStyle(
+              fontSize: 11,
+              color: Color(AppColors.textSecondaryColor),
+              fontWeight: FontWeight.w500,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Booking Reference',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                SelectableText(
-                  display,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(AppColors.primaryColor),
-                    letterSpacing: 1.2,
-                  ),
-                ),
-              ],
+            child: SelectableText(
+              display,
+              maxLines: 1,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: Color(AppColors.textColor),
+                letterSpacing: 0.3,
+              ),
             ),
           ),
           if (hasId)
-            Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () => copyBookingId(context, id),
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(AppColors.primaryColor).withValues(
-                      alpha: 0.1,
-                    ),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.copy,
-                    color: Color(AppColors.primaryColor),
-                    size: 18,
-                  ),
+            InkWell(
+              onTap: () => copyBookingId(context, id),
+              borderRadius: BorderRadius.circular(4),
+              child: const Padding(
+                padding: EdgeInsets.all(4),
+                child: Icon(
+                  Icons.copy_rounded,
+                  size: 14,
+                  color: Color(AppColors.textSecondaryColor),
                 ),
               ),
             ),
