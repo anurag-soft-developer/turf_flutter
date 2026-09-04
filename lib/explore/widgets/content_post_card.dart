@@ -258,6 +258,7 @@ class PostMediaCarousel extends StatefulWidget {
 class _PostMediaCarouselState extends State<PostMediaCarousel> {
   static const _fallbackRatio = 1.0;
   static const _videoRatio = 16 / 9;
+  static const _maxScreenHeightFraction = 0.8;
 
   int _pageIndex = 0;
   final Map<String, double> _aspectRatios = {};
@@ -355,8 +356,9 @@ class _PostMediaCarouselState extends State<PostMediaCarousel> {
         _PostMediaAspectCache.ratioByUrl.containsKey(item.url);
   }
 
-  /// Tallest known file at [width]. Never shrinks for a given width so
-  /// async decode / ListView recycle cannot collapse the item.
+  /// Tallest known file at [width], capped at 80% of screen height.
+  /// Never shrinks for a given width so async decode / ListView recycle
+  /// cannot collapse the item.
   double _carouselHeight(double width) {
     var maxHeight = 0.0;
     var anyKnown = false;
@@ -366,16 +368,18 @@ class _PostMediaCarouselState extends State<PostMediaCarousel> {
       final height = width / _ratioFor(item);
       if (height > maxHeight) maxHeight = height;
     }
-    final computed = anyKnown ? maxHeight : width / _fallbackRatio;
+    final cap = MediaQuery.sizeOf(context).height * _maxScreenHeightFraction;
+    final computed =
+        (anyKnown ? maxHeight : width / _fallbackRatio).clamp(0.0, cap);
     if (_lockedWidth != width || _lockedHeight == null) {
       _lockedWidth = width;
       _lockedHeight = computed;
       return computed;
     }
     if (computed > _lockedHeight!) {
-      _lockedHeight = computed;
+      _lockedHeight = computed.clamp(0.0, cap);
     }
-    return _lockedHeight!;
+    return _lockedHeight!.clamp(0.0, cap);
   }
 
   @override
@@ -424,7 +428,7 @@ class _PostMediaCarouselState extends State<PostMediaCarousel> {
                               return AppNetworkImage(
                                 item.url,
                                 width: screenWidth,
-                                fit: BoxFit.fitWidth,
+                                fit: BoxFit.contain,
                                 alignment: Alignment.center,
                                 errorBuilder: (_, _, _) => const Center(
                                   child: Icon(

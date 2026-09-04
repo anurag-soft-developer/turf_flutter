@@ -9,15 +9,25 @@ import '../../../core/config/constants.dart';
 import '../../../core/utils/exception_handler.dart';
 
 /// Local-only gallery/camera picker with an Instagram-style carousel preview.
-/// Does not upload; parent submits files later.
+/// Does not upload; [onPicked] delivers originals for the editor to process.
 class CreatePostMediaPicker extends StatefulWidget {
   final RxList<XFile> files;
   final int maxImages;
+  final bool autoOpenSource;
+  final Future<void> Function(List<XFile> files, int afterIndex) onPicked;
+  final ValueChanged<XFile>? onFileRemoved;
+  final ValueChanged<int>? onEdit;
+  final RxInt? focusIndex;
 
   const CreatePostMediaPicker({
     super.key,
     required this.files,
+    required this.onPicked,
+    this.onFileRemoved,
+    this.onEdit,
+    this.focusIndex,
     this.maxImages = 10,
+    this.autoOpenSource = false,
   });
 
   @override
@@ -26,8 +36,24 @@ class CreatePostMediaPicker extends StatefulWidget {
 
 class _CreatePostMediaPickerState extends State<CreatePostMediaPicker> {
   final ImagePicker _picker = ImagePicker();
-  final PageController _pageController = PageController();
-  int _pageIndex = 0;
+  late final PageController _pageController;
+  late int _pageIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    final fileCount = widget.files.length;
+    final raw = widget.focusIndex?.value ?? 0;
+    final initial = fileCount <= 0 ? 0 : raw.clamp(0, fileCount - 1);
+    _pageIndex = initial;
+    _pageController = PageController(initialPage: initial);
+    if (widget.autoOpenSource) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || widget.files.isNotEmpty) return;
+        _showSourceSheet();
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -112,13 +138,23 @@ class _CreatePostMediaPickerState extends State<CreatePostMediaPicker> {
     );
   }
 
+  Future<void> _emitPicked(List<XFile> picked) async {
+    final after = widget.files.isEmpty
+        ? -1
+        : _pageIndex.clamp(0, widget.files.length - 1);
+    final beforeCount = widget.files.length;
+    await widget.onPicked(picked, after);
+    if (!mounted || widget.files.length <= beforeCount) return;
+    _jumpToPage(after < 0 ? 0 : after + 1);
+  }
+
   Future<void> _pickFromGallery() async {
     if (!_canAddMore) return;
     try {
       final remaining = widget.maxImages - widget.files.length;
       final picked = await _picker.pickMultiImage(limit: remaining);
       if (!mounted || picked.isEmpty) return;
-      _appendFiles(picked);
+      await _emitPicked(picked);
     } on PlatformException catch (e) {
       _handlePickerError(e, fromCamera: false);
     } catch (e) {
@@ -132,7 +168,7 @@ class _CreatePostMediaPickerState extends State<CreatePostMediaPicker> {
     try {
       final image = await _picker.pickImage(source: ImageSource.camera);
       if (!mounted || image == null) return;
-      _appendFiles([image]);
+      await _emitPicked([image]);
     } on PlatformException catch (e) {
       _handlePickerError(e, fromCamera: true);
     } catch (e) {
@@ -141,24 +177,11 @@ class _CreatePostMediaPickerState extends State<CreatePostMediaPicker> {
     }
   }
 
-  void _appendFiles(List<XFile> incoming) {
-    final existing = widget.files.map((f) => f.path).toSet();
-    var added = 0;
-    for (final file in incoming) {
-      if (widget.files.length >= widget.maxImages) break;
-      if (existing.contains(file.path)) continue;
-      widget.files.add(file);
-      existing.add(file.path);
-      added++;
-    }
-    if (added == 0) return;
-    _jumpToPage(widget.files.length - 1);
-  }
-
   void _removeCurrent() {
     if (widget.files.isEmpty) return;
     final index = _pageIndex.clamp(0, widget.files.length - 1);
-    widget.files.removeAt(index);
+    final removed = widget.files.removeAt(index);
+    widget.onFileRemoved?.call(removed);
     if (widget.files.isEmpty) {
       setState(() => _pageIndex = 0);
       return;
@@ -200,11 +223,15 @@ class _CreatePostMediaPickerState extends State<CreatePostMediaPicker> {
         files: widget.files,
         pageController: _pageController,
         pageIndex: _pageIndex,
-        maxImages: widget.maxImages,
         canAddMore: _canAddMore,
         onPageChanged: (index) => setState(() => _pageIndex = index),
         onRemove: _removeCurrent,
         onAdd: _showSourceSheet,
+        onEdit: widget.onEdit == null
+            ? null
+            : () => widget.onEdit!(
+                _pageIndex.clamp(0, widget.files.length - 1),
+              ),
       );
     });
   }
@@ -263,141 +290,221 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-class _Carousel extends StatelessWidget {
+class _Carousel extends StatefulWidget {
   final List<XFile> files;
   final PageController pageController;
   final int pageIndex;
-  final int maxImages;
   final bool canAddMore;
   final ValueChanged<int> onPageChanged;
   final VoidCallback onRemove;
   final VoidCallback onAdd;
+  final VoidCallback? onEdit;
 
   const _Carousel({
     required this.files,
     required this.pageController,
     required this.pageIndex,
-    required this.maxImages,
     required this.canAddMore,
     required this.onPageChanged,
     required this.onRemove,
     required this.onAdd,
+    this.onEdit,
   });
 
   @override
+  State<_Carousel> createState() => _CarouselState();
+}
+
+class _CarouselState extends State<_Carousel> {
+  static const _fallbackRatio = 1.0;
+
+  final Map<String, double> _ratios = {};
+  final List<VoidCallback> _cancelResolvers = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _resolveFiles(widget.files);
+  }
+
+  @override
+  void didUpdateWidget(_Carousel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final oldPaths = oldWidget.files.map((f) => f.path).toList();
+    final nextPaths = widget.files.map((f) => f.path).toList();
+    if (!_samePaths(oldPaths, nextPaths)) {
+      _resolveFiles(widget.files);
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final cancel in _cancelResolvers) {
+      cancel();
+    }
+    super.dispose();
+  }
+
+  bool _samePaths(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
+  void _resolveFiles(List<XFile> files) {
+    for (final file in files) {
+      if (_ratios.containsKey(file.path)) continue;
+      _listenForRatio(file.path);
+    }
+  }
+
+  void _listenForRatio(String path) {
+    final stream = FileImage(File(path)).resolve(const ImageConfiguration());
+    var cancelled = false;
+    late final ImageStreamListener listener;
+    listener = ImageStreamListener(
+      (info, _) {
+        stream.removeListener(listener);
+        final width = info.image.width;
+        final height = info.image.height;
+        if (width <= 0 || height <= 0) return;
+        if (cancelled || !mounted) return;
+        setState(() => _ratios[path] = width / height);
+      },
+      onError: (_, __) {
+        stream.removeListener(listener);
+      },
+    );
+    stream.addListener(listener);
+    _cancelResolvers.add(() {
+      cancelled = true;
+      stream.removeListener(listener);
+    });
+  }
+
+  double _carouselHeight(double width) {
+    var maxHeight = 0.0;
+    var anyKnown = false;
+    for (final file in widget.files) {
+      final ratio = _ratios[file.path];
+      if (ratio == null) continue;
+      anyKnown = true;
+      final height = width / ratio;
+      if (height > maxHeight) maxHeight = height;
+    }
+    return anyKnown ? maxHeight : width / _fallbackRatio;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: AspectRatio(
-            aspectRatio: 1,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                ColoredBox(
-                  color: Colors.black,
-                  child: PageView.builder(
-                    controller: pageController,
-                    itemCount: files.length,
-                    onPageChanged: onPageChanged,
-                    itemBuilder: (context, index) {
-                      return Image.file(
-                        File(files[index].path),
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => const Center(
-                          child: Icon(
-                            Icons.broken_image_outlined,
-                            color: Colors.white54,
-                            size: 48,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                Positioned(
-                  top: 10,
-                  left: 10,
-                  child: _CountChip(
-                    label: '${pageIndex + 1}/${files.length}',
-                  ),
-                ),
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: Row(
-                    children: [
-                      if (canAddMore) ...[
-                        _RoundIconButton(
-                          icon: Icons.add,
-                          onTap: onAdd,
-                        ),
-                        const SizedBox(width: 8),
-                      ],
-                      _RoundIconButton(
-                        icon: Icons.close,
-                        onTap: onRemove,
-                      ),
-                    ],
-                  ),
-                ),
-                if (files.length > 1)
-                  Positioned(
-                    bottom: 12,
-                    left: 0,
-                    right: 0,
-                    child: IgnorePointer(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(files.length, (index) {
-                          final active = index == pageIndex;
-                          return Container(
-                            width: 8,
-                            height: 8,
-                            margin: const EdgeInsets.symmetric(horizontal: 4),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: active
-                                  ? Colors.white
-                                  : Colors.white.withValues(alpha: 0.5),
+    final files = widget.files;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final naturalHeight = _carouselHeight(width);
+        final height = constraints.maxHeight.isFinite
+            ? naturalHeight.clamp(0.0, constraints.maxHeight)
+            : naturalHeight;
+
+        return Align(
+          alignment: Alignment.center,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: SizedBox(
+              width: width,
+              height: height,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  ColoredBox(
+                    color: Colors.black,
+                    child: PageView.builder(
+                      controller: widget.pageController,
+                      itemCount: files.length,
+                      onPageChanged: widget.onPageChanged,
+                      itemBuilder: (context, index) {
+                        return Image.file(
+                          File(files[index].path),
+                          fit: BoxFit.contain,
+                          alignment: Alignment.center,
+                          errorBuilder: (_, _, _) => const Center(
+                            child: Icon(
+                              Icons.broken_image_outlined,
+                              color: Colors.white54,
+                              size: 48,
                             ),
-                          );
-                        }),
-                      ),
+                          ),
+                        );
+                      },
                     ),
                   ),
-              ],
-            ),
-          ),
-        ),
-        if (canAddMore) ...[
-          const SizedBox(height: 10),
-          OutlinedButton.icon(
-            onPressed: onAdd,
-            icon: const Icon(
-              Icons.add_photo_alternate_outlined,
-              size: 18,
-              color: Color(AppColors.primaryColor),
-            ),
-            label: Text(
-              'Add more (${files.length}/$maxImages)',
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: Color(AppColors.textColor),
+                  Positioned(
+                    top: 10,
+                    left: 10,
+                    child: _CountChip(
+                      label: '${widget.pageIndex + 1}/${files.length}',
+                    ),
+                  ),
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Row(
+                      children: [
+                        if (widget.onEdit != null) ...[
+                          _RoundIconButton(
+                            icon: Icons.edit_outlined,
+                            onTap: widget.onEdit!,
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        if (widget.canAddMore) ...[
+                          _RoundIconButton(
+                            icon: Icons.add,
+                            onTap: widget.onAdd,
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        _RoundIconButton(
+                          icon: Icons.close,
+                          onTap: widget.onRemove,
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (files.length > 1)
+                    Positioned(
+                      bottom: 12,
+                      left: 0,
+                      right: 0,
+                      child: IgnorePointer(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(files.length, (index) {
+                            final active = index == widget.pageIndex;
+                            return Container(
+                              width: 8,
+                              height: 8,
+                              margin: const EdgeInsets.symmetric(horizontal: 4),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: active
+                                    ? Colors.white
+                                    : Colors.white.withValues(alpha: 0.5),
+                              ),
+                            );
+                          }),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size.fromHeight(40),
-              side: BorderSide(color: Colors.grey.shade300),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
           ),
-        ],
-      ],
+        );
+      },
     );
   }
 }
