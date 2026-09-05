@@ -330,13 +330,14 @@ class PostEndpoints {
   String byId(String id) => '/posts/$id';
 }
 
-/// `GET /chat/inbox`, `GET /chat/messages`, `POST /chat/read`, `GET /chat/read-cursors`.
+/// `GET /chat/inbox`, `GET /chat/messages`, `POST /chat/read`, `POST /chat/hide`, `GET /chat/read-cursors`.
 class ChatEndpoints {
   const ChatEndpoints();
 
   String get inbox => '/chat/inbox';
   String get messages => '/chat/messages';
   String get read => '/chat/read';
+  String get hide => '/chat/hide';
   String get readCursors => '/chat/read-cursors';
 }
 

@@ -95,4 +95,43 @@ class ChatService {
         .where((item) => item.userId.isNotEmpty)
         .toList();
   }
+
+  Future<bool> hideThreads(List<ChatInboxItem> items) {
+    return _hideThreadRefs(
+      items.map((item) => (scope: item.scope, scopeId: item.scopeId)),
+    );
+  }
+
+  Future<bool> _hideThreadRefs(
+    Iterable<({ChatScope scope, String scopeId})> refs,
+  ) async {
+    final unique = <String, ({ChatScope scope, String scopeId})>{};
+    for (final ref in refs) {
+      if (ref.scopeId.isEmpty) continue;
+      unique['${ref.scope.apiValue}:${ref.scopeId}'] = ref;
+    }
+    final threads = unique.values.toList();
+    if (threads.isEmpty) return false;
+
+    const batchSize = 100;
+    for (var i = 0; i < threads.length; i += batchSize) {
+      final end =
+          i + batchSize > threads.length ? threads.length : i + batchSize;
+      final batch = threads.sublist(i, end);
+      final response = await _apiService.post<Map<String, dynamic>>(
+        ApiConstants.chat.hide,
+        data: {
+          'items': [
+            for (final item in batch)
+              {
+                'scope': item.scope.apiValue,
+                'scopeId': item.scopeId,
+              },
+          ],
+        },
+      );
+      if (response == null) return false;
+    }
+    return true;
+  }
 }

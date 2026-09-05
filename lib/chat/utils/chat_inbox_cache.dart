@@ -134,4 +134,47 @@ class ChatInboxCache {
       },
     );
   }
+
+  static void remove(ChatScope scope, String scopeId) {
+    removeKeys({chatRoomKey(scope, scopeId)});
+  }
+
+  static void removeKeys(Set<String> keys) {
+    if (keys.isEmpty) return;
+    final client = _client;
+    if (client == null) return;
+    client.setQueryData<
+        InfiniteData<PaginatedResponse<ChatInboxItem>, int>,
+        Object>(
+      QueryKeys.chatInbox,
+      (previous) {
+        if (previous == null) return previous;
+        var removed = 0;
+        final pages = previous.pages
+            .map(
+              (page) => page.copyWith(
+                data: page.data.where((item) {
+                  if (!keys.contains(item.roomKey)) return true;
+                  removed++;
+                  return false;
+                }).toList(),
+              ),
+            )
+            .toList();
+        if (removed > 0 && pages.isNotEmpty) {
+          pages[0] = pages[0].copyWith(
+            totalDocuments: (pages[0].totalDocuments - removed)
+                .clamp(0, pages[0].totalDocuments),
+          );
+        }
+        return InfiniteData(pages, previous.pageParams);
+      },
+    );
+  }
+
+  static Future<void> invalidate() async {
+    final client = _client;
+    if (client == null) return;
+    await client.invalidateQueries(queryKey: QueryKeys.chatInbox);
+  }
 }

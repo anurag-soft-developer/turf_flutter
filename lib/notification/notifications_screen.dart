@@ -52,73 +52,81 @@ class NotificationsScreen extends HookWidget {
           final allSelected = controller.allSelected(items);
           final deleting = controller.isDeleting.value;
 
-          return Scaffold(
-            backgroundColor: const Color(AppColors.backgroundColor),
-            appBar: AppBar(
-              title: Text(
-                selecting
-                    ? '${selectedIds.length} selected'
-                    : 'Notifications',
+          return PopScope(
+            canPop: !selecting,
+            onPopInvokedWithResult: (didPop, _) {
+              if (!didPop) controller.exitSelection();
+            },
+            child: Scaffold(
+              backgroundColor: const Color(AppColors.backgroundColor),
+              appBar: AppBar(
+                title: Text(
+                  selecting
+                      ? '${selectedIds.length} selected'
+                      : 'Notifications',
+                ),
+                backgroundColor: _primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                leading: selecting
+                    ? IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: controller.exitSelection,
+                      )
+                    : null,
+                actions: [
+                  if (selecting && items.isNotEmpty)
+                    IconButton(
+                      tooltip: allSelected ? 'Deselect all' : 'Select all',
+                      onPressed: () => controller.toggleSelectAll(items),
+                      icon: Icon(
+                        allSelected
+                            ? Icons.check_box
+                            : Icons.check_box_outline_blank,
+                      ),
+                    )
+                  else if (items.any((e) => !e.isRead))
+                    TextButton(
+                      onPressed: controller.markAllRead,
+                      child: const Text(
+                        'Mark all read',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                ],
               ),
-              backgroundColor: _primary,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              leading: selecting
-                  ? IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: controller.exitSelection,
+              floatingActionButtonLocation:
+                  FloatingActionButtonLocation.centerFloat,
+              floatingActionButton: selecting &&
+                      selectedIds.isNotEmpty &&
+                      !deleting
+                  ? FloatingActionButton.extended(
+                      onPressed: () => _confirmDelete(
+                        context,
+                        controller,
+                        items,
+                      ),
+                      backgroundColor: Colors.red.shade600,
+                      foregroundColor: Colors.white,
+                      icon: const Icon(Icons.delete_outline),
+                      label: Text(
+                        selectedIds.length == 1
+                            ? 'Delete'
+                            : 'Delete (${selectedIds.length})',
+                      ),
                     )
                   : null,
-              actions: [
-                if (selecting && items.isNotEmpty)
-                  IconButton(
-                    tooltip: allSelected ? 'Deselect all' : 'Select all',
-                    onPressed: () => controller.toggleSelectAll(items),
-                    icon: Icon(
-                      allSelected
-                          ? Icons.check_box
-                          : Icons.check_box_outline_blank,
-                    ),
-                  )
-                else if (items.any((e) => !e.isRead))
-                  TextButton(
-                    onPressed: controller.markAllRead,
-                    child: const Text(
-                      'Mark all read',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-              ],
-            ),
-            floatingActionButtonLocation:
-                FloatingActionButtonLocation.centerFloat,
-            floatingActionButton: selecting &&
-                    selectedIds.isNotEmpty &&
-                    !deleting
-                ? FloatingActionButton.extended(
-                    onPressed: () => _confirmDelete(
-                      context,
-                      controller,
-                      items,
-                    ),
-                    backgroundColor: Colors.red.shade600,
-                    foregroundColor: Colors.white,
-                    icon: const Icon(Icons.delete_outline),
-                    label: Text(
-                      selectedIds.length == 1
-                          ? 'Delete'
-                          : 'Delete (${selectedIds.length})',
-                    ),
-                  )
-                : null,
-            body: _NotificationsBody(
-              query: query,
-              items: items,
-              isSelecting: selecting,
-              selectedIds: selectedIds,
-              onRefresh: () => query.refetch(),
-              onTap: controller.onTap,
-              onLongPress: controller.onLongPress,
+              body: _NotificationsBody(
+                query: query,
+                items: items,
+                isSelecting: selecting,
+                selectedIds: selectedIds,
+                onRefresh: () => query.refetch(),
+                onTap: controller.onTap,
+                onLongPress: controller.onLongPress,
+                onConfirmDismiss: (n) => _confirmDeleteOne(context, n),
+                onDismissed: (n) => controller.deleteIds({n.id}, items),
+              ),
             ),
           );
         });
@@ -160,6 +168,35 @@ class NotificationsScreen extends HookWidget {
       await controller.deleteSelected(items);
     }
   }
+
+  Future<bool> _confirmDeleteOne(
+    BuildContext context,
+    AppNotification n,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete notification'),
+        content: Text(
+          n.title.isEmpty
+              ? 'Delete this notification?'
+              : 'Delete "${n.title}"?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    return confirmed == true;
+  }
 }
 
 class _NotificationsBody extends StatelessWidget {
@@ -171,6 +208,8 @@ class _NotificationsBody extends StatelessWidget {
     required this.onRefresh,
     required this.onTap,
     required this.onLongPress,
+    required this.onConfirmDismiss,
+    required this.onDismissed,
   });
 
   final InfiniteQueryResult<PaginatedResponse<AppNotification>, Object, int>
@@ -181,6 +220,8 @@ class _NotificationsBody extends StatelessWidget {
   final Future<void> Function() onRefresh;
   final Future<void> Function(AppNotification n) onTap;
   final void Function(AppNotification n) onLongPress;
+  final Future<bool> Function(AppNotification n) onConfirmDismiss;
+  final void Function(AppNotification n) onDismissed;
 
   static const Color _primary = Color(AppColors.primaryColor);
   static const Color _textSecondary = Color(AppColors.textSecondaryColor);
@@ -304,88 +345,99 @@ class _NotificationsBody extends StatelessWidget {
             final n = items[index];
             final timeStr = _formatTime(n);
             final selected = selectedIds.contains(n.id);
-            return Material(
-              color: selected
-                  ? _primary.withValues(alpha: 0.12)
-                  : n.isRead
-                      ? Colors.transparent
-                      : _primary.withValues(alpha: 0.06),
-              child: InkWell(
-                onTap: () => onTap(n),
-                onLongPress: () => onLongPress(n),
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (isSelecting)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2, right: 12),
-                          child: SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: Checkbox(
-                              value: selected,
-                              onChanged: (_) => onTap(n),
-                              activeColor: _primary,
-                              materialTapTargetSize:
-                                  MaterialTapTargetSize.shrinkWrap,
-                              visualDensity: VisualDensity.compact,
-                            ),
-                          ),
-                        )
-                      else if (!n.isRead)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 6, right: 10),
-                          child: Container(
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                              color: _primary,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        )
-                      else
-                        const SizedBox(width: 18),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              n.title,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: n.isRead
-                                    ? FontWeight.w500
-                                    : FontWeight.w700,
-                                color: const Color(AppColors.textColor),
+            return Dismissible(
+              key: ValueKey(n.id),
+              direction: isSelecting
+                  ? DismissDirection.none
+                  : DismissDirection.endToStart,
+              background: const _DeleteBackground(),
+              confirmDismiss: (_) => onConfirmDismiss(n),
+              onDismissed: (_) => onDismissed(n),
+              child: Material(
+                color: selected
+                    ? _primary.withValues(alpha: 0.12)
+                    : n.isRead
+                        ? const Color(AppColors.backgroundColor)
+                        : _primary.withValues(alpha: 0.06),
+                child: InkWell(
+                  onTap: () => onTap(n),
+                  onLongPress: () => onLongPress(n),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (isSelecting)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2, right: 12),
+                            child: SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: Checkbox(
+                                value: selected,
+                                onChanged: (_) => onTap(n),
+                                activeColor: _primary,
+                                materialTapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
+                                visualDensity: VisualDensity.compact,
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              n.body,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                height: 1.35,
-                                color: _textSecondary,
+                          )
+                        else if (!n.isRead)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6, right: 10),
+                            child: Container(
+                              width: 8,
+                              height: 8,
+                              decoration: const BoxDecoration(
+                                color: _primary,
+                                shape: BoxShape.circle,
                               ),
                             ),
-                            if (timeStr != null) ...[
-                              const SizedBox(height: 8),
+                          )
+                        else
+                          const SizedBox(width: 18),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
                               Text(
-                                timeStr,
+                                n.title,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: n.isRead
+                                      ? FontWeight.w500
+                                      : FontWeight.w700,
+                                  color: const Color(AppColors.textColor),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                n.body,
                                 style: const TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 14,
+                                  height: 1.35,
                                   color: _textSecondary,
                                 ),
                               ),
+                              if (timeStr != null) ...[
+                                const SizedBox(height: 8),
+                                Text(
+                                  timeStr,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: _textSecondary,
+                                  ),
+                                ),
+                              ],
                             ],
-                          ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -400,5 +452,32 @@ class _NotificationsBody extends StatelessWidget {
     final dt = n.createdAtDate ?? n.updatedAtDate;
     if (dt == null) return null;
     return DateFormat('MMM d, y • h:mm a').format(dt.toLocal());
+  }
+}
+
+class _DeleteBackground extends StatelessWidget {
+  const _DeleteBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.red.shade600,
+      alignment: Alignment.centerRight,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: const Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          Icon(Icons.delete_outline, color: Colors.white),
+          SizedBox(width: 8),
+          Text(
+            'Delete',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

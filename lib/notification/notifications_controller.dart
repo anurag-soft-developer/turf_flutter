@@ -15,6 +15,7 @@ class NotificationsController extends GetxController {
   final RxBool isSelecting = false.obs;
   final selectedIds = <String>{}.obs;
   final RxBool isDeleting = false.obs;
+  final _inFlightIds = <String>{};
 
   bool allSelected(List<AppNotification> items) =>
       items.isNotEmpty && selectedIds.length == items.length;
@@ -114,26 +115,34 @@ class NotificationsController extends GetxController {
   }
 
   Future<void> deleteSelected(List<AppNotification> items) async {
-    final ids = selectedIds.toSet();
-    if (ids.isEmpty || isDeleting.value) return;
+    await deleteIds(selectedIds.toSet(), items);
+  }
+
+  Future<void> deleteIds(Set<String> ids, List<AppNotification> items) async {
+    final toDelete = ids.where((id) => !_inFlightIds.contains(id)).toSet();
+    if (toDelete.isEmpty) return;
 
     final unreadDeleted =
-        items.where((n) => ids.contains(n.id) && !n.isRead).length;
+        items.where((n) => toDelete.contains(n.id) && !n.isRead).length;
     final previousUnread = Get.isRegistered<PlayerDashboardController>()
         ? Get.find<PlayerDashboardController>().unreadNotificationCount.value
         : 0;
 
+    _inFlightIds.addAll(toDelete);
     isDeleting.value = true;
-    NotificationInboxCache.removeIds(ids);
+    NotificationInboxCache.removeIds(toDelete);
     if (unreadDeleted > 0) {
       _adjustDashboardUnread(
         (c) => c.decrementUnreadNotificationCount(unreadDeleted),
       );
     }
-    exitSelection();
+    selectedIds.removeAll(toDelete);
+    if (selectedIds.isEmpty) {
+      isSelecting.value = false;
+    }
 
     try {
-      final res = await _service.delete(ids.toList());
+      final res = await _service.delete(toDelete.toList());
       if (res != null && res.deleted) {
         AppSnackbar.success(
           title: 'Notifications',
@@ -153,7 +162,8 @@ class NotificationsController extends GetxController {
         );
       }
     } finally {
-      isDeleting.value = false;
+      _inFlightIds.removeAll(toDelete);
+      isDeleting.value = _inFlightIds.isNotEmpty;
     }
   }
 
