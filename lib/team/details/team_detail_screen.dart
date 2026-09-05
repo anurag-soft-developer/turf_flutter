@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/chat/utils/chat_navigation.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
@@ -164,6 +165,24 @@ class TeamDetailScreen extends HookWidget {
         foregroundColor: Colors.white,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
+          Obx(() {
+            final t = controller.team.value;
+            final teamId = t?.id;
+            if (teamId == null ||
+                teamId.isEmpty ||
+                (!controller.isMember && !controller.isOwner)) {
+              return const SizedBox.shrink();
+            }
+            return IconButton(
+              icon: const Icon(Icons.chat_bubble_outline),
+              tooltip: 'Team chat',
+              onPressed: () => ChatNavigation.openTeam(
+                teamId,
+                title: t?.name,
+                imageUrl: t?.logo,
+              ),
+            );
+          }),
           if (controller.isMyTeamMode)
             Obx(() {
               final t = controller.team.value;

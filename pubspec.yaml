@@ -69,6 +69,8 @@ dependencies:
   visibility_detector: ^0.4.0+2
   cached_network_image: ^3.4.1
   flutter_cache_manager: ^3.4.1
+  flutter_chat_core: ^2.8.0
+  flutter_chat_ui: ^2.11.1
 
 dev_dependencies:
   flutter_test:

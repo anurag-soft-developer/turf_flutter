@@ -1,3 +1,4 @@
+import 'package:flutter_application_1/chat/chat_socket_service.dart';
 import 'package:flutter_application_1/notification/notification_session_controller.dart';
 import 'package:flutter_application_1/notification/notification_socket_service.dart';
 import 'package:flutter_application_1/notification/push_notification_service.dart';
@@ -33,6 +34,12 @@ class InitialBinding extends Bindings {
     if (!Get.isRegistered<ScoringSocketService>()) {
       Get.put<ScoringSocketService>(
         ScoringSocketService(),
+        permanent: true,
+      );
+    }
+    if (!Get.isRegistered<ChatSocketService>()) {
+      Get.put<ChatSocketService>(
+        ChatSocketService(),
         permanent: true,
       );
     }

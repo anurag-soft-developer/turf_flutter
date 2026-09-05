@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/chat/utils/chat_navigation.dart';
 import 'package:flutter_application_1/components/shared/app_network_image.dart';
 import 'package:get/get.dart';
 
+import '../../../core/auth/auth_state_controller.dart';
 import '../../../core/config/constants.dart';
 import '../../../core/models/user_field_instance.dart';
 import '../follow/follow_button.dart';
@@ -230,8 +232,44 @@ class PlayerHeroSection extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: 12),
-              // Hides itself on the logged-in user's own profile.
-              FollowButton(targetId: helper.getId()),
+              Row(
+                children: [
+                  Expanded(
+                    child: FollowButton(targetId: helper.getId()),
+                  ),
+                  if (Get.isRegistered<AuthStateController>())
+                    Builder(
+                      builder: (context) {
+                        final me = Get.find<AuthStateController>().user?.id;
+                        final otherId = helper.getId();
+                        if (me == null ||
+                            otherId == null ||
+                            me.isEmpty ||
+                            otherId.isEmpty ||
+                            me == otherId) {
+                          return const SizedBox.shrink();
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.only(left: 8),
+                          child: OutlinedButton.icon(
+                            onPressed: () => ChatNavigation.openPlayer(
+                              myUserId: me,
+                              otherUserId: otherId,
+                              title: helper.getDisplayName(),
+                              imageUrl: helper.getAvatar(),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              side: const BorderSide(color: Colors.white70),
+                            ),
+                            icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                            label: const Text('Message'),
+                          ),
+                        );
+                      },
+                    ),
+                ],
+              ),
             ],
           ),
         ),

@@ -76,6 +76,8 @@ class Routes {
   final String cricketScoreBoard = '/match-up/cricket-scoreboard';
   final String footballScoreBoard = '/match-up/football-scoreboard';
   final String matchHistory = '/match-history';
+  final String chatInbox = '/chat';
+  final String chatThread = '/chat/thread';
 }
 
 class StorageKeys {

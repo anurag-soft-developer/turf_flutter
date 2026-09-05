@@ -1,3 +1,4 @@
+import 'package:flutter_application_1/chat/chat_socket_service.dart';
 import 'package:flutter_application_1/notification/notification_socket_service.dart';
 import 'package:flutter_application_1/notification/push_notification_service.dart';
 import 'package:flutter_application_1/scoring/shared/scoring_socket_service.dart';
@@ -16,11 +17,16 @@ class NotificationSessionController extends GetxController {
           ? Get.find<ScoringSocketService>()
           : null;
 
+  ChatSocketService? get _chatSocket => Get.isRegistered<ChatSocketService>()
+      ? Get.find<ChatSocketService>()
+      : null;
+
   Future<void> startForSession() async {
     // Services are idempotent; always attempt so a prior soft-fail can recover.
     await Future.wait([
       _push.start(),
       _socket.start(),
+      if (_chatSocket != null) _chatSocket!.start(),
     ]);
   }
 
@@ -29,12 +35,14 @@ class NotificationSessionController extends GetxController {
     await _push.stop();
     await _socket.stop();
     await _scoringSocket?.stop();
+    await _chatSocket?.stop();
   }
 
   Future<void> reconnectSocketsWithFreshToken() async {
     await Future.wait([
       _socket.reconnectWithFreshToken(),
       if (_scoringSocket != null) _scoringSocket!.reconnectWithFreshToken(),
+      if (_chatSocket != null) _chatSocket!.reconnectWithFreshToken(),
     ]);
   }
 }

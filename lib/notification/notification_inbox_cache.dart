@@ -79,6 +79,83 @@ class NotificationInboxCache {
     await client.invalidateQueries(queryKey: QueryKeys.notifications);
   }
 
+  static void patch(AppNotification updated) {
+    final client = _client;
+    if (client == null) return;
+    client.setQueryData<
+        InfiniteData<PaginatedResponse<AppNotification>, int>,
+        Object>(
+      QueryKeys.notifications,
+      (previous) {
+        if (previous == null) return previous;
+        return InfiniteData(
+          [
+            for (final page in previous.pages)
+              page.copyWith(
+                data: [
+                  for (final n in page.data)
+                    if (n.id == updated.id) updated else n,
+                ],
+              ),
+          ],
+          previous.pageParams,
+        );
+      },
+    );
+  }
+
+  static void removeIds(Set<String> ids) {
+    if (ids.isEmpty) return;
+    final client = _client;
+    if (client == null) return;
+    client.setQueryData<
+        InfiniteData<PaginatedResponse<AppNotification>, int>,
+        Object>(
+      QueryKeys.notifications,
+      (previous) {
+        if (previous == null) return previous;
+        return InfiniteData(
+          [
+            for (final page in previous.pages)
+              page.copyWith(
+                data: [
+                  for (final n in page.data)
+                    if (!ids.contains(n.id)) n,
+                ],
+              ),
+          ],
+          previous.pageParams,
+        );
+      },
+    );
+  }
+
+  static void markAllRead() {
+    final client = _client;
+    if (client == null) return;
+    final now = DateTime.now().toUtc().toIso8601String();
+    client.setQueryData<
+        InfiniteData<PaginatedResponse<AppNotification>, int>,
+        Object>(
+      QueryKeys.notifications,
+      (previous) {
+        if (previous == null) return previous;
+        return InfiniteData(
+          [
+            for (final page in previous.pages)
+              page.copyWith(
+                data: [
+                  for (final n in page.data)
+                    if (n.isRead) n else n.copyWith(readAt: now),
+                ],
+              ),
+          ],
+          previous.pageParams,
+        );
+      },
+    );
+  }
+
   /// Builds an [AppNotification] from a Socket.io `notification.push` payload.
   static AppNotification fromPushPayload(Map<String, dynamic> payload) {
     final notificationId =

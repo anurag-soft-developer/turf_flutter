@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/chat/model/chat_scope.dart';
+import 'package:flutter_application_1/chat/chat_thread_screen.dart';
+import 'package:flutter_application_1/core/config/constants.dart';
 
-import '../../components/challenges/challenge_messages_placeholder.dart';
-import '../../core/config/constants.dart';
 import '../model/team_match_model.dart';
 
 class MatchChallengeMessagesScreen extends StatelessWidget {
@@ -11,34 +12,22 @@ class MatchChallengeMessagesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final matchId = match.id;
     final versus =
         '${match.fromTeamHelper.getDisplayName()} vs ${match.toTeamHelper.getDisplayName()}';
 
-    return Scaffold(
-      backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(
-        title: const Text('Messages'),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(36),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                versus,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: Color(AppColors.textSecondaryColor),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-      body: const ChallengeMessagesPlaceholder(),
+    if (matchId == null || matchId.isEmpty) {
+      return Scaffold(
+        backgroundColor: const Color(AppColors.backgroundColor),
+        appBar: AppBar(title: const Text('Messages')),
+        body: const Center(child: Text('Match not found.')),
+      );
+    }
+
+    return ChatThreadScreen(
+      scope: ChatScope.match,
+      scopeId: matchId,
+      title: versus,
     );
   }
 }

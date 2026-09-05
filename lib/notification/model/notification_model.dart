@@ -47,6 +47,25 @@ class AppNotification {
 
   Map<String, dynamic> toJson() => _$AppNotificationToJson(this);
 
+  AppNotification copyWith({
+    String? readAt,
+    String? updatedAt,
+  }) {
+    return AppNotification(
+      id: id,
+      recipientUserId: recipientUserId,
+      module: module,
+      title: title,
+      body: body,
+      data: data,
+      sourceType: sourceType,
+      sourceId: sourceId,
+      readAt: readAt ?? this.readAt,
+      createdAt: createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
   bool get isRead => readAt != null && readAt!.isNotEmpty;
 
   DateTime? get readAtDate => _parseIso(readAt);

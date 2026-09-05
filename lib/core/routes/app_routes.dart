@@ -12,6 +12,7 @@ import 'package:get/get.dart';
 import 'about_help_legal_routes.dart';
 import 'auth_routes.dart';
 import 'booking_routes.dart';
+import 'chat_routes.dart';
 import 'match_up_routes.dart';
 import 'rank_routes.dart';
 import 'profile_routes.dart';
@@ -59,5 +60,6 @@ class AppRoutes {
     ...teamRoutes,
     ...aboutHelpLegalRoutes,
     ...matchUpRoutes,
+    ...chatRoutes,
   ];
 }

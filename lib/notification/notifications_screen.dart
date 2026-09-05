@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/config/constants.dart';
 import 'package:flutter_application_1/core/models/paginated_response.dart';
 import 'package:flutter_application_1/core/query/query_keys.dart';
-import '../core/query/query_retry.dart';
-import 'package:flutter_application_1/core/utils/app_snackbar.dart';
-import 'package:flutter_application_1/dashboard/player/player_dashboard_controller.dart';
+import 'package:flutter_application_1/core/query/query_retry.dart';
 import 'package:flutter_application_1/notification/model/notification_model.dart';
-import 'package:flutter_application_1/notification/notification_router.dart';
 import 'package:flutter_application_1/notification/notification_service.dart';
+import 'package:flutter_application_1/notification/notifications_controller.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
@@ -22,16 +20,15 @@ class NotificationsScreen extends HookWidget {
   @override
   Widget build(BuildContext context) {
     final service = useMemoized(NotificationService.new);
-    final tappingId = useState<String?>(null);
-    final isSelecting = useState(false);
-    final selectedIds = useState<Set<String>>(<String>{});
-    final isDeleting = useState(false);
 
     final query =
         useInfiniteQuery<PaginatedResponse<AppNotification>, Object, int>(
       QueryKeys.notifications,
       (ctx) async {
-        final result = await service.list(page: ctx.pageParam, limit: _pageSize);
+        final result = await service.list(
+          page: ctx.pageParam,
+          limit: _pageSize,
+        );
         return result ?? EmptyPaginatedResponse<AppNotification>();
       },
       initialPageParam: 1,
@@ -45,347 +42,123 @@ class NotificationsScreen extends HookWidget {
 
     final items = query.data?.pages.expand((p) => p.data).toList() ??
         const <AppNotification>[];
-    final allSelected =
-        items.isNotEmpty && selectedIds.value.length == items.length;
 
-    Future<void> invalidateNotifications() async {
-      if (!Get.isRegistered<QueryClient>()) {
-        await query.refetch();
-        return;
-      }
-      await Get.find<QueryClient>().invalidateQueries(
-        queryKey: QueryKeys.notifications,
-      );
-    }
+    return GetBuilder<NotificationsController>(
+      init: NotificationsController(),
+      builder: (controller) {
+        return Obx(() {
+          final selecting = controller.isSelecting.value;
+          final selectedIds = controller.selectedIds.toSet();
+          final allSelected = controller.allSelected(items);
+          final deleting = controller.isDeleting.value;
 
-    void patchNotificationInCache(AppNotification updated) {
-      if (!Get.isRegistered<QueryClient>()) return;
-      Get.find<QueryClient>().setQueryData<
-          InfiniteData<PaginatedResponse<AppNotification>, int>,
-          Object>(
-        QueryKeys.notifications,
-        (previous) {
-          if (previous == null) return null;
-          return InfiniteData(
-            [
-              for (final page in previous.pages)
-                page.copyWith(
-                  data: [
-                    for (final n in page.data)
-                      if (n.id == updated.id) updated else n,
-                  ],
-                ),
-            ],
-            previous.pageParams,
-          );
-        },
-      );
-    }
-
-    void removeNotificationsFromCache(Set<String> ids) {
-      if (!Get.isRegistered<QueryClient>()) return;
-      Get.find<QueryClient>().setQueryData<
-          InfiniteData<PaginatedResponse<AppNotification>, int>,
-          Object>(
-        QueryKeys.notifications,
-        (previous) {
-          if (previous == null) return null;
-          return InfiniteData(
-            [
-              for (final page in previous.pages)
-                page.copyWith(
-                  data: [
-                    for (final n in page.data)
-                      if (!ids.contains(n.id)) n,
-                  ],
-                ),
-            ],
-            previous.pageParams,
-          );
-        },
-      );
-    }
-
-    void adjustDashboardUnread(void Function(PlayerDashboardController c) fn) {
-      if (!Get.isRegistered<PlayerDashboardController>()) return;
-      fn(Get.find<PlayerDashboardController>());
-    }
-
-    void markAllReadInCache() {
-      if (!Get.isRegistered<QueryClient>()) return;
-      final now = DateTime.now().toUtc().toIso8601String();
-      Get.find<QueryClient>().setQueryData<
-          InfiniteData<PaginatedResponse<AppNotification>, int>,
-          Object>(
-        QueryKeys.notifications,
-        (previous) {
-          if (previous == null) return null;
-          return InfiniteData(
-            [
-              for (final page in previous.pages)
-                page.copyWith(
-                  data: [
-                    for (final n in page.data)
-                      if (n.isRead)
-                        n
-                      else
-                        AppNotification(
-                          id: n.id,
-                          recipientUserId: n.recipientUserId,
-                          module: n.module,
-                          title: n.title,
-                          body: n.body,
-                          data: n.data,
-                          sourceType: n.sourceType,
-                          sourceId: n.sourceId,
-                          readAt: now,
-                          createdAt: n.createdAt,
-                          updatedAt: n.updatedAt,
-                        ),
-                  ],
-                ),
-            ],
-            previous.pageParams,
-          );
-        },
-      );
-    }
-
-    void exitSelection() {
-      isSelecting.value = false;
-      selectedIds.value = <String>{};
-    }
-
-    void enterSelection(String id) {
-      isSelecting.value = true;
-      selectedIds.value = {id};
-    }
-
-    void toggleSelected(String id) {
-      final next = Set<String>.from(selectedIds.value);
-      if (next.contains(id)) {
-        next.remove(id);
-      } else {
-        next.add(id);
-      }
-      selectedIds.value = next;
-    }
-
-    void toggleSelectAll() {
-      if (allSelected) {
-        selectedIds.value = <String>{};
-      } else {
-        selectedIds.value = items.map((e) => e.id).toSet();
-        isSelecting.value = true;
-      }
-    }
-
-    Future<void> onTap(AppNotification n) async {
-      if (isSelecting.value) {
-        toggleSelected(n.id);
-        return;
-      }
-      if (tappingId.value == n.id) return;
-      tappingId.value = n.id;
-
-      try {
-        if (!n.isRead) {
-          final optimistic = AppNotification(
-            id: n.id,
-            recipientUserId: n.recipientUserId,
-            module: n.module,
-            title: n.title,
-            body: n.body,
-            data: n.data,
-            sourceType: n.sourceType,
-            sourceId: n.sourceId,
-            readAt: DateTime.now().toUtc().toIso8601String(),
-            createdAt: n.createdAt,
-            updatedAt: n.updatedAt,
-          );
-          patchNotificationInCache(optimistic);
-          adjustDashboardUnread((c) => c.decrementUnreadNotificationCount());
-
-          final updated = await service.markRead(n.id);
-          if (updated != null) {
-            patchNotificationInCache(updated);
-          } else {
-            adjustDashboardUnread((c) => c.unreadNotificationCount.value++);
-            await invalidateNotifications();
-          }
-        }
-
-        debugPrint('notification: ${n.toJson()}');
-        await NotificationRouter.open(n);
-      } finally {
-        tappingId.value = null;
-      }
-    }
-
-    Future<void> markAllRead() async {
-      final previousUnread = Get.isRegistered<PlayerDashboardController>()
-          ? Get.find<PlayerDashboardController>().unreadNotificationCount.value
-          : 0;
-      markAllReadInCache();
-      adjustDashboardUnread((c) => c.clearUnreadNotificationCount());
-      final res = await service.markAllRead();
-      if (res != null) {
-        await invalidateNotifications();
-        AppSnackbar.success(
-          title: 'Notifications',
-          message: 'Marked ${res.updatedCount} as read.',
-        );
-      } else {
-        adjustDashboardUnread(
-          (c) => c.unreadNotificationCount.value = previousUnread,
-        );
-        await invalidateNotifications();
-        AppSnackbar.error(
-          title: 'Notifications',
-          message: 'Could not mark all as read.',
-        );
-      }
-    }
-
-    Future<void> deleteSelected() async {
-      final ids = selectedIds.value;
-      if (ids.isEmpty || isDeleting.value) return;
-
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Delete notifications'),
-          content: Text(
-            ids.length == 1
-                ? 'Delete this notification?'
-                : 'Delete ${ids.length} notifications?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              child: const Text('Cancel'),
+          return Scaffold(
+            backgroundColor: const Color(AppColors.backgroundColor),
+            appBar: AppBar(
+              title: Text(
+                selecting
+                    ? '${selectedIds.length} selected'
+                    : 'Notifications',
+              ),
+              backgroundColor: _primary,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              leading: selecting
+                  ? IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: controller.exitSelection,
+                    )
+                  : null,
+              actions: [
+                if (selecting && items.isNotEmpty)
+                  IconButton(
+                    tooltip: allSelected ? 'Deselect all' : 'Select all',
+                    onPressed: () => controller.toggleSelectAll(items),
+                    icon: Icon(
+                      allSelected
+                          ? Icons.check_box
+                          : Icons.check_box_outline_blank,
+                    ),
+                  )
+                else if (items.any((e) => !e.isRead))
+                  TextButton(
+                    onPressed: controller.markAllRead,
+                    child: const Text(
+                      'Mark all read',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+              ],
             ),
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(true),
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Delete'),
+            floatingActionButtonLocation:
+                FloatingActionButtonLocation.centerFloat,
+            floatingActionButton: selecting &&
+                    selectedIds.isNotEmpty &&
+                    !deleting
+                ? FloatingActionButton.extended(
+                    onPressed: () => _confirmDelete(
+                      context,
+                      controller,
+                      items,
+                    ),
+                    backgroundColor: Colors.red.shade600,
+                    foregroundColor: Colors.white,
+                    icon: const Icon(Icons.delete_outline),
+                    label: Text(
+                      selectedIds.length == 1
+                          ? 'Delete'
+                          : 'Delete (${selectedIds.length})',
+                    ),
+                  )
+                : null,
+            body: _NotificationsBody(
+              query: query,
+              items: items,
+              isSelecting: selecting,
+              selectedIds: selectedIds,
+              onRefresh: () => query.refetch(),
+              onTap: controller.onTap,
+              onLongPress: controller.onLongPress,
             ),
-          ],
+          );
+        });
+      },
+    );
+  }
+
+  Future<void> _confirmDelete(
+    BuildContext context,
+    NotificationsController controller,
+    List<AppNotification> items,
+  ) async {
+    final count = controller.selectedIds.length;
+    if (count == 0) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete notifications'),
+        content: Text(
+          count == 1
+              ? 'Delete this notification?'
+              : 'Delete $count notifications?',
         ),
-      );
-      if (confirmed != true) return;
-
-      final unreadDeleted = items
-          .where((n) => ids.contains(n.id) && !n.isRead)
-          .length;
-      final previousUnread = Get.isRegistered<PlayerDashboardController>()
-          ? Get.find<PlayerDashboardController>().unreadNotificationCount.value
-          : 0;
-
-      isDeleting.value = true;
-      removeNotificationsFromCache(ids);
-      if (unreadDeleted > 0) {
-        adjustDashboardUnread(
-          (c) => c.decrementUnreadNotificationCount(unreadDeleted),
-        );
-      }
-      exitSelection();
-
-      try {
-        final res = await service.delete(ids.toList());
-        if (res != null && res.deleted) {
-          AppSnackbar.success(
-            title: 'Notifications',
-            message: res.deletedCount <= 1
-                ? 'Notification deleted.'
-                : 'Deleted ${res.deletedCount} notifications.',
-          );
-          await invalidateNotifications();
-        } else {
-          adjustDashboardUnread(
-            (c) => c.unreadNotificationCount.value = previousUnread,
-          );
-          await invalidateNotifications();
-          AppSnackbar.error(
-            title: 'Notifications',
-            message: 'Could not delete notifications.',
-          );
-        }
-      } finally {
-        isDeleting.value = false;
-      }
-    }
-
-    return Scaffold(
-      backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(
-        title: Text(
-          isSelecting.value
-              ? '${selectedIds.value.length} selected'
-              : 'Notifications',
-        ),
-        backgroundColor: _primary,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        leading: isSelecting.value
-            ? IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: exitSelection,
-              )
-            : null,
         actions: [
-          if (isSelecting.value && items.isNotEmpty)
-            IconButton(
-              tooltip: allSelected ? 'Deselect all' : 'Select all',
-              onPressed: toggleSelectAll,
-              icon: Icon(
-                allSelected
-                    ? Icons.check_box
-                    : Icons.check_box_outline_blank,
-              ),
-            )
-          else if (items.any((e) => !e.isRead))
-            TextButton(
-              onPressed: markAllRead,
-              child: const Text(
-                'Mark all read',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
         ],
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: isSelecting.value &&
-              selectedIds.value.isNotEmpty &&
-              !isDeleting.value
-          ? FloatingActionButton.extended(
-              onPressed: deleteSelected,
-              backgroundColor: Colors.red.shade600,
-              foregroundColor: Colors.white,
-              icon: const Icon(Icons.delete_outline),
-              label: Text(
-                selectedIds.value.length == 1
-                    ? 'Delete'
-                    : 'Delete (${selectedIds.value.length})',
-              ),
-            )
-          : null,
-      body: _NotificationsBody(
-        query: query,
-        items: items,
-        isSelecting: isSelecting.value,
-        selectedIds: selectedIds.value,
-        onRefresh: () => query.refetch(),
-        onTap: onTap,
-        onLongPress: (n) {
-          if (isSelecting.value) {
-            toggleSelected(n.id);
-          } else {
-            enterSelection(n.id);
-          }
-        },
-      ),
     );
+    if (confirmed == true) {
+      await controller.deleteSelected(items);
+    }
   }
 }
 

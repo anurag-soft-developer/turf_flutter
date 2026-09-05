@@ -253,4 +253,16 @@ class QueryKeys {
 
   static List<Object> bookingDetail(String bookingId) =>
       [...bookingDetailPrefix, bookingId];
+
+  static const chatInbox = ['chatInbox'];
+
+  static const chatMessagesPrefix = ['chatMessages'];
+
+  static List<Object> chatMessages(String scope, String scopeId) =>
+      [...chatMessagesPrefix, scope, scopeId];
+
+  static const chatReadCursorsPrefix = ['chatReadCursors'];
+
+  static List<Object> chatReadCursors(String scope, String scopeId) =>
+      [...chatReadCursorsPrefix, scope, scopeId];
 }
