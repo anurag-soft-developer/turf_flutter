@@ -105,6 +105,45 @@ class ChatInboxCache {
     );
   }
 
+  static void applyLastMessage(ChatInboxItem incoming) {
+    if (incoming.scopeId.isEmpty) return;
+    if (incoming.lastMessageId.isEmpty) {
+      remove(incoming.scope, incoming.scopeId);
+      return;
+    }
+
+    final client = _client;
+    if (client == null) return;
+
+    client.setQueryData<
+        InfiniteData<PaginatedResponse<ChatInboxItem>, int>,
+        Object>(
+      QueryKeys.chatInbox,
+      (previous) {
+        if (previous == null) return previous;
+        var found = false;
+        final pages = previous.pages
+            .map(
+              (page) => page.copyWith(
+                data: page.data.map((item) {
+                  if (item.roomKey != incoming.roomKey) return item;
+                  found = true;
+                  return item.copyWith(
+                    lastMessageId: incoming.lastMessageId,
+                    lastMessageBody: incoming.lastMessageBody,
+                    lastSenderUserId: incoming.lastSenderUserId,
+                    lastMessageAt: incoming.lastMessageAt,
+                  );
+                }).toList(),
+              ),
+            )
+            .toList();
+        if (!found) return previous;
+        return InfiniteData(pages, previous.pageParams);
+      },
+    );
+  }
+
   static void clearUnread(ChatScope scope, String scopeId) {
     final client = _client;
     if (client == null) return;

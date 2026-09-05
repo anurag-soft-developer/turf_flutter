@@ -164,3 +164,34 @@ class ChatReadEvent {
     );
   }
 }
+
+class ChatMessageDeletedEvent {
+  final ChatScope scope;
+  final String scopeId;
+  final String messageId;
+  final String deletedAt;
+  final ChatInboxItem? inboxUpdated;
+
+  const ChatMessageDeletedEvent({
+    required this.scope,
+    required this.scopeId,
+    required this.messageId,
+    required this.deletedAt,
+    this.inboxUpdated,
+  });
+
+  factory ChatMessageDeletedEvent.fromJson(Map<String, dynamic> json) {
+    final inboxRaw = json['inboxUpdated'];
+    return ChatMessageDeletedEvent(
+      scope: ChatScope.fromApi(json['scope']?.toString()) ?? ChatScope.player,
+      scopeId: json['scopeId']?.toString() ?? '',
+      messageId: json['messageId']?.toString() ?? '',
+      deletedAt: json['deletedAt']?.toString() ?? '',
+      inboxUpdated: inboxRaw is Map
+          ? ChatInboxItem.fromInboxUpdated(
+              inboxRaw.map((key, value) => MapEntry(key.toString(), value)),
+            )
+          : null,
+    );
+  }
+}

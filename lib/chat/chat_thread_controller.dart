@@ -34,6 +34,7 @@ class ChatThreadController extends GetxController {
   StreamSubscription<dynamic>? _opsSub;
   StreamSubscription<ChatMessageModel>? _msgSub;
   StreamSubscription<ChatReadEvent>? _readSub;
+  StreamSubscription<ChatMessageDeletedEvent>? _deletedSub;
 
   String get me => Get.find<AuthStateController>().user?.id ?? '';
 
@@ -53,6 +54,7 @@ class ChatThreadController extends GetxController {
     unawaited(_opsSub?.cancel());
     unawaited(_msgSub?.cancel());
     unawaited(_readSub?.cancel());
+    unawaited(_deletedSub?.cancel());
     if (Get.isRegistered<ChatSocketService>()) {
       final socket = ChatSocketService.instance;
       socket.clearActiveRoom();
@@ -89,6 +91,7 @@ class ChatThreadController extends GetxController {
       ]);
       _recomputeSeenSubtitle();
     });
+    _deletedSub = socket.deletions.listen(_onDeleted);
   }
 
   Future<void> _loadCursors() async {
@@ -118,7 +121,7 @@ class ChatThreadController extends GetxController {
     );
     _hasMore = history.length >= 30;
     await chatController.setMessages(
-      history.map(toFlyerTextMessage).toList(),
+      history.reversed.map(toFlyerTextMessage).toList(),
     );
     await _loadCursors();
     await _markRead();
@@ -128,11 +131,14 @@ class ChatThreadController extends GetxController {
     if (_loadingEarlier || !_hasMore) return;
     final oldest = chatController.messages.isEmpty
         ? null
-        : chatController.messages.last;
+        : chatController.messages.first;
     final before = oldest is TextMessage
         ? oldest.createdAt?.toUtc().toIso8601String()
         : null;
-    if (before == null) return;
+    if (before == null) {
+      _hasMore = false;
+      return;
+    }
     _loadingEarlier = true;
     try {
       final older = await _chatService.listMessages(
@@ -147,13 +153,18 @@ class ChatThreadController extends GetxController {
       final mapped = older
           .where((item) => !existingIds.contains(item.messageId))
           .map(toFlyerTextMessage)
+          .toList()
+          .reversed
           .toList();
-      if (mapped.isNotEmpty) {
-        await chatController.insertAllMessages(
-          mapped,
-          index: chatController.messages.length,
-        );
+      if (mapped.isEmpty) {
+        _hasMore = false;
+        return;
       }
+      await chatController.insertAllMessages(
+        mapped,
+        index: 0,
+        animated: false,
+      );
     } finally {
       _loadingEarlier = false;
     }
@@ -206,10 +217,50 @@ class ChatThreadController extends GetxController {
     );
   }
 
+  Future<void> deleteMessage(String messageId) async {
+    if (messageId.isEmpty) return;
+    if (!Get.isRegistered<ChatSocketService>() ||
+        !ChatSocketService.instance.isConnected) {
+      AppSnackbar.error(
+        title: 'Chat',
+        message: 'Not connected. Try again in a moment.',
+      );
+      return;
+    }
+    ChatSocketService.instance.deleteMessage(
+      scope: scope,
+      scopeId: scopeId,
+      messageId: messageId,
+    );
+  }
+
+  Future<void> _onDeleted(ChatMessageDeletedEvent event) async {
+    if (event.scope != scope || event.scopeId != scopeId) return;
+    if (event.messageId.isEmpty) return;
+    final existing = _messageById(event.messageId);
+    if (existing == null) return;
+    await chatController.removeMessage(existing);
+    _recomputeSeenSubtitle();
+  }
+
+  Message? _messageById(String messageId) {
+    for (final message in chatController.messages) {
+      if (message.id == messageId) return message;
+    }
+    return null;
+  }
+
+  Message? get _latestOwnMessage {
+    Message? latest;
+    for (final message in chatController.messages) {
+      if (message.authorId == me) latest = message;
+    }
+    return latest;
+  }
+
   Future<List<String>> seenByNames() async {
     final names = <String>[];
-    final own = chatController.messages.where((m) => m.authorId == me);
-    final lastOwn = own.isEmpty ? null : own.first;
+    final lastOwn = _latestOwnMessage;
     final createdAt = lastOwn?.createdAt;
     for (final cursor in cursors) {
       if (cursor.userId == me) continue;
@@ -228,12 +279,11 @@ class ChatThreadController extends GetxController {
       seenSubtitle.value = null;
       return;
     }
-    final own = chatController.messages.where((m) => m.authorId == me);
-    if (own.isEmpty) {
+    final lastOwn = _latestOwnMessage;
+    if (lastOwn == null) {
       seenSubtitle.value = null;
       return;
     }
-    final lastOwn = own.first;
     final createdAt = lastOwn.createdAt;
     if (createdAt == null) {
       seenSubtitle.value = null;

@@ -23,9 +23,12 @@ class ChatSocketService extends GetxService {
       StreamController<ChatMessageModel>.broadcast();
   final StreamController<ChatReadEvent> _readsController =
       StreamController<ChatReadEvent>.broadcast();
+  final StreamController<ChatMessageDeletedEvent> _deletedController =
+      StreamController<ChatMessageDeletedEvent>.broadcast();
 
   Stream<ChatMessageModel> get messages => _messagesController.stream;
   Stream<ChatReadEvent> get reads => _readsController.stream;
+  Stream<ChatMessageDeletedEvent> get deletions => _deletedController.stream;
 
   bool get isConnected => _socket?.connected == true;
 
@@ -135,6 +138,19 @@ class ChatSocketService extends GetxService {
       }
     });
 
+    socket.on('chat.message.deleted', (dynamic raw) {
+      try {
+        final map = _asStringKeyedMap(raw);
+        if (map == null) return;
+        final event = ChatMessageDeletedEvent.fromJson(map);
+        if (event.messageId.isEmpty) return;
+        _applyDeletedInbox(event);
+        _deletedController.add(event);
+      } catch (e, st) {
+        debugPrint('chat.message.deleted handle failed: $e\n$st');
+      }
+    });
+
     _socket = socket;
     socket.connect();
   }
@@ -196,6 +212,20 @@ class ChatSocketService extends GetxService {
     });
   }
 
+  void deleteMessage({
+    required ChatScope scope,
+    required String scopeId,
+    required String messageId,
+  }) {
+    final socket = _socket;
+    if (socket == null || !socket.connected) return;
+    socket.emit('chat.delete', {
+      'scope': scope.apiValue,
+      'scopeId': scopeId,
+      'messageId': messageId,
+    });
+  }
+
   Future<void> reconnectWithFreshToken() async {
     if (!_started && _joinCounts.isEmpty) return;
     final joined = Map<String, int>.from(_joinCounts);
@@ -230,7 +260,17 @@ class ChatSocketService extends GetxService {
     unawaited(stop());
     unawaited(_messagesController.close());
     unawaited(_readsController.close());
+    unawaited(_deletedController.close());
     super.onClose();
+  }
+
+  void _applyDeletedInbox(ChatMessageDeletedEvent event) {
+    final inbox = event.inboxUpdated;
+    if (inbox == null || inbox.lastMessageId.isEmpty) {
+      ChatInboxCache.remove(event.scope, event.scopeId);
+      return;
+    }
+    ChatInboxCache.applyLastMessage(inbox);
   }
 
   Map<String, dynamic>? _asStringKeyedMap(dynamic raw) {

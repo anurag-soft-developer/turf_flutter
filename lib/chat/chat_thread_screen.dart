@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_application_1/chat/chat_thread_controller.dart';
 import 'package:flutter_application_1/chat/model/chat_scope.dart';
 import 'package:flutter_application_1/core/auth/auth_state_controller.dart';
@@ -97,11 +100,29 @@ class ChatThreadScreen extends StatelessWidget {
             currentUserId: me,
             resolveUser: controller.resolveUser,
             onMessageSend: controller.onSend,
+            onMessageLongPress: (
+              context,
+              message, {
+              required index,
+              required details,
+            }) {
+              unawaited(
+                _showMessageMenu(
+                  context,
+                  controller,
+                  message,
+                  details: details,
+                  isMine: message.authorId == me,
+                ),
+              );
+            },
             builders: Builders(
+              loadMoreBuilder: (_) => const SizedBox.shrink(),
               chatAnimatedListBuilder: (context, itemBuilder) {
                 return ChatAnimatedList(
                   itemBuilder: itemBuilder,
                   onEndReached: controller.loadEarlier,
+                  physics: const ClampingScrollPhysics(),
                 );
               },
             ),
@@ -109,6 +130,75 @@ class ChatThreadScreen extends StatelessWidget {
         );
       },
     );
+  }
+
+  Future<void> _showMessageMenu(
+    BuildContext context,
+    ChatThreadController controller,
+    Message message, {
+    required LongPressStartDetails details,
+    required bool isMine,
+  }) async {
+    const error = Color(AppColors.errorColor);
+    const text = Color(AppColors.textColor);
+    final action = await showMenu<String>(
+      context: context,
+      color: const Color(AppColors.surfaceColor).withValues(alpha: 0.82),
+      surfaceTintColor: Colors.transparent,
+      shadowColor: Colors.black26,
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      constraints: const BoxConstraints(minWidth: 128, maxWidth: 156),
+      menuPadding: const EdgeInsets.symmetric(vertical: 4),
+      position: RelativeRect.fromLTRB(
+        details.globalPosition.dx,
+        details.globalPosition.dy,
+        details.globalPosition.dx,
+        details.globalPosition.dy,
+      ),
+      items: [
+        const PopupMenuItem(
+          value: 'copy',
+          height: 36,
+          padding: EdgeInsets.symmetric(horizontal: 12),
+          child: Row(
+            children: [
+              Icon(Icons.copy_outlined, size: 16, color: text),
+              SizedBox(width: 8),
+              Text('Copy', style: TextStyle(fontSize: 13, color: text)),
+            ],
+          ),
+        ),
+        if (isMine)
+          const PopupMenuItem(
+            value: 'delete',
+            height: 36,
+            padding: EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              children: [
+                Icon(Icons.delete_outline, size: 16, color: error),
+                SizedBox(width: 8),
+                Text('Delete', style: TextStyle(fontSize: 13, color: error)),
+              ],
+            ),
+          ),
+      ],
+    );
+    if (!context.mounted || action == null) return;
+
+    switch (action) {
+      case 'copy':
+        await _copyMessage(message);
+      case 'delete':
+        await controller.deleteMessage(message.id);
+    }
+  }
+
+  Future<void> _copyMessage(Message message) async {
+    final text = message is TextMessage ? message.text : null;
+    if (text == null || text.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: text));
+    // AppSnackbar.success(title: 'Chat', message: 'Message copied');
   }
 
   Future<void> _showSeenBy(
