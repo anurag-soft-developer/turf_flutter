@@ -231,7 +231,8 @@ class TurfSearchSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: const BoxDecoration(
         color: Color(AppColors.primaryColor),
         borderRadius: BorderRadius.only(
@@ -239,6 +240,7 @@ class TurfSearchSection extends StatelessWidget {
           bottomRight: Radius.circular(20),
         ),
       ),
+      alignment: Alignment.centerLeft,
       child: QuickFiltersRow(controller: controller),
     );
   }

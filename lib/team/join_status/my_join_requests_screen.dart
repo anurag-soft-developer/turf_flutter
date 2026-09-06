@@ -5,6 +5,8 @@ import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
 import '../../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
+import '../../core/components/scroll/floating_sliver_app_bar.dart';
+import '../../core/components/scroll/pinned_sliver_header.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/paginated_response.dart';
 import '../../core/query/query_keys.dart';
@@ -51,45 +53,49 @@ class MyJoinRequestsScreen extends HookWidget {
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(
-        title: const Text('Join requests'),
-        actions: [
-          IconButton(
-            tooltip: 'Find teams',
-            icon: const Icon(Icons.search),
-            onPressed: () => Get.toNamed(AppConstants.routes.teamOpenings),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          AppSegmentedTabs(
-            controller: tabController,
-            fillWidth: true,
-            onTap: (index) {
-              selectedTab.value = _tabs[index];
-              tabController.animateTo(index);
-            },
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            items: const [
-              AppTabItem(
-                label: 'Pending',
-                icon: Icons.hourglass_top_outlined,
-              ),
-              AppTabItem(label: 'Joined', icon: Icons.check_circle_outline),
-              AppTabItem(label: 'Rejected', icon: Icons.cancel_outlined),
-            ],
-          ),
-          Expanded(
-            child: AppSegmentedTabView(
-              controller: tabController,
-              children: [
-                for (final tab in _tabs)
-                  _RequestTabList(key: ValueKey(tab.name), tab: tab),
+      body: NestedScrollView(
+        floatHeaderSlivers: true,
+        headerSliverBuilder: (context, innerBoxIsScrolled) {
+          return [
+            FloatingSliverAppBar(
+              title: const Text('Join requests'),
+              actions: [
+                IconButton(
+                  tooltip: 'Find teams',
+                  icon: const Icon(Icons.search),
+                  onPressed: () =>
+                      Get.toNamed(AppConstants.routes.teamOpenings),
+                ),
               ],
             ),
-          ),
-        ],
+            PinnedSliverHeader(
+              child: AppSegmentedTabs(
+                controller: tabController,
+                fillWidth: true,
+                onTap: (index) {
+                  selectedTab.value = _tabs[index];
+                  tabController.animateTo(index);
+                },
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                items: const [
+                  AppTabItem(
+                    label: 'Pending',
+                    icon: Icons.hourglass_top_outlined,
+                  ),
+                  AppTabItem(label: 'Joined', icon: Icons.check_circle_outline),
+                  AppTabItem(label: 'Rejected', icon: Icons.cancel_outlined),
+                ],
+              ),
+            ),
+          ];
+        },
+        body: AppSegmentedTabView(
+          controller: tabController,
+          children: [
+            for (final tab in _tabs)
+              _RequestTabList(key: ValueKey(tab.name), tab: tab),
+          ],
+        ),
       ),
     );
   }

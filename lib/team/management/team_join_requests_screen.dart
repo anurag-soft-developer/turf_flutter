@@ -5,7 +5,7 @@ import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
 import '../../core/auth/auth_state_controller.dart';
-import '../../core/components/query/query_async_body.dart';
+import '../../core/components/scroll/floating_sliver_app_bar.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/paginated_response.dart';
 import '../../core/query/query_keys.dart';
@@ -71,25 +71,39 @@ class TeamJoinRequestsScreen extends HookWidget {
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(
-        title: Text(
-          team?.name != null
-              ? 'Join requests · ${team!.name}'
-              : 'Join requests',
+      body: RefreshIndicator(
+        edgeOffset: floatingRefreshEdgeOffset(context),
+        onRefresh: () async {
+          await Future.wait([
+            teamQuery.refetch(),
+            pendingQuery.refetch(),
+          ]);
+        },
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            FloatingSliverAppBar(
+              title: Text(
+                team?.name != null
+                    ? 'Join requests · ${team!.name}'
+                    : 'Join requests',
+              ),
+            ),
+            ..._bodySlivers(
+              context: context,
+              c: c,
+              hasTeamId: hasTeamId,
+              accessDenied: accessDenied,
+              teamQuery: teamQuery,
+              pendingQuery: pendingQuery,
+            ),
+          ],
         ),
-      ),
-      body: _buildBody(
-        context: context,
-        c: c,
-        hasTeamId: hasTeamId,
-        accessDenied: accessDenied,
-        teamQuery: teamQuery,
-        pendingQuery: pendingQuery,
       ),
     );
   }
 
-  Widget _buildBody({
+  List<Widget> _bodySlivers({
     required BuildContext context,
     required TeamJoinRequestsController c,
     required bool hasTeamId,
@@ -99,80 +113,145 @@ class TeamJoinRequestsScreen extends HookWidget {
         pendingQuery,
   }) {
     if (!hasTeamId) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text(
-            'You do not have access to review join requests for this team.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Color(AppColors.textSecondaryColor),
-              fontSize: 15,
+      return [
+        const SliverFillRemaining(
+          hasScrollBody: false,
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(
+              child: Text(
+                'You do not have access to review join requests for this team.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Color(AppColors.textSecondaryColor),
+                  fontSize: 15,
+                ),
+              ),
             ),
           ),
         ),
-      );
+      ];
     }
 
     if (teamQuery.isLoading ||
         (teamQuery.isFetching && teamQuery.data == null && !teamQuery.isError)) {
-      return const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(
-            Color(AppColors.primaryColor),
-          ),
-        ),
-      );
-    }
-
-    if (teamQuery.isError && teamQuery.data == null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Failed to load team',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Color(AppColors.textSecondaryColor),
-                ),
+      return [
+        const SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(
+                Color(AppColors.primaryColor),
               ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => teamQuery.refetch(),
-                child: const Text('Retry'),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    if (accessDenied) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text(
-            'You do not have access to review join requests for this team.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Color(AppColors.textSecondaryColor),
-              fontSize: 15,
             ),
           ),
         ),
-      );
+      ];
     }
 
-    return QueryAsyncBody<PaginatedResponse<TeamMemberModel>, Object>(
-      state: pendingQuery,
-      onRetry: () => pendingQuery.refetch(),
-      data: (page) {
-        final pending = page.data;
-        if (pending.isEmpty) {
-          return const Center(
+    if (teamQuery.isError && teamQuery.data == null) {
+      return [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Failed to load team',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Color(AppColors.textSecondaryColor),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => teamQuery.refetch(),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ];
+    }
+
+    if (accessDenied) {
+      return [
+        const SliverFillRemaining(
+          hasScrollBody: false,
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(
+              child: Text(
+                'You do not have access to review join requests for this team.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Color(AppColors.textSecondaryColor),
+                  fontSize: 15,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ];
+    }
+
+    if (pendingQuery.isLoading ||
+        (pendingQuery.isFetching && pendingQuery.data == null)) {
+      return [
+        const SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(
+                Color(AppColors.primaryColor),
+              ),
+            ),
+          ),
+        ),
+      ];
+    }
+
+    if (pendingQuery.isError && pendingQuery.data == null) {
+      return [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Failed to load join requests',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Color(AppColors.textSecondaryColor),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => pendingQuery.refetch(),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ];
+    }
+
+    final pending = pendingQuery.data?.data ?? const <TeamMemberModel>[];
+    if (pending.isEmpty) {
+      return [
+        const SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
             child: Text(
               'No pending join requests.',
               style: TextStyle(
@@ -180,44 +259,44 @@ class TeamJoinRequestsScreen extends HookWidget {
                 fontSize: 15,
               ),
             ),
-          );
-        }
+          ),
+        ),
+      ];
+    }
 
-        return RefreshIndicator(
-          onRefresh: () async {
-            await Future.wait([
-              teamQuery.refetch(),
-              pendingQuery.refetch(),
-            ]);
-          },
-          child: Obx(() {
-            final actionId = c.actionMembershipId.value;
-            return ListView.separated(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-              itemCount: pending.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
-              itemBuilder: (context, i) {
-                final m = pending[i];
-                return _PendingApplicantRow(
-                  member: m,
-                  onOpenProfile: () {
-                    final userId = m.userHelper.getId();
-                    if (userId == null || userId.isEmpty) return;
-                    Get.toNamed(
-                      AppConstants.routes.teamMemberProfile,
-                      arguments: {'userId': userId},
-                    );
-                  },
-                  isProcessing: actionId != null && actionId == m.id,
-                  onAccept: () => c.accept(m),
-                  onReject: () => _confirmReject(context, c, m),
-                );
-              },
-            );
-          }),
-        );
-      },
-    );
+    return [
+      SliverPadding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+        sliver: SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, i) {
+              final m = pending[i];
+              return Padding(
+                padding: EdgeInsets.only(top: i == 0 ? 0 : 10),
+                child: Obx(() {
+                  final actionId = c.actionMembershipId.value;
+                  return _PendingApplicantRow(
+                    member: m,
+                    onOpenProfile: () {
+                      final userId = m.userHelper.getId();
+                      if (userId == null || userId.isEmpty) return;
+                      Get.toNamed(
+                        AppConstants.routes.teamMemberProfile,
+                        arguments: {'userId': userId},
+                      );
+                    },
+                    isProcessing: actionId != null && actionId == m.id,
+                    onAccept: () => c.accept(m),
+                    onReject: () => _confirmReject(context, c, m),
+                  );
+                }),
+              );
+            },
+            childCount: pending.length,
+          ),
+        ),
+      ),
+    ];
   }
 
   void _confirmReject(

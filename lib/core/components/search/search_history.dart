@@ -19,38 +19,40 @@ class SearchHistory extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (items.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: const [
-              Icon(
-                Icons.history,
-                size: 48,
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: const [
+          SizedBox(height: 120),
+          Center(
+            child: Icon(
+              Icons.history,
+              size: 48,
+              color: Color(AppColors.textSecondaryColor),
+            ),
+          ),
+          SizedBox(height: 12),
+          Text(
+            'No recent searches',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Color(AppColors.textColor),
+            ),
+          ),
+          SizedBox(height: 8),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24),
+            child: Text(
+              'Your search history will appear here.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
                 color: Color(AppColors.textSecondaryColor),
               ),
-              SizedBox(height: 12),
-              Text(
-                'No recent searches',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Color(AppColors.textColor),
-                ),
-              ),
-              SizedBox(height: 8),
-              Text(
-                'Your search history will appear here.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Color(AppColors.textSecondaryColor),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
+        ],
       );
     }
 

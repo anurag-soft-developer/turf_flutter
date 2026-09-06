@@ -4,6 +4,8 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import '../../../components/shared/app_search_field.dart';
 import '../../config/constants.dart';
 import '../../services/search/search_history_store.dart';
+import '../scroll/floating_sliver_app_bar.dart';
+import '../scroll/pinned_sliver_header.dart';
 import 'search_history.dart';
 
 typedef AppSearchResultsBuilder = Widget Function(
@@ -31,6 +33,8 @@ class AppSearchScreen extends HookWidget {
   final AppSearchResultsBuilder resultsBuilder;
   final AppSearchHeaderBuilder? headerBuilder;
   final bool autofocus;
+
+  static const _searchToolbarHeight = 64.0;
 
   @override
   Widget build(BuildContext context) {
@@ -82,46 +86,48 @@ class AppSearchScreen extends HookWidget {
 
     final query = submittedQuery.value;
     final showResults = query.isNotEmpty && !isFieldFocused.value;
+    final header = showResults && headerBuilder != null
+        ? headerBuilder!(context, query)
+        : null;
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(
-        titleSpacing: 0,
-        toolbarHeight: 64,
-        title: Padding(
-          padding: const EdgeInsets.only(right: 12),
-          child: AppSearchField(
-            controller: searchController,
-            focusNode: focusNode,
-            hintText: hintText,
-            autofocus: autofocus,
-            onSubmitted: submit,
-            onCleared: clearSubmitted,
-          ),
-        ),
-      ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (showResults && headerBuilder != null)
-            headerBuilder!(context, query),
-          Expanded(
-            child: showResults
-                ? resultsBuilder(context, query)
-                : SearchHistory(
-                    items: historyItems.value,
-                    onSelect: submit,
-                    onRemove: (term) async {
-                      await historyStore.remove(term);
-                      await refreshHistory();
-                    },
-                    onClearAll: () async {
-                      await historyStore.clear();
-                      await refreshHistory();
-                    },
-                  ),
-          ),
-        ],
+      body: NestedScrollView(
+        floatHeaderSlivers: true,
+        headerSliverBuilder: (context, innerBoxIsScrolled) {
+          return [
+            FloatingSliverAppBar(
+              toolbarHeight: _searchToolbarHeight,
+              titleSpacing: 0,
+              title: Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: AppSearchField(
+                  controller: searchController,
+                  focusNode: focusNode,
+                  hintText: hintText,
+                  autofocus: autofocus,
+                  onSubmitted: submit,
+                  onCleared: clearSubmitted,
+                ),
+              ),
+            ),
+            if (header != null) PinnedSliverHeader(child: header),
+          ];
+        },
+        body: showResults
+            ? resultsBuilder(context, query)
+            : SearchHistory(
+                items: historyItems.value,
+                onSelect: submit,
+                onRemove: (term) async {
+                  await historyStore.remove(term);
+                  await refreshHistory();
+                },
+                onClearAll: () async {
+                  await historyStore.clear();
+                  await refreshHistory();
+                },
+              ),
       ),
     );
   }

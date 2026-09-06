@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 
 import '../../components/turf_review/turf_review_stats_summary.dart';
 import '../../components/turf_review/turf_review_tile.dart';
+import '../../core/components/scroll/floating_sliver_app_bar.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/paginated_response.dart';
 import '../../core/query/query_keys.dart';
@@ -24,8 +25,17 @@ class TurfReviewsFullScreen extends HookWidget {
     if (turfId == null || turfId.isEmpty) {
       return Scaffold(
         backgroundColor: const Color(AppColors.backgroundColor),
-        appBar: AppBar(title: const Text('Reviews')),
-        body: const Center(child: Text('Unable to open reviews for this turf.')),
+        body: CustomScrollView(
+          slivers: [
+            const FloatingSliverAppBar(title: Text('Reviews')),
+            const SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(
+                child: Text('Unable to open reviews for this turf.'),
+              ),
+            ),
+          ],
+        ),
       );
     }
 
@@ -70,74 +80,95 @@ class TurfReviewsFullScreen extends HookWidget {
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(
-        title: const Text('All reviews'),
-        backgroundColor: const Color(AppColors.primaryColor),
-        foregroundColor: Colors.white,
-      ),
-      body: listLoading
-          ? const Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  Color(AppColors.primaryColor),
-                ),
-              ),
-            )
-          : RefreshIndicator(
-              onRefresh: () async {
-                await Future.wait([
-                  statsQuery.refetch(),
-                  reviewsQuery.refetch(),
-                ]);
-              },
-              color: const Color(AppColors.primaryColor),
-              child: NotificationListener<ScrollNotification>(
-                onNotification: (notification) {
-                  if (notification.metrics.pixels >=
-                      notification.metrics.maxScrollExtent - 160) {
-                    if (reviewsQuery.hasNextPage &&
-                        !reviewsQuery.isFetchingNextPage) {
-                      reviewsQuery.fetchNextPage();
-                    }
-                  }
-                  return false;
-                },
-                child: ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-                  children: [
-                    TurfReviewStatsSummary(
+      body: RefreshIndicator(
+        edgeOffset: floatingRefreshEdgeOffset(context),
+        onRefresh: () async {
+          await Future.wait([
+            statsQuery.refetch(),
+            reviewsQuery.refetch(),
+          ]);
+        },
+        color: const Color(AppColors.primaryColor),
+        child: NotificationListener<ScrollNotification>(
+          onNotification: (notification) {
+            if (notification.metrics.pixels >=
+                notification.metrics.maxScrollExtent - 160) {
+              if (reviewsQuery.hasNextPage &&
+                  !reviewsQuery.isFetchingNextPage) {
+                reviewsQuery.fetchNextPage();
+              }
+            }
+            return false;
+          },
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              const FloatingSliverAppBar(title: Text('All reviews')),
+              if (listLoading)
+                const SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Color(AppColors.primaryColor),
+                      ),
+                    ),
+                  ),
+                )
+              else ...[
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  sliver: SliverToBoxAdapter(
+                    child: TurfReviewStatsSummary(
                       stats: statsQuery.data,
                       isLoading: statsLoading && reviews.isEmpty,
                     ),
-                    const SizedBox(height: 16),
-                    if (reviewsQuery.isError && reviews.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 24),
-                        child: Text(
-                          'Could not load reviews',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.error,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ...reviews.map((r) => TurfReviewTile(review: r)),
-                    if (reviewsQuery.isFetchingNextPage)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 24),
-                        child: Center(
-                          child: SizedBox(
-                            width: 28,
-                            height: 28,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        ),
-                      ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
+                if (reviewsQuery.isError && reviews.isEmpty)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Text(
+                        'Could not load reviews',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        if (index >= reviews.length) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 24),
+                            child: Center(
+                              child: SizedBox(
+                                width: 28,
+                                height: 28,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            ),
+                          );
+                        }
+                        return TurfReviewTile(review: reviews[index]);
+                      },
+                      childCount: reviews.length +
+                          (reviewsQuery.isFetchingNextPage ? 1 : 0),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

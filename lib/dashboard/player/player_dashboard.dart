@@ -9,6 +9,7 @@ import '../../components/dashboard/sports_section.dart';
 import '../../components/dashboard/team_action_cards.dart';
 import '../../components/turf/featured_section.dart';
 import '../../core/auth/auth_state_controller.dart';
+import '../../core/components/scroll/floating_sliver_app_bar.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/location_model.dart';
 import '../../core/query/query_keys.dart';
@@ -19,7 +20,13 @@ import '../model/player_dashboard_model.dart';
 import 'player_dashboard_controller.dart';
 
 class PlayerDashboard extends HookWidget {
-  const PlayerDashboard({super.key});
+  const PlayerDashboard({
+    super.key,
+    this.headerSlivers = const <Widget>[],
+  });
+
+  /// Prefixed into the same [CustomScrollView] (e.g. floating [SliverAppBar]).
+  final List<Widget> headerSlivers;
 
   String _greeting() {
     final hour = DateTime.now().hour;
@@ -35,6 +42,8 @@ class PlayerDashboard extends HookWidget {
     final queryClient = useQueryClient();
 
     return RefreshIndicator(
+      edgeOffset: floatingRefreshEdgeOffset(context),
+      color: const Color(AppColors.primaryColor),
       onRefresh: () async {
         await settings.resolveLocation();
         await Future.wait([
@@ -46,12 +55,12 @@ class PlayerDashboard extends HookWidget {
           ),
         ]);
       },
-      child: SingleChildScrollView(
+      child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
+        slivers: [
+          ...headerSlivers,
+          SliverToBoxAdapter(
+            child: Padding(
               padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
               child: Obx(() {
                 final name = authController.user?.fullName?.trim();
@@ -83,8 +92,10 @@ class PlayerDashboard extends HookWidget {
                 );
               }),
             ),
-            const SizedBox(height: 20),
-            Obx(() {
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 20)),
+          SliverToBoxAdapter(
+            child: Obx(() {
               final ready = settings.isLocationReady.value;
               final location = settings.nearbyLocation.value;
 
@@ -102,24 +113,30 @@ class PlayerDashboard extends HookWidget {
                 location: location,
               );
             }),
-            const SizedBox(height: 16),
-            const Padding(
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 16)),
+          const SliverToBoxAdapter(
+            child: Padding(
               padding: EdgeInsets.symmetric(horizontal: 24.0),
               child: SportsSection(),
             ),
-            const SizedBox(height: 28),
-            const Padding(
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 28)),
+          const SliverToBoxAdapter(
+            child: Padding(
               padding: EdgeInsets.symmetric(horizontal: 24.0),
               child: DashboardLeaderboardSection(),
             ),
-            const SizedBox(height: 28),
-            const Padding(
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 28)),
+          const SliverToBoxAdapter(
+            child: Padding(
               padding: EdgeInsets.symmetric(horizontal: 24),
               child: TeamActionCardsRow(),
             ),
-            const SizedBox(height: 32),
-          ],
-        ),
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 32)),
+        ],
       ),
     );
   }
@@ -141,7 +158,7 @@ class _PlayerDashboardFeedPlaceholder extends StatelessWidget {
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 24),
           child: Text(
-            'Featured turves',
+            'Featured turfs',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,

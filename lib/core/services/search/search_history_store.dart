@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../config/constants.dart';
 
-enum SearchHistoryScope { explore, turfs, matchUp }
+enum SearchHistoryScope { explore, turfs, matchUp, myTeams }
 
 class SearchHistoryStore {
   SearchHistoryStore(this.scope);
@@ -22,6 +22,7 @@ class SearchHistoryStore {
       SearchHistoryScope.explore => keys.searchHistoryExplore,
       SearchHistoryScope.turfs => keys.searchHistoryTurfs,
       SearchHistoryScope.matchUp => keys.searchHistoryMatchUp,
+      SearchHistoryScope.myTeams => keys.searchHistoryMyTeams,
     };
   }
 

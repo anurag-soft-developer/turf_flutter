@@ -7,6 +7,8 @@ import 'package:get/get.dart';
 import '../components/match_up/my_team_selector.dart';
 import '../components/match_up/team_logo.dart';
 import '../components/match_up/team_stats_row.dart';
+import '../core/components/scroll/floating_sliver_app_bar.dart';
+import '../core/components/scroll/pinned_sliver_header.dart';
 import '../core/config/constants.dart';
 import '../core/models/paginated_response.dart';
 import '../core/query/query_keys.dart';
@@ -19,6 +21,48 @@ import 'match_up_controller.dart';
 
 class MatchUpScreen extends HookWidget {
   const MatchUpScreen({super.key});
+
+  static List<Widget> _appBarActions({bool includeChallenges = true}) {
+    return [
+      IconButton(
+        tooltip: 'Search',
+        icon: const Icon(Icons.search),
+        onPressed: () => Get.toNamed(AppConstants.routes.matchUpSearch),
+      ),
+      if (includeChallenges)
+        IconButton(
+          tooltip: 'Challenges',
+          icon: const Icon(Icons.inbox_outlined),
+          onPressed: () => Get.toNamed(AppConstants.routes.matchUpChallenges),
+        ),
+    ];
+  }
+
+  static List<Widget> _chromeSlivers({
+    required TeamSportType sport,
+    required ValueChanged<TeamSportType> onSportChanged,
+    bool includeChallenges = true,
+  }) {
+    return [
+      FloatingSliverAppBar(
+        leading: const UserAvatarAppBarAction(),
+        title: const Text('Match Up'),
+        actions: _appBarActions(includeChallenges: includeChallenges),
+      ),
+      PinnedSliverHeader(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          child: SportFilterPicker(
+            value: sport,
+            sports: TeamSportType.values,
+            sheetTitle: 'Filter by sport',
+            searchable: true,
+            onChanged: onSportChanged,
+          ),
+        ),
+      ),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,30 +96,24 @@ class MatchUpScreen extends HookWidget {
         (membershipsQuery.isFetching && membershipsQuery.data == null)) {
       return Scaffold(
         backgroundColor: const Color(AppColors.backgroundColor),
-        appBar: AppBar(
-          automaticallyImplyLeading: false,
-          leading: const UserAvatarAppBarAction(),
-          title: const Text('Match Up'),
-          actions: [
-            IconButton(
-              tooltip: 'Search',
-              icon: const Icon(Icons.search),
-              onPressed: () => Get.toNamed(AppConstants.routes.matchUpSearch),
+        body: CustomScrollView(
+          slivers: [
+            FloatingSliverAppBar(
+              leading: const UserAvatarAppBarAction(),
+              title: const Text('Match Up'),
+              actions: _appBarActions(),
             ),
-            IconButton(
-              tooltip: 'Challenges',
-              icon: const Icon(Icons.inbox_outlined),
-              onPressed: () =>
-                  Get.toNamed(AppConstants.routes.matchUpChallenges),
+            const SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Color(AppColors.primaryColor),
+                  ),
+                ),
+              ),
             ),
           ],
-        ),
-        body: const Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(
-              Color(AppColors.primaryColor),
-            ),
-          ),
         ),
       );
     }
@@ -83,78 +121,49 @@ class MatchUpScreen extends HookWidget {
     if (membershipsQuery.isError && membershipsQuery.data == null) {
       return Scaffold(
         backgroundColor: const Color(AppColors.backgroundColor),
-        appBar: AppBar(
-          automaticallyImplyLeading: false,
-          leading: const UserAvatarAppBarAction(),
-          title: const Text('Match Up'),
-          actions: [
-            IconButton(
-              tooltip: 'Search',
-              icon: const Icon(Icons.search),
-              onPressed: () => Get.toNamed(AppConstants.routes.matchUpSearch),
+        body: CustomScrollView(
+          slivers: [
+            FloatingSliverAppBar(
+              leading: const UserAvatarAppBarAction(),
+              title: const Text('Match Up'),
+              actions: _appBarActions(includeChallenges: false),
+            ),
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(
+                child: ElevatedButton(
+                  onPressed: () => membershipsQuery.refetch(),
+                  child: const Text('Retry'),
+                ),
+              ),
             ),
           ],
-        ),
-        body: Center(
-          child: ElevatedButton(
-            onPressed: () => membershipsQuery.refetch(),
-            child: const Text('Retry'),
-          ),
         ),
       );
     }
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        leading: const UserAvatarAppBarAction(),
-        title: const Text('Match Up'),
-        actions: [
-          IconButton(
-            tooltip: 'Search',
-            icon: const Icon(Icons.search),
-            onPressed: () => Get.toNamed(AppConstants.routes.matchUpSearch),
-          ),
-          IconButton(
-            tooltip: 'Challenges',
-            icon: const Icon(Icons.inbox_outlined),
-            onPressed: () => Get.toNamed(AppConstants.routes.matchUpChallenges),
-          ),
-        ],
-      ),
       body: Obx(() {
         final sport = c.selectedSport.value;
         final teamsForSport = c.myTeamsForSport;
         c.feedRevision.value;
         final fromTeamId = c.selectedTeam.value?.id;
 
-        return Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: SportFilterPicker(
-                value: sport,
-                sports: TeamSportType.values,
-                sheetTitle: 'Filter by sport',
-                searchable: true,
-                onChanged: c.switchSport,
-              ),
-            ),
-            Expanded(
-              child: _SportFeedSection(
-                key: ValueKey(
-                  '${sport.name}|${fromTeamId ?? ''}|${c.feedRevision.value}',
-                ),
-                sport: sport,
-                hasTeams: teamsForSport.isNotEmpty,
-                fromTeamId: fromTeamId,
-                search: null,
-                controller: c,
-                onChallenge: (team) => _confirmChallenge(context, c, team),
-              ),
-            ),
-          ],
+        return _SportFeedSection(
+          key: ValueKey(
+            '${sport.name}|${fromTeamId ?? ''}|${c.feedRevision.value}',
+          ),
+          sport: sport,
+          hasTeams: teamsForSport.isNotEmpty,
+          fromTeamId: fromTeamId,
+          search: null,
+          controller: c,
+          onChallenge: (team) => _confirmChallenge(context, c, team),
+          leadingSlivers: _chromeSlivers(
+            sport: sport,
+            onSportChanged: c.switchSport,
+          ),
         );
       }),
     );
@@ -194,6 +203,7 @@ class _SportFeedSection extends HookWidget {
     required this.search,
     required this.controller,
     required this.onChallenge,
+    required this.leadingSlivers,
   });
 
   final TeamSportType sport;
@@ -202,13 +212,10 @@ class _SportFeedSection extends HookWidget {
   final String? search;
   final MatchUpController controller;
   final ValueChanged<TeamModel> onChallenge;
+  final List<Widget> leadingSlivers;
 
   @override
   Widget build(BuildContext context) {
-    if (!hasTeams) {
-      return _NoTeamPlaceholder(sport: sport);
-    }
-
     final queryKey = QueryKeys.matchUpOpponents(
       sport: sport.name,
       fromTeamId: fromTeamId,
@@ -246,6 +253,7 @@ class _SportFeedSection extends HookWidget {
       },
       initialPageParam: 1,
       retry: noRetry,
+      enabled: hasTeams,
       nextPageParamBuilder: (data) {
         final last = data.pages.isNotEmpty ? data.pages.last : null;
         if (last == null || !last.hasNextPage) return null;
@@ -253,81 +261,126 @@ class _SportFeedSection extends HookWidget {
       },
     );
 
+    if (!hasTeams) {
+      return CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          ...leadingSlivers,
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: _NoTeamPlaceholder(sport: sport),
+          ),
+        ],
+      );
+    }
+
     final items =
         opponentsQuery.data?.pages.expand((p) => p.data).toList() ??
         const <TeamModel>[];
 
-    if (opponentsQuery.isLoading ||
-        (opponentsQuery.isFetching && items.isEmpty)) {
-      return const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(
-            Color(AppColors.primaryColor),
-          ),
-        ),
-      );
-    }
-
-    if (opponentsQuery.isError && items.isEmpty) {
-      return _FeedErrorPlaceholder(
-        sport: sport,
-        message: 'Failed to load teams',
-        onRetry: () async {
-          await opponentsQuery.refetch();
-        },
-      );
-    }
-
     return RefreshIndicator(
+      edgeOffset: floatingRefreshEdgeOffset(context),
+      color: const Color(AppColors.primaryColor),
       onRefresh: () => opponentsQuery.refetch(),
-      child: items.isEmpty
-          ? ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              children: [_EmptyFeedPlaceholder(sport: sport)],
-            )
-          : NotificationListener<ScrollNotification>(
-              onNotification: (notification) {
-                if (notification.metrics.pixels >=
-                    notification.metrics.maxScrollExtent - 200) {
-                  if (opponentsQuery.hasNextPage &&
-                      !opponentsQuery.isFetchingNextPage) {
-                    opponentsQuery.fetchNextPage();
-                  }
-                }
-                return false;
-              },
-              child: ListView.builder(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                itemCount:
-                    items.length + (opponentsQuery.isFetchingNextPage ? 1 : 0),
-                itemBuilder: (context, index) {
-                  if (index == items.length) {
-                    return const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(16),
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Color(AppColors.primaryColor),
-                          ),
-                        ),
-                      ),
-                    );
-                  }
+      child: NotificationListener<ScrollNotification>(
+        onNotification: (notification) {
+          if (notification.metrics.pixels >=
+              notification.metrics.maxScrollExtent - 200) {
+            if (opponentsQuery.hasNextPage &&
+                !opponentsQuery.isFetchingNextPage) {
+              opponentsQuery.fetchNextPage();
+            }
+          }
+          return false;
+        },
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            ...leadingSlivers,
+            ..._feedSlivers(opponentsQuery, items),
+          ],
+        ),
+      ),
+    );
+  }
 
-                  final team = items[index];
-                  return Obx(() {
-                    final isSent = controller.isTeamChallenged(team.id);
-                    return _OpponentCard(
-                      team: team,
-                      isSent: isSent,
-                      onChallenge: isSent ? null : () => onChallenge(team),
-                    );
-                  });
-                },
+  List<Widget> _feedSlivers(
+    InfiniteQueryResult<PaginatedResponse<TeamModel>, Object, int> query,
+    List<TeamModel> items,
+  ) {
+    if (query.isLoading || (query.isFetching && items.isEmpty)) {
+      return [
+        const SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(
+                Color(AppColors.primaryColor),
               ),
             ),
-    );
+          ),
+        ),
+      ];
+    }
+
+    if (query.isError && items.isEmpty) {
+      return [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: _FeedErrorPlaceholder(
+            sport: sport,
+            message: 'Failed to load teams',
+            onRetry: () async {
+              await query.refetch();
+            },
+          ),
+        ),
+      ];
+    }
+
+    if (items.isEmpty) {
+      return [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: _EmptyFeedPlaceholder(sport: sport),
+        ),
+      ];
+    }
+
+    return [
+      SliverPadding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        sliver: SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              if (index == items.length) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Color(AppColors.primaryColor),
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              final team = items[index];
+              return Obx(() {
+                final isSent = controller.isTeamChallenged(team.id);
+                return _OpponentCard(
+                  team: team,
+                  isSent: isSent,
+                  onChallenge: isSent ? null : () => onChallenge(team),
+                );
+              });
+            },
+            childCount: items.length + (query.isFetchingNextPage ? 1 : 0),
+          ),
+        ),
+      ),
+    ];
   }
 }
 
@@ -820,55 +873,51 @@ class _FeedErrorPlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = sport == TeamSportType.cricket ? 'cricket' : 'football';
-    return ListView(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 48),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.error_outline, size: 64, color: Colors.grey.shade300),
-              const SizedBox(height: 16),
-              Text(
-                'Could not load $label teams',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: Color(AppColors.textColor),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                message,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Color(AppColors.textSecondaryColor),
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton.icon(
-                onPressed: () => onRetry(),
-                icon: const Icon(Icons.refresh, size: 18),
-                label: const Text('Retry'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(AppColors.primaryColor),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  elevation: 0,
-                ),
-              ),
-            ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 48),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.error_outline, size: 64, color: Colors.grey.shade300),
+          const SizedBox(height: 16),
+          Text(
+            'Could not load $label teams',
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: Color(AppColors.textColor),
+            ),
           ),
-        ),
-      ],
+          const SizedBox(height: 8),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Color(AppColors.textSecondaryColor),
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            onPressed: () => onRetry(),
+            icon: const Icon(Icons.refresh, size: 18),
+            label: const Text('Retry'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(AppColors.primaryColor),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 12,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              elevation: 0,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -52,11 +52,11 @@ class AppMenuScreen extends StatelessWidget {
         icon: Icons.sports_soccer_rounded,
         onTap: () => _navigateTo(AppConstants.routes.matchUpChallenges),
       ),
-      AppMenuItem(
-        title: 'Matches',
-        icon: Icons.emoji_events_rounded,
-        onTap: () => _navigateTo(AppConstants.routes.matches),
-      ),
+      // AppMenuItem(
+      //   title: 'Matches',
+      //   icon: Icons.emoji_events_rounded,
+      //   onTap: () => _navigateTo(AppConstants.routes.matches),
+      // ),
       AppMenuItem(
         title: 'Notifications',
         icon: Icons.notifications_rounded,
@@ -129,7 +129,7 @@ class AppMenuScreen extends StatelessWidget {
                     _buildMenuGrid(playerItems),
                     const SizedBox(height: 28),
                     _buildSectionTitle('Other'),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     _buildMenuList(appItems),
                     const SizedBox(height: 32),
                     CustomButton(
@@ -268,71 +268,92 @@ class AppMenuScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(String title, {bool primary = true}) {
     return Text(
       title,
-      style: const TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w700,
-        color: Color(AppColors.textColor),
+      style: TextStyle(
+        fontSize: primary ? 16 : 13,
+        fontWeight: primary ? FontWeight.w700 : FontWeight.w600,
+        color: Color(
+          primary ? AppColors.textColor : AppColors.textSecondaryColor,
+        ),
       ),
     );
   }
 
   Widget _buildMenuGrid(List<AppMenuItem> items) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: items.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        childAspectRatio: 1.35,
-      ),
-      itemBuilder: (context, index) => _buildGridTile(items[index]),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const spacing = 10.0;
+        const minTileWidth = 96.0;
+        final maxWidth = constraints.maxWidth;
+
+        // Pack as many compact tiles as fit, then stretch widths so the row
+        // fills the full width (no trailing empty margin).
+        final columns = ((maxWidth + spacing) / (minTileWidth + spacing))
+            .floor()
+            .clamp(2, 6);
+        final tileWidth = (maxWidth - spacing * (columns - 1)) / columns;
+
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: [
+            for (final item in items)
+              SizedBox(
+                width: tileWidth,
+                child: _buildGridTile(item),
+              ),
+          ],
+        );
+      },
     );
   }
 
   Widget _buildGridTile(AppMenuItem item) {
     return Material(
       color: const Color(AppColors.surfaceColor),
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(14),
       child: InkWell(
         onTap: item.onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: const Color(AppColors.dividerColor).withValues(alpha: 0.6),
             ),
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 44,
-                height: 44,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
                   color:
                       (item.backgroundColor ??
                               const Color(AppColors.primaryColor))
                           .withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
                   item.icon,
+                  size: 22,
                   color: item.iconColor ?? const Color(AppColors.primaryColor),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               Text(
                 item.title,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  fontSize: 15,
+                  fontSize: 13,
+                  height: 1.2,
                   fontWeight: FontWeight.w600,
                   color: Color(AppColors.textColor),
                 ),
@@ -350,17 +371,17 @@ class AppMenuScreen extends StatelessWidget {
 
   Widget _buildListTile(AppMenuItem item) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 6),
       child: Material(
         color: const Color(AppColors.surfaceColor),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         child: InkWell(
           onTap: item.onTap,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(12),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: const Color(
                   AppColors.dividerColor,
@@ -370,27 +391,27 @@ class AppMenuScreen extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                  width: 40,
-                  height: 40,
+                  width: 32,
+                  height: 32,
                   decoration: BoxDecoration(
                     color: const Color(
                       AppColors.primaryColor,
                     ).withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
                     item.icon,
                     color:
                         item.iconColor ?? const Color(AppColors.primaryColor),
-                    size: 22,
+                    size: 18,
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     item.title,
                     style: const TextStyle(
-                      fontSize: 15,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: Color(AppColors.textColor),
                     ),
@@ -398,6 +419,7 @@ class AppMenuScreen extends StatelessWidget {
                 ),
                 const Icon(
                   Icons.chevron_right_rounded,
+                  size: 18,
                   color: Color(AppColors.textSecondaryColor),
                 ),
               ],

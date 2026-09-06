@@ -20,7 +20,6 @@ class NavTab {
   final String label;
   final Widget Function() screenBuilder;
   final void Function()? loadController;
-  final void Function()? disposeController;
 
   /// Called when the user taps the already-selected tab (pull-to-refresh style).
   final Future<void> Function()? onRetap;
@@ -31,7 +30,6 @@ class NavTab {
     required this.label,
     required this.screenBuilder,
     this.loadController,
-    this.disposeController,
     this.onRetap,
   });
 }
@@ -62,11 +60,10 @@ final List<NavTab> kNavTabs = [
   NavTab(
     icon: Icons.grass_outlined,
     activeIcon: Icons.grass,
-    label: 'Turves',
+    label: 'Turfs',
     screenBuilder: () => const TurfListScreen(),
     loadController: () =>
         _ensure<TurfListController>(() => TurfListController()),
-    disposeController: () => _dispose<TurfListController>(),
     onRetap: () => _invalidate(QueryKeys.turfSearchPrefix),
   ),
   NavTab(
@@ -83,7 +80,6 @@ final List<NavTab> kNavTabs = [
     label: 'Match Up',
     screenBuilder: () => const MatchUpScreen(),
     loadController: () => _ensure<MatchUpController>(() => MatchUpController()),
-    disposeController: () => _dispose<MatchUpController>(),
     onRetap: () async {
       await Future.wait([
         _invalidate(QueryKeys.myMemberships),
@@ -98,7 +94,6 @@ final List<NavTab> kNavTabs = [
     label: 'Rank',
     screenBuilder: () => const RankScreen(),
     loadController: () => _ensure<RankController>(() => RankController()),
-    disposeController: () => _dispose<RankController>(),
     onRetap: () async {
       await Future.wait([
         _invalidate(QueryKeys.playerLeaderboardPrefix),
@@ -114,11 +109,5 @@ void _ensure<T extends GetxController>(
 }) {
   if (!Get.isRegistered<T>()) {
     Get.put<T>(factory(), permanent: permanent);
-  }
-}
-
-void _dispose<T extends GetxController>() {
-  if (Get.isRegistered<T>()) {
-    Get.delete<T>();
   }
 }

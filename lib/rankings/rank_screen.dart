@@ -3,6 +3,8 @@ import 'package:flutter_application_1/components/shared/user_avatar_app_bar_acti
 import 'package:get/get.dart';
 
 import '../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
+import '../core/components/scroll/floating_sliver_app_bar.dart';
+import '../core/components/scroll/pinned_sliver_header.dart';
 import '../core/config/constants.dart';
 import 'rank_controller.dart';
 import 'widgets/player_ranking_list.dart';
@@ -56,11 +58,6 @@ class _RankScreenState extends State<RankScreen>
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        leading: const UserAvatarAppBarAction(),
-        title: const Text('Rank'),
-      ),
       body: Obx(() {
         final currentIndex = _tabs.indexOf(rankController.selectedTab.value);
         final safeIndex = currentIndex < 0 ? 0 : currentIndex;
@@ -71,51 +68,64 @@ class _RankScreenState extends State<RankScreen>
         final sport = rankController.selectedSport.value;
         final playerSport = rankController.playerSport;
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: RankSportFilter(
-                      value: sport,
-                      onChanged: rankController.switchSport,
-                      sheetTitle: 'Show rankings for',
+        return NestedScrollView(
+          floatHeaderSlivers: true,
+          headerSliverBuilder: (context, innerBoxIsScrolled) {
+            return [
+              const FloatingSliverAppBar(
+                leading: UserAvatarAppBarAction(),
+                title: Text('Rank'),
+              ),
+              PinnedSliverHeader(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: RankSportFilter(
+                        value: sport,
+                        onChanged: rankController.switchSport,
+                        sheetTitle: 'Show rankings for',
+                      ),
                     ),
-                  ),
-                ],
+                    Container(
+                      margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                      child: AppSegmentedTabs(
+                        controller: _tabController,
+                        onTap: (index) =>
+                            rankController.switchTab(_tabs[index]),
+                        padding: EdgeInsets.zero,
+                        items: const [
+                          AppTabItem(
+                            label: 'Teams',
+                            icon: Icons.groups_outlined,
+                          ),
+                          AppTabItem(
+                            label: 'Players',
+                            icon: Icons.person_outline,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            Container(
-              margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: AppSegmentedTabs(
-                controller: _tabController,
-                onTap: (index) => rankController.switchTab(_tabs[index]),
-                padding: EdgeInsets.zero,
-                items: const [
-                  AppTabItem(label: 'Teams', icon: Icons.groups_outlined),
-                  AppTabItem(label: 'Players', icon: Icons.person_outline),
-                ],
+            ];
+          },
+          body: AppSegmentedTabView(
+            controller: _tabController,
+            children: [
+              TeamsRankingList(
+                key: ValueKey('teams-${sport.name}'),
+                sport: sport,
               ),
-            ),
-            Expanded(
-              child: AppSegmentedTabView(
-                controller: _tabController,
-                children: [
-                  TeamsRankingList(
-                    key: ValueKey('teams-${sport.name}'),
-                    sport: sport,
-                  ),
-                  PlayerRankingList(
-                    key: ValueKey('players-${playerSport.name}'),
-                    sport: playerSport,
-                  ),
-                ],
+              PlayerRankingList(
+                key: ValueKey('players-${playerSport.name}'),
+                sport: playerSport,
               ),
-            ),
-          ],
+            ],
+          ),
         );
       }),
     );

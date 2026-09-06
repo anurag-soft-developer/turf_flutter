@@ -8,6 +8,8 @@ import '../../components/match_history/match_card.dart';
 import '../../components/match_history/match_history_placeholders.dart';
 import '../../components/match_up/my_team_selector.dart';
 import '../../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
+import '../../core/components/scroll/floating_sliver_app_bar.dart';
+import '../../core/components/scroll/pinned_sliver_header.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/paginated_response.dart';
 import '../../core/query/query_keys.dart';
@@ -84,7 +86,6 @@ class MatchChallengesScreen extends HookWidget {
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(title: const Text('Challenges')),
       body: _buildBody(
         c: c,
         membershipsQuery: membershipsQuery,
@@ -100,63 +101,98 @@ class MatchChallengesScreen extends HookWidget {
   }) {
     if (membershipsQuery.isLoading ||
         (membershipsQuery.isFetching && membershipsQuery.data == null)) {
-      return const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(
-            Color(AppColors.primaryColor),
+      return CustomScrollView(
+        slivers: [
+          const FloatingSliverAppBar(title: Text('Challenges')),
+          const SliverFillRemaining(
+            hasScrollBody: false,
+            child: Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  Color(AppColors.primaryColor),
+                ),
+              ),
+            ),
           ),
-        ),
+        ],
       );
     }
 
     if (membershipsQuery.isError && membershipsQuery.data == null) {
-      return Center(
-        child: ElevatedButton(
-          onPressed: () => membershipsQuery.refetch(),
-          child: const Text('Retry'),
-        ),
+      return CustomScrollView(
+        slivers: [
+          const FloatingSliverAppBar(title: Text('Challenges')),
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: Center(
+              child: ElevatedButton(
+                onPressed: () => membershipsQuery.refetch(),
+                child: const Text('Retry'),
+              ),
+            ),
+          ),
+        ],
       );
     }
 
     return Obx(() {
       if (c.myTeams.isEmpty) {
-        return const _NoMembershipsMessage();
+        return CustomScrollView(
+          slivers: [
+            const FloatingSliverAppBar(title: Text('Challenges')),
+            const SliverFillRemaining(
+              hasScrollBody: false,
+              child: _NoMembershipsMessage(),
+            ),
+          ],
+        );
       }
 
       final filterKey = c.teamFilterKey;
 
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Row(
-              children: [
-                Expanded(
-                  child: MyTeamSelector(
-                    teams: c.myTeams,
-                    allowToSelectAll: true,
-                    allTeamsSelected: c.filterAllTeams.value,
-                    selectedTeam: c.selectedMembershipTeam.value,
-                    sheetTitle: 'Show challenges for',
-                    onTeamSelected: c.selectTeamForFilter,
-                    onAllTeamsSelected: c.selectAllTeamsFilter,
+      return NestedScrollView(
+        floatHeaderSlivers: true,
+        headerSliverBuilder: (context, innerBoxIsScrolled) {
+          return [
+            const FloatingSliverAppBar(title: Text('Challenges')),
+            PinnedSliverHeader(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: MyTeamSelector(
+                            teams: c.myTeams,
+                            allowToSelectAll: true,
+                            allTeamsSelected: c.filterAllTeams.value,
+                            selectedTeam: c.selectedMembershipTeam.value,
+                            sheetTitle: 'Show challenges for',
+                            onTeamSelected: c.selectTeamForFilter,
+                            onAllTeamsSelected: c.selectAllTeamsFilter,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                  Container(
+                    margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                    child: AppSegmentedTabs(
+                      controller: tabController,
+                      onTap: c.switchTab,
+                      padding: EdgeInsets.zero,
+                      items: _tabs,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          Container(
-            margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: AppSegmentedTabs(
-              controller: tabController,
-              onTap: c.switchTab,
-              padding: EdgeInsets.zero,
-              items: _tabs,
-            ),
-          ),
-          Expanded(
-            child: AppSegmentedTabView(
+          ];
+        },
+        body: AppSegmentedTabView(
               controller: tabController,
               children: [
                 _ChallengesQueryPane(
@@ -217,10 +253,8 @@ class MatchChallengesScreen extends HookWidget {
                 ),
               ],
             ),
-          ),
-        ],
-      );
-    });
+          );
+        });
   }
 }
 

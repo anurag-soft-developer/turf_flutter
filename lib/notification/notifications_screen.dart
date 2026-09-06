@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/core/components/scroll/floating_sliver_app_bar.dart';
 import 'package:flutter_application_1/core/config/constants.dart';
 import 'package:flutter_application_1/core/models/paginated_response.dart';
 import 'package:flutter_application_1/core/query/query_keys.dart';
@@ -59,42 +60,6 @@ class NotificationsScreen extends HookWidget {
             },
             child: Scaffold(
               backgroundColor: const Color(AppColors.backgroundColor),
-              appBar: AppBar(
-                title: Text(
-                  selecting
-                      ? '${selectedIds.length} selected'
-                      : 'Notifications',
-                ),
-                backgroundColor: _primary,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                leading: selecting
-                    ? IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: controller.exitSelection,
-                      )
-                    : null,
-                actions: [
-                  if (selecting && items.isNotEmpty)
-                    IconButton(
-                      tooltip: allSelected ? 'Deselect all' : 'Select all',
-                      onPressed: () => controller.toggleSelectAll(items),
-                      icon: Icon(
-                        allSelected
-                            ? Icons.check_box
-                            : Icons.check_box_outline_blank,
-                      ),
-                    )
-                  else if (items.any((e) => !e.isRead))
-                    TextButton(
-                      onPressed: controller.markAllRead,
-                      child: const Text(
-                        'Mark all read',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
-                ],
-              ),
               floatingActionButtonLocation:
                   FloatingActionButtonLocation.centerFloat,
               floatingActionButton: selecting &&
@@ -116,16 +81,73 @@ class NotificationsScreen extends HookWidget {
                       ),
                     )
                   : null,
-              body: _NotificationsBody(
-                query: query,
-                items: items,
-                isSelecting: selecting,
-                selectedIds: selectedIds,
+              body: RefreshIndicator(
+                edgeOffset: floatingRefreshEdgeOffset(context),
+                color: _primary,
                 onRefresh: () => query.refetch(),
-                onTap: controller.onTap,
-                onLongPress: controller.onLongPress,
-                onConfirmDismiss: (n) => _confirmDeleteOne(context, n),
-                onDismissed: (n) => controller.deleteIds({n.id}, items),
+                child: NotificationListener<ScrollNotification>(
+                  onNotification: (notification) {
+                    if (notification.metrics.pixels >=
+                        notification.metrics.maxScrollExtent - 240) {
+                      if (query.hasNextPage && !query.isFetchingNextPage) {
+                        query.fetchNextPage();
+                      }
+                    }
+                    return false;
+                  },
+                  child: CustomScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      FloatingSliverAppBar(
+                        title: Text(
+                          selecting
+                              ? '${selectedIds.length} selected'
+                              : 'Notifications',
+                        ),
+                        leading: selecting
+                            ? IconButton(
+                                icon: const Icon(Icons.close),
+                                onPressed: controller.exitSelection,
+                              )
+                            : null,
+                        actions: [
+                          if (selecting && items.isNotEmpty)
+                            IconButton(
+                              tooltip:
+                                  allSelected ? 'Deselect all' : 'Select all',
+                              onPressed: () =>
+                                  controller.toggleSelectAll(items),
+                              icon: Icon(
+                                allSelected
+                                    ? Icons.check_box
+                                    : Icons.check_box_outline_blank,
+                              ),
+                            )
+                          else if (items.any((e) => !e.isRead))
+                            TextButton(
+                              onPressed: controller.markAllRead,
+                              child: const Text(
+                                'Mark all read',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                        ],
+                      ),
+                      _NotificationsBody(
+                        query: query,
+                        items: items,
+                        isSelecting: selecting,
+                        selectedIds: selectedIds,
+                        onTap: controller.onTap,
+                        onLongPress: controller.onLongPress,
+                        onConfirmDismiss: (n) =>
+                            _confirmDeleteOne(context, n),
+                        onDismissed: (n) =>
+                            controller.deleteIds({n.id}, items),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           );
@@ -205,7 +227,6 @@ class _NotificationsBody extends StatelessWidget {
     required this.items,
     required this.isSelecting,
     required this.selectedIds,
-    required this.onRefresh,
     required this.onTap,
     required this.onLongPress,
     required this.onConfirmDismiss,
@@ -217,7 +238,6 @@ class _NotificationsBody extends StatelessWidget {
   final List<AppNotification> items;
   final bool isSelecting;
   final Set<String> selectedIds;
-  final Future<void> Function() onRefresh;
   final Future<void> Function(AppNotification n) onTap;
   final void Function(AppNotification n) onLongPress;
   final Future<bool> Function(AppNotification n) onConfirmDismiss;
@@ -229,60 +249,65 @@ class _NotificationsBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (query.isLoading || (query.isFetching && items.isEmpty)) {
-      return const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(_primary),
+      return const SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(_primary),
+          ),
         ),
       );
     }
 
     if (query.isError && items.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: _textSecondary),
-              const SizedBox(height: 16),
-              Text(
-                'Could not load notifications',
-                style: Theme.of(context).textTheme.titleMedium,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '${query.error}',
-                style: const TextStyle(color: _textSecondary, fontSize: 13),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              FilledButton(
-                onPressed: () => query.refetch(),
-                child: const Text('Retry'),
-              ),
-            ],
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 48, color: _textSecondary),
+                const SizedBox(height: 16),
+                Text(
+                  'Could not load notifications',
+                  style: Theme.of(context).textTheme.titleMedium,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${query.error}',
+                  style: const TextStyle(color: _textSecondary, fontSize: 13),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                FilledButton(
+                  onPressed: () => query.refetch(),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
           ),
         ),
       );
     }
 
     if (items.isEmpty) {
-      return RefreshIndicator(
-        color: _primary,
-        onRefresh: onRefresh,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          children: const [
-            SizedBox(height: 120),
-            Icon(
-              Icons.notifications_none_rounded,
-              size: 64,
-              color: _textSecondary,
-            ),
-            SizedBox(height: 16),
-            Center(
-              child: Text(
+      return const SliverFillRemaining(
+        hasScrollBody: false,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.notifications_none_rounded,
+                size: 64,
+                color: _textSecondary,
+              ),
+              SizedBox(height: 16),
+              Text(
                 'No notifications yet',
                 style: TextStyle(
                   fontSize: 16,
@@ -290,46 +315,28 @@ class _NotificationsBody extends StatelessWidget {
                   color: Color(AppColors.textColor),
                 ),
               ),
-            ),
-            SizedBox(height: 8),
-            Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 32),
-                child: Text(
-                  'When something needs your attention, it will show up here.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: _textSecondary, fontSize: 14),
-                ),
+              SizedBox(height: 8),
+              Text(
+                'When something needs your attention, it will show up here.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: _textSecondary, fontSize: 14),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       );
     }
 
-    return RefreshIndicator(
-      color: _primary,
-      onRefresh: onRefresh,
-      child: NotificationListener<ScrollNotification>(
-        onNotification: (notification) {
-          if (notification.metrics.pixels >=
-              notification.metrics.maxScrollExtent - 240) {
-            if (query.hasNextPage && !query.isFetchingNextPage) {
-              query.fetchNextPage();
-            }
-          }
-          return false;
-        },
-        child: ListView.builder(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(
-            0,
-            8,
-            0,
-            isSelecting && selectedIds.isNotEmpty ? 88 : 8,
-          ),
-          itemCount: items.length + (query.isFetchingNextPage ? 1 : 0),
-          itemBuilder: (context, index) {
+    return SliverPadding(
+      padding: EdgeInsets.fromLTRB(
+        0,
+        8,
+        0,
+        isSelecting && selectedIds.isNotEmpty ? 88 : 8,
+      ),
+      sliver: SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
             if (index >= items.length) {
               return const Padding(
                 padding: EdgeInsets.all(16),
@@ -443,6 +450,7 @@ class _NotificationsBody extends StatelessWidget {
               ),
             );
           },
+          childCount: items.length + (query.isFetchingNextPage ? 1 : 0),
         ),
       ),
     );

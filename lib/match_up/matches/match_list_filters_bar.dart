@@ -13,8 +13,6 @@ class MatchListFiltersBar extends StatelessWidget {
   final MatchListFilters filters;
   final ValueChanged<MatchListFilters> onChanged;
 
-  static const _filterWidth = 160.0;
-
   Future<void> _openTypeMenu(BuildContext context) async {
     final selected = await _showMenu<MatchTypeFilter>(
       context,
@@ -79,14 +77,12 @@ class MatchListFiltersBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          SizedBox(
-            width: _filterWidth,
-            child: Builder(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            Builder(
               builder: (fieldContext) => _CompactFilterField(
                 fieldLabel: 'Type',
                 icon: Icons.groups_outlined,
@@ -96,10 +92,8 @@ class MatchListFiltersBar extends StatelessWidget {
                 onClear: () => onChanged(filters.withTypeAll()),
               ),
             ),
-          ),
-          SizedBox(
-            width: _filterWidth,
-            child: Builder(
+            const SizedBox(width: 6),
+            Builder(
               builder: (fieldContext) => _CompactFilterField(
                 fieldLabel: 'Status',
                 icon: Icons.sports_score_outlined,
@@ -109,8 +103,8 @@ class MatchListFiltersBar extends StatelessWidget {
                 onClear: () => onChanged(filters.withStatusAll()),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -133,94 +127,66 @@ class _CompactFilterField extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback? onClear;
 
-  static const _height = 40.0;
+  static const _height = 28.0;
+  static const _selectedBg = Color(0xFFE0E7FF);
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 2, bottom: 4),
-          child: Text(
-            fieldLabel,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: Color(AppColors.textSecondaryColor),
+    final primary = const Color(AppColors.primaryColor);
+    final muted = const Color(AppColors.textSecondaryColor);
+    final display = hasSelection ? label : fieldLabel;
+
+    return Material(
+      color: hasSelection ? _selectedBg : Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          height: _height,
+          padding: const EdgeInsets.only(left: 8, right: 4),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: hasSelection
+                  ? primary
+                  : Colors.white.withValues(alpha: 0.35),
             ),
           ),
-        ),
-        SizedBox(
-          height: _height,
-          child: Material(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            child: InkWell(
-              onTap: onTap,
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: const Color(
-                      AppColors.dividerColor,
-                    ).withValues(alpha: 0.8),
-                  ),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                child: Row(
-                  children: [
-                    Icon(
-                      icon,
-                      size: 18,
-                      color: const Color(AppColors.textSecondaryColor),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 13,
-                          height: 1.2,
-                          color: Color(
-                            hasSelection
-                                ? AppColors.textColor
-                                : AppColors.textSecondaryColor,
-                          ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(
-                      width: 32,
-                      height: 32,
-                      child: hasSelection && onClear != null
-                          ? IconButton(
-                              icon: const Icon(Icons.close, size: 16),
-                              color: const Color(AppColors.textSecondaryColor),
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(
-                                minWidth: 32,
-                                minHeight: 32,
-                              ),
-                              onPressed: onClear,
-                            )
-                          : const Icon(
-                              Icons.keyboard_arrow_down_rounded,
-                              size: 20,
-                              color: Color(AppColors.textSecondaryColor),
-                            ),
-                    ),
-                  ],
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 13, color: hasSelection ? primary : muted),
+              const SizedBox(width: 4),
+              Text(
+                display,
+                style: TextStyle(
+                  fontSize: 12,
+                  height: 1.1,
+                  fontWeight: hasSelection ? FontWeight.w600 : FontWeight.w500,
+                  color: hasSelection ? primary : muted,
                 ),
               ),
-            ),
+              const SizedBox(width: 2),
+              if (hasSelection && onClear != null)
+                InkWell(
+                  onTap: onClear,
+                  borderRadius: BorderRadius.circular(10),
+                  child: Padding(
+                    padding: const EdgeInsets.all(2),
+                    child: Icon(Icons.close, size: 12, color: muted),
+                  ),
+                )
+              else
+                Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: 14,
+                  color: muted,
+                ),
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
 }

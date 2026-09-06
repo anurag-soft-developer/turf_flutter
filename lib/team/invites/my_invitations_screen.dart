@@ -5,6 +5,8 @@ import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
 import '../../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
+import '../../core/components/scroll/floating_sliver_app_bar.dart';
+import '../../core/components/scroll/pinned_sliver_header.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/paginated_response.dart';
 import '../../core/query/query_keys.dart';
@@ -51,38 +53,39 @@ class MyInvitationsScreen extends HookWidget {
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(
-        title: const Text('Invitations'),
-      ),
-      body: Column(
-        children: [
-          AppSegmentedTabs(
-            controller: tabController,
-            fillWidth: true,
-            onTap: (index) {
-              selectedTab.value = _tabs[index];
-              tabController.animateTo(index);
-            },
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            items: const [
-              AppTabItem(
-                label: 'Pending',
-                icon: Icons.hourglass_top_outlined,
+      body: NestedScrollView(
+        floatHeaderSlivers: true,
+        headerSliverBuilder: (context, innerBoxIsScrolled) {
+          return [
+            const FloatingSliverAppBar(title: Text('Invitations')),
+            PinnedSliverHeader(
+              child: AppSegmentedTabs(
+                controller: tabController,
+                fillWidth: true,
+                onTap: (index) {
+                  selectedTab.value = _tabs[index];
+                  tabController.animateTo(index);
+                },
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                items: const [
+                  AppTabItem(
+                    label: 'Pending',
+                    icon: Icons.hourglass_top_outlined,
+                  ),
+                  AppTabItem(label: 'Joined', icon: Icons.check_circle_outline),
+                  AppTabItem(label: 'Declined', icon: Icons.cancel_outlined),
+                ],
               ),
-              AppTabItem(label: 'Joined', icon: Icons.check_circle_outline),
-              AppTabItem(label: 'Declined', icon: Icons.cancel_outlined),
-            ],
-          ),
-          Expanded(
-            child: AppSegmentedTabView(
-              controller: tabController,
-              children: [
-                for (final tab in _tabs)
-                  _InvitationTabList(key: ValueKey(tab.name), tab: tab),
-              ],
             ),
-          ),
-        ],
+          ];
+        },
+        body: AppSegmentedTabView(
+          controller: tabController,
+          children: [
+            for (final tab in _tabs)
+              _InvitationTabList(key: ValueKey(tab.name), tab: tab),
+          ],
+        ),
       ),
     );
   }

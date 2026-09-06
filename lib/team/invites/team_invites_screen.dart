@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import '../../components/shared/confirm_phone_dialog.dart';
 import '../../core/auth/auth_state_controller.dart';
+import '../../core/components/scroll/floating_sliver_app_bar.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/paginated_response.dart';
 import '../../core/query/query_keys.dart';
@@ -64,11 +65,6 @@ class TeamInvitesScreen extends HookWidget {
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(
-        title: Text(
-          team?.name != null ? 'Invites · ${team!.name}' : 'Invites',
-        ),
-      ),
       floatingActionButton: accessDenied
           ? null
           : FloatingActionButton.extended(
@@ -77,13 +73,28 @@ class TeamInvitesScreen extends HookWidget {
               icon: const Icon(Icons.person_add_alt_1_rounded),
               label: const Text('Invite'),
             ),
-      body: _buildBody(
-        context: context,
-        c: c,
-        hasTeamId: hasTeamId,
-        accessDenied: accessDenied,
-        teamQuery: teamQuery,
-        invitesQuery: invitesQuery,
+      body: RefreshIndicator(
+        edgeOffset: floatingRefreshEdgeOffset(context),
+        onRefresh: () => invitesQuery.refetch(),
+        color: const Color(AppColors.primaryColor),
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            FloatingSliverAppBar(
+              title: Text(
+                team?.name != null ? 'Invites · ${team!.name}' : 'Invites',
+              ),
+            ),
+            ..._bodySlivers(
+              context: context,
+              c: c,
+              hasTeamId: hasTeamId,
+              accessDenied: accessDenied,
+              teamQuery: teamQuery,
+              invitesQuery: invitesQuery,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -204,7 +215,7 @@ class TeamInvitesScreen extends HookWidget {
     }
   }
 
-  Widget _buildBody({
+  List<Widget> _bodySlivers({
     required BuildContext context,
     required TeamInvitesController c,
     required bool hasTeamId,
@@ -214,49 +225,64 @@ class TeamInvitesScreen extends HookWidget {
         invitesQuery,
   }) {
     if (!hasTeamId || accessDenied) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text(
-            'You do not have access to manage invites for this team.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Color(AppColors.textSecondaryColor),
-              fontSize: 15,
+      return [
+        const SliverFillRemaining(
+          hasScrollBody: false,
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(
+              child: Text(
+                'You do not have access to manage invites for this team.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Color(AppColors.textSecondaryColor),
+                  fontSize: 15,
+                ),
+              ),
             ),
           ),
         ),
-      );
+      ];
     }
 
     if (teamQuery.isLoading ||
         (invitesQuery.isLoading && invitesQuery.data == null)) {
-      return const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(
-            Color(AppColors.primaryColor),
+      return [
+        const SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(
+                Color(AppColors.primaryColor),
+              ),
+            ),
           ),
         ),
-      );
+      ];
     }
 
     if (invitesQuery.isError && invitesQuery.data == null) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Failed to load invites',
-              style: TextStyle(color: Color(AppColors.textSecondaryColor)),
+      return [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Failed to load invites',
+                  style: TextStyle(color: Color(AppColors.textSecondaryColor)),
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton(
+                  onPressed: () => invitesQuery.refetch(),
+                  child: const Text('Retry'),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: () => invitesQuery.refetch(),
-              child: const Text('Retry'),
-            ),
-          ],
+          ),
         ),
-      );
+      ];
     }
 
     final items = List<TeamInviteModel>.from(invitesQuery.data?.data ?? [])
@@ -275,42 +301,39 @@ class TeamInvitesScreen extends HookWidget {
       });
 
     if (items.isEmpty) {
-      return RefreshIndicator(
-        onRefresh: () => invitesQuery.refetch(),
-        color: const Color(AppColors.primaryColor),
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          children: const [
-            SizedBox(height: 120),
-            Center(
-              child: Text(
-                'No invites yet.\nTap Invite to send one by email or phone.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Color(AppColors.textSecondaryColor),
-                  fontSize: 15,
-                ),
+      return [
+        const SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
+            child: Text(
+              'No invites yet.\nTap Invite to send one by email or phone.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Color(AppColors.textSecondaryColor),
+                fontSize: 15,
               ),
             ),
-          ],
+          ),
         ),
-      );
+      ];
     }
 
-    return RefreshIndicator(
-      onRefresh: () => invitesQuery.refetch(),
-      color: const Color(AppColors.primaryColor),
-      child: ListView.separated(
-        physics: const AlwaysScrollableScrollPhysics(),
+    return [
+      SliverPadding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
-        itemCount: items.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 10),
-        itemBuilder: (context, index) {
-          final invite = items[index];
-          return _InviteRow(invite: invite, controller: c);
-        },
+        sliver: SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              return Padding(
+                padding: EdgeInsets.only(top: index == 0 ? 0 : 10),
+                child: _InviteRow(invite: items[index], controller: c),
+              );
+            },
+            childCount: items.length,
+          ),
+        ),
       ),
-    );
+    ];
   }
 }
 

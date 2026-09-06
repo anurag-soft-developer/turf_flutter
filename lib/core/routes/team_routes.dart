@@ -11,6 +11,7 @@ import 'package:flutter_application_1/team/management/team_join_requests_screen.
 import 'package:flutter_application_1/team/management/team_roster_manage_screen.dart';
 import 'package:flutter_application_1/team/members/player_profile_screen.dart';
 import 'package:flutter_application_1/team/my_teams/my_teams_screen.dart';
+import 'package:flutter_application_1/team/my_teams/my_teams_search_screen.dart';
 import 'package:flutter_application_1/team/openings/team_openings_screen.dart';
 import 'package:get/get.dart';
 
@@ -19,6 +20,12 @@ final List<GetPage<dynamic>> teamRoutes = [
     name: AppConstants.routes.myTeams,
     page: () => const MyTeamsScreen(),
     binding: MyTeamsBinding(),
+    transition: Transition.cupertino,
+    middlewares: [AuthGuard()],
+  ),
+  GetPage(
+    name: AppConstants.routes.myTeamsSearch,
+    page: () => const MyTeamsSearchScreen(),
     transition: Transition.cupertino,
     middlewares: [AuthGuard()],
   ),

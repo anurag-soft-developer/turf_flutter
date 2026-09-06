@@ -17,7 +17,7 @@ class PlayerDashboardModel {
     final rawTurfs = json['turfs'] as List<dynamic>? ?? const [];
     final rawTitle = (json['turfsTitle'] as String?)?.trim();
     return PlayerDashboardModel(
-      turfsTitle: _normalizeTurvesTitle(
+      turfsTitle: _normalizeTurfsTitle(
         rawTitle == null || rawTitle.isEmpty ? null : rawTitle,
       ),
       turfs: rawTurfs
@@ -30,13 +30,13 @@ class PlayerDashboardModel {
     );
   }
 
-  static String _normalizeTurvesTitle(String? title) {
-    if (title == null || title.isEmpty) return 'Featured turves';
-    return title.replaceAll(RegExp(r'\bturfs\b', caseSensitive: false), 'turves');
+  static String _normalizeTurfsTitle(String? title) {
+    if (title == null || title.isEmpty) return 'Featured turfs';
+    return title.replaceAll(RegExp(r'\bturves\b', caseSensitive: false), 'turfs');
   }
 
   static const empty = PlayerDashboardModel(
-    turfsTitle: 'Featured turves',
+    turfsTitle: 'Featured turfs',
     turfs: [],
     nearbyTeamsCount: 0,
     unreadNotificationCount: 0,

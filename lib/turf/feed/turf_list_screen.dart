@@ -6,6 +6,8 @@ import 'package:get/get.dart';
 
 import '../../components/turf/search_components.dart';
 import '../../components/turf/turf_cards.dart';
+import '../../core/components/scroll/floating_sliver_app_bar.dart';
+import '../../core/components/scroll/pinned_sliver_header.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/paginated_response.dart';
 import '../../core/query/query_keys.dart';
@@ -24,61 +26,34 @@ class TurfListScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        leading: const UserAvatarAppBarAction(),
-        title: const Text(
-          'Find Turfs',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: const Color(AppColors.primaryColor),
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            tooltip: 'Search',
-            icon: const Icon(Icons.search),
-            onPressed: () => Get.toNamed(AppConstants.routes.turfSearch),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          TurfSearchSection(controller: controller),
-          Expanded(
-            child: Obx(() {
-              final settings = Get.find<SettingsController>();
-              final city = settings.selectedCityLocation.value;
-              final queryKey = QueryKeys.turfSearch(
-                search: '',
-                sportTypes: controller.selectedSportTypes.toList(),
-                amenities: controller.selectedAmenities.toList(),
-                city: city == null
-                    ? ''
-                    : '${city.latitude},${city.longitude}',
-                minPrice: controller.minPrice.value,
-                maxPrice: controller.maxPrice.value,
-                minRating: controller.selectedRating.value,
-                sortBy: controller.sortBy.value,
-              );
-              // Touch revision so Obx rebuilds when filters bump without list change.
-              controller.filterRevision.value;
+      body: Obx(() {
+        final settings = Get.find<SettingsController>();
+        final city = settings.selectedCityLocation.value;
+        final queryKey = QueryKeys.turfSearch(
+          search: '',
+          sportTypes: controller.selectedSportTypes.toList(),
+          amenities: controller.selectedAmenities.toList(),
+          city: city == null ? '' : '${city.latitude},${city.longitude}',
+          minPrice: controller.minPrice.value,
+          maxPrice: controller.maxPrice.value,
+          minRating: controller.selectedRating.value,
+          sortBy: controller.sortBy.value,
+        );
+        // Touch revision so Obx rebuilds when filters bump without list change.
+        controller.filterRevision.value;
 
-              return _TurfListQueryBody(
-                key: ValueKey(queryKey.join('|')),
-                queryKey: queryKey,
-                controller: controller,
-              );
-            }),
-          ),
-        ],
-      ),
+        return _TurfListScroll(
+          key: ValueKey(queryKey.join('|')),
+          queryKey: queryKey,
+          controller: controller,
+        );
+      }),
     );
   }
 }
 
-class _TurfListQueryBody extends HookWidget {
-  const _TurfListQueryBody({
+class _TurfListScroll extends HookWidget {
+  const _TurfListScroll({
     super.key,
     required this.queryKey,
     required this.controller,
@@ -91,7 +66,8 @@ class _TurfListQueryBody extends HookWidget {
   Widget build(BuildContext context) {
     final turfService = TurfService();
 
-    final turfsQuery = useInfiniteQuery<PaginatedResponse<TurfModel>, Object, int>(
+    final turfsQuery =
+        useInfiniteQuery<PaginatedResponse<TurfModel>, Object, int>(
       queryKey,
       (ctx) async {
         final response = await turfService.searchTurfs(
@@ -131,94 +107,119 @@ class _TurfListQueryBody extends HookWidget {
         const <TurfModel>[];
 
     return RefreshIndicator(
+      edgeOffset: floatingRefreshEdgeOffset(context),
+      color: const Color(AppColors.primaryColor),
       onRefresh: () => turfsQuery.refetch(),
-      child: _buildList(turfsQuery, turfs),
+      child: NotificationListener<ScrollNotification>(
+        onNotification: (notification) {
+          if (notification.metrics.pixels >=
+              notification.metrics.maxScrollExtent - 200) {
+            if (turfsQuery.hasNextPage && !turfsQuery.isFetchingNextPage) {
+              turfsQuery.fetchNextPage();
+            }
+          }
+          return false;
+        },
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            FloatingSliverAppBar(
+              leading: const UserAvatarAppBarAction(),
+              title: const Text(
+                'Find Turfs',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              actions: [
+                IconButton(
+                  tooltip: 'Search',
+                  icon: const Icon(Icons.search),
+                  onPressed: () => Get.toNamed(AppConstants.routes.turfSearch),
+                ),
+              ],
+            ),
+            PinnedSliverHeader(
+              backgroundColor: const Color(AppColors.primaryColor),
+              child: TurfSearchSection(controller: controller),
+            ),
+            ..._feedSlivers(turfsQuery, turfs),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildList(
+  List<Widget> _feedSlivers(
     InfiniteQueryResult<PaginatedResponse<TurfModel>, Object, int> query,
     List<TurfModel> turfs,
   ) {
     if (turfs.isEmpty &&
         (query.isLoading || (query.isFetching && query.data == null))) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: const [
-          SizedBox(height: 120),
-          Center(
+      return [
+        const SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
             child: CircularProgressIndicator(
               valueColor: AlwaysStoppedAnimation<Color>(
                 Color(AppColors.primaryColor),
               ),
             ),
           ),
-        ],
-      );
+        ),
+      ];
     }
 
     if (query.isError && turfs.isEmpty) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: [
-          const SizedBox(height: 120),
-          Center(
+      return [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
             child: ElevatedButton(
               onPressed: () => query.refetch(),
               child: const Text('Retry'),
             ),
           ),
-        ],
-      );
+        ),
+      ];
     }
 
     if (turfs.isEmpty) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: [
-          SizedBox(
-            height: 320,
-            child: EmptyTurfsView(onClearFilters: controller.clearFilters),
-          ),
-        ],
-      );
+      return [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: EmptyTurfsView(onClearFilters: controller.clearFilters),
+        ),
+      ];
     }
 
-    return NotificationListener<ScrollNotification>(
-      onNotification: (notification) {
-        if (notification.metrics.pixels >=
-            notification.metrics.maxScrollExtent - 200) {
-          if (query.hasNextPage && !query.isFetchingNextPage) {
-            query.fetchNextPage();
-          }
-        }
-        return false;
-      },
-      child: ListView.builder(
-        physics: const AlwaysScrollableScrollPhysics(),
+    return [
+      SliverPadding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        itemCount: turfs.length + (query.isFetchingNextPage ? 1 : 0),
-        itemBuilder: (context, index) {
-          if (index == turfs.length) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    Color(AppColors.primaryColor),
+        sliver: SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              if (index == turfs.length) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Color(AppColors.primaryColor),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            );
-          }
+                );
+              }
 
-          final turf = turfs[index];
-          return TurfListCard(
-            turf: turf,
-            onTap: () => controller.navigateToTurfDetail(turf),
-          );
-        },
+              final turf = turfs[index];
+              return TurfListCard(
+                turf: turf,
+                onTap: () => controller.navigateToTurfDetail(turf),
+              );
+            },
+            childCount: turfs.length + (query.isFetchingNextPage ? 1 : 0),
+          ),
+        ),
       ),
-    );
+    ];
   }
 }

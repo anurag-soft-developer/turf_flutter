@@ -5,6 +5,7 @@ import 'package:flutter_application_1/chat/chat_inbox_controller.dart';
 import 'package:flutter_application_1/chat/chat_service.dart';
 import 'package:flutter_application_1/chat/model/chat_models.dart';
 import 'package:flutter_application_1/chat/model/chat_scope.dart';
+import 'package:flutter_application_1/core/components/scroll/floating_sliver_app_bar.dart';
 import 'package:flutter_application_1/core/config/constants.dart';
 import 'package:flutter_application_1/core/models/paginated_response.dart';
 import 'package:flutter_application_1/core/query/query_keys.dart';
@@ -58,35 +59,39 @@ class ChatInboxScreen extends HookWidget {
           final allSelected = controller.allSelected(items);
           final hiding = controller.isHiding.value;
 
-          Widget body;
+          Widget bodySliver;
           if (query.isLoading && items.isEmpty) {
-            body = const Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(_primary),
+            bodySliver = const SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(_primary),
+                ),
               ),
             );
           } else if (query.isError && items.isEmpty) {
-            body = Center(
-              child: TextButton(
-                onPressed: () => query.refetch(),
-                child: const Text('Could not load messages. Retry'),
+            bodySliver = SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(
+                child: TextButton(
+                  onPressed: () => query.refetch(),
+                  child: const Text('Could not load messages. Retry'),
+                ),
               ),
             );
           } else if (items.isEmpty) {
-            body = ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              children: const [
-                SizedBox(height: 120),
-                Center(
-                  child: Icon(
+            bodySliver = const SliverFillRemaining(
+              hasScrollBody: false,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
                     Icons.chat_bubble_outline_rounded,
                     size: 64,
                     color: _textSecondary,
                   ),
-                ),
-                SizedBox(height: 16),
-                Center(
-                  child: Text(
+                  SizedBox(height: 16),
+                  Text(
                     'No messages yet',
                     style: TextStyle(
                       fontSize: 16,
@@ -94,55 +99,54 @@ class ChatInboxScreen extends HookWidget {
                       color: Color(AppColors.textColor),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             );
           } else {
-            body = NotificationListener<ScrollNotification>(
-              onNotification: (notification) {
-                if (notification.metrics.pixels >=
-                    notification.metrics.maxScrollExtent - 200) {
-                  if (query.hasNextPage && !query.isFetchingNextPage) {
-                    query.fetchNextPage();
-                  }
-                }
-                return false;
-              },
-              child: ListView.separated(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.only(
-                  bottom: selecting && selectedKeys.isNotEmpty ? 88 : 0,
-                ),
-                itemCount: items.length + (query.isFetchingNextPage ? 1 : 0),
-                separatorBuilder: (_, __) => const Divider(height: 1),
-                itemBuilder: (context, index) {
-                  if (index >= items.length) {
-                    return const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Center(child: CircularProgressIndicator()),
+            bodySliver = SliverPadding(
+              padding: EdgeInsets.only(
+                bottom: selecting && selectedKeys.isNotEmpty ? 88 : 0,
+              ),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    if (index >= items.length) {
+                      return const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    }
+                    final item = items[index];
+                    final selected = selectedKeys.contains(item.roomKey);
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Dismissible(
+                          key: ValueKey(item.roomKey),
+                          direction: selecting
+                              ? DismissDirection.none
+                              : DismissDirection.endToStart,
+                          background: const _HideBackground(),
+                          confirmDismiss: (_) => _confirmHide(context, item),
+                          onDismissed: (_) {
+                            unawaited(controller.hideThreads([item]));
+                          },
+                          child: _InboxTile(
+                            item: item,
+                            selected: selected,
+                            isSelecting: selecting,
+                            onTap: () => controller.onTap(item),
+                            onLongPress: () => controller.onLongPress(item),
+                          ),
+                        ),
+                        if (index < items.length - 1)
+                          const Divider(height: 1),
+                      ],
                     );
-                  }
-                  final item = items[index];
-                  final selected = selectedKeys.contains(item.roomKey);
-                  return Dismissible(
-                    key: ValueKey(item.roomKey),
-                    direction: selecting
-                        ? DismissDirection.none
-                        : DismissDirection.endToStart,
-                    background: const _HideBackground(),
-                    confirmDismiss: (_) => _confirmHide(context, item),
-                    onDismissed: (_) {
-                      unawaited(controller.hideThreads([item]));
-                    },
-                    child: _InboxTile(
-                      item: item,
-                      selected: selected,
-                      isSelecting: selecting,
-                      onTap: () => controller.onTap(item),
-                      onLongPress: () => controller.onLongPress(item),
-                    ),
-                  );
-                },
+                  },
+                  childCount:
+                      items.length + (query.isFetchingNextPage ? 1 : 0),
+                ),
               ),
             );
           }
@@ -154,29 +158,6 @@ class ChatInboxScreen extends HookWidget {
             },
             child: Scaffold(
               backgroundColor: const Color(AppColors.backgroundColor),
-              appBar: AppBar(
-                title: Text(
-                  selecting ? '${selectedKeys.length} selected' : 'Messages',
-                ),
-                leading: selecting
-                    ? IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: controller.exitSelection,
-                      )
-                    : null,
-                actions: [
-                  if (selecting && items.isNotEmpty)
-                    IconButton(
-                      tooltip: allSelected ? 'Deselect all' : 'Select all',
-                      onPressed: () => controller.toggleSelectAll(items),
-                      icon: Icon(
-                        allSelected
-                            ? Icons.check_box
-                            : Icons.check_box_outline_blank,
-                      ),
-                    ),
-                ],
-              ),
               floatingActionButtonLocation:
                   FloatingActionButtonLocation.centerFloat,
               floatingActionButton: selecting &&
@@ -199,6 +180,7 @@ class ChatInboxScreen extends HookWidget {
                     )
                   : null,
               body: RefreshIndicator(
+                edgeOffset: floatingRefreshEdgeOffset(context),
                 onRefresh: () async {
                   if (Get.isRegistered<QueryClient>()) {
                     await Get.find<QueryClient>().invalidateQueries(
@@ -208,7 +190,50 @@ class ChatInboxScreen extends HookWidget {
                     await query.refetch();
                   }
                 },
-                child: body,
+                child: NotificationListener<ScrollNotification>(
+                  onNotification: (notification) {
+                    if (notification.metrics.pixels >=
+                        notification.metrics.maxScrollExtent - 200) {
+                      if (query.hasNextPage && !query.isFetchingNextPage) {
+                        query.fetchNextPage();
+                      }
+                    }
+                    return false;
+                  },
+                  child: CustomScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      FloatingSliverAppBar(
+                        title: Text(
+                          selecting
+                              ? '${selectedKeys.length} selected'
+                              : 'Messages',
+                        ),
+                        leading: selecting
+                            ? IconButton(
+                                icon: const Icon(Icons.close),
+                                onPressed: controller.exitSelection,
+                              )
+                            : null,
+                        actions: [
+                          if (selecting && items.isNotEmpty)
+                            IconButton(
+                              tooltip:
+                                  allSelected ? 'Deselect all' : 'Select all',
+                              onPressed: () =>
+                                  controller.toggleSelectAll(items),
+                              icon: Icon(
+                                allSelected
+                                    ? Icons.check_box
+                                    : Icons.check_box_outline_blank,
+                              ),
+                            ),
+                        ],
+                      ),
+                      bodySliver,
+                    ],
+                  ),
+                ),
               ),
             ),
           );

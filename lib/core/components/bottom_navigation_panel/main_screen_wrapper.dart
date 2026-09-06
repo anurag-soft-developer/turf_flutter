@@ -17,19 +17,29 @@ class _MainScreenWrapperState extends State<MainScreenWrapper> {
   static const _exitWindow = Duration(seconds: 2);
 
   late final NavigationController _navController;
+  late final List<Widget?> _tabPages;
   DateTime? _lastBackAt;
 
   @override
   void initState() {
     super.initState();
     _navController = Get.find<NavigationController>();
+    _tabPages = List<Widget?>.filled(kNavTabs.length, null);
   }
 
-  Widget _buildActiveTab(int safeIndex) {
-    final tab = kNavTabs[safeIndex];
-    return KeyedSubtree(
-      key: ValueKey(safeIndex),
-      child: tab.screenBuilder(),
+  /// Mount a tab the first time it's selected; keep it for scroll/state.
+  Widget _buildTabStack(int safeIndex) {
+    _tabPages[safeIndex] ??= KeyedSubtree(
+      key: ValueKey('nav-tab-$safeIndex'),
+      child: kNavTabs[safeIndex].screenBuilder(),
+    );
+
+    return IndexedStack(
+      index: safeIndex,
+      sizing: StackFit.expand,
+      children: List<Widget>.generate(kNavTabs.length, (i) {
+        return _tabPages[i] ?? const SizedBox.shrink();
+      }),
     );
   }
 
@@ -51,7 +61,10 @@ class _MainScreenWrapperState extends State<MainScreenWrapper> {
         ..clearSnackBars()
         ..showSnackBar(
           const SnackBar(
-            content: Text('Press back again to exit', style: TextStyle(color: Colors.white),),
+            content: Text(
+              'Press back again to exit',
+              style: TextStyle(color: Colors.white),
+            ),
             duration: _exitWindow,
             behavior: SnackBarBehavior.floating,
             backgroundColor: Color(AppColors.secondaryColor),
@@ -74,7 +87,7 @@ class _MainScreenWrapperState extends State<MainScreenWrapper> {
             0,
             kNavTabs.length - 1,
           );
-          return _buildActiveTab(safeIndex);
+          return _buildTabStack(safeIndex);
         }),
         bottomNavigationBar: Obx(() {
           final safeIndex = _navController.currentIndex.clamp(

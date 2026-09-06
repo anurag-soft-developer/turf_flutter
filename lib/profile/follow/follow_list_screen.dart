@@ -4,6 +4,7 @@ import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
 import '../../components/player/follow/user_list_tile.dart';
+import '../../core/components/scroll/floating_sliver_app_bar.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/following/following_model.dart';
 import '../../core/models/paginated_response.dart';
@@ -78,9 +79,17 @@ class FollowListScreen extends HookWidget {
 
     if (subjectId == null) {
       return Scaffold(
-        appBar: AppBar(title: Text(title)),
-        body: Center(
-          child: Text(_isTeam ? 'Team not found' : 'User not found'),
+        backgroundColor: const Color(AppColors.backgroundColor),
+        body: CustomScrollView(
+          slivers: [
+            FloatingSliverAppBar(title: Text(title)),
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(
+                child: Text(_isTeam ? 'Team not found' : 'User not found'),
+              ),
+            ),
+          ],
         ),
       );
     }
@@ -129,121 +138,152 @@ class FollowListScreen extends HookWidget {
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(
-        title: Text(name != null && name.isNotEmpty ? '$name — $title' : title),
+      body: RefreshIndicator(
+        edgeOffset: floatingRefreshEdgeOffset(context),
+        onRefresh: () => query.refetch(),
+        color: const Color(AppColors.primaryColor),
+        child: NotificationListener<ScrollNotification>(
+          onNotification: (notification) {
+            if (notification.metrics.pixels >=
+                notification.metrics.maxScrollExtent - 160) {
+              if (query.hasNextPage && !query.isFetchingNextPage) {
+                query.fetchNextPage();
+              }
+            }
+            return false;
+          },
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              FloatingSliverAppBar(
+                title: Text(
+                  name != null && name.isNotEmpty ? '$name — $title' : title,
+                ),
+              ),
+              ..._bodySlivers(query, items),
+            ],
+          ),
+        ),
       ),
-      body: _buildBody(query, items),
     );
   }
 
-  Widget _buildBody(
+  List<Widget> _bodySlivers(
     InfiniteQueryResult<PaginatedResponse<FollowingModel>, Object, int> query,
     List<FollowingModel> items,
   ) {
     if (query.isLoading || (query.isFetching && items.isEmpty)) {
-      return const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(
-            Color(AppColors.primaryColor),
+      return [
+        const SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(
+                Color(AppColors.primaryColor),
+              ),
+            ),
           ),
         ),
-      );
+      ];
     }
 
     if (query.isError && items.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.error_outline,
-              size: 42,
-              color: Color(AppColors.textSecondaryColor),
+      return [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.error_outline,
+                  size: 42,
+                  color: Color(AppColors.textSecondaryColor),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  _isFollowers
+                      ? 'Failed to load followers'
+                      : 'Failed to load following',
+                  style: const TextStyle(
+                    color: Color(AppColors.textSecondaryColor),
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton(
+                  onPressed: () => query.refetch(),
+                  child: const Text('Retry'),
+                ),
+              ],
             ),
-            const SizedBox(height: 10),
-            Text(
-              _isFollowers
-                  ? 'Failed to load followers'
-                  : 'Failed to load following',
-              style: const TextStyle(
-                color: Color(AppColors.textSecondaryColor),
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: () => query.refetch(),
-              child: const Text('Retry'),
-            ),
-          ],
+          ),
         ),
-      );
+      ];
     }
 
     if (items.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              _isFollowers
-                  ? Icons.people_outline
-                  : Icons.person_search_outlined,
-              size: 64,
-              color: Colors.grey.shade300,
+      return [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  _isFollowers
+                      ? Icons.people_outline
+                      : Icons.person_search_outlined,
+                  size: 64,
+                  color: Colors.grey.shade300,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  _isFollowers
+                      ? 'No followers yet.'
+                      : 'Not following anyone yet.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Color(AppColors.textSecondaryColor),
+                    fontSize: 16,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            Text(
-              _isFollowers ? 'No followers yet.' : 'Not following anyone yet.',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Color(AppColors.textSecondaryColor),
-                fontSize: 16,
-              ),
-            ),
-          ],
+          ),
         ),
-      );
+      ];
     }
 
-    return RefreshIndicator(
-      onRefresh: () => query.refetch(),
-      color: const Color(AppColors.primaryColor),
-      child: NotificationListener<ScrollNotification>(
-        onNotification: (notification) {
-          if (notification.metrics.pixels >=
-              notification.metrics.maxScrollExtent - 160) {
-            if (query.hasNextPage && !query.isFetchingNextPage) {
-              query.fetchNextPage();
-            }
-          }
-          return false;
-        },
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          children: [
-            for (final edge in items)
-              UserListTile(
-                // Follower rows show who follows; following rows show who is followed.
+    return [
+      SliverPadding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        sliver: SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              if (index >= items.length) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(
+                    child: SizedBox(
+                      width: 28,
+                      height: 28,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                );
+              }
+              final edge = items[index];
+              return UserListTile(
                 helper: _isFollowers
                     ? edge.requesterHelper
                     : edge.recipientHelper,
-              ),
-            if (query.isFetchingNextPage)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 24),
-                child: Center(
-                  child: SizedBox(
-                    width: 28,
-                    height: 28,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                ),
-              ),
-          ],
+              );
+            },
+            childCount: items.length + (query.isFetchingNextPage ? 1 : 0),
+          ),
         ),
       ),
-    );
+    ];
   }
 }

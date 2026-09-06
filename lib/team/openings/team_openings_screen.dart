@@ -4,6 +4,8 @@ import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
 import '../../components/match_up/team_logo.dart';
+import '../../core/components/scroll/floating_sliver_app_bar.dart';
+import '../../core/components/scroll/pinned_sliver_header.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/paginated_response.dart';
 import '../../core/query/query_keys.dart';
@@ -44,39 +46,13 @@ class TeamOpeningsScreen extends HookWidget {
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(
-        title: const Text('Openings'),
-        actions: [
-          IconButton(
-            tooltip: 'My join requests',
-            icon: const Icon(Icons.assignment_outlined),
-            onPressed: () => Get.toNamed(AppConstants.routes.myJoinRequests),
-          ),
-        ],
-      ),
       body: Obx(() {
         final sport = controller.selectedSport.value;
-        return Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: SportFilterPicker(
-                value: sport,
-                sports: TeamSportType.values,
-                sheetTitle: 'Filter by sport',
-                searchable: true,
-                onChanged: controller.switchSport,
-              ),
-            ),
-            Expanded(
-              child: _OpeningsFeed(
-                key: ValueKey(sport.name),
-                controller: controller,
-                sport: sport,
-                onRefreshMemberships: () => membershipsQuery.refetch(),
-              ),
-            ),
-          ],
+        return _OpeningsFeed(
+          key: ValueKey(sport.name),
+          controller: controller,
+          sport: sport,
+          onRefreshMemberships: () => membershipsQuery.refetch(),
         );
       }),
     );
@@ -124,69 +100,8 @@ class _OpeningsFeed extends HookWidget {
     final items =
         query.data?.pages.expand((p) => p.data).toList() ?? const <TeamModel>[];
 
-    if (query.isLoading || (query.isFetching && items.isEmpty)) {
-      return const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(
-            Color(AppColors.primaryColor),
-          ),
-        ),
-      );
-    }
-
-    if (query.isError && items.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.error_outline,
-              size: 42,
-              color: Color(AppColors.textSecondaryColor),
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              'Failed to load recruiting teams',
-              style: TextStyle(
-                color: Color(AppColors.textSecondaryColor),
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: () => query.refetch(),
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (items.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.group_add_outlined,
-              size: 64,
-              color: Colors.grey.shade300,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'No teams are recruiting for this sport yet.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Color(AppColors.textSecondaryColor),
-                fontSize: 16,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
     return RefreshIndicator(
+      edgeOffset: floatingRefreshEdgeOffset(context),
       onRefresh: () async {
         await Future.wait([query.refetch(), onRefreshMemberships()]);
       },
@@ -201,35 +116,128 @@ class _OpeningsFeed extends HookWidget {
           }
           return false;
         },
-        child: Obx(() {
-          controller.myMembershipsLoaded.value;
-          controller.joiningTeamIds.length;
-          return ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-            children: [
-              for (var i = 0; i < items.length; i++) ...[
-                if (i > 0) const SizedBox(height: 12),
-                Builder(
-                  builder: (context) {
-                    final team = items[i];
-                    final id = team.id;
-                    if (id == null || id.isEmpty) {
-                      return const SizedBox.shrink();
-                    }
-                    return _RecruitingTeamCard(
-                      team: team,
-                      label: controller.joinButtonLabel(id) ?? 'Join',
-                      onJoin: controller.canTapJoin(id)
-                          ? () => controller.onJoinAction(id)
-                          : null,
-                      isJoining: controller.joiningTeamIds.contains(id),
-                    );
-                  },
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            FloatingSliverAppBar(
+              title: const Text('Openings'),
+              actions: [
+                IconButton(
+                  tooltip: 'My join requests',
+                  icon: const Icon(Icons.assignment_outlined),
+                  onPressed: () =>
+                      Get.toNamed(AppConstants.routes.myJoinRequests),
                 ),
               ],
-              if (query.isFetchingNextPage)
-                const Padding(
+            ),
+            PinnedSliverHeader(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: SportFilterPicker(
+                  value: sport,
+                  sports: TeamSportType.values,
+                  sheetTitle: 'Filter by sport',
+                  searchable: true,
+                  onChanged: controller.switchSport,
+                ),
+              ),
+            ),
+            ..._feedSlivers(query, items),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _feedSlivers(
+    InfiniteQueryResult<PaginatedResponse<TeamModel>, Object, int> query,
+    List<TeamModel> items,
+  ) {
+    if (query.isLoading || (query.isFetching && items.isEmpty)) {
+      return [
+        const SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(
+                Color(AppColors.primaryColor),
+              ),
+            ),
+          ),
+        ),
+      ];
+    }
+
+    if (query.isError && items.isEmpty) {
+      return [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.error_outline,
+                  size: 42,
+                  color: Color(AppColors.textSecondaryColor),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Failed to load recruiting teams',
+                  style: TextStyle(
+                    color: Color(AppColors.textSecondaryColor),
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton(
+                  onPressed: () => query.refetch(),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ];
+    }
+
+    if (items.isEmpty) {
+      return [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.group_add_outlined,
+                  size: 64,
+                  color: Colors.grey.shade300,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'No teams are recruiting for this sport yet.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Color(AppColors.textSecondaryColor),
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ];
+    }
+
+    return [
+      SliverPadding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+        sliver: SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              if (index >= items.length) {
+                return const Padding(
                   padding: EdgeInsets.symmetric(vertical: 24),
                   child: Center(
                     child: SizedBox(
@@ -238,12 +246,34 @@ class _OpeningsFeed extends HookWidget {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     ),
                   ),
-                ),
-            ],
-          );
-        }),
+                );
+              }
+              return Padding(
+                padding: EdgeInsets.only(top: index == 0 ? 0 : 12),
+                child: Obx(() {
+                  controller.myMembershipsLoaded.value;
+                  controller.joiningTeamIds.length;
+                  final team = items[index];
+                  final id = team.id;
+                  if (id == null || id.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+                  return _RecruitingTeamCard(
+                    team: team,
+                    label: controller.joinButtonLabel(id) ?? 'Join',
+                    onJoin: controller.canTapJoin(id)
+                        ? () => controller.onJoinAction(id)
+                        : null,
+                    isJoining: controller.joiningTeamIds.contains(id),
+                  );
+                }),
+              );
+            },
+            childCount: items.length + (query.isFetchingNextPage ? 1 : 0),
+          ),
+        ),
       ),
-    );
+    ];
   }
 }
 

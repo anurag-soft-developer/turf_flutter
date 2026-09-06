@@ -24,9 +24,11 @@ class SportFilterPicker extends StatelessWidget {
   List<TeamSportType> get _sports => sports ?? rankingTeamSportTypes;
 
   /// Opens the searchable sport bottom sheet.
+  ///
+  /// [value] may be null when nothing is selected yet (e.g. explore filters).
   static Future<void> showSheet({
     required BuildContext context,
-    required TeamSportType value,
+    TeamSportType? value,
     required ValueChanged<TeamSportType> onChanged,
     List<TeamSportType>? sports,
     String sheetTitle = 'Select sport',
@@ -113,7 +115,7 @@ class _SportPickerSheet extends StatefulWidget {
     required this.onChanged,
   });
 
-  final TeamSportType value;
+  final TeamSportType? value;
   final List<TeamSportType> sports;
   final String sheetTitle;
   final bool searchable;
@@ -144,18 +146,100 @@ class _SportPickerSheetState extends State<_SportPickerSheet> {
   @override
   Widget build(BuildContext context) {
     final maxHeight = MediaQuery.of(context).size.height * 0.75;
+    // Searchable sheets (full catalog) need a fixed height so the list can scroll.
+    final expandList = widget.searchable;
+    final sports = _filteredSports;
+
+    Widget listBody;
+    if (sports.isEmpty) {
+      listBody = const Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 24),
+          child: Text(
+            'No sports found',
+            style: TextStyle(color: Color(AppColors.textSecondaryColor)),
+          ),
+        ),
+      );
+    } else {
+      listBody = ListView.builder(
+        shrinkWrap: !expandList,
+        itemCount: sports.length,
+        itemBuilder: (context, index) {
+          final sport = sports[index];
+          final isSelected = sport == widget.value;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Material(
+              color: isSelected
+                  ? const Color(AppColors.primaryColor).withValues(alpha: 0.08)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(14),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: () => widget.onChanged(sport),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: const Color(
+                            AppColors.primaryColor,
+                          ).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          sport.icon,
+                          color: const Color(AppColors.primaryColor),
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          teamSportLabel(sport),
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight:
+                                isSelected ? FontWeight.w700 : FontWeight.w500,
+                            color: const Color(AppColors.textColor),
+                          ),
+                        ),
+                      ),
+                      if (isSelected)
+                        const Icon(
+                          Icons.check_circle,
+                          size: 22,
+                          color: Color(AppColors.primaryColor),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    }
 
     return SafeArea(
       top: false,
       child: Container(
-        constraints: BoxConstraints(maxHeight: maxHeight),
+        height: expandList ? maxHeight : null,
+        constraints: expandList ? null : BoxConstraints(maxHeight: maxHeight),
         decoration: const BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize: expandList ? MainAxisSize.max : MainAxisSize.min,
           children: [
             Container(
               width: 40,
@@ -214,73 +298,7 @@ class _SportPickerSheetState extends State<_SportPickerSheet> {
               ),
             ],
             const SizedBox(height: 16),
-            Flexible(
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: _filteredSports.length,
-                itemBuilder: (context, index) {
-                  final sport = _filteredSports[index];
-                  final isSelected = sport == widget.value;
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Material(
-                      color: isSelected
-                          ? const Color(AppColors.primaryColor)
-                              .withValues(alpha: 0.08)
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(14),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(14),
-                        onTap: () => widget.onChanged(sport),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 12,
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: const Color(AppColors.primaryColor)
-                                      .withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Icon(
-                                  sport.icon,
-                                  color: const Color(AppColors.primaryColor),
-                                  size: 22,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  teamSportLabel(sport),
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: isSelected
-                                        ? FontWeight.w700
-                                        : FontWeight.w500,
-                                    color: const Color(AppColors.textColor),
-                                  ),
-                                ),
-                              ),
-                              if (isSelected)
-                                const Icon(
-                                  Icons.check_circle,
-                                  size: 22,
-                                  color: Color(AppColors.primaryColor),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
+            if (expandList) Expanded(child: listBody) else listBody,
           ],
         ),
       ),

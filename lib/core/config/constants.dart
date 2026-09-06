@@ -46,6 +46,7 @@ class Routes {
   final String turfReviews = '/turf-reviews';
   // final String turfBookings = '/turf-bookings';
   final String myTeams = '/my-teams';
+  final String myTeamsSearch = '/my-teams/search';
   final String myTeam = '/my-team';
   final String teamOpenings = '/team-openings';
   final String myJoinRequests = '/my-join-requests';
@@ -91,6 +92,7 @@ class StorageKeys {
   final String searchHistoryExplore = 'search_history_explore';
   final String searchHistoryTurfs = 'search_history_turfs';
   final String searchHistoryMatchUp = 'search_history_match_up';
+  final String searchHistoryMyTeams = 'search_history_my_teams';
 }
 
 class ErrorMessages {

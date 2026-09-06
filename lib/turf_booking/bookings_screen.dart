@@ -5,6 +5,8 @@ import 'package:get/get.dart';
 
 import '../components/booking/booking_card.dart';
 import '../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
+import '../core/components/scroll/floating_sliver_app_bar.dart';
+import '../core/components/scroll/pinned_sliver_header.dart';
 import '../core/config/constants.dart';
 import '../core/models/paginated_response.dart';
 import '../core/query/query_keys.dart';
@@ -58,43 +60,42 @@ class BookingsScreen extends HookWidget {
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(
-        title: const Text(
-          'My Bookings',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: const Color(AppColors.primaryColor),
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: Column(
-        children: [
-          AppSegmentedTabs(
-            controller: tabController,
-            items: _tabItems,
-            fillWidth: true,
-            onTap: (index) => bookingController.switchTab(_tabs[index]),
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-          ),
-          Expanded(
-            child: Obx(() {
-              final paymentFilter =
-                  bookingController.paymentStatusFilter.value?.name;
-              return AppSegmentedTabView(
+      body: NestedScrollView(
+        floatHeaderSlivers: true,
+        headerSliverBuilder: (context, innerBoxIsScrolled) {
+          return [
+            const FloatingSliverAppBar(
+              title: Text(
+                'My Bookings',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            PinnedSliverHeader(
+              child: AppSegmentedTabs(
                 controller: tabController,
-                children: [
-                  for (final tab in _tabs)
-                    _BookingsTabPane(
-                      key: ValueKey('${tab.name}|${paymentFilter ?? ''}'),
-                      tab: tab,
-                      paymentStatusFilter:
-                          bookingController.paymentStatusFilter.value,
-                    ),
-                ],
-              );
-            }),
-          ),
-        ],
+                items: _tabItems,
+                fillWidth: true,
+                onTap: (index) => bookingController.switchTab(_tabs[index]),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              ),
+            ),
+          ];
+        },
+        body: Obx(() {
+          final paymentFilter =
+              bookingController.paymentStatusFilter.value?.name;
+          return AppSegmentedTabView(
+            controller: tabController,
+            children: [
+              for (final tab in _tabs)
+                _BookingsTabPane(
+                  key: ValueKey('${tab.name}|${paymentFilter ?? ''}'),
+                  tab: tab,
+                  paymentStatusFilter: bookingController.paymentStatusFilter.value,
+                ),
+            ],
+          );
+        }),
       ),
     );
   }

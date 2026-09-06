@@ -71,6 +71,7 @@ dependencies:
   flutter_cache_manager: ^3.4.1
   flutter_chat_core: ^2.8.0
   flutter_chat_ui: ^2.11.1
+  sliver_tools: ^0.2.12
 
 dev_dependencies:
   flutter_test:
@@ -84,6 +85,10 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+  # SPM fails on this repo because the parent folder name contains a space
+  # ("Bhopal projects"). CocoaPods continues to manage iOS plugins.
+  config:
+    enable-swift-package-manager: false
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

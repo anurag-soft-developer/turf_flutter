@@ -5,6 +5,7 @@ import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
 import '../../core/auth/auth_state_controller.dart';
+import '../../core/components/scroll/floating_sliver_app_bar.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/paginated_response.dart';
 import '../../core/query/query_keys.dart';
@@ -133,29 +134,44 @@ class TeamRosterManageScreen extends HookWidget {
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(
-        title: Text(
-          team?.name != null
-              ? 'Manage squad · ${team!.name}'
-              : 'Manage squad',
+      body: RefreshIndicator(
+        edgeOffset: floatingRefreshEdgeOffset(context),
+        onRefresh: () async {
+          await Future.wait([
+            teamQuery.refetch(),
+            activeQuery.refetch(),
+            suspendedQuery.refetch(),
+          ]);
+        },
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            FloatingSliverAppBar(
+              title: Text(
+                team?.name != null
+                    ? 'Manage squad · ${team!.name}'
+                    : 'Manage squad',
+              ),
+            ),
+            ..._bodySlivers(
+              context: context,
+              c: c,
+              hasTeamId: hasTeamId,
+              accessDenied: accessDenied,
+              teamQuery: teamQuery,
+              activeQuery: activeQuery,
+              suspendedQuery: suspendedQuery,
+              members: members,
+              rosterLoading: rosterLoading,
+              rosterError: rosterError,
+            ),
+          ],
         ),
-      ),
-      body: _buildBody(
-        context: context,
-        c: c,
-        hasTeamId: hasTeamId,
-        accessDenied: accessDenied,
-        teamQuery: teamQuery,
-        activeQuery: activeQuery,
-        suspendedQuery: suspendedQuery,
-        members: members,
-        rosterLoading: rosterLoading,
-        rosterError: rosterError,
       ),
     );
   }
 
-  Widget _buildBody({
+  List<Widget> _bodySlivers({
     required BuildContext context,
     required TeamRosterManageController c,
     required bool hasTeamId,
@@ -170,148 +186,190 @@ class TeamRosterManageScreen extends HookWidget {
     required bool rosterError,
   }) {
     if (!hasTeamId) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text(
-            'You do not have permission to manage this team’s roster.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Color(AppColors.textSecondaryColor),
-              fontSize: 15,
+      return [
+        const SliverFillRemaining(
+          hasScrollBody: false,
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(
+              child: Text(
+                'You do not have permission to manage this team’s roster.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Color(AppColors.textSecondaryColor),
+                  fontSize: 15,
+                ),
+              ),
             ),
           ),
         ),
-      );
+      ];
     }
 
     if (teamQuery.isLoading ||
         (teamQuery.isFetching && teamQuery.data == null && !teamQuery.isError)) {
-      return const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(
-            Color(AppColors.primaryColor),
-          ),
-        ),
-      );
-    }
-
-    if (teamQuery.isError && teamQuery.data == null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Failed to load team',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Color(AppColors.textSecondaryColor),
-                ),
+      return [
+        const SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(
+                Color(AppColors.primaryColor),
               ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => teamQuery.refetch(),
-                child: const Text('Retry'),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    if (accessDenied) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text(
-            'You do not have permission to manage this team’s roster.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Color(AppColors.textSecondaryColor),
-              fontSize: 15,
             ),
           ),
         ),
-      );
+      ];
     }
 
-    if (rosterLoading) {
-      return const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(
-            Color(AppColors.primaryColor),
+    if (teamQuery.isError && teamQuery.data == null) {
+      return [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Failed to load team',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Color(AppColors.textSecondaryColor),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => teamQuery.refetch(),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
-      );
+      ];
     }
 
-    if (rosterError) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Failed to load roster',
+    if (accessDenied) {
+      return [
+        const SliverFillRemaining(
+          hasScrollBody: false,
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(
+              child: Text(
+                'You do not have permission to manage this team’s roster.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Color(AppColors.textSecondaryColor),
+                  fontSize: 15,
                 ),
               ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () {
-                  activeQuery.refetch();
-                  suspendedQuery.refetch();
-                },
-                child: const Text('Retry'),
-              ),
-            ],
+            ),
           ),
         ),
-      );
+      ];
+    }
+
+    if (rosterLoading) {
+      return [
+        const SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(
+                Color(AppColors.primaryColor),
+              ),
+            ),
+          ),
+        ),
+      ];
+    }
+
+    if (rosterError) {
+      return [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Failed to load roster',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Color(AppColors.textSecondaryColor),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      activeQuery.refetch();
+                      suspendedQuery.refetch();
+                    },
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ];
     }
 
     final teamId = c.teamId!;
 
-    return RefreshIndicator(
-      onRefresh: () async {
-        await Future.wait([
-          teamQuery.refetch(),
-          activeQuery.refetch(),
-          suspendedQuery.refetch(),
-        ]);
-      },
-      child: Obx(() {
-        final busyId = c.actionTargetId.value;
-        return ListView(
+    if (members.isEmpty) {
+      return [
+        SliverPadding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-          children: [
-            _RosterQuickActions(teamId: teamId),
-            const SizedBox(height: 16),
-            if (members.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 48),
-                child: Center(
-                  child: Text(
-                    'No members in the roster yet.',
-                    style: TextStyle(
-                      color: Color(AppColors.textSecondaryColor),
-                      fontSize: 15,
+          sliver: SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _RosterQuickActions(teamId: teamId),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 48),
+                  child: Center(
+                    child: Text(
+                      'No members in the roster yet.',
+                      style: TextStyle(
+                        color: Color(AppColors.textSecondaryColor),
+                        fontSize: 15,
+                      ),
                     ),
                   ),
                 ),
-              )
-            else
-              ...List.generate(members.length, (i) {
-                final m = members[i];
-                final busy = busyId != null && busyId == m.id;
+              ],
+            ),
+          ),
+        ),
+      ];
+    }
+
+    return [
+      SliverPadding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+        sliver: SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, i) {
+              if (i == 0) {
                 return Padding(
-                  padding: EdgeInsets.only(top: i == 0 ? 0 : 8),
-                  child: _RosterRow(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: _RosterQuickActions(teamId: teamId),
+                );
+              }
+              final m = members[i - 1];
+              return Padding(
+                padding: EdgeInsets.only(top: i == 1 ? 0 : 8),
+                child: Obx(() {
+                  final busyId = c.actionTargetId.value;
+                  final busy = busyId != null && busyId == m.id;
+                  return _RosterRow(
                     member: m,
                     isBusy: busy,
                     isSelf: c.isSelf(m),
@@ -321,13 +379,15 @@ class TeamRosterManageScreen extends HookWidget {
                     onRemove: () => _confirmRemove(context, c, m),
                     onSuspend: () => _confirmSuspend(context, c, m),
                     onUnsuspend: () => c.unsuspendMember(m),
-                  ),
-                );
-              }),
-          ],
-        );
-      }),
-    );
+                  );
+                }),
+              );
+            },
+            childCount: members.length + 1,
+          ),
+        ),
+      ),
+    ];
   }
 
   void _confirmRemove(

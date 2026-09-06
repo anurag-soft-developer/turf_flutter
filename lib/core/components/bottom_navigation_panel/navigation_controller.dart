@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 
+import '../../../turf/feed/turf_list_controller.dart';
 import 'nav_tabs.dart';
 
 class NavigationController extends GetxController {
@@ -21,18 +22,24 @@ class NavigationController extends GetxController {
       return;
     }
 
-    activeTabs[_currentIndex.value].disposeController?.call();
+    // Keep previous tab controllers alive so IndexedStack can restore scroll/UI.
     _currentIndex.value = index;
     _loadControllerForCurrentTab();
   }
 
-  /// Switches to the Turves tab and optionally applies a sport filter.
+  /// Switches to the Turfs tab and optionally applies a sport filter.
   void goToTurfs({String? sportFilter}) {
-    final turfsIndex = kNavTabs.indexWhere((tab) => tab.label == 'Turves');
+    final turfsIndex = kNavTabs.indexWhere((tab) => tab.label == 'Turfs');
     if (turfsIndex < 0) return;
 
     if (sportFilter != null) {
-      pendingSportFilter.value = sportFilter;
+      // Tab/controller may already be alive — apply immediately when possible.
+      if (Get.isRegistered<TurfListController>()) {
+        Get.find<TurfListController>().setSportFilter(sportFilter);
+        pendingSportFilter.value = null;
+      } else {
+        pendingSportFilter.value = sportFilter;
+      }
     }
     changeTab(turfsIndex);
   }
