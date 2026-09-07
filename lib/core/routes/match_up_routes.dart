@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/bindings/explore_binding.dart';
 import 'package:flutter_application_1/bindings/match_challenge_detail_binding.dart';
 import 'package:flutter_application_1/bindings/match_challenges_binding.dart';
-import 'package:flutter_application_1/bindings/match_up_binding.dart';
 import 'package:flutter_application_1/bindings/scoring_binding.dart';
 import 'package:flutter_application_1/core/config/constants.dart';
 import 'package:flutter_application_1/core/guards/auth_guard.dart';
@@ -12,29 +11,13 @@ import 'package:flutter_application_1/explore/search/explore_search_screen.dart'
 import 'package:flutter_application_1/explore/widgets/explore_post_viewer_screen.dart';
 import 'package:flutter_application_1/match_up/match_challenges/match_challenge_detail_screen.dart';
 import 'package:flutter_application_1/match_up/match_challenges/match_challenges_screen.dart';
-import 'package:flutter_application_1/match_up/match_up_screen.dart';
 import 'package:flutter_application_1/match_up/messages/match_challenge_messages_screen.dart';
 import 'package:flutter_application_1/match_up/model/team_match_model.dart';
-import 'package:flutter_application_1/match_up/search/match_up_search_screen.dart';
 import 'package:flutter_application_1/scoring/cricket/cricket_scoreboard_screen.dart';
 import 'package:flutter_application_1/scoring/football/football_scoreboard_screen.dart';
 import 'package:get/get.dart';
 
 final List<GetPage<dynamic>> matchUpRoutes = [
-  GetPage(
-    name: AppConstants.routes.matchUp,
-    page: () => const MatchUpScreen(),
-    binding: MatchUpBinding(),
-    transition: Transition.cupertino,
-    middlewares: [AuthGuard()],
-  ),
-  GetPage(
-    name: AppConstants.routes.matchUpSearch,
-    page: () => const MatchUpSearchScreen(),
-    binding: MatchUpBinding(),
-    transition: Transition.cupertino,
-    middlewares: [AuthGuard()],
-  ),
   GetPage(
     name: AppConstants.routes.matchUpChallenges,
     page: () => const MatchChallengesScreen(),

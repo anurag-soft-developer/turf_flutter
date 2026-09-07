@@ -8,6 +8,7 @@ import '../../../team/model/team_model.dart';
 import '../../../team/utils/team_media_url.dart';
 import '../../player/follow/follow_button.dart';
 import '../../player/follow/follow_stat_button.dart';
+import '../../shared/fullscreen_image_view.dart';
 
 class TeamHeroHeader extends StatefulWidget {
   const TeamHeroHeader({super.key, required this.team});
@@ -95,7 +96,12 @@ class _TeamHeroHeaderState extends State<TeamHeroHeader> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    IgnorePointer(child: _buildLogo(logoUrl)),
+                    GestureDetector(
+                      onTap: logoUrl == null
+                          ? null
+                          : () => showFullscreenImage(context, logoUrl),
+                      child: _buildLogo(logoUrl),
+                    ),
                     const SizedBox(width: 14),
                     Expanded(
                       child: IgnorePointer(

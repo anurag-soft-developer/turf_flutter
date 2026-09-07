@@ -48,26 +48,15 @@ class QueryKeys {
   static List<Object> teamLeaderboard(String sport) =>
       [...teamLeaderboardPrefix, sport];
 
-  /// Non-paginated memberships snapshot (Match Up, Team Openings CTA state).
+  /// Non-paginated memberships snapshot (Challenge, Team Openings CTA state).
   static const myMemberships = ['myMemberships'];
 
   /// Paginated active memberships (My Teams). Shares prefix with [myMemberships].
   static List<Object?> myMembershipsActive({String? search}) =>
       [...myMemberships, 'active', search ?? ''];
 
-  static const matchUpOpponentsPrefix = ['matchUpOpponents'];
-
-  static List<Object?> matchUpOpponents({
-    required String sport,
-    String? fromTeamId,
-    String? search,
-  }) =>
-      [
-        ...matchUpOpponentsPrefix,
-        sport,
-        fromTeamId ?? '',
-        search ?? '',
-      ];
+  /// Active sent/received challenges for Explore Challenge/Sent/Received buttons.
+  static const activeOpponentIds = ['activeOpponentIds'];
 
   static const matchChallengesPrefix = ['matchChallenges'];
 
@@ -255,6 +244,9 @@ class QueryKeys {
       [...bookingDetailPrefix, bookingId];
 
   static const chatInbox = ['chatInbox'];
+
+  static List<Object?> chatInboxSearch(String search) =>
+      [...chatInbox, 'search', search];
 
   static const chatMessagesPrefix = ['chatMessages'];
 

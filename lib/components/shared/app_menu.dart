@@ -62,11 +62,6 @@ class AppMenuScreen extends StatelessWidget {
         icon: Icons.notifications_rounded,
         onTap: () => _navigateTo(AppConstants.routes.notifications),
       ),
-      AppMenuItem(
-        title: 'Messages',
-        icon: Icons.chat_bubble_rounded,
-        onTap: () => _navigateTo(AppConstants.routes.chatInbox),
-      ),
     ];
   }
 

@@ -14,10 +14,19 @@ class ChatService {
   Future<PaginatedResponse<ChatInboxItem>?> listInbox({
     int page = 1,
     int limit = 20,
+    String? search,
   }) async {
+    final queryParameters = <String, dynamic>{
+      'page': page,
+      'limit': limit,
+    };
+    final trimmedSearch = search?.trim();
+    if (trimmedSearch != null && trimmedSearch.isNotEmpty) {
+      queryParameters['search'] = trimmedSearch;
+    }
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiConstants.chat.inbox,
-      queryParameters: {'page': page, 'limit': limit},
+      queryParameters: queryParameters,
     );
     if (response == null) {
       return EmptyPaginatedResponse<ChatInboxItem>();

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/bindings/explore_binding.dart';
+import 'package:flutter_application_1/chat/chat_inbox_screen.dart';
 import 'package:flutter_application_1/explore/explore_screen.dart';
-import 'package:flutter_application_1/match_up/match_up_controller.dart';
-import 'package:flutter_application_1/match_up/match_up_screen.dart';
+import 'package:flutter_application_1/match_up/challenge/challenge_controller.dart';
 import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
@@ -72,21 +72,20 @@ final List<NavTab> kNavTabs = [
     label: 'Explore',
     screenBuilder: () => const ExploreScreen(),
     loadController: () => ExploreBinding().dependencies(),
-    onRetap: () => _invalidate(QueryKeys.explorePrefix),
+    onRetap: () async {
+      await _invalidate(QueryKeys.explorePrefix);
+      await _invalidate(QueryKeys.activeOpponentIds);
+      if (Get.isRegistered<ChallengeController>()) {
+        await Get.find<ChallengeController>().loadActiveOpponentIds();
+      }
+    },
   ),
   NavTab(
-    icon: Icons.sports_soccer_outlined,
-    activeIcon: Icons.sports_soccer,
-    label: 'Match Up',
-    screenBuilder: () => const MatchUpScreen(),
-    loadController: () => _ensure<MatchUpController>(() => MatchUpController()),
-    onRetap: () async {
-      await Future.wait([
-        _invalidate(QueryKeys.myMemberships),
-        _invalidate(QueryKeys.matchUpOpponentsPrefix),
-        _invalidate(QueryKeys.matchChallengesPrefix),
-      ]);
-    },
+    icon: Icons.chat_bubble_outline,
+    activeIcon: Icons.chat_bubble,
+    label: 'Messages',
+    screenBuilder: () => const ChatInboxScreen(),
+    onRetap: () => _invalidate(QueryKeys.chatInbox),
   ),
   NavTab(
     icon: Icons.emoji_events_outlined,

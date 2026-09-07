@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/components/shared/user_avatar_app_bar_action.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
@@ -83,17 +82,16 @@ class ProfileScreen extends HookWidget {
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        leading: const UserAvatarAppBarAction(),
+        leading: IconButton(
+          onPressed: () => Get.toNamed(AppConstants.routes.createPost),
+          icon: const Icon(Icons.add_a_photo_outlined),
+          tooltip: 'New post',
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: Colors.white,
         title: const Text('My Profile'),
         actions: [
-          IconButton(
-            onPressed: () => Get.toNamed(AppConstants.routes.createPost),
-            icon: const Icon(Icons.add_a_photo_outlined),
-            tooltip: 'New post',
-          ),
           IconButton(
             onPressed: () => Get.toNamed(AppConstants.routes.editProfile),
             icon: const Icon(Icons.edit_outlined),

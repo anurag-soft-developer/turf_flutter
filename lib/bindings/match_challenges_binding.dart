@@ -8,5 +8,8 @@ class MatchChallengesBinding extends Bindings {
   void dependencies() {
     ScoringBinding().dependencies();
     Get.lazyPut<MatchChallengesController>(() => MatchChallengesController());
+    if (Get.isRegistered<MatchChallengesController>()) {
+      Get.find<MatchChallengesController>().applyTabFromArguments();
+    }
   }
 }

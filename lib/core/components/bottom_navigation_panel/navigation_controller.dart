@@ -1,12 +1,21 @@
 import 'package:get/get.dart';
 
+import '../../../explore/model/explore_category.dart';
 import '../../../turf/feed/turf_list_controller.dart';
 import 'nav_tabs.dart';
+
+class PendingExploreNav {
+  const PendingExploreNav({this.category, this.teamOpenForMatch});
+
+  final ExploreCategory? category;
+  final bool? teamOpenForMatch;
+}
 
 class NavigationController extends GetxController {
   final RxInt _currentIndex = 0.obs;
   final RxDouble _slideValue = 0.0.obs;
   final RxnString pendingSportFilter = RxnString();
+  final Rxn<PendingExploreNav> pendingExplore = Rxn();
 
   int get currentIndex => _currentIndex.value;
   double get slideValue => _slideValue.value;
@@ -44,9 +53,29 @@ class NavigationController extends GetxController {
     changeTab(turfsIndex);
   }
 
+  /// Switches to the Explore tab and optionally applies category / team filters.
+  void goToExplore({ExploreCategory? category, bool? teamOpenForMatch}) {
+    final exploreIndex = kNavTabs.indexWhere((tab) => tab.label == 'Explore');
+    if (exploreIndex < 0) return;
+
+    if (category != null || teamOpenForMatch != null) {
+      pendingExplore.value = PendingExploreNav(
+        category: category,
+        teamOpenForMatch: teamOpenForMatch,
+      );
+    }
+    changeTab(exploreIndex);
+  }
+
   String? takePendingSportFilter() {
     final value = pendingSportFilter.value;
     pendingSportFilter.value = null;
+    return value;
+  }
+
+  PendingExploreNav? takePendingExplore() {
+    final value = pendingExplore.value;
+    pendingExplore.value = null;
     return value;
   }
 

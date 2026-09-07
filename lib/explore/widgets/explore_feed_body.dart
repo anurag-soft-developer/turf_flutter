@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_query/flutter_query.dart';
+import 'package:get/get.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
 import '../../components/match_history/match_history_placeholders.dart';
@@ -11,11 +12,18 @@ import '../../core/models/location_model.dart';
 import '../../core/query/query_keys.dart';
 import '../../core/query/query_retry.dart';
 import '../../engagement/engagement_service.dart';
+import '../../match_up/challenge/challenge_controller.dart';
 import '../explore_service.dart';
 import '../model/explore_category.dart';
 import '../model/explore_filters.dart';
 import '../model/explore_item.dart';
 import 'explore_item_tile.dart';
+
+Future<void> _refreshExploreChallengeState() async {
+  if (Get.isRegistered<ChallengeController>()) {
+    await Get.find<ChallengeController>().loadActiveOpponentIds();
+  }
+}
 
 class ExploreFeedBody extends HookWidget {
   const ExploreFeedBody({
@@ -96,7 +104,10 @@ class ExploreFeedBody extends HookWidget {
       return RefreshIndicator(
         edgeOffset: floatingRefreshEdgeOffset(context),
         color: const Color(AppColors.primaryColor),
-        onRefresh: () => query.refetch(),
+        onRefresh: () async {
+          await query.refetch();
+          await _refreshExploreChallengeState();
+        },
         child: NotificationListener<ScrollNotification>(
           onNotification: (notification) {
             if (notification.metrics.pixels >=
@@ -165,6 +176,7 @@ class ExploreFeedBody extends HookWidget {
         color: const Color(AppColors.primaryColor),
         onRefresh: () async {
           await query.refetch();
+          await _refreshExploreChallengeState();
         },
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -186,6 +198,7 @@ class ExploreFeedBody extends HookWidget {
       color: const Color(AppColors.primaryColor),
       onRefresh: () async {
         await query.refetch();
+        await _refreshExploreChallengeState();
       },
       child: NotificationListener<ScrollNotification>(
         onNotification: (notification) {

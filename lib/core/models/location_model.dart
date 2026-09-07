@@ -131,6 +131,15 @@ class LocationModel {
 
   double get lat => coordinates.lat;
 
+  /// City, else state, else country, else address with zip removed.
+  String? get shortPlaceLabel {
+    for (final value in [city, state, country]) {
+      final trimmed = value?.trim();
+      if (trimmed != null && trimmed.isNotEmpty) return trimmed;
+    }
+    return address.trim();
+  }
+
   factory LocationModel.fromJson(Map<String, dynamic> json) =>
       _$LocationModelFromJson(json);
 

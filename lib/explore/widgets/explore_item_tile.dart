@@ -9,6 +9,8 @@ import '../../core/config/constants.dart';
 import '../../core/models/user_field_instance.dart';
 import '../../engagement/engagement_entity.dart';
 import '../../engagement/engagement_service.dart';
+import '../../match_up/challenge/challenge_controller.dart';
+import '../../match_up/challenge/challenge_team_sheet.dart';
 import '../../match_up/match_challenges/match_challenge_detail_screen.dart';
 import '../../match_up/model/team_match_model.dart';
 import '../../team/model/team_model.dart';
@@ -119,7 +121,12 @@ class _ExploreTeamTile extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  TeamLogo(url: team.logo, size: 48, teamId: team.id),
+                  TeamLogo(
+                    url: team.logo,
+                    size: 48,
+                    teamId: team.id,
+                    placeholderIcon: team.sportType.icon,
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -135,41 +142,128 @@ class _ExploreTeamTile extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        if (team.location != null) ...[
-                          const SizedBox(height: 3),
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.location_on_outlined,
-                                size: 13,
-                                color: Color(AppColors.textSecondaryColor),
-                              ),
-                              const SizedBox(width: 3),
-                              Flexible(
-                                child: Text(
-                                  team.location!.address,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: Color(AppColors.textSecondaryColor),
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                        const SizedBox(height: 3),
+                        _ExploreTeamMeta(team: team),
                       ],
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
-              TeamStatsRow.fromTeam(team, compact: true),
+              _ExploreTeamStatsAndChallenge(team: team),
             ],
           ),
         ),
       ),
     );
+  }
+}
+
+class _ExploreTeamMeta extends StatelessWidget {
+  const _ExploreTeamMeta({required this.team});
+
+  final TeamModel team;
+
+  @override
+  Widget build(BuildContext context) {
+    const style = TextStyle(
+      fontSize: 12,
+      color: Color(AppColors.textSecondaryColor),
+    );
+    final place = team.location?.shortPlaceLabel;
+
+    return Row(
+      children: [
+        Icon(
+          team.sportType.icon,
+          size: 13,
+          color: const Color(AppColors.textSecondaryColor),
+        ),
+        const SizedBox(width: 3),
+        Flexible(
+          child: Text(
+            team.sportType.label,
+            style: style,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        if (place != null) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 5),
+            child: Text(
+              '·',
+              style: TextStyle(
+                color: Colors.grey.shade400,
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          const Icon(
+            Icons.location_on_outlined,
+            size: 13,
+            color: Color(AppColors.textSecondaryColor),
+          ),
+          const SizedBox(width: 3),
+          Flexible(
+            child: Text(
+              place,
+              style: style,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _ExploreTeamStatsAndChallenge extends StatelessWidget {
+  const _ExploreTeamStatsAndChallenge({required this.team});
+
+  final TeamModel team;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!Get.isRegistered<ChallengeController>()) {
+      return TeamStatsRow.fromTeam(team, compact: true);
+    }
+
+    final controller = Get.find<ChallengeController>();
+    return Obx(() {
+      controller.myMemberships.length;
+      controller.challengedOpponentsByFromTeam.length;
+      controller.receivedOpponentsByOurTeam.length;
+      final isReceived = controller.isReceived(team);
+      final isSent = controller.isChallengeSent(team);
+      if (!controller.isChallengeableTarget(team)) {
+        return TeamStatsRow.fromTeam(team, compact: true);
+      }
+
+      return Row(
+        children: [
+          Expanded(child: TeamStatsRow.fromTeam(team, compact: true)),
+          const SizedBox(width: 8),
+          ChallengeButton(
+            isSent: isSent,
+            isReceived: isReceived,
+            onTap: isReceived
+                ? () => Get.toNamed(
+                      AppConstants.routes.matchUpChallenges,
+                      arguments: {'tab': 'received'},
+                    )
+                : isSent
+                    ? null
+                    : () => onChallengePressed(
+                          context: context,
+                          controller: controller,
+                          opponent: team,
+                        ),
+          ),
+        ],
+      );
+    });
   }
 }

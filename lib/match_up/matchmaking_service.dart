@@ -64,6 +64,14 @@ class MatchmakingService {
     );
   }
 
+  /// `GET /matchmaking/active-opponent-ids`
+  Future<ActiveOpponentIds> listActiveOpponentIds() async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiConstants.matchmaking.activeOpponentIds,
+    );
+    return parseActiveOpponentIds(response);
+  }
+
   /// `POST /matchmaking/requests/:id/respond`
   Future<TeamMatchModel?> respond(
     String matchId,
@@ -167,4 +175,36 @@ class MatchmakingService {
     if (response == null) return null;
     return TeamMatchModel.fromJson(response);
   }
+}
+
+class ActiveOpponentIds {
+  const ActiveOpponentIds({
+    this.sentByTeamId = const {},
+    this.receivedByTeamId = const {},
+  });
+
+  final Map<String, Set<String>> sentByTeamId;
+  final Map<String, Set<String>> receivedByTeamId;
+}
+
+Map<String, Set<String>> _parseOpponentIdMap(dynamic raw) {
+  if (raw is! Map) return {};
+  final out = <String, Set<String>>{};
+  for (final entry in raw.entries) {
+    final teamId = entry.key.toString();
+    final ids = entry.value;
+    if (teamId.isEmpty || ids is! List) continue;
+    out[teamId] = ids
+        .map((id) => id.toString())
+        .where((id) => id.isNotEmpty)
+        .toSet();
+  }
+  return out;
+}
+
+ActiveOpponentIds parseActiveOpponentIds(Map<String, dynamic>? json) {
+  return ActiveOpponentIds(
+    sentByTeamId: _parseOpponentIdMap(json?['sentByTeamId']),
+    receivedByTeamId: _parseOpponentIdMap(json?['receivedByTeamId']),
+  );
 }

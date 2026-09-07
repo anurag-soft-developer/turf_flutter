@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import '../../../core/auth/auth_state_controller.dart';
 import '../../../core/config/constants.dart';
 import '../../../core/models/user_field_instance.dart';
+import '../../shared/fullscreen_image_view.dart';
 import '../follow/follow_button.dart';
 import '../follow/follow_stat_button.dart';
 
@@ -102,23 +103,30 @@ class PlayerHeroSection extends StatelessWidget {
               // Avatar beside name + follow stats to keep the hero compact.
               Row(
                 children: [
-                  CircleAvatar(
-                    radius: 42,
-                    backgroundColor: Colors.white.withValues(alpha: 0.2),
-                    backgroundImage:
-                        helper.getAvatar() != null &&
-                            helper.getAvatar()!.isNotEmpty
-                        ? AppNetworkImage.provider(helper.getAvatar()!)
-                        : null,
-                    child:
-                        helper.getAvatar() == null ||
-                            helper.getAvatar()!.isEmpty
-                        ? const Icon(
-                            Icons.person,
-                            size: 48,
-                            color: Colors.white,
-                          )
-                        : null,
+                  GestureDetector(
+                    onTap: () {
+                      final avatar = helper.getAvatar();
+                      if (avatar == null || avatar.isEmpty) return;
+                      showFullscreenImage(context, avatar);
+                    },
+                    child: CircleAvatar(
+                      radius: 42,
+                      backgroundColor: Colors.white.withValues(alpha: 0.2),
+                      backgroundImage:
+                          helper.getAvatar() != null &&
+                              helper.getAvatar()!.isNotEmpty
+                          ? AppNetworkImage.provider(helper.getAvatar()!)
+                          : null,
+                      child:
+                          helper.getAvatar() == null ||
+                              helper.getAvatar()!.isEmpty
+                          ? const Icon(
+                              Icons.person,
+                              size: 48,
+                              color: Colors.white,
+                            )
+                          : null,
+                    ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -234,9 +242,7 @@ class PlayerHeroSection extends StatelessWidget {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  Expanded(
-                    child: FollowButton(targetId: helper.getId()),
-                  ),
+                  FollowButton(targetId: helper.getId()),
                   if (Get.isRegistered<AuthStateController>())
                     Builder(
                       builder: (context) {
@@ -260,10 +266,28 @@ class PlayerHeroSection extends StatelessWidget {
                             ),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: Colors.white,
-                              side: const BorderSide(color: Colors.white70),
+                              side: BorderSide(
+                                color: Colors.white.withValues(alpha: 0.7),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 8,
+                              ),
+                              minimumSize: const Size(118, 36),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              shape: const StadiumBorder(),
                             ),
-                            icon: const Icon(Icons.chat_bubble_outline, size: 18),
-                            label: const Text('Message'),
+                            icon: const Icon(
+                              Icons.chat_bubble_outline,
+                              size: 18,
+                            ),
+                            label: const Text(
+                              'Message',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                           ),
                         );
                       },

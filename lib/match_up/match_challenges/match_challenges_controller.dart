@@ -78,6 +78,25 @@ class MatchChallengesController extends GetxController {
     filterAllTeams.value = true;
   }
 
+  @override
+  void onInit() {
+    super.onInit();
+    applyTabFromArguments();
+  }
+
+  void applyTabFromArguments() {
+    final raw = Get.arguments;
+    if (raw is! Map) return;
+    final tabName = raw['tab'];
+    if (tabName is! String) return;
+    for (final tab in MatchChallengesTab.values) {
+      if (tab.name == tabName) {
+        selectedTab.value = tab;
+        return;
+      }
+    }
+  }
+
   void switchTab(int index) {
     if (index < 0 || index >= MatchChallengesTab.values.length) return;
     final tab = MatchChallengesTab.values[index];

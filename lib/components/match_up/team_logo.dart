@@ -10,11 +10,13 @@ class TeamLogo extends StatelessWidget {
     required this.url,
     this.size = 48,
     this.teamId,
+    this.placeholderIcon,
   });
 
   final String url;
   final double size;
   final String? teamId;
+  final IconData? placeholderIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +43,7 @@ class TeamLogo extends StatelessWidget {
         color: const Color(AppColors.primaryColor).withValues(alpha: 0.1),
       ),
       child: Icon(
-        Icons.shield_outlined,
+        placeholderIcon ?? Icons.groups_rounded,
         size: size * 0.5,
         color: const Color(AppColors.primaryColor),
       ),

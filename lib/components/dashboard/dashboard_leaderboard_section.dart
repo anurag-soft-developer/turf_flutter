@@ -312,33 +312,30 @@ class _LeaderboardSkeleton extends StatelessWidget {
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+                padding: const EdgeInsets.fromLTRB(12, 16, 12, 0),
                 child: SizedBox(
-                  height: 176,
+                  height: LeaderboardPodium.defaultHeight,
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Expanded(
                         child: _PodiumSlotSkeleton(
                           opacity: opacity,
-                          badgeSize: 24,
+                          rank: 2,
                           avatarSize: 52,
-                        ),
-                      ),
-                      Expanded(
-                        child: Transform.translate(
-                          offset: const Offset(0, -12),
-                          child: _PodiumSlotSkeleton(
-                            opacity: opacity,
-                            badgeSize: 28,
-                            avatarSize: 64,
-                          ),
                         ),
                       ),
                       Expanded(
                         child: _PodiumSlotSkeleton(
                           opacity: opacity,
-                          badgeSize: 24,
+                          rank: 1,
+                          avatarSize: 64,
+                        ),
+                      ),
+                      Expanded(
+                        child: _PodiumSlotSkeleton(
+                          opacity: opacity,
+                          rank: 3,
                           avatarSize: 52,
                         ),
                       ),
@@ -398,33 +395,43 @@ class _LeaderboardSkeleton extends StatelessWidget {
 class _PodiumSlotSkeleton extends StatelessWidget {
   const _PodiumSlotSkeleton({
     required this.opacity,
-    required this.badgeSize,
+    required this.rank,
     required this.avatarSize,
   });
 
   final double opacity;
-  final double badgeSize;
+  final int rank;
   final double avatarSize;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        BreathingCircle(opacity: opacity, size: badgeSize),
-        const SizedBox(height: 6),
-        BreathingCircle(opacity: opacity, size: avatarSize),
-        const SizedBox(height: 8),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: BreathingBlock(
-            opacity: opacity,
-            height: 12,
-            borderRadius: BorderRadius.circular(4),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          BreathingCircle(opacity: opacity, size: avatarSize),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: BreathingBlock(
+              opacity: opacity,
+              height: 12,
+              borderRadius: BorderRadius.circular(4),
+            ),
           ),
-        ),
-      ],
+          const SizedBox(height: 8),
+          BreathingBlock(
+            opacity: opacity,
+            width: double.infinity,
+            height: LeaderboardPodium.barHeightForRank(rank),
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(10),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

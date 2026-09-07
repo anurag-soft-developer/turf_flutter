@@ -45,12 +45,19 @@ class LeaderboardPodium extends StatelessWidget {
     this.third,
     required this.avatarBuilder,
     this.onSlotTap,
-    this.height = 176,
+    this.height = defaultHeight,
     this.firstAvatarSize = 64,
     this.sideAvatarSize = 52,
-    this.padding = const EdgeInsets.fromLTRB(12, 0, 12, 16),
-    this.firstPlaceOffset = const Offset(0, -12),
+    this.padding = const EdgeInsets.fromLTRB(12, 16, 12, 0),
   });
+
+  static const double defaultHeight = 220;
+
+  static double barHeightForRank(int rank) => switch (rank) {
+        1 => 72,
+        2 => 52,
+        _ => 36,
+      };
 
   final LeaderboardPodiumEntry? first;
   final LeaderboardPodiumEntry? second;
@@ -61,7 +68,6 @@ class LeaderboardPodium extends StatelessWidget {
   final double firstAvatarSize;
   final double sideAvatarSize;
   final EdgeInsets padding;
-  final Offset firstPlaceOffset;
 
   @override
   Widget build(BuildContext context) {
@@ -86,15 +92,12 @@ class LeaderboardPodium extends StatelessWidget {
               ),
             ),
             Expanded(
-              child: Transform.translate(
-                offset: firstPlaceOffset,
-                child: _PodiumSlot(
-                  entry: first,
-                  rank: 1,
-                  avatarSize: firstAvatarSize,
-                  avatarBuilder: avatarBuilder,
-                  onTap: onSlotTap,
-                ),
+              child: _PodiumSlot(
+                entry: first,
+                rank: 1,
+                avatarSize: firstAvatarSize,
+                avatarBuilder: avatarBuilder,
+                onTap: onSlotTap,
               ),
             ),
             Expanded(
@@ -162,17 +165,15 @@ class _PodiumSlot extends StatelessWidget {
     }
 
     final style = _PodiumRankStyle.forRank(rank);
-    final slot = Column(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        _RankBadge(rank: rank, style: style),
-        const SizedBox(height: 6),
-        avatarBuilder(entry!, avatarSize),
-        const SizedBox(height: 8),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Text(
+    final slot = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          avatarBuilder(entry!, avatarSize),
+          const SizedBox(height: 8),
+          Text(
             entry!.name,
             textAlign: TextAlign.center,
             maxLines: 1,
@@ -183,8 +184,28 @@ class _PodiumSlot extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
-        ),
-      ],
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            height: LeaderboardPodium.barHeightForRank(rank),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: style.badgeColor,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(10),
+              ),
+            ),
+            child: Text(
+              '$rank',
+              style: TextStyle(
+                color: style.badgeTextColor,
+                fontSize: rank == 1 ? 18 : 15,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
 
     if (onTap == null) {
@@ -195,55 +216,6 @@ class _PodiumSlot extends StatelessWidget {
       onTap: () => onTap!(entry!),
       borderRadius: BorderRadius.circular(12),
       child: slot,
-    );
-  }
-}
-
-class _RankBadge extends StatelessWidget {
-  const _RankBadge({
-    required this.rank,
-    required this.style,
-  });
-
-  final int rank;
-  final _PodiumRankStyle style;
-
-  @override
-  Widget build(BuildContext context) {
-    final size = rank == 1 ? 28.0 : 24.0;
-    return _RankCircle(rank: rank, style: style, size: size);
-  }
-}
-
-class _RankCircle extends StatelessWidget {
-  const _RankCircle({
-    required this.rank,
-    required this.style,
-    required this.size,
-  });
-
-  final int rank;
-  final _PodiumRankStyle style;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: style.badgeColor,
-        shape: BoxShape.circle,
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        '$rank',
-        style: TextStyle(
-          color: style.badgeTextColor,
-          fontSize: 12,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
     );
   }
 }

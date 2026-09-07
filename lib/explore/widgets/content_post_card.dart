@@ -98,6 +98,15 @@ class _ContentPostCardState extends State<ContentPostCard> {
     }
   }
 
+  void _openAuthorProfile() {
+    final userId = widget.post.postedByHelper.getId();
+    if (userId == null || userId.isEmpty) return;
+    Get.toNamed(
+      AppConstants.routes.teamMemberProfile,
+      arguments: {'userId': userId},
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final post = widget.post;
@@ -106,6 +115,8 @@ class _ContentPostCardState extends State<ContentPostCard> {
     final match = post.match;
     final turfName = post.turfHelper.getName();
     final id = post.id ?? '';
+    final authorId = author.getId();
+    final canOpenAuthor = authorId != null && authorId.isNotEmpty;
 
     return VisibilityDetector(
       key: Key('post-view-$id'),
@@ -124,41 +135,55 @@ class _ContentPostCardState extends State<ContentPostCard> {
           children: [
             Row(
               children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundImage: (author.getAvatar() ?? '').isNotEmpty
-                      ? AppNetworkImage.provider(author.getAvatar()!)
-                      : null,
-                  child: (author.getAvatar() ?? '').isEmpty
-                      ? Text(
-                          author.getDisplayName().isNotEmpty
-                              ? author.getDisplayName()[0].toUpperCase()
-                              : '?',
-                        )
-                      : null,
-                ),
-                const SizedBox(width: 10),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        author.getDisplayName(),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                          color: Color(AppColors.textColor),
+                  child: GestureDetector(
+                    onTap: canOpenAuthor ? _openAuthorProfile : null,
+                    behavior: HitTestBehavior.opaque,
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 20,
+                          backgroundImage:
+                              (author.getAvatar() ?? '').isNotEmpty
+                                  ? AppNetworkImage.provider(
+                                      author.getAvatar()!,
+                                    )
+                                  : null,
+                          child: (author.getAvatar() ?? '').isEmpty
+                              ? Text(
+                                  author.getDisplayName().isNotEmpty
+                                      ? author.getDisplayName()[0]
+                                          .toUpperCase()
+                                      : '?',
+                                )
+                              : null,
                         ),
-                      ),
-                      if (teamName != null)
-                        Text(
-                          teamName,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Color(AppColors.textSecondaryColor),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                author.getDisplayName(),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 15,
+                                  color: Color(AppColors.textColor),
+                                ),
+                              ),
+                              if (teamName != null)
+                                Text(
+                                  teamName,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Color(AppColors.textSecondaryColor),
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
                 if (id.isNotEmpty)

@@ -2,16 +2,15 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/chat/chat_inbox_controller.dart';
+import 'package:flutter_application_1/chat/chat_inbox_tile.dart';
 import 'package:flutter_application_1/chat/chat_service.dart';
 import 'package:flutter_application_1/chat/model/chat_models.dart';
-import 'package:flutter_application_1/chat/model/chat_scope.dart';
+import 'package:flutter_application_1/components/shared/user_avatar_app_bar_action.dart';
 import 'package:flutter_application_1/core/components/scroll/floating_sliver_app_bar.dart';
 import 'package:flutter_application_1/core/config/constants.dart';
 import 'package:flutter_application_1/core/models/paginated_response.dart';
 import 'package:flutter_application_1/core/query/query_keys.dart';
 import 'package:flutter_application_1/core/query/query_retry.dart';
-import 'package:flutter_application_1/core/utils/date_util.dart';
-import 'package:flutter_application_1/components/shared/app_network_image.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
@@ -131,7 +130,7 @@ class ChatInboxScreen extends HookWidget {
                           onDismissed: (_) {
                             unawaited(controller.hideThreads([item]));
                           },
-                          child: _InboxTile(
+                          child: ChatInboxTile(
                             item: item,
                             selected: selected,
                             isSelecting: selecting,
@@ -209,13 +208,22 @@ class ChatInboxScreen extends HookWidget {
                               ? '${selectedKeys.length} selected'
                               : 'Messages',
                         ),
+                        automaticallyImplyLeading: false,
                         leading: selecting
                             ? IconButton(
                                 icon: const Icon(Icons.close),
                                 onPressed: controller.exitSelection,
                               )
-                            : null,
+                            : const UserAvatarAppBarAction(),
                         actions: [
+                          if (!selecting)
+                            IconButton(
+                              tooltip: 'Search',
+                              icon: const Icon(Icons.search),
+                              onPressed: () => Get.toNamed(
+                                AppConstants.routes.chatInboxSearch,
+                              ),
+                            ),
                           if (selecting && items.isNotEmpty)
                             IconButton(
                               tooltip:
@@ -326,119 +334,5 @@ class _HideBackground extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-class _InboxTile extends StatelessWidget {
-  const _InboxTile({
-    required this.item,
-    required this.selected,
-    required this.isSelecting,
-    required this.onTap,
-    required this.onLongPress,
-  });
-
-  final ChatInboxItem item;
-  final bool selected;
-  final bool isSelecting;
-  final VoidCallback onTap;
-  final VoidCallback onLongPress;
-
-  @override
-  Widget build(BuildContext context) {
-    final imageUrl = item.imageUrl;
-    final timeLabel =
-        item.lastMessageAt.isEmpty ? '' : timeAgo(item.lastMessageAt);
-    final unread = item.unreadCount > 0;
-
-    return Material(
-      color: selected
-          ? ChatInboxScreen._primary.withValues(alpha: 0.12)
-          : const Color(AppColors.backgroundColor),
-      child: ListTile(
-        onTap: onTap,
-        onLongPress: onLongPress,
-        leading: isSelecting
-            ? Checkbox(
-                value: selected,
-                onChanged: (_) => onTap(),
-                activeColor: ChatInboxScreen._primary,
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                visualDensity: VisualDensity.compact,
-              )
-            : CircleAvatar(
-                backgroundColor: ChatInboxScreen._primary.withValues(
-                  alpha: 0.12,
-                ),
-                backgroundImage: imageUrl != null && imageUrl.isNotEmpty
-                    ? AppNetworkImage.provider(imageUrl)
-                    : null,
-                child: imageUrl == null || imageUrl.isEmpty
-                    ? Icon(
-                        _iconForScope(item.scope),
-                        color: ChatInboxScreen._primary,
-                      )
-                    : null,
-              ),
-        title: Text(
-          item.title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontWeight: unread ? FontWeight.w700 : FontWeight.w600,
-            color: const Color(AppColors.textColor),
-          ),
-        ),
-        subtitle: Text(
-          item.lastMessageBody,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontWeight: unread ? FontWeight.w600 : FontWeight.w400,
-            color: const Color(AppColors.textSecondaryColor),
-          ),
-        ),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            if (timeLabel.isNotEmpty)
-              Text(
-                timeLabel,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: Color(AppColors.textSecondaryColor),
-                ),
-              ),
-            if (unread) ...[
-              const SizedBox(height: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                decoration: BoxDecoration(
-                  color: ChatInboxScreen._primary,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  item.unreadCount > 99 ? '99+' : '${item.unreadCount}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  IconData _iconForScope(ChatScope scope) {
-    return switch (scope) {
-      ChatScope.team => Icons.groups_outlined,
-      ChatScope.match => Icons.sports_soccer_outlined,
-      ChatScope.player => Icons.person_outline,
-    };
   }
 }

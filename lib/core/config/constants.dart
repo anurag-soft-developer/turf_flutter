@@ -64,20 +64,19 @@ class Routes {
   String followers(String userId) => '/followers/$userId';
   String following(String userId) => '/following/$userId';
   String teamFollowers(String teamId) => '/team-followers/$teamId';
-  final String matchUp = '/match-up';
   final String matchUpChallenges = '/match-up/challenges';
   String matchChallengeDetail([String id = ':id']) =>
       '/match-up/challenges/detail/$id';
   final String matches = '/matches';
   final String exploreSearch = '/explore/search';
   final String turfSearch = '/turf/search';
-  final String matchUpSearch = '/match-up/search';
   String explorePost([String id = ':id']) => '/explore/post/$id';
   final String matchChallengeMessages = '/match-up/challenge-messages';
   final String cricketScoreBoard = '/match-up/cricket-scoreboard';
   final String footballScoreBoard = '/match-up/football-scoreboard';
   final String matchHistory = '/match-history';
   final String chatInbox = '/chat';
+  final String chatInboxSearch = '/chat/search';
   final String chatThread = '/chat/thread';
 }
 
@@ -93,6 +92,7 @@ class StorageKeys {
   final String searchHistoryTurfs = 'search_history_turfs';
   final String searchHistoryMatchUp = 'search_history_match_up';
   final String searchHistoryMyTeams = 'search_history_my_teams';
+  final String searchHistoryChat = 'search_history_chat';
 }
 
 class ErrorMessages {
