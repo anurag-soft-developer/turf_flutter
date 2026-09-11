@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/utils/app_snackbar.dart';
 import 'package:get/get.dart';
+import 'package:pretty_qr_code/pretty_qr_code.dart';
 import '../../turf_booking/model/turf_booking_model.dart';
 import '../../core/config/constants.dart';
 
@@ -8,6 +9,10 @@ class BookingCard extends StatelessWidget {
   final TurfBookingModel booking;
 
   const BookingCard({super.key, required this.booking});
+
+  bool get _hasTicket =>
+      booking.status == TurfBookingStatus.confirmed ||
+      booking.status == TurfBookingStatus.completed;
 
   @override
   Widget build(BuildContext context) {
@@ -18,124 +23,106 @@ class BookingCard extends StatelessWidget {
         color: Colors.white,
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Column(
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Booking #${booking.id?.substring(0, 6) ?? 'N/A'}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: Color(AppColors.textColor),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Booking #${booking.id?.substring(0, 6) ?? 'N/A'}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: Color(AppColors.textColor),
+                            ),
+                          ),
+                        ),
+                        _StatusChip(status: booking.status),
+                      ],
                     ),
-                  ),
-                  Row(
-                    children: [
-                      _StatusChip(status: booking.status),
-                      if (booking.status == TurfBookingStatus.confirmed ||
-                          booking.status == TurfBookingStatus.completed) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        const Icon(Icons.grass, size: 18, color: Colors.green),
                         const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.withValues(alpha: .1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.qr_code,
-                                size: 12,
-                                color: Colors.blue[700],
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'TAP',
-                                style: TextStyle(
-                                  color: Colors.blue[700],
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
+                        Expanded(
+                          child: Text(
+                            booking.turfDisplayName,
+                            style: const TextStyle(
+                              color: Color(AppColors.textSecondaryColor),
+                              fontWeight: FontWeight.w500,
+                              fontSize: 15,
+                            ),
                           ),
                         ),
                       ],
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  const Icon(Icons.grass, size: 18, color: Colors.green),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      booking.turfDisplayName,
-                      style: const TextStyle(
-                        color: Color(AppColors.textSecondaryColor),
-                        fontWeight: FontWeight.w500,
-                        fontSize: 15,
-                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  const Icon(Icons.access_time, size: 18, color: Colors.blue),
-                  const SizedBox(width: 8),
-                  Text(
-                    booking.bookingTimeDisplay,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Color(AppColors.textSecondaryColor),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.access_time,
+                          size: 18,
+                          color: Colors.blue,
+                        ),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            booking.bookingTimeDisplay,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Color(AppColors.textSecondaryColor),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        const Icon(
+                          Icons.calendar_today,
+                          size: 18,
+                          color: Colors.orange,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          booking.startDateTime?.toString().split(' ').first ??
+                              'N/A',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Color(AppColors.textSecondaryColor),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  const Icon(
-                    Icons.calendar_today,
-                    size: 18,
-                    color: Colors.orange,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    booking.startDateTime?.toString().split(' ').first ?? 'N/A',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Color(AppColors.textSecondaryColor),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.currency_rupee,
+                          size: 18,
+                          color: Colors.green,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '₹${booking.totalAmount?.toStringAsFixed(2) ?? '0.00'}',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Color(AppColors.textSecondaryColor),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  const Icon(
-                    Icons.currency_rupee,
-                    size: 18,
-                    color: Colors.green,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '₹${booking.totalAmount?.toStringAsFixed(2) ?? '0.00'}',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Color(AppColors.textSecondaryColor),
-                    ),
-                  ),
-                ],
-              ),
+              if (_hasTicket && (booking.id ?? '').isNotEmpty) ...[
+                const SizedBox(width: 12),
+                _CompactTicketQr(data: booking.id!),
+              ],
             ],
           ),
         ),
@@ -144,8 +131,7 @@ class BookingCard extends StatelessWidget {
   }
 
   void _handleCardTap() {
-    if (booking.status == TurfBookingStatus.confirmed ||
-        booking.status == TurfBookingStatus.completed) {
+    if (_hasTicket) {
       Get.toNamed(
         AppConstants.routes.bookingTicket,
         arguments: {
@@ -153,13 +139,42 @@ class BookingCard extends StatelessWidget {
           'booking': booking,
         },
       );
-    } else {
-      AppSnackbar.error(
-        title: 'Ticket is not generated yet',
-        message:
-            'Booking is ${booking.status?.name.capitalizeFirst ?? 'UNKNOWN'}',
-      );
+      return;
     }
+    if (booking.status == TurfBookingStatus.cancelled) return;
+    AppSnackbar.error(
+      title: 'Ticket is not generated yet',
+      message:
+          'Booking is ${booking.status?.name.capitalizeFirst ?? 'UNKNOWN'}',
+    );
+  }
+}
+
+class _CompactTicketQr extends StatelessWidget {
+  const _CompactTicketQr({required this.data});
+
+  final String data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 64,
+      height: 64,
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(AppColors.dividerColor)),
+      ),
+      child: PrettyQrView.data(
+        data: data,
+        decoration: const PrettyQrDecoration(
+          shape: PrettyQrSmoothSymbol(
+            color: Color(AppColors.primaryColor),
+          ),
+        ),
+      ),
+    );
   }
 }
 

@@ -164,6 +164,7 @@ class CreatePostRequest {
   final PostStatus? status;
   final String? team;
   final String? match;
+  final String? turf;
   final List<CreatePostMediaInput>? media;
 
   const CreatePostRequest({
@@ -173,6 +174,7 @@ class CreatePostRequest {
     this.status,
     this.team,
     this.match,
+    this.turf,
     this.media,
   });
 
@@ -184,6 +186,7 @@ class CreatePostRequest {
     if (status != null) map['status'] = status!.name;
     if (team != null) map['team'] = team;
     if (match != null) map['match'] = match;
+    if (turf != null) map['turf'] = turf;
     if (media != null) {
       map['media'] = media!.map((m) => m.toJson()).toList();
     }
@@ -234,5 +237,29 @@ class PostFilterQuery {
       params['search'] = trimmedSearch;
     }
     return params;
+  }
+
+  PostFilterQuery copyWith({
+    String? postedBy,
+    bool? mine,
+    PostStatus? status,
+    String? team,
+    String? match,
+    String? turf,
+    String? search,
+    int? page,
+    int? limit,
+  }) {
+    return PostFilterQuery(
+      postedBy: postedBy ?? this.postedBy,
+      mine: mine ?? this.mine,
+      status: status ?? this.status,
+      team: team ?? this.team,
+      match: match ?? this.match,
+      turf: turf ?? this.turf,
+      search: search ?? this.search,
+      page: page ?? this.page,
+      limit: limit ?? this.limit,
+    );
   }
 }

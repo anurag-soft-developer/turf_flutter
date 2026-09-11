@@ -24,12 +24,14 @@ class ProfileStatsSliver extends HookWidget {
     useListenable(sportTabController);
 
     if (sports.isEmpty) {
-      return const SliverFillRemaining(
-        hasScrollBody: false,
-        child: Center(
-          child: Text(
-            'No sport stats available',
-            style: TextStyle(color: Color(AppColors.textSecondaryColor)),
+      return const SliverToBoxAdapter(
+        child: Padding(
+          padding: EdgeInsets.only(top: 80, bottom: 48),
+          child: Center(
+            child: Text(
+              'No sport stats available',
+              style: TextStyle(color: Color(AppColors.textSecondaryColor)),
+            ),
           ),
         ),
       );

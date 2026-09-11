@@ -408,6 +408,27 @@ class TeamMatchModel {
 
   TurfBookingRefFieldInstance get turfBookingIdHelper =>
       TurfBookingRefFieldInstance(turfBookingId);
+
+  String get versusLabel {
+    final from = fromTeamHelper.getDisplayName();
+    final to = toTeamHelper.getDisplayName();
+    if (from.isNotEmpty && to.isNotEmpty) return '$from vs $to';
+    if (from.isNotEmpty) return from;
+    if (to.isNotEmpty) return to;
+    return 'Match';
+  }
+
+  ProposedTurfModel? get selectedTurfProposal {
+    if (selectedTurfProposalId != null) {
+      for (final turf in proposedTurfs) {
+        if (turf.proposalId == selectedTurfProposalId) return turf;
+      }
+    }
+    for (final turf in proposedTurfs) {
+      if (turf.status == MatchProposalStatus.accepted) return turf;
+    }
+    return null;
+  }
 }
 
 // --- Query param objects ---

@@ -13,7 +13,9 @@ import '../core/models/user_field_instance.dart';
 import '../core/query/query_keys.dart';
 import '../core/query/query_retry.dart';
 import '../core/services/auth_service.dart';
-import 'widgets/profile_posts_grid.dart';
+import '../explore/model/content_post_model.dart';
+import '../explore/post_service.dart';
+import '../explore/widgets/tagged_posts_grid.dart';
 import 'widgets/profile_scroll_scaffold.dart';
 import 'widgets/profile_stats_sliver.dart';
 
@@ -49,7 +51,6 @@ class ProfileScreen extends HookWidget {
   @override
   Widget build(BuildContext context) {
     final authController = Get.find<AuthStateController>();
-    final queryClient = useQueryClient();
 
     final profileQuery = useQuery<UserModel, Object>(
       QueryKeys.profile,
@@ -106,21 +107,17 @@ class ProfileScreen extends HookWidget {
           final sports = _availableSports(resolved);
           final userId = resolved.id ?? authController.user?.id ?? '';
 
-          Future<void> onRefresh() async {
-            await Future.wait([
-              profileQuery.refetch(),
-              if (userId.isNotEmpty)
-                queryClient.invalidateQueries(
-                  queryKey: QueryKeys.userPosts(userId),
-                ),
-            ]);
-          }
-
           return ProfileScrollScaffold(
-            onRefresh: onRefresh,
-            hero: PlayerHeroSection(helper: helper),
-            badges: PlayerBadgesSection(
-              badges: helper.getModel()?.badges ?? [],
+            header: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                PlayerHeroSection(helper: helper),
+                const SizedBox(height: 24),
+                PlayerBadgesSection(
+                  badges: helper.getModel()?.badges ?? [],
+                ),
+                const SizedBox(height: 24),
+              ],
             ),
             outerTabController: outerTabController,
             photosSliver: userId.isEmpty
@@ -130,7 +127,14 @@ class ProfileScreen extends HookWidget {
                       child: Center(child: Text('No photos yet')),
                     ),
                   )
-                : ProfilePostsGrid(userId: userId),
+                : TaggedPostsGrid(
+                    queryKey: QueryKeys.userPosts(userId),
+                    filter: PostFilterQuery(
+                      postedBy: userId,
+                      status: PostStatus.published,
+                      limit: PostService.userPostsPageSize,
+                    ),
+                  ),
             statsSliver: ProfileStatsSliver(
               sports: sports,
               sportTabController: sportTabController,

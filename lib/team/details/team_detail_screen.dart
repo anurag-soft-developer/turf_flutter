@@ -19,6 +19,10 @@ import '../../core/config/constants.dart';
 import '../../core/models/paginated_response.dart';
 import '../../core/query/query_keys.dart';
 import '../../core/query/query_retry.dart';
+import '../../explore/model/content_post_model.dart';
+import '../../explore/post_service.dart';
+import '../../explore/widgets/tagged_posts_grid.dart';
+import '../../profile/widgets/profile_scroll_scaffold.dart';
 import '../members/model/team_member_model.dart';
 import '../model/team_model.dart';
 import '../team_service.dart';
@@ -124,6 +128,8 @@ class TeamDetailScreen extends HookWidget {
       retry: noRetry,
     );
 
+    final outerTabController = useTabController(initialLength: 2);
+
     useEffect(() {
       controller.setTeamId(hasTeamId ? resolvedTeamId : null);
       return null;
@@ -222,6 +228,7 @@ class TeamDetailScreen extends HookWidget {
             membershipsQuery: membershipsQuery,
             teamQuery: teamQuery,
             rosterQuery: rosterQuery,
+            tabController: outerTabController,
           ),
           if (controller.isMyTeamMode)
             Obx(
@@ -253,6 +260,7 @@ class TeamDetailScreen extends HookWidget {
     required QueryResult<TeamModel, Object> teamQuery,
     required QueryResult<PaginatedResponse<TeamMemberModel>, Object>
         rosterQuery,
+    required TabController tabController,
   }) {
     if (needsMembershipResolution) {
       if (membershipsQuery.isLoading ||
@@ -328,189 +336,201 @@ class TeamDetailScreen extends HookWidget {
             : null;
         final isMember = membership?.status == TeamMemberStatus.active;
 
-        return RefreshIndicator(
-          onRefresh: () async {
-            await Future.wait([
-              teamQuery.refetch(),
-              rosterQuery.refetch(),
-              membershipsQuery.refetch(),
-            ]);
-          },
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TeamHeroHeader(team: t),
-                const SizedBox(height: 16),
-                TeamQuickStatsBar(team: t),
-                const SizedBox(height: 24),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: const TeamSectionHeader(title: 'About'),
-                ),
-                const SizedBox(height: 12),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: TeamInfoSection(team: t),
-                ),
-                const SizedBox(height: 28),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: TeamSportStatsSection(team: t),
-                ),
-                const SizedBox(height: 28),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: TeamSectionHeader(
-                    title: 'Squad',
-                    trailing: controller.isMyTeamMode &&
-                            isOwner &&
-                            t.id != null &&
-                            t.id!.isNotEmpty
-                        ? PopupMenuButton<String>(
-                            tooltip: 'Squad actions',
-                            offset: const Offset(0, 36),
-                            color: const Color(AppColors.surfaceColor),
-                            surfaceTintColor: Colors.transparent,
-                            onSelected: (value) {
-                              if (value == 'manage') {
-                                Get.toNamed(
-                                  AppConstants.routes.teamRosterManage,
-                                  arguments: {'teamId': t.id!},
-                                );
-                              } else if (value == 'invite') {
-                                Get.toNamed(
-                                  AppConstants.routes.teamInvites,
-                                  arguments: {'teamId': t.id!},
-                                );
-                              } else if (value == 'join_requests') {
-                                Get.toNamed(
-                                  AppConstants.routes.teamJoinRequests,
-                                  arguments: {'teamId': t.id!},
-                                );
-                              }
-                            },
-                            itemBuilder: (context) => const [
-                              PopupMenuItem(
-                                value: 'manage',
-                                child: Text(
-                                  'Manage members',
-                                  style: TextStyle(
-                                    color: Color(AppColors.textColor),
-                                  ),
+        final teamId = t.id;
+        final hasTaggedTeamId = teamId != null && teamId.isNotEmpty;
+
+        final manageBody = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TeamHeroHeader(
+                team: t,
+                showFollowButton: !controller.isMyTeamMode,
+              ),
+              const SizedBox(height: 16),
+              TeamQuickStatsBar(team: t),
+              const SizedBox(height: 24),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: const TeamSectionHeader(title: 'About'),
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: TeamInfoSection(team: t),
+              ),
+              const SizedBox(height: 28),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: TeamSectionHeader(
+                  title: 'Squad',
+                  trailing: controller.isMyTeamMode &&
+                          isOwner &&
+                          hasTaggedTeamId
+                      ? PopupMenuButton<String>(
+                          tooltip: 'Squad actions',
+                          offset: const Offset(0, 36),
+                          color: const Color(AppColors.surfaceColor),
+                          surfaceTintColor: Colors.transparent,
+                          onSelected: (value) {
+                            if (value == 'manage') {
+                              Get.toNamed(
+                                AppConstants.routes.teamRosterManage,
+                                arguments: {'teamId': teamId},
+                              );
+                            } else if (value == 'invite') {
+                              Get.toNamed(
+                                AppConstants.routes.teamInvites,
+                                arguments: {'teamId': teamId},
+                              );
+                            } else if (value == 'join_requests') {
+                              Get.toNamed(
+                                AppConstants.routes.teamJoinRequests,
+                                arguments: {'teamId': teamId},
+                              );
+                            }
+                          },
+                          itemBuilder: (context) => const [
+                            PopupMenuItem(
+                              value: 'manage',
+                              child: Text(
+                                'Manage members',
+                                style: TextStyle(
+                                  color: Color(AppColors.textColor),
                                 ),
                               ),
-                              PopupMenuItem(
-                                value: 'invite',
-                                child: Text(
-                                  'Invite members',
-                                  style: TextStyle(
-                                    color: Color(AppColors.textColor),
-                                  ),
+                            ),
+                            PopupMenuItem(
+                              value: 'invite',
+                              child: Text(
+                                'Invite members',
+                                style: TextStyle(
+                                  color: Color(AppColors.textColor),
                                 ),
                               ),
-                              PopupMenuItem(
-                                value: 'join_requests',
-                                child: Text(
-                                  'Join requests',
-                                  style: TextStyle(
-                                    color: Color(AppColors.textColor),
-                                  ),
+                            ),
+                            PopupMenuItem(
+                              value: 'join_requests',
+                              child: Text(
+                                'Join requests',
+                                style: TextStyle(
+                                  color: Color(AppColors.textColor),
                                 ),
                               ),
-                            ],
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 6,
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: const [
-                                  Icon(
-                                    Icons.manage_accounts,
-                                    size: 16,
-                                    color: Color(AppColors.primaryColor),
-                                  ),
-                                  SizedBox(width: 4),
-                                  Text(
-                                    'Manage',
-                                    style: TextStyle(
-                                      fontSize: 12.5,
-                                      fontWeight: FontWeight.w700,
-                                      color: Color(AppColors.primaryColor),
-                                    ),
-                                  ),
-                                  Icon(
-                                    Icons.arrow_drop_down,
-                                    size: 18,
-                                    color: Color(AppColors.primaryColor),
-                                  ),
-                                ],
-                              ),
                             ),
-                          )
-                        : null,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _MembersHorizontalList(members: members),
-                const SizedBox(height: 28),
-                if (t.socialLinks.instagram != null ||
-                    t.socialLinks.twitter != null ||
-                    t.socialLinks.facebook != null ||
-                    t.socialLinks.youtube != null) ...[
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: const TeamSectionHeader(title: 'Connect'),
-                  ),
-                  const SizedBox(height: 12),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: TeamSocialLinksRow(links: t.socialLinks),
-                  ),
-                  const SizedBox(height: 28),
-                ],
-                if (controller.isMyTeamMode && (isOwner || isMember))
-                  Obx(() {
-                    final st = controller.team.value ?? t;
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const TeamSectionHeader(title: 'Team Actions'),
-                          const SizedBox(height: 12),
-                          if (isOwner) ...[
-                            TeamSettingsCard(
-                              controller: controller,
-                              team: st,
-                            ),
-                            const SizedBox(height: 18),
-                            TeamRecruitmentSettingsCard(
-                              controller: controller,
-                              team: st,
-                            ),
-                            const SizedBox(height: 18),
                           ],
-                          TeamActionsCard(
-                            isOwner: isOwner,
-                            isMember: isMember,
-                            isActionLoading: controller.isActionLoading.value,
-                            teamStatus: st.status,
-                            onToggleStatus: () =>
-                                _confirmToggleStatus(context, controller),
-                            onLeave: () =>
-                                _confirmLeave(context, controller),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: const [
+                                Icon(
+                                  Icons.manage_accounts,
+                                  size: 16,
+                                  color: Color(AppColors.primaryColor),
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Manage',
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(AppColors.primaryColor),
+                                  ),
+                                ),
+                                Icon(
+                                  Icons.arrow_drop_down,
+                                  size: 18,
+                                  color: Color(AppColors.primaryColor),
+                                ),
+                              ],
+                            ),
                           ),
-                          const SizedBox(height: 28),
-                        ],
-                      ),
-                    );
-                  }),
-                const SizedBox(height: 24),
+                        )
+                      : null,
+                ),
+              ),
+              const SizedBox(height: 12),
+              _MembersHorizontalList(members: members),
+              const SizedBox(height: 28),
+              if (t.socialLinks.instagram != null ||
+                  t.socialLinks.twitter != null ||
+                  t.socialLinks.facebook != null ||
+                  t.socialLinks.youtube != null) ...[
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: const TeamSectionHeader(title: 'Connect'),
+                ),
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: TeamSocialLinksRow(links: t.socialLinks),
+                ),
+                const SizedBox(height: 28),
               ],
+              if (controller.isMyTeamMode && (isOwner || isMember))
+                Obx(() {
+                  final st = controller.team.value ?? t;
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const TeamSectionHeader(title: 'Team Actions'),
+                        const SizedBox(height: 12),
+                        if (isOwner) ...[
+                          TeamSettingsCard(
+                            controller: controller,
+                            team: st,
+                          ),
+                          const SizedBox(height: 18),
+                          TeamRecruitmentSettingsCard(
+                            controller: controller,
+                            team: st,
+                          ),
+                          const SizedBox(height: 18),
+                        ],
+                        TeamActionsCard(
+                          isOwner: isOwner,
+                          isMember: isMember,
+                          isActionLoading: controller.isActionLoading.value,
+                          teamStatus: st.status,
+                          onToggleStatus: () =>
+                              _confirmToggleStatus(context, controller),
+                          onLeave: () =>
+                              _confirmLeave(context, controller),
+                        ),
+                        const SizedBox(height: 28),
+                      ],
+                    ),
+                  );
+                }),
+              const SizedBox(height: 8),
+            ],
+        );
+
+        if (controller.isMyTeamMode) {
+          return SingleChildScrollView(child: manageBody);
+        }
+
+        return ProfileScrollScaffold(
+          outerTabController: tabController,
+          header: manageBody,
+          photosSliver: hasTaggedTeamId
+              ? TaggedPostsGrid(
+                  filter: PostFilterQuery(
+                    team: teamId,
+                    status: PostStatus.published,
+                    limit: PostService.userPostsPageSize,
+                  ),
+                )
+              : const SliverToBoxAdapter(child: SizedBox.shrink()),
+          statsSliver: SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+              child: TeamSportStatsSection(team: t),
             ),
           ),
         );

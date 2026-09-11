@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../components/match_up/team_logo.dart';
+import '../../components/shared/app_network_image.dart';
 import '../../components/shared/custom_button.dart';
 import '../../components/shared/custom_text_field.dart';
 import '../../components/shared/loading_overlay.dart';
 import '../../core/config/constants.dart';
 import 'create_post_controller.dart';
 import 'widgets/create_post_media_picker.dart';
+import 'widgets/create_post_mention_sheet.dart';
 
 class CreatePostScreen extends StatelessWidget {
   const CreatePostScreen({super.key});
@@ -105,6 +108,8 @@ class _CaptionStep extends StatelessWidget {
               color: Color(AppColors.textSecondaryColor),
             ),
           ),
+          const SizedBox(height: 16),
+          _CreatePostMentions(controller: controller),
           const SizedBox(height: 28),
           CustomButton(
             text: 'Publish',
@@ -117,3 +122,233 @@ class _CaptionStep extends StatelessWidget {
     );
   }
 }
+
+class _CreatePostMentions extends StatelessWidget {
+  const _CreatePostMentions({required this.controller});
+
+  final CreatePostController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Tag (optional)',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Color(AppColors.textSecondaryColor),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _MentionCard(
+            emptyLabel: 'Team',
+            emptyHint: 'Tag a team',
+            icon: Icons.groups_outlined,
+            mention: controller.mentionedTeam.value,
+            onTap: () => controller.pickTeam(context),
+            onClear: () => controller.mentionedTeam.value = null,
+          ),
+          const SizedBox(height: 8),
+          _MentionCard(
+            emptyLabel: 'Match',
+            emptyHint: 'Tag a match',
+            icon: Icons.sports_outlined,
+            mention: controller.mentionedMatch.value,
+            isMatch: true,
+            onTap: () => controller.pickMatch(context),
+            onClear: () => controller.mentionedMatch.value = null,
+          ),
+          const SizedBox(height: 8),
+          _MentionCard(
+            emptyLabel: 'Turf',
+            emptyHint: 'Tag a turf',
+            icon: Icons.grass_outlined,
+            mention: controller.mentionedTurf.value,
+            isTurf: true,
+            onTap: () => controller.pickTurf(context),
+            onClear: () => controller.mentionedTurf.value = null,
+          ),
+        ],
+      );
+    });
+  }
+}
+
+class _MentionCard extends StatelessWidget {
+  const _MentionCard({
+    required this.emptyLabel,
+    required this.emptyHint,
+    required this.icon,
+    required this.mention,
+    required this.onTap,
+    required this.onClear,
+    this.isMatch = false,
+    this.isTurf = false,
+  });
+
+  final String emptyLabel;
+  final String emptyHint;
+  final IconData icon;
+  final PostMentionRef? mention;
+  final VoidCallback onTap;
+  final VoidCallback onClear;
+  final bool isMatch;
+  final bool isTurf;
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = mention != null;
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(10, 10, 4, 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: selected
+                  ? const Color(AppColors.primaryColor).withValues(alpha: 0.35)
+                  : const Color(AppColors.dividerColor),
+            ),
+          ),
+          child: Row(
+            children: [
+              _leading(),
+              const SizedBox(width: 12),
+              Expanded(
+                child: selected
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            mention!.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              color: Color(AppColors.textColor),
+                            ),
+                          ),
+                          if ((mention!.subtitle ?? '').trim().isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              mention!.subtitle!.trim(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(AppColors.textSecondaryColor),
+                              ),
+                            ),
+                          ],
+                        ],
+                      )
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            emptyLabel,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              color: Color(AppColors.textColor),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            emptyHint,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(AppColors.textSecondaryColor),
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+              if (selected)
+                IconButton(
+                  tooltip: 'Remove',
+                  onPressed: onClear,
+                  icon: const Icon(Icons.close, size: 18),
+                  color: const Color(AppColors.textSecondaryColor),
+                )
+              else
+                const Padding(
+                  padding: EdgeInsets.only(right: 8),
+                  child: Icon(
+                    Icons.add_circle_outline,
+                    size: 20,
+                    color: Color(AppColors.primaryColor),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _leading() {
+    if (mention != null && isMatch) {
+      return CreatePostMatchPairLogos(
+        leftUrl: mention!.imageUrl,
+        rightUrl: mention!.secondaryImageUrl,
+        size: 36,
+      );
+    }
+    if (isTurf) {
+      return _TurfAvatar(url: mention?.imageUrl);
+    }
+    return TeamLogo(
+      url: mention?.imageUrl ?? '',
+      size: 40,
+      placeholderIcon: icon,
+    );
+  }
+}
+
+class _TurfAvatar extends StatelessWidget {
+  const _TurfAvatar({this.url});
+
+  final String? url;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: SizedBox(
+        width: 44,
+        height: 44,
+        child: url == null || url!.isEmpty
+            ? Container(
+                color: const Color(AppColors.primaryColor).withValues(alpha: 0.1),
+                child: const Icon(
+                  Icons.grass,
+                  color: Color(AppColors.primaryColor),
+                ),
+              )
+            : AppNetworkImage(
+                url!,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => Container(
+                  color: const Color(
+                    AppColors.primaryColor,
+                  ).withValues(alpha: 0.1),
+                  child: const Icon(
+                    Icons.grass,
+                    color: Color(AppColors.primaryColor),
+                  ),
+                ),
+              ),
+      ),
+    );
+  }
+}
+

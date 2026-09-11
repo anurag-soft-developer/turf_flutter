@@ -14,6 +14,9 @@ import '../../core/query/query_keys.dart';
 import '../../core/query/query_retry.dart';
 import '../../core/routes/route_query.dart';
 import '../../core/utils/map_launch_util.dart';
+import '../../explore/model/content_post_model.dart';
+import '../../explore/post_service.dart';
+import '../../explore/widgets/tagged_posts_grid.dart';
 import '../../team/members/model/team_member_model.dart';
 import '../../team/team_service.dart';
 import '../matchmaking_service.dart';
@@ -269,70 +272,102 @@ class _MatchChallengeDetailBody extends StatelessWidget {
                 child: AppSegmentedTabView(
                   controller: controller.detailTabController,
                   children: [
-                    SingleChildScrollView(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _InfoCard(
-                            title: 'Schedule',
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Obx(
-                                  () => _ScheduleLine(
-                                    icon: Icons.schedule,
-                                    label: 'Time',
-                                    value: timeSummary,
-                                    canEdit: controller.canUseScheduleControls,
-                                    isLoading: controller.isUpdatingSlot.value,
-                                    otherFieldBusy:
-                                        controller.isUpdatingTurf.value ||
-                                        controller.actionsChildBusy.value,
-                                    onEditPressed: () =>
-                                        controller.setTimeSlot(context),
-                                    editTooltip:
-                                        hasSlot ? 'Edit time' : 'Set time',
-                                    editIcon: hasSlot
-                                        ? Icons.edit_outlined
-                                        : Icons.event_available_outlined,
-                                  ),
+                    CustomScrollView(
+                      slivers: [
+                        SliverToBoxAdapter(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _InfoCard(
+                                title: 'Schedule',
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    Obx(
+                                      () => _ScheduleLine(
+                                        icon: Icons.schedule,
+                                        label: 'Time',
+                                        value: timeSummary,
+                                        canEdit:
+                                            controller.canUseScheduleControls,
+                                        isLoading:
+                                            controller.isUpdatingSlot.value,
+                                        otherFieldBusy:
+                                            controller.isUpdatingTurf.value ||
+                                            controller.actionsChildBusy.value,
+                                        onEditPressed: () =>
+                                            controller.setTimeSlot(context),
+                                        editTooltip:
+                                            hasSlot ? 'Edit time' : 'Set time',
+                                        editIcon: hasSlot
+                                            ? Icons.edit_outlined
+                                            : Icons.event_available_outlined,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Obx(
+                                      () => _ScheduleLine(
+                                        icon: Icons.grass,
+                                        label: 'Turf',
+                                        value: turfSummary,
+                                        location: hasTurfLocation
+                                            ? turfLocation
+                                            : null,
+                                        canEdit:
+                                            controller.canUseScheduleControls,
+                                        isLoading:
+                                            controller.isUpdatingTurf.value,
+                                        otherFieldBusy:
+                                            controller.isUpdatingSlot.value ||
+                                            controller.actionsChildBusy.value,
+                                        onEditPressed: () =>
+                                            controller.setTurf(context),
+                                        editTooltip:
+                                            hasTurf ? 'Edit turf' : 'Set turf',
+                                        editIcon: hasTurf
+                                            ? Icons.edit_outlined
+                                            : Icons.add_location_alt_outlined,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: 12),
-                                Obx(
-                                  () => _ScheduleLine(
-                                    icon: Icons.grass,
-                                    label: 'Turf',
-                                    value: turfSummary,
-                                    location: hasTurfLocation
-                                        ? turfLocation
-                                        : null,
-                                    canEdit: controller.canUseScheduleControls,
-                                    isLoading: controller.isUpdatingTurf.value,
-                                    otherFieldBusy:
-                                        controller.isUpdatingSlot.value ||
-                                        controller.actionsChildBusy.value,
-                                    onEditPressed: () =>
-                                        controller.setTurf(context),
-                                    editTooltip:
-                                        hasTurf ? 'Edit turf' : 'Set turf',
-                                    editIcon: hasTurf
-                                        ? Icons.edit_outlined
-                                        : Icons.add_location_alt_outlined,
-                                  ),
+                              ),
+                              const SizedBox(height: 12),
+                              MatchChallengeActionsCard(
+                                match: currentMatch,
+                                myTeamId: controller.myTeamId,
+                                onMatchUpdated:
+                                    controller.scheduleMatchUpdate,
+                                onInternalBusyChanged:
+                                    controller.scheduleActionsChildBusy,
+                              ),
+                              const SizedBox(height: 20),
+                              const Text(
+                                'Photos',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(AppColors.textColor),
                                 ),
-                              ],
+                              ),
+                              const SizedBox(height: 10),
+                            ],
+                          ),
+                        ),
+                        if (currentMatch.id != null &&
+                            currentMatch.id!.isNotEmpty)
+                          TaggedPostsGrid(
+                            filter: PostFilterQuery(
+                              match: currentMatch.id,
+                              status: PostStatus.published,
+                              limit: PostService.userPostsPageSize,
                             ),
+                          )
+                        else
+                          const SliverToBoxAdapter(
+                            child: SizedBox.shrink(),
                           ),
-                          const SizedBox(height: 12),
-                          MatchChallengeActionsCard(
-                            match: currentMatch,
-                            myTeamId: controller.myTeamId,
-                            onMatchUpdated: controller.scheduleMatchUpdate,
-                            onInternalBusyChanged:
-                                controller.scheduleActionsChildBusy,
-                          ),
-                        ],
-                      ),
+                      ],
                     ),
                     MatchScorecardTab(
                       match: currentMatch,

@@ -36,6 +36,7 @@ class TeamSportStatsSection extends StatelessWidget {
           final crossAxisCount = screenWidth > 500 ? 3 : 2;
 
           return GridView.count(
+            primary: false,
             crossAxisCount: crossAxisCount,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),

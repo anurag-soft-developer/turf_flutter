@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
+import '../../core/config/constants.dart';
+import '../../explore/model/content_post_model.dart';
+import '../../explore/post_service.dart';
+import '../../explore/widgets/tagged_posts_grid.dart';
 import '../../turf/details/turf_detail_controller.dart';
 import '../turf_review/turf_detail_reviews_section.dart';
 import 'booking_components.dart';
@@ -22,6 +27,9 @@ class TurfDetailScrollContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final turfId = controller.turf.value?.id ?? controller.turfId;
+    final hasTurfId = turfId != null && turfId.isNotEmpty;
+
     return CustomScrollView(
       slivers: [
         TurfImageCarousel(controller: controller),
@@ -38,17 +46,36 @@ class TurfDetailScrollContent extends StatelessWidget {
                       : const SizedBox(),
                 ),
               ],
-              if (controller.turfId != null)
+              if (hasTurfId)
                 TurfDetailReviewsSection(
-                  turfId:
-                      controller.turf.value?.id ?? controller.turfId!,
+                  turfId: turfId,
                   showReviewList: showReviewList,
                 ),
               if (belowReviews != null) belowReviews!,
-              SizedBox(height: showBookingSection ? 100 : 24),
+              if (hasTurfId)
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 20, 16, 10),
+                  child: Text(
+                    'Photos',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: Color(AppColors.textColor),
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
+        if (hasTurfId)
+          TaggedPostsGrid(
+            filter: PostFilterQuery(
+              turf: turfId,
+              status: PostStatus.published,
+              limit: PostService.userPostsPageSize,
+            ),
+          ),
+        const SliverToBoxAdapter(child: SizedBox(height: 100)),
       ],
     );
   }

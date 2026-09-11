@@ -42,7 +42,6 @@ final List<GetPage<dynamic>> matchUpRoutes = [
   GetPage(
     name: AppConstants.routes.explorePost(),
     page: () => const ExplorePostViewerScreen(),
-    binding: ExploreBinding(),
     transition: Transition.cupertino,
     middlewares: [AuthGuard()],
   ),

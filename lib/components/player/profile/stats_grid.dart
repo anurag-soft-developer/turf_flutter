@@ -15,6 +15,7 @@ class StatsGrid extends StatelessWidget {
         final aspectRatio = constraints.maxWidth > 600 ? 1.3 : 1.1;
 
         return GridView.count(
+          primary: false,
           crossAxisCount: crossAxisCount,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),

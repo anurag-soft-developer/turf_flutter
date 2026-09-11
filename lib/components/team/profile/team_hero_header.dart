@@ -11,9 +11,14 @@ import '../../player/follow/follow_stat_button.dart';
 import '../../shared/fullscreen_image_view.dart';
 
 class TeamHeroHeader extends StatefulWidget {
-  const TeamHeroHeader({super.key, required this.team});
+  const TeamHeroHeader({
+    super.key,
+    required this.team,
+    this.showFollowButton = true,
+  });
 
   final TeamModel team;
+  final bool showFollowButton;
 
   @override
   State<TeamHeroHeader> createState() => _TeamHeroHeaderState();
@@ -171,11 +176,13 @@ class _TeamHeroHeaderState extends State<TeamHeroHeader> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       onTap: canOpenFollowers ? _openFollowers : null,
                     ),
-                    const Spacer(),
-                    FollowButton(
-                      targetId: widget.team.id,
-                      recipientType: FollowRecipientType.team,
-                    ),
+                    if (widget.showFollowButton) ...[
+                      const Spacer(),
+                      FollowButton(
+                        targetId: widget.team.id,
+                        recipientType: FollowRecipientType.team,
+                      ),
+                    ],
                   ],
                 ),
               ],

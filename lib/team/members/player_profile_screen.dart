@@ -12,7 +12,9 @@ import '../../core/models/user_field_instance.dart';
 import '../../core/query/query_keys.dart';
 import '../../core/query/query_retry.dart';
 import '../../core/services/user_service.dart';
-import '../../profile/widgets/profile_posts_grid.dart';
+import '../../explore/model/content_post_model.dart';
+import '../../explore/post_service.dart';
+import '../../explore/widgets/tagged_posts_grid.dart';
 import '../../profile/widgets/profile_scroll_scaffold.dart';
 import '../../profile/widgets/profile_stats_sliver.dart';
 
@@ -58,7 +60,6 @@ class PlayerProfileScreen extends HookWidget {
   @override
   Widget build(BuildContext context) {
     final userId = useMemoized(() => _parseUserId(Get.arguments));
-    final queryClient = useQueryClient();
 
     if (userId == null || userId.isEmpty) {
       return Scaffold(
@@ -101,23 +102,27 @@ class PlayerProfileScreen extends HookWidget {
           final helper = UserFieldInstance(resolved);
           final sports = _availableSports(resolved);
 
-          Future<void> onRefresh() async {
-            await Future.wait([
-              profileQuery.refetch(),
-              queryClient.invalidateQueries(
-                queryKey: QueryKeys.userPosts(userId),
-              ),
-            ]);
-          }
-
           return ProfileScrollScaffold(
-            onRefresh: onRefresh,
-            hero: PlayerHeroSection(helper: helper),
-            badges: PlayerBadgesSection(
-              badges: helper.getModel()?.badges ?? [],
+            header: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                PlayerHeroSection(helper: helper),
+                const SizedBox(height: 24),
+                PlayerBadgesSection(
+                  badges: helper.getModel()?.badges ?? [],
+                ),
+                const SizedBox(height: 24),
+              ],
             ),
             outerTabController: outerTabController,
-            photosSliver: ProfilePostsGrid(userId: userId),
+            photosSliver: TaggedPostsGrid(
+              queryKey: QueryKeys.userPosts(userId),
+              filter: PostFilterQuery(
+                postedBy: userId,
+                status: PostStatus.published,
+                limit: PostService.userPostsPageSize,
+              ),
+            ),
             statsSliver: ProfileStatsSliver(
               sports: sports,
               sportTabController: sportTabController,

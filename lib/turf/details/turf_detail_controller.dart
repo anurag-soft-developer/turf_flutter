@@ -331,6 +331,7 @@ class TurfDetailController extends GetxController {
     await Future.wait([
       client.invalidateQueries(queryKey: ['turfReviews', id]),
       client.invalidateQueries(queryKey: QueryKeys.turfReviewStats(id)),
+      client.invalidateQueries(queryKey: QueryKeys.taggedPosts(turf: id)),
     ]);
   }
 

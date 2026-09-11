@@ -111,9 +111,6 @@ class _ContentPostCardState extends State<ContentPostCard> {
   Widget build(BuildContext context) {
     final post = widget.post;
     final author = post.postedByHelper;
-    final teamName = post.teamHelper.getName();
-    final match = post.match;
-    final turfName = post.turfHelper.getName();
     final id = post.id ?? '';
     final authorId = author.getId();
     final canOpenAuthor = authorId != null && authorId.isNotEmpty;
@@ -171,14 +168,6 @@ class _ContentPostCardState extends State<ContentPostCard> {
                                   color: Color(AppColors.textColor),
                                 ),
                               ),
-                              if (teamName != null)
-                                Text(
-                                  teamName,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: Color(AppColors.textSecondaryColor),
-                                  ),
-                                ),
                             ],
                           ),
                         ),
@@ -233,25 +222,6 @@ class _ContentPostCardState extends State<ContentPostCard> {
                   height: 1.4,
                   color: Color(AppColors.textColor),
                 ),
-              ),
-            ],
-            if (match != null || turfName != null) ...[
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  if (match != null)
-                    Chip(
-                      avatar: const Icon(Icons.sports, size: 16),
-                      label: Text(match.versusLabel),
-                    ),
-                  if (turfName != null)
-                    Chip(
-                      avatar: const Icon(Icons.place_outlined, size: 16),
-                      label: Text(turfName),
-                    ),
-                ],
               ),
             ],
             if (post.media.isNotEmpty) ...[

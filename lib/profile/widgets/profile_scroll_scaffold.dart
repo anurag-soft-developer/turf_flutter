@@ -1,26 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_hooks/flutter_hooks.dart';
 
 import '../../core/config/constants.dart';
 
-/// Page-level pull-to-refresh over hero + pinned tabs.
-///
-/// Tab bars stay tappable; horizontal swipe is omitted so a vertical pull
-/// is never claimed by a [TabBarView].
-class ProfileScrollScaffold extends HookWidget {
+/// Collapsing header + swipeable Photos/Stats.
+class ProfileScrollScaffold extends StatelessWidget {
   const ProfileScrollScaffold({
     super.key,
-    required this.onRefresh,
-    required this.hero,
-    required this.badges,
+    required this.header,
     required this.outerTabController,
     required this.photosSliver,
     required this.statsSliver,
   });
 
-  final Future<void> Function() onRefresh;
-  final Widget hero;
-  final Widget badges;
+  final Widget header;
   final TabController outerTabController;
 
   /// Must be a sliver (e.g. [SliverGrid], [SliverToBoxAdapter]).
@@ -31,41 +23,14 @@ class ProfileScrollScaffold extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    useListenable(outerTabController);
-    final isPhotos = outerTabController.index == 0;
-
-    // Dashboard body starts below the AppBar (edgeOffset 0). Profile uses
-    // extendBodyBehindAppBar, so shift the indicator origin to the AppBar's
-    // bottom edge — same "pop from under the bar" animation.
-    final edgeOffset =
-        Scaffold.maybeOf(context)?.appBarMaxHeight ??
-        MediaQuery.paddingOf(context).top + kToolbarHeight;
-
-    return RefreshIndicator(
-      edgeOffset: edgeOffset,
-      displacement: 40,
-      color: const Color(AppColors.primaryColor),
-      backgroundColor: Colors.white,
-      elevation: 2,
-      onRefresh: onRefresh,
-      child: CustomScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        slivers: [
-          SliverToBoxAdapter(child: hero),
+    return NestedScrollView(
+      headerSliverBuilder: (context, innerBoxIsScrolled) {
+        return [
+          SliverToBoxAdapter(child: header),
           SliverToBoxAdapter(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 24),
-                badges,
-                const SizedBox(height: 24),
-              ],
-            ),
-          ),
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _PinnedTabBarDelegate(
-              tabBar: TabBar(
+            child: Material(
+              color: Colors.white,
+              child: TabBar(
                 controller: outerTabController,
                 labelColor: const Color(AppColors.primaryColor),
                 unselectedLabelColor: const Color(
@@ -85,39 +50,80 @@ class ProfileScrollScaffold extends HookWidget {
               ),
             ),
           ),
-          if (isPhotos) photosSliver else statsSliver,
+        ];
+      },
+      body: TabBarView(
+        controller: outerTabController,
+        children: [
+          _TabScroll(
+            tabIndex: 0,
+            tabController: outerTabController,
+            sliver: photosSliver,
+          ),
+          _TabScroll(
+            tabIndex: 1,
+            tabController: outerTabController,
+            sliver: statsSliver,
+          ),
         ],
       ),
     );
   }
 }
 
-class _PinnedTabBarDelegate extends SliverPersistentHeaderDelegate {
-  _PinnedTabBarDelegate({required this.tabBar});
+class _TabScroll extends StatefulWidget {
+  const _TabScroll({
+    required this.tabIndex,
+    required this.tabController,
+    required this.sliver,
+  });
 
-  final TabBar tabBar;
+  final int tabIndex;
+  final TabController tabController;
+  final Widget sliver;
 
   @override
-  double get minExtent => tabBar.preferredSize.height;
+  State<_TabScroll> createState() => _TabScrollState();
+}
+
+class _TabScrollState extends State<_TabScroll> {
+  late bool _isActive;
 
   @override
-  double get maxExtent => tabBar.preferredSize.height;
-
-  @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
-    return Material(
-      color: Colors.white,
-      elevation: overlapsContent ? 1 : 0,
-      child: tabBar,
-    );
+  void initState() {
+    super.initState();
+    _isActive = widget.tabController.index == widget.tabIndex;
+    widget.tabController.addListener(_syncActive);
   }
 
   @override
-  bool shouldRebuild(covariant _PinnedTabBarDelegate oldDelegate) {
-    return tabBar != oldDelegate.tabBar;
+  void didUpdateWidget(covariant _TabScroll oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.tabController != widget.tabController) {
+      oldWidget.tabController.removeListener(_syncActive);
+      widget.tabController.addListener(_syncActive);
+    }
+    _syncActive();
+  }
+
+  @override
+  void dispose() {
+    widget.tabController.removeListener(_syncActive);
+    super.dispose();
+  }
+
+  void _syncActive() {
+    final active = widget.tabController.index == widget.tabIndex;
+    if (active == _isActive) return;
+    setState(() => _isActive = active);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomScrollView(
+      // NestedScrollView's inner controller can attach to only one view.
+      primary: _isActive,
+      slivers: [widget.sliver],
+    );
   }
 }

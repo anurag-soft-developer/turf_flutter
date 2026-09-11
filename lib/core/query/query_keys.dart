@@ -189,6 +189,23 @@ class QueryKeys {
   static List<Object> userPosts(String userId) =>
       [...userPostsPrefix, userId];
 
+  /// Prefix for tagged post grids (team / match / turf / author).
+  static const taggedPostsPrefix = ['taggedPosts'];
+
+  static List<Object> taggedPosts({
+    String? postedBy,
+    String? team,
+    String? match,
+    String? turf,
+  }) =>
+      [
+        ...taggedPostsPrefix,
+        postedBy ?? '',
+        team ?? '',
+        match ?? '',
+        turf ?? '',
+      ];
+
   static const cricketSessionPrefix = ['cricketSession'];
 
   static List<Object> cricketSession(String matchId) =>

@@ -13,8 +13,25 @@ import '../../core/utils/app_snackbar.dart';
 import '../../explore/model/content_post_model.dart';
 import '../../explore/post_service.dart';
 import 'widgets/create_post_image_editor.dart';
+import 'widgets/create_post_mention_sheet.dart';
 
 enum CreatePostStep { pick, edit, caption }
+
+class PostMentionRef {
+  const PostMentionRef({
+    required this.id,
+    required this.label,
+    this.imageUrl,
+    this.secondaryImageUrl,
+    this.subtitle,
+  });
+
+  final String id;
+  final String label;
+  final String? imageUrl;
+  final String? secondaryImageUrl;
+  final String? subtitle;
+}
 
 class PostDraftImage {
   PostDraftImage({
@@ -41,6 +58,9 @@ class CreatePostController extends GetxController {
   final RxInt previewIndex = 0.obs;
   final RxBool isSubmitting = false.obs;
   final RxString submitMessage = 'Uploading…'.obs;
+  final mentionedTeam = Rxn<PostMentionRef>();
+  final mentionedMatch = Rxn<PostMentionRef>();
+  final mentionedTurf = Rxn<PostMentionRef>();
 
   final List<PostDraftImage> drafts = [];
   final List<String> _tempEditedPaths = [];
@@ -238,6 +258,9 @@ class CreatePostController extends GetxController {
         CreatePostRequest(
           content: content,
           status: PostStatus.published,
+          team: mentionedTeam.value?.id,
+          match: mentionedMatch.value?.id,
+          turf: mentionedTurf.value?.id,
           media: uploaded
               .map(
                 (ref) => CreatePostMediaInput(
@@ -304,7 +327,60 @@ class CreatePostController extends GetxController {
         client.invalidateQueries(queryKey: QueryKeys.userPosts(userId)),
       );
     }
+    futures.add(
+      client.invalidateQueries(queryKey: QueryKeys.taggedPostsPrefix),
+    );
     await Future.wait(futures);
+  }
+
+  Future<void> pickTeam(BuildContext context) async {
+    final team = await showCreatePostTeamPicker(context);
+    final id = team?.id?.trim();
+    if (id == null || id.isEmpty) return;
+    mentionedTeam.value = PostMentionRef(
+      id: id,
+      label: team!.name,
+      imageUrl: createPostTeamLogoUrl(team.logo),
+      subtitle: team.location?.shortPlaceLabel,
+    );
+  }
+
+  Future<void> pickMatch(BuildContext context) async {
+    final match = await showCreatePostMatchPicker(context);
+    final id = match?.id?.trim();
+    if (id == null || id.isEmpty) return;
+    final from = match!.fromTeamHelper.getSubsetModel();
+    final to = match.toTeamHelper.getSubsetModel();
+    mentionedMatch.value = PostMentionRef(
+      id: id,
+      label: match.versusLabel,
+      imageUrl: createPostTeamLogoUrl(from?.logo),
+      secondaryImageUrl: createPostTeamLogoUrl(to?.logo),
+      subtitle: createPostMatchScheduleLabel(match),
+    );
+    final turf = match.selectedTurfProposal;
+    final helper = turf?.turfIdHelper;
+    final turfId = helper?.getId()?.trim();
+    if (turfId != null && turfId.isNotEmpty) {
+      mentionedTurf.value = PostMentionRef(
+        id: turfId,
+        label: helper!.getDisplayName(),
+        imageUrl: helper.getMainImage(),
+        subtitle: helper.getLocation()?.shortPlaceLabel ?? helper.getAddress(),
+      );
+    }
+  }
+
+  Future<void> pickTurf(BuildContext context) async {
+    final turf = await showCreatePostTurfPicker(context);
+    final id = turf?.id?.trim();
+    if (id == null || id.isEmpty) return;
+    mentionedTurf.value = PostMentionRef(
+      id: id,
+      label: turf!.displayName,
+      imageUrl: turf.mainImage,
+      subtitle: turf.location?.shortPlaceLabel ?? turf.location?.address,
+    );
   }
 
   void _deleteTemp(String? path) {

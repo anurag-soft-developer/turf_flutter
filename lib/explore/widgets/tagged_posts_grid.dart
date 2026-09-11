@@ -7,32 +7,42 @@ import '../../core/config/constants.dart';
 import '../../core/models/paginated_response.dart';
 import '../../core/query/query_keys.dart';
 import '../../core/query/query_retry.dart';
-import '../../explore/model/content_post_model.dart';
-import '../../explore/post_service.dart';
-import '../../explore/widgets/explore_post_viewer_screen.dart';
+import '../model/content_post_model.dart';
+import '../post_service.dart';
+import 'explore_post_viewer_screen.dart';
 
-/// 3-column published-post thumbnail grid for a user's profile Photos tab.
+/// 3-column published-post thumbnail grid.
 ///
 /// Returns slivers for a page-level [CustomScrollView]. Page refresh owns
 /// pull-to-refresh; this widget only paginates on scroll.
-class ProfilePostsGrid extends HookWidget {
-  const ProfilePostsGrid({super.key, required this.userId});
+class TaggedPostsGrid extends HookWidget {
+  const TaggedPostsGrid({
+    super.key,
+    required this.filter,
+    this.queryKey,
+    this.emptyLabel = 'No photos yet',
+  });
 
-  final String userId;
+  final PostFilterQuery filter;
+  final List<Object>? queryKey;
+  final String emptyLabel;
 
   @override
   Widget build(BuildContext context) {
+    final key = queryKey ??
+        QueryKeys.taggedPosts(
+          postedBy: filter.postedBy,
+          team: filter.team,
+          match: filter.match,
+          turf: filter.turf,
+        );
+
     final query =
         useInfiniteQuery<PaginatedResponse<ContentPostModel>, Object, int>(
-      QueryKeys.userPosts(userId),
+      key,
       (ctx) async {
         final result = await PostService().findMany(
-          PostFilterQuery(
-            postedBy: userId,
-            status: PostStatus.published,
-            page: ctx.pageParam,
-            limit: PostService.userPostsPageSize,
-          ),
+          filter.copyWith(page: ctx.pageParam),
         );
         return result ?? EmptyPaginatedResponse<ContentPostModel>();
       },
@@ -64,7 +74,7 @@ class ProfilePostsGrid extends HookWidget {
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (cancelled || !context.mounted) return;
-        position = Scrollable.maybeOf(context)?.position;
+        position = _paginationScrollPosition(context);
         position?.addListener(onScroll);
       });
 
@@ -117,10 +127,10 @@ class ProfilePostsGrid extends HookWidget {
     }
 
     if (posts.isEmpty) {
-      return const _StatusSliver(
+      return _StatusSliver(
         child: Text(
-          'No photos yet',
-          style: TextStyle(
+          emptyLabel,
+          style: const TextStyle(
             color: Color(AppColors.textSecondaryColor),
             fontSize: 14,
           ),
@@ -147,7 +157,17 @@ class ProfilePostsGrid extends HookWidget {
                 return GestureDetector(
                   onTap: () {
                     if (id != null && id.isNotEmpty) {
-                      openExplorePostViewer(id: id, userId: userId);
+                      final last = query.data?.pages.isNotEmpty == true
+                          ? query.data!.pages.last
+                          : null;
+                      openExplorePostViewer(
+                        id: id,
+                        filter: filter,
+                        queryKey: key,
+                        seedPosts: List<ContentPostModel>.from(posts),
+                        seedPage: last?.page ?? 0,
+                        seedHasNextPage: last?.hasNextPage ?? false,
+                      );
                     }
                   },
                   child: thumb == null || thumb.isEmpty
@@ -200,12 +220,24 @@ class _StatusSliver extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SliverFillRemaining(
-      hasScrollBody: false,
+    return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.only(top: 80),
+        padding: const EdgeInsets.only(top: 80, bottom: 48),
         child: Center(child: child),
       ),
     );
   }
+}
+
+ScrollPosition? _paginationScrollPosition(BuildContext context) {
+  ScrollableState? current = Scrollable.maybeOf(context);
+  while (current != null) {
+    final position = current.position;
+    if (position.axis == Axis.vertical &&
+        (current.widget.physics?.shouldAcceptUserOffset(position) ?? true)) {
+      return position;
+    }
+    current = current.context.findAncestorStateOfType<ScrollableState>();
+  }
+  return null;
 }
