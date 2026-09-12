@@ -110,6 +110,14 @@ class ContentPostModel {
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
+  /// From explore engagement enrichment (`content_stats.likeCount`).
+  @JsonKey(defaultValue: 0)
+  final int likeCount;
+
+  /// Whether the current user has liked this post (explore enrichment).
+  @JsonKey(defaultValue: false)
+  final bool likedByMe;
+
   const ContentPostModel({
     this.id,
     this.postedBy,
@@ -124,6 +132,8 @@ class ContentPostModel {
     this.media = const [],
     this.createdAt,
     this.updatedAt,
+    this.likeCount = 0,
+    this.likedByMe = false,
   });
 
   factory ContentPostModel.fromJson(Map<String, dynamic> json) =>

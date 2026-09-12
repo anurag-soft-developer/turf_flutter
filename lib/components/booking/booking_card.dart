@@ -32,9 +32,11 @@ class BookingCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
+                        const Icon(Icons.grass, size: 18, color: Colors.green),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Booking #${booking.id?.substring(0, 6) ?? 'N/A'}',
+                            booking.turfDisplayName,
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
@@ -42,27 +44,11 @@ class BookingCard extends StatelessWidget {
                             ),
                           ),
                         ),
+                        const SizedBox(width: 8),
                         _StatusChip(status: booking.status),
                       ],
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        const Icon(Icons.grass, size: 18, color: Colors.green),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            booking.turfDisplayName,
-                            style: const TextStyle(
-                              color: Color(AppColors.textSecondaryColor),
-                              fontWeight: FontWeight.w500,
-                              fontSize: 15,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
                     Row(
                       children: [
                         const Icon(

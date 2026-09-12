@@ -110,6 +110,8 @@ ContentPostModel _$ContentPostModelFromJson(Map<String, dynamic> json) =>
       updatedAt: json['updatedAt'] == null
           ? null
           : DateTime.parse(json['updatedAt'] as String),
+      likeCount: (json['likeCount'] as num?)?.toInt() ?? 0,
+      likedByMe: json['likedByMe'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$ContentPostModelToJson(ContentPostModel instance) =>
@@ -127,6 +129,8 @@ Map<String, dynamic> _$ContentPostModelToJson(ContentPostModel instance) =>
       'media': instance.media.map((e) => e.toJson()).toList(),
       'createdAt': instance.createdAt?.toIso8601String(),
       'updatedAt': instance.updatedAt?.toIso8601String(),
+      'likeCount': instance.likeCount,
+      'likedByMe': instance.likedByMe,
     };
 
 const _$PostStatusEnumMap = {

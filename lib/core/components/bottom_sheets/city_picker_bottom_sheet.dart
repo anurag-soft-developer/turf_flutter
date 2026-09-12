@@ -55,7 +55,8 @@ class CityPickerBottomSheet {
                         const LinearProgressIndicator(minHeight: 2),
                         const SizedBox(height: 12),
                       ],
-                      OutlinedButton.icon(
+                      _CurrentLocationButton(
+                        isDetecting: isDetecting,
                         onPressed: isDetecting
                             ? null
                             : () async {
@@ -68,22 +69,8 @@ class CityPickerBottomSheet {
                                   Navigator.of(ctx).pop();
                                 }
                               },
-                        icon: isDetecting
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.my_location),
-                        label: Text(
-                          isDetecting
-                              ? 'Detecting current location...'
-                              : 'Detect current location',
-                        ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 16),
                       Expanded(
                         child: SingleChildScrollView(
                           keyboardDismissBehavior:
@@ -162,4 +149,96 @@ Widget _buildHeader({required VoidCallback? onClear}) {
       ),
     ],
   );
+}
+
+class _CurrentLocationButton extends StatelessWidget {
+  const _CurrentLocationButton({
+    required this.isDetecting,
+    required this.onPressed,
+  });
+
+  final bool isDetecting;
+  final VoidCallback? onPressed;
+
+  static const _primary = Color(AppColors.primaryColor);
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(12),
+        child: Ink(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: _primary.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: _primary.withValues(alpha: 0.28)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: _primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                alignment: Alignment.center,
+                child: isDetecting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(_primary),
+                        ),
+                      )
+                    : const Icon(
+                        Icons.my_location_rounded,
+                        size: 20,
+                        color: _primary,
+                      ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isDetecting
+                          ? 'Detecting location...'
+                          : 'Use current location',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Color(AppColors.textColor),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      isDetecting
+                          ? 'Please wait a moment'
+                          : 'Detect city from your GPS',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (!isDetecting)
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: Colors.grey.shade400,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

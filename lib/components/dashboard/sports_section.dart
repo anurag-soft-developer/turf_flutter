@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../core/components/bottom_navigation_panel/navigation_controller.dart';
 import '../../core/config/constants.dart';
+import '../../core/config/sport_icon.dart';
 import '../../core/config/sport_types.dart';
 
 class SportsSection extends StatelessWidget {
@@ -80,7 +81,7 @@ class SportsSection extends StatelessWidget {
                 color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(sport.icon, size: 22, color: Colors.white),
+              child: SportIcon(sport: sport, size: 22, color: Colors.white),
             ),
             const SizedBox(height: 6),
             Text(

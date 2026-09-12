@@ -18,20 +18,39 @@ class ExploreLikeButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final liked = LikeStore.instance.likedKeys.contains(
-        LikeStore.keyFor(entityType, entityId),
-      );
-      return IconButton(
-        tooltip: liked ? 'Unlike' : 'Like',
-        onPressed: entityId.isEmpty
-            ? null
-            : () => LikeStore.instance.toggle(entityType, entityId),
-        icon: Icon(
-          liked ? Icons.favorite : Icons.favorite_border,
-          color: liked
-              ? const Color(AppColors.primaryColor)
-              : const Color(AppColors.textSecondaryColor),
-        ),
+      final key = LikeStore.keyFor(entityType, entityId);
+      final liked = LikeStore.instance.likedKeys.contains(key);
+      final count = LikeStore.instance.likeCounts[key] ?? 0;
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            tooltip: liked ? 'Unlike' : 'Like',
+            onPressed: entityId.isEmpty
+                ? null
+                : () => LikeStore.instance.toggle(entityType, entityId),
+            icon: Icon(
+              liked ? Icons.favorite : Icons.favorite_border,
+              color: liked
+                  ? const Color(AppColors.primaryColor)
+                  : const Color(AppColors.textSecondaryColor),
+            ),
+          ),
+          if (count > 0)
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: Text(
+                '$count',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: liked
+                      ? const Color(AppColors.primaryColor)
+                      : const Color(AppColors.textSecondaryColor),
+                ),
+              ),
+            ),
+        ],
       );
     });
   }

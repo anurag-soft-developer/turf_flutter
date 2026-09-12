@@ -13,11 +13,25 @@ class TeamInvitesController extends GetxController {
 
   final RxnString actionInviteId = RxnString();
   final RxBool inviting = false.obs;
+  /// Busy target key: user id, `email:…`, or `phone:…`.
+  final RxnString invitingTargetKey = RxnString();
   final RxBool accessDenied = false.obs;
   final RxnString teamName = RxnString();
+  /// Targets invited successfully in this session (for Sent UI).
+  final RxSet<String> sentInviteTargets = <String>{}.obs;
 
   String? _teamId;
   String? get teamId => _teamId;
+
+  static String contactKey({String? email, String? phone}) {
+    if (email != null && email.isNotEmpty) {
+      return 'email:${email.trim().toLowerCase()}';
+    }
+    if (phone != null && phone.isNotEmpty) {
+      return 'phone:${phone.trim()}';
+    }
+    return '';
+  }
 
   @override
   void onInit() {
@@ -39,24 +53,44 @@ class TeamInvitesController extends GetxController {
     accessDenied.value = denied;
   }
 
-  Future<bool> invite({String? email, String? phone}) async {
+  Future<bool> invite({
+    String? email,
+    String? phone,
+    String? inviteeUserId,
+  }) async {
     if (_teamId == null) return false;
+    final targetKey = inviteeUserId != null && inviteeUserId.isNotEmpty
+        ? inviteeUserId
+        : contactKey(email: email, phone: phone);
+
     inviting.value = true;
+    invitingTargetKey.value = targetKey.isEmpty ? null : targetKey;
     final res = await _teamService.inviteService.create(
       _teamId!,
-      CreateTeamInviteRequest(email: email, phone: phone),
+      CreateTeamInviteRequest(
+        email: email,
+        phone: phone,
+        inviteeUserId: inviteeUserId,
+      ),
     );
     inviting.value = false;
+    invitingTargetKey.value = null;
     if (res == null) return false;
 
-    AppSnackbar.success(
-      title: 'Invite sent',
-      message: email != null
-          ? 'Invitation email sent to $email.'
-          : 'Invitation SMS sent to $phone.',
-    );
+    if (targetKey.isNotEmpty) {
+      sentInviteTargets.add(targetKey);
+    }
     await _invalidateInvites();
     return true;
+  }
+
+  bool isInviteSent(String targetKey) {
+    if (targetKey.isEmpty) return false;
+    return sentInviteTargets.contains(targetKey);
+  }
+
+  void seedSentTargets(Iterable<String> keys) {
+    sentInviteTargets.addAll(keys.where((k) => k.isNotEmpty));
   }
 
   Future<void> revoke(TeamInviteModel invite) async {
@@ -72,10 +106,14 @@ class TeamInvitesController extends GetxController {
     actionInviteId.value = id;
     final ok = await _teamService.inviteService.revoke(_teamId!, id);
     if (ok) {
-      AppSnackbar.success(
-        title: 'Invite revoked',
-        message: 'The invitation was cancelled.',
-      );
+      final inviteeId = invite.inviteeHelper.getId();
+      if (inviteeId != null && inviteeId.isNotEmpty) {
+        sentInviteTargets.remove(inviteeId);
+      }
+      final contact = contactKey(email: invite.email, phone: invite.phone);
+      if (contact.isNotEmpty) {
+        sentInviteTargets.remove(contact);
+      }
       await _invalidateInvites();
     }
     actionInviteId.value = null;

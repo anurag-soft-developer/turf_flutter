@@ -12,6 +12,7 @@ class MatchChallengeRespondActions extends StatelessWidget {
     this.isRejecting = false,
     this.isAccepting = false,
     this.enabled = true,
+    this.compact = false,
   });
 
   final VoidCallback onReject;
@@ -19,11 +20,17 @@ class MatchChallengeRespondActions extends StatelessWidget {
   final bool isRejecting;
   final bool isAccepting;
   final bool enabled;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final busy = isRejecting || isAccepting;
     final canInteract = enabled && !busy;
+    final verticalPad = compact ? 6.0 : 12.0;
+    final gap = compact ? 8.0 : 10.0;
+    final radius = compact ? 8.0 : 12.0;
+    final fontSize = compact ? 13.0 : 14.0;
+    final spinner = compact ? 16.0 : 20.0;
 
     return Row(
       children: [
@@ -32,50 +39,66 @@ class MatchChallengeRespondActions extends StatelessWidget {
             onPressed: canInteract ? onReject : null,
             style: OutlinedButton.styleFrom(
               foregroundColor: const Color(AppColors.textColor),
-              padding: const EdgeInsets.symmetric(vertical: 12),
+              padding: EdgeInsets.symmetric(vertical: verticalPad),
+              minimumSize: Size(0, compact ? 34 : 44),
+              tapTargetSize: compact
+                  ? MaterialTapTargetSize.shrinkWrap
+                  : MaterialTapTargetSize.padded,
+              visualDensity:
+                  compact ? VisualDensity.compact : VisualDensity.standard,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(radius),
               ),
             ),
             child: isRejecting
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                    ),
+                ? SizedBox(
+                    height: spinner,
+                    width: spinner,
+                    child: const CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text(
+                : Text(
                     'Reject',
-                    style: TextStyle(fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: fontSize,
+                    ),
                   ),
           ),
         ),
-        const SizedBox(width: 10),
+        SizedBox(width: gap),
         Expanded(
           child: ElevatedButton(
             onPressed: canInteract ? onAccept : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(AppColors.primaryColor),
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 12),
+              padding: EdgeInsets.symmetric(vertical: verticalPad),
+              minimumSize: Size(0, compact ? 34 : 44),
+              tapTargetSize: compact
+                  ? MaterialTapTargetSize.shrinkWrap
+                  : MaterialTapTargetSize.padded,
+              visualDensity:
+                  compact ? VisualDensity.compact : VisualDensity.standard,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(radius),
               ),
               elevation: 0,
             ),
             child: isAccepting
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
+                ? SizedBox(
+                    height: spinner,
+                    width: spinner,
+                    child: const CircularProgressIndicator(
                       strokeWidth: 2,
                       color: Colors.white,
                     ),
                   )
-                : const Text(
+                : Text(
                     'Accept',
-                    style: TextStyle(fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: fontSize,
+                    ),
                   ),
           ),
         ),

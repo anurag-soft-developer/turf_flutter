@@ -12,7 +12,12 @@
           "package_name": "com.example.turf"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "205162989358-p7u8sbe9i375l5a3ugkruradcntnc15g.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBZpGnLgPUJKjaDrzqL2EH_FseqS8M6NGI"
@@ -20,7 +25,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "205162989358-p7u8sbe9i375l5a3ugkruradcntnc15g.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

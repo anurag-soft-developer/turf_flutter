@@ -4,17 +4,17 @@ import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
-import '../../components/shared/confirm_phone_dialog.dart';
+import '../../components/rankings/player_avatar.dart';
 import '../../core/auth/auth_state_controller.dart';
 import '../../core/components/scroll/floating_sliver_app_bar.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/paginated_response.dart';
 import '../../core/query/query_keys.dart';
 import '../../core/query/query_retry.dart';
-import '../../core/utils/app_snackbar.dart';
 import '../model/team_model.dart';
 import '../team_service.dart';
 import 'model/team_invite_model.dart';
+import 'team_invite_sheet.dart';
 import 'team_invites_controller.dart';
 
 class TeamInvitesScreen extends HookWidget {
@@ -68,7 +68,27 @@ class TeamInvitesScreen extends HookWidget {
       floatingActionButton: accessDenied
           ? null
           : FloatingActionButton.extended(
-              onPressed: () => _showInviteSheet(context, c),
+              onPressed: () {
+                final pending = invitesQuery.data?.data ?? const [];
+                final targets = <String>{};
+                for (final invite in pending) {
+                  if (invite.status != TeamInviteStatus.pending) continue;
+                  final userId = invite.inviteeHelper.getId();
+                  if (userId != null && userId.isNotEmpty) {
+                    targets.add(userId);
+                  }
+                  final contact = TeamInvitesController.contactKey(
+                    email: invite.email,
+                    phone: invite.phone,
+                  );
+                  if (contact.isNotEmpty) targets.add(contact);
+                }
+                showTeamInviteSheet(
+                  context: context,
+                  controller: c,
+                  alreadyInvitedTargets: targets,
+                );
+              },
               backgroundColor: const Color(AppColors.primaryColor),
               icon: const Icon(Icons.person_add_alt_1_rounded),
               label: const Text('Invite'),
@@ -97,122 +117,6 @@ class TeamInvitesScreen extends HookWidget {
         ),
       ),
     );
-  }
-
-  Future<void> _showInviteSheet(
-    BuildContext context,
-    TeamInvitesController c,
-  ) async {
-    final controller = TextEditingController();
-    final result = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: const Color(AppColors.surfaceColor),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                'Invite by email or phone',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: Color(AppColors.textColor),
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Enter an email address or phone number with country code.',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Color(AppColors.textSecondaryColor),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: controller,
-                keyboardType: TextInputType.emailAddress,
-                autofocus: true,
-                style: const TextStyle(
-                  color: Color(AppColors.textColor),
-                  fontSize: 16,
-                ),
-                decoration: InputDecoration(
-                  hintText: 'email@example.com or +9198…',
-                  hintStyle: const TextStyle(
-                    color: Color(AppColors.textSecondaryColor),
-                  ),
-                  filled: true,
-                  fillColor: const Color(AppColors.surfaceColor),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Obx(() {
-                final busy = c.inviting.value;
-                return FilledButton(
-                  onPressed: busy
-                      ? null
-                      : () async {
-                          try {
-                            final identifier = await resolveAuthIdentifier(
-                              ctx,
-                              controller.text,
-                            );
-                            if (identifier == null) return;
-                            final ok = await c.invite(
-                              email: identifier.email,
-                              phone: identifier.phone,
-                            );
-                            if (ok && ctx.mounted) {
-                              Navigator.of(ctx).pop(true);
-                            }
-                          } on FormatException catch (e) {
-                            AppSnackbar.error(
-                              title: 'Invalid contact',
-                              message: e.message,
-                            );
-                          }
-                        },
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(AppColors.primaryColor),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  child: busy
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text('Send invite'),
-                );
-              }),
-            ],
-          ),
-        );
-      },
-    );
-    controller.dispose();
-    if (result == true) {
-      // list invalidated by controller
-    }
   }
 
   List<Widget> _bodySlivers({
@@ -306,7 +210,7 @@ class TeamInvitesScreen extends HookWidget {
           hasScrollBody: false,
           child: Center(
             child: Text(
-              'No invites yet.\nTap Invite to send one by email or phone.',
+              'No invites yet.\nTap Invite to search people or send by email/phone.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Color(AppColors.textSecondaryColor),
@@ -349,6 +253,8 @@ class _InviteRow extends StatelessWidget {
     final created = invite.createdAt != null
         ? dateFmt.format(invite.createdAt!.toLocal())
         : null;
+    final invitee = invite.inviteeHelper;
+    final showUser = invitee.isPopulated;
 
     return Card(
       elevation: 0,
@@ -358,22 +264,30 @@ class _InviteRow extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
         child: Row(
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color:
-                    const Color(AppColors.primaryColor).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
+            if (showUser)
+              PlayerAvatar(
+                url: invitee.getAvatar() ?? '',
+                name: invitee.getDisplayName(),
+                size: 44,
+                userId: invitee.getId(),
+              )
+            else
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: const Color(AppColors.primaryColor)
+                      .withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  invite.email != null
+                      ? Icons.email_outlined
+                      : Icons.phone_outlined,
+                  color: const Color(AppColors.primaryColor),
+                  size: 22,
+                ),
               ),
-              child: Icon(
-                invite.email != null
-                    ? Icons.email_outlined
-                    : Icons.phone_outlined,
-                color: const Color(AppColors.primaryColor),
-                size: 22,
-              ),
-            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

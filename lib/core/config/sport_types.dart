@@ -9,7 +9,10 @@ import 'package:flutter/material.dart';
 class SportTypeConfig {
   final String id;
   final String label;
+  /// Material icon fallback (and default when [iconAsset] is null).
   final IconData icon;
+  /// Optional SVG for sports that share Material icons with others.
+  final String? iconAsset;
   final Color color;
   final List<Color> gradient;
   final bool rankingEnabled;
@@ -18,6 +21,7 @@ class SportTypeConfig {
     required this.id,
     required this.label,
     required this.icon,
+    this.iconAsset,
     required this.color,
     required this.gradient,
     this.rankingEnabled = false,
@@ -28,6 +32,8 @@ class SportTypes {
   SportTypes._();
 
   static const String all = 'all';
+
+  static const String _assetDir = 'assets/sports';
 
   static const List<SportTypeConfig> catalog = [
     SportTypeConfig(
@@ -57,6 +63,7 @@ class SportTypes {
       id: 'badminton',
       label: 'Badminton',
       icon: Icons.sports_tennis,
+      iconAsset: '$_assetDir/badminton.svg',
       color: Colors.blue,
       gradient: [Color(0xFF42A5F5), Color(0xFF1565C0)],
     ),
@@ -85,6 +92,7 @@ class SportTypes {
       id: 'table_tennis',
       label: 'Table Tennis',
       icon: Icons.sports_tennis,
+      iconAsset: '$_assetDir/table_tennis.svg',
       color: Colors.teal,
       gradient: [Color(0xFF26A69A), Color(0xFF00695C)],
     ),
@@ -92,6 +100,7 @@ class SportTypes {
       id: 'squash',
       label: 'Squash',
       icon: Icons.sports_tennis,
+      iconAsset: '$_assetDir/squash.svg',
       color: Colors.indigo,
       gradient: [Color(0xFF5C6BC0), Color(0xFF283593)],
     ),
@@ -99,6 +108,7 @@ class SportTypes {
       id: 'futsal',
       label: 'Futsal',
       icon: Icons.sports_soccer,
+      iconAsset: '$_assetDir/futsal.svg',
       color: Colors.green,
       gradient: [Color(0xFF81C784), Color(0xFF2E7D32)],
     ),
@@ -106,6 +116,7 @@ class SportTypes {
       id: 'kabaddi',
       label: 'Kabaddi',
       icon: Icons.sports_martial_arts,
+      iconAsset: '$_assetDir/kabaddi.svg',
       color: Colors.red,
       gradient: [Color(0xFFEF5350), Color(0xFFC62828)],
     ),
@@ -113,6 +124,7 @@ class SportTypes {
       id: 'pickleball',
       label: 'Pickleball',
       icon: Icons.sports_tennis,
+      iconAsset: '$_assetDir/pickleball.svg',
       color: Colors.cyan,
       gradient: [Color(0xFF26C6DA), Color(0xFF00838F)],
     ),
@@ -134,6 +146,7 @@ class SportTypes {
       id: 'softball',
       label: 'Softball',
       icon: Icons.sports_baseball,
+      iconAsset: '$_assetDir/softball.svg',
       color: Colors.yellow,
       gradient: [Color(0xFFFFEE58), Color(0xFFF9A825)],
     ),
@@ -148,6 +161,7 @@ class SportTypes {
       id: 'throwball',
       label: 'Throwball',
       icon: Icons.sports_volleyball,
+      iconAsset: '$_assetDir/throwball.svg',
       color: Colors.pink,
       gradient: [Color(0xFFEC407A), Color(0xFFC2185B)],
     ),
@@ -155,6 +169,7 @@ class SportTypes {
       id: 'netball',
       label: 'Netball',
       icon: Icons.sports_volleyball,
+      iconAsset: '$_assetDir/netball.svg',
       color: Colors.lime,
       gradient: [Color(0xFFD4E157), Color(0xFF9E9D24)],
     ),
@@ -169,6 +184,7 @@ class SportTypes {
       id: 'boxing',
       label: 'Boxing',
       icon: Icons.sports_martial_arts,
+      iconAsset: '$_assetDir/boxing.svg',
       color: Colors.redAccent,
       gradient: [Color(0xFFFF5252), Color(0xFFD50000)],
     ),
@@ -216,6 +232,8 @@ class SportTypes {
   static String labelFor(String id) => byId(id)?.label ?? id;
 
   static IconData iconFor(String id) => byId(id)?.icon ?? Icons.sports;
+
+  static String? iconAssetFor(String id) => byId(id)?.iconAsset;
 
   static bool isAll(String sportType) =>
       sportType.trim().toLowerCase() == all;

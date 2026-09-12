@@ -36,16 +36,24 @@ class TeamInviteFilterQuery {
 class CreateTeamInviteRequest {
   final String? email;
   final String? phone;
+  final String? inviteeUserId;
 
-  const CreateTeamInviteRequest({this.email, this.phone})
-      : assert(
-          (email != null) != (phone != null),
-          'Provide exactly one of email or phone',
+  CreateTeamInviteRequest({
+    this.email,
+    this.phone,
+    this.inviteeUserId,
+  }) : assert(
+          (email != null ? 1 : 0) +
+                  (phone != null ? 1 : 0) +
+                  (inviteeUserId != null ? 1 : 0) ==
+              1,
+          'Provide exactly one of email, phone, or inviteeUserId',
         );
 
   Map<String, dynamic> toJson() => {
         if (email != null) 'email': email,
         if (phone != null) 'phone': phone,
+        if (inviteeUserId != null) 'inviteeUserId': inviteeUserId,
       };
 }
 
@@ -110,9 +118,10 @@ class TeamInviteModel {
   UserFieldInstance get inviteeHelper => UserFieldInstance(inviteeUser);
 
   String get contactLabel {
+    final name = inviteeHelper.getDisplayName();
+    if (inviteeHelper.isPopulated && name != 'Unknown User') return name;
     if (email != null && email!.isNotEmpty) return email!;
     if (phone != null && phone!.isNotEmpty) return phone!;
-    final name = inviteeHelper.getDisplayName();
     if (name != 'Unknown User') return name;
     return 'Unknown contact';
   }

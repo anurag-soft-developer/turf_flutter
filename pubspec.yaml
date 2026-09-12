@@ -72,6 +72,7 @@ dependencies:
   flutter_chat_core: ^2.8.0
   flutter_chat_ui: ^2.11.1
   sliver_tools: ^0.2.12
+  flutter_svg: ^2.0.17
 
 dev_dependencies:
   flutter_test:
@@ -99,6 +100,7 @@ flutter:
   assets:
     - .env
     - assets/logos/splash_logo.png
+    - assets/sports/
 
 
   # An image asset can refer to one or more resolution-specific "variants", see

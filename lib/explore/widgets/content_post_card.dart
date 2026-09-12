@@ -11,6 +11,7 @@ import '../../core/query/query_keys.dart';
 import '../../core/utils/app_snackbar.dart';
 import '../../engagement/engagement_entity.dart';
 import '../../engagement/engagement_service.dart';
+import '../../engagement/like_store.dart';
 import '../model/content_post_model.dart';
 import '../post_service.dart';
 import 'explore_like_button.dart';
@@ -34,6 +35,41 @@ class ContentPostCard extends StatefulWidget {
 
 class _ContentPostCardState extends State<ContentPostCard> {
   bool _deleting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scheduleSeedLike();
+  }
+
+  @override
+  void didUpdateWidget(covariant ContentPostCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.post.id != widget.post.id ||
+        oldWidget.post.likeCount != widget.post.likeCount ||
+        oldWidget.post.likedByMe != widget.post.likedByMe) {
+      _scheduleSeedLike();
+    }
+  }
+
+  /// Defer so GetX Obx is not marked dirty while ExploreItemTile is building.
+  void _scheduleSeedLike() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _seedLike();
+    });
+  }
+
+  void _seedLike() {
+    final id = widget.post.id;
+    if (id == null || id.isEmpty) return;
+    LikeStore.instance.seed(
+      EngagementEntityType.post,
+      id,
+      likedByMe: widget.post.likedByMe,
+      likeCount: widget.post.likeCount,
+    );
+  }
 
   bool get _isOwner {
     if (!Get.isRegistered<AuthStateController>()) return false;

@@ -17,6 +17,7 @@ class MatchCard extends StatelessWidget {
     /// Public Matches: keep false so the winner team name is shown instead.
     this.personalizeForTeam = false,
     this.onTap,
+    this.footer,
   });
 
   final TeamMatchModel match;
@@ -24,6 +25,7 @@ class MatchCard extends StatelessWidget {
   final bool isHistory;
   final bool personalizeForTeam;
   final VoidCallback? onTap;
+  final Widget? footer;
 
   @override
   Widget build(BuildContext context) {
@@ -196,6 +198,22 @@ class MatchCard extends StatelessWidget {
       ],
     );
 
+    final mainContent = Padding(
+      padding: EdgeInsets.fromLTRB(14, 14, 14, footer != null ? 0 : 14),
+      child: content,
+    );
+
+    final tappable = onTap == null
+        ? mainContent
+        : Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(14),
+              child: mainContent,
+            ),
+          );
+
     final body = Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -204,21 +222,24 @@ class MatchCard extends StatelessWidget {
           color: const Color(AppColors.dividerColor).withValues(alpha: 0.5),
         ),
       ),
-      child: Padding(padding: const EdgeInsets.all(14), child: content),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          tappable,
+          if (footer != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+              child: footer!,
+            ),
+        ],
+      ),
     );
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      child: onTap == null
-          ? body
-          : Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: onTap,
-                borderRadius: BorderRadius.circular(14),
-                child: body,
-              ),
-            ),
+      child: body,
     );
   }
 

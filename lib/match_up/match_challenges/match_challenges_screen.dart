@@ -16,7 +16,6 @@ import '../../core/query/query_keys.dart';
 import '../../core/query/query_retry.dart';
 import '../../team/members/model/team_member_model.dart';
 import '../../team/team_service.dart';
-import '../../team/utils/team_ui.dart';
 import '../matchmaking_service.dart';
 import '../model/team_match_model.dart';
 import 'match_challenge_detail_screen.dart';
@@ -644,102 +643,37 @@ class _ReceivedChallengeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fromName = match.fromTeamHelper.getDisplayName();
     final canRespond =
         match.status == TeamMatchStatus.requested &&
         !_matchShowsAsExpired(match);
+    final selectedTeamId = controller.filterAllTeams.value
+        ? null
+        : controller.selectedMembershipTeam.value?.id;
 
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () async {
-            await openMatchChallengeDetail(match: match, isIncoming: true);
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        fromName,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: Color(AppColors.textColor),
-                        ),
-                      ),
-                    ),
-                    _StatusChip(match: match),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  teamSportLabel(match.sportType),
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Color(AppColors.textSecondaryColor),
-                  ),
-                ),
-                Obx(() {
-                  if (!controller.filterAllTeams.value) {
-                    return const SizedBox.shrink();
-                  }
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      'Receiving as: ${match.toTeamHelper.getDisplayName()}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade700,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  );
-                }),
-                if (match.createdAt != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    _formatDate(match.createdAt!),
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                  ),
-                ],
-                if (canRespond) ...[
-                  const SizedBox(height: 14),
-                  Obx(() {
-                    final id = match.id;
-                    final accepting =
-                        id != null && controller.acceptingMatchId.value == id;
-                    final rejecting =
-                        id != null && controller.rejectingMatchId.value == id;
-                    return MatchChallengeRespondActions(
-                      isRejecting: rejecting,
-                      isAccepting: accepting,
-                      onReject: () => controller.rejectChallenge(match),
-                      onAccept: () => controller.acceptChallenge(match),
-                    );
-                  }),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
+    return MatchCard(
+      match: match,
+      selectedTeamId: selectedTeamId,
+      isHistory: false,
+      personalizeForTeam: true,
+      onTap: () async {
+        await openMatchChallengeDetail(match: match, isIncoming: true);
+      },
+      footer: canRespond
+          ? Obx(() {
+              final id = match.id;
+              final accepting =
+                  id != null && controller.acceptingMatchId.value == id;
+              final rejecting =
+                  id != null && controller.rejectingMatchId.value == id;
+              return MatchChallengeRespondActions(
+                compact: true,
+                isRejecting: rejecting,
+                isAccepting: accepting,
+                onReject: () => controller.rejectChallenge(match),
+                onAccept: () => controller.acceptChallenge(match),
+              );
+            })
+          : null,
     );
   }
 }
@@ -752,108 +686,18 @@ class _SentChallengeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final toName = match.toTeamHelper.getDisplayName();
+    final selectedTeamId = controller.filterAllTeams.value
+        ? null
+        : controller.selectedMembershipTeam.value?.id;
 
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () async {
-            await openMatchChallengeDetail(match: match, isIncoming: false);
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        toName,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: Color(AppColors.textColor),
-                        ),
-                      ),
-                    ),
-                    _StatusChip(match: match),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  teamSportLabel(match.sportType),
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Color(AppColors.textSecondaryColor),
-                  ),
-                ),
-                Obx(() {
-                  if (!controller.filterAllTeams.value) {
-                    return const SizedBox.shrink();
-                  }
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      'Sent as: ${match.fromTeamHelper.getDisplayName()}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade700,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  );
-                }),
-                if (match.createdAt != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    _formatDate(match.createdAt!),
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.match});
-
-  final TeamMatchModel match;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: const Color(AppColors.primaryColor).withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        _statusDisplayForMatch(match),
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: Color(AppColors.primaryColor),
-        ),
-      ),
+    return MatchCard(
+      match: match,
+      selectedTeamId: selectedTeamId,
+      isHistory: false,
+      personalizeForTeam: true,
+      onTap: () async {
+        await openMatchChallengeDetail(match: match, isIncoming: false);
+      },
     );
   }
 }
@@ -903,15 +747,6 @@ class _NoMembershipsMessage extends StatelessWidget {
   }
 }
 
-String _statusLabel(TeamMatchStatus s) {
-  return switch (s) {
-    TeamMatchStatus.requested => 'Pending',
-    TeamMatchStatus.scheduleFinalized => 'Scheduled',
-    TeamMatchStatus.expired => 'EXPIRED',
-    _ => s.name.capitalizeFirst!,
-  };
-}
-
 bool _matchShowsAsExpired(TeamMatchModel m) {
   if (m.status == TeamMatchStatus.expired) return true;
   final ex = m.expiresAt;
@@ -923,17 +758,6 @@ bool _matchShowsAsExpired(TeamMatchModel m) {
     TeamMatchStatus.negotiating => true,
     _ => false,
   };
-}
-
-String _statusDisplayForMatch(TeamMatchModel m) {
-  if (_matchShowsAsExpired(m)) return 'EXPIRED';
-  return _statusLabel(m.status);
-}
-
-String _formatDate(DateTime d) {
-  final local = d.toLocal();
-  return '${local.year}-${local.month.toString().padLeft(2, '0')}-${local.day.toString().padLeft(2, '0')} '
-      '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
 }
 
 bool _isIncomingForMatch(TeamMatchModel match, MatchChallengesController c) {
