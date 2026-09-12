@@ -85,7 +85,11 @@ class _RankScreenState extends State<RankScreen>
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                       child: RankSportFilter(
                         value: sport,
-                        onChanged: rankController.switchSport,
+                        onChanged: (selected) {
+                          if (selected != null) {
+                            rankController.switchSport(selected);
+                          }
+                        },
                         sheetTitle: 'Show rankings for',
                       ),
                     ),

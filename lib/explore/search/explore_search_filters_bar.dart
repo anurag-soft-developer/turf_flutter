@@ -105,7 +105,11 @@ class _TeamFiltersBar extends StatelessWidget {
       value: filters.sportType,
       sports: TeamSportType.values,
       searchable: true,
-      onChanged: (sport) => onChanged(filters.copyWith(sportType: sport)),
+      onChanged: (sport) {
+        if (sport != null) {
+          onChanged(filters.copyWith(sportType: sport));
+        }
+      },
     );
   }
 }

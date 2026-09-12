@@ -44,6 +44,12 @@ class TeamDetailController extends GetxController {
 
   bool get isMember => myMembership.value?.status == TeamMemberStatus.active;
 
+  bool get isSuspended =>
+      myMembership.value?.status == TeamMemberStatus.suspended;
+
+  /// Active or suspended members can leave the team.
+  bool get canLeave => isMember || isSuspended;
+
   bool get hasPendingRequest =>
       myMembership.value?.status == TeamMemberStatus.pending;
 
@@ -173,7 +179,7 @@ class TeamDetailController extends GetxController {
 
   Future<void> leaveTeam() async {
     final id = _teamId;
-    if (id == null || !isMyTeamMode || !isMember) return;
+    if (id == null || !canLeave) return;
     isActionLoading.value = true;
     final res = await _teamService.memberService.leave(id);
     if (res != null && res.success) {
@@ -182,10 +188,10 @@ class TeamDetailController extends GetxController {
         teamId: id,
         includeJoinRequests: true,
       );
+      myMembership.value = null;
       if (isMyTeamMode) {
         team.value = null;
         members.clear();
-        myMembership.value = null;
         _teamId = null;
       }
     }
@@ -196,7 +202,13 @@ class TeamDetailController extends GetxController {
 
   Future<void> sendJoinRequest() async {
     final id = _teamId;
-    if (id == null || isMyTeamMode || isMember || hasPendingRequest) return;
+    if (id == null ||
+        isMyTeamMode ||
+        isMember ||
+        isSuspended ||
+        hasPendingRequest) {
+      return;
+    }
     isJoining.value = true;
     final result = await _teamService.memberService.join(id);
     if (result != null) {

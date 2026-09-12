@@ -49,7 +49,7 @@ class TeamOpeningsScreen extends HookWidget {
       body: Obx(() {
         final sport = controller.selectedSport.value;
         return _OpeningsFeed(
-          key: ValueKey(sport.name),
+          key: ValueKey(sport?.name ?? 'all'),
           controller: controller,
           sport: sport,
           onRefreshMemberships: () => membershipsQuery.refetch(),
@@ -68,13 +68,13 @@ class _OpeningsFeed extends HookWidget {
   });
 
   final TeamOpeningsController controller;
-  final TeamSportType sport;
+  final TeamSportType? sport;
   final Future<void> Function() onRefreshMemberships;
 
   @override
   Widget build(BuildContext context) {
     final query = useInfiniteQuery<PaginatedResponse<TeamModel>, Object, int>(
-      QueryKeys.teamOpenings(sport.name),
+      QueryKeys.teamOpenings(sport?.name ?? 'all'),
       (ctx) async {
         final result = await TeamService().findMany(
           TeamFilterQuery(
@@ -138,6 +138,7 @@ class _OpeningsFeed extends HookWidget {
                   sports: TeamSportType.values,
                   sheetTitle: 'Filter by sport',
                   searchable: true,
+                  includeAll: true,
                   onChanged: controller.switchSport,
                 ),
               ),
@@ -215,10 +216,12 @@ class _OpeningsFeed extends HookWidget {
                   color: Colors.grey.shade300,
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  'No teams are recruiting for this sport yet.',
+                Text(
+                  sport == null
+                      ? 'No teams are recruiting yet.'
+                      : 'No teams are recruiting for this sport yet.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Color(AppColors.textSecondaryColor),
                     fontSize: 16,
                   ),
@@ -252,6 +255,7 @@ class _OpeningsFeed extends HookWidget {
                 padding: EdgeInsets.only(top: index == 0 ? 0 : 12),
                 child: Obx(() {
                   controller.myMembershipsLoaded.value;
+                  controller.membershipRevision.value;
                   controller.joiningTeamIds.length;
                   final team = items[index];
                   final id = team.id;
@@ -293,6 +297,10 @@ class _RecruitingTeamCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final id = team.id;
+    final isDestructive = label == 'Withdraw' || label == 'Leave';
+    final buttonColor = Color(
+      isDestructive ? AppColors.errorColor : AppColors.primaryColor,
+    );
     return Card(
       elevation: 0,
       color: const Color(AppColors.surfaceColor),
@@ -327,16 +335,22 @@ class _RecruitingTeamCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 4,
-                      children: [_Chip(text: teamJoinModeLabel(team.joinMode))],
+                    Text(
+                      teamSportLabel(team.sportType),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Color(AppColors.textSecondaryColor),
+                      ),
                     ),
-                    if (team.tagline != null && team.tagline!.isNotEmpty) ...[
-                      const SizedBox(height: 6),
+                    if (team.location?.shortPlaceLabel case final place?
+                        when place.isNotEmpty) ...[
+                      const SizedBox(height: 2),
                       Text(
-                        team.tagline!,
-                        maxLines: 2,
+                        place,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 13,
@@ -351,11 +365,9 @@ class _RecruitingTeamCard extends StatelessWidget {
               FilledButton(
                 onPressed: onJoin == null || isJoining ? null : () => onJoin!(),
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(AppColors.primaryColor),
+                  backgroundColor: buttonColor,
                   foregroundColor: Colors.white,
-                  disabledBackgroundColor: const Color(
-                    AppColors.primaryColor,
-                  ).withValues(alpha: 0.45),
+                  disabledBackgroundColor: buttonColor.withValues(alpha: 0.45),
                   disabledForegroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -388,36 +400,6 @@ class _RecruitingTeamCard extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Chip extends StatelessWidget {
-  const _Chip({required this.text, this.highlighted = false});
-
-  final String text;
-  final bool highlighted;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: highlighted
-            ? const Color(AppColors.primaryColor).withValues(alpha: 0.12)
-            : const Color(AppColors.textSecondaryColor).withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: highlighted
-              ? const Color(AppColors.primaryColor)
-              : const Color(AppColors.textSecondaryColor),
         ),
       ),
     );

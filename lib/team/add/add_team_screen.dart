@@ -335,7 +335,9 @@ class _SportTypeStep extends StatelessWidget {
                   sports: TeamSportType.values,
                   sheetTitle: 'Select sport',
                   searchable: true,
-                  onChanged: (v) => controller.sportType.value = v,
+                  onChanged: (v) {
+                    if (v != null) controller.sportType.value = v;
+                  },
                 ),
                 borderRadius: BorderRadius.circular(14),
                 child: Ink(

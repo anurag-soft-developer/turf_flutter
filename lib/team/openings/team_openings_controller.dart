@@ -2,7 +2,6 @@ import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
 import '../../core/query/query_keys.dart';
-import '../../core/utils/app_snackbar.dart';
 import '../members/model/team_member_model.dart';
 import '../team_service.dart';
 
@@ -10,17 +9,24 @@ import '../team_service.dart';
 class TeamOpeningsController extends GetxController {
   final TeamService _teamService = TeamService();
 
-  final Rx<TeamSportType> selectedSport = TeamSportType.cricket.obs;
+  /// `null` = all sports (no sportType filter).
+  final Rxn<TeamSportType> selectedSport = Rxn<TeamSportType>();
   final Map<String, TeamMemberModel> myMembershipByTeamId =
       <String, TeamMemberModel>{};
   final RxBool myMembershipsLoaded = false.obs;
+
+  /// Bumped whenever [myMembershipByTeamId] changes so Obx rebuilds.
+  final membershipRevision = 0.obs;
   final joiningTeamIds = <String>[].obs;
 
-  void switchSport(TeamSportType sport) {
+  String get openingsQuerySportKey => selectedSport.value?.name ?? 'all';
+
+  void switchSport(TeamSportType? sport) {
     if (selectedSport.value == sport) return;
     selectedSport.value = sport;
   }
 
+  /// Server returns one newest membership per team when history=false.
   void syncMemberships(List<TeamMemberModel> memberships) {
     myMembershipByTeamId
       ..clear()
@@ -34,6 +40,18 @@ class TeamOpeningsController extends GetxController {
             .whereType<MapEntry<String, TeamMemberModel>>(),
       );
     myMembershipsLoaded.value = true;
+    membershipRevision.value++;
+  }
+
+  void _setMembership(String teamId, TeamMemberModel membership) {
+    myMembershipByTeamId[teamId] = membership;
+    membershipRevision.value++;
+  }
+
+  void _clearMembership(String teamId) {
+    if (myMembershipByTeamId.remove(teamId) != null) {
+      membershipRevision.value++;
+    }
   }
 
   TeamMemberModel? membershipForTeam(String? teamId) {
@@ -46,14 +64,14 @@ class TeamOpeningsController extends GetxController {
     if (m == null) return 'Join';
     switch (m.status) {
       case TeamMemberStatus.active:
-        return 'On team';
+      case TeamMemberStatus.suspended:
+        return 'Leave';
       case TeamMemberStatus.pending:
         return 'Withdraw';
       case TeamMemberStatus.rejected:
         return 'Join again';
       case TeamMemberStatus.resigned:
       case TeamMemberStatus.removed:
-      case TeamMemberStatus.suspended:
         return 'Join';
     }
   }
@@ -62,6 +80,8 @@ class TeamOpeningsController extends GetxController {
     final m = membershipForTeam(teamId);
     if (m == null) return true;
     return m.status == TeamMemberStatus.pending ||
+        m.status == TeamMemberStatus.active ||
+        m.status == TeamMemberStatus.suspended ||
         m.status == TeamMemberStatus.rejected ||
         m.status == TeamMemberStatus.resigned ||
         m.status == TeamMemberStatus.removed;
@@ -71,6 +91,11 @@ class TeamOpeningsController extends GetxController {
     final m = membershipForTeam(teamId);
     if (m?.status == TeamMemberStatus.pending) {
       await withdrawJoinRequest(teamId);
+      return;
+    }
+    if (m?.status == TeamMemberStatus.active ||
+        m?.status == TeamMemberStatus.suspended) {
+      await leaveTeam(teamId);
       return;
     }
     await requestJoin(teamId);
@@ -88,14 +113,8 @@ class TeamOpeningsController extends GetxController {
     joiningTeamIds.add(teamId);
     final result = await _teamService.memberService.join(teamId);
     if (result != null) {
-      final id = result.teamId;
-      if (id != null) myMembershipByTeamId[id] = result;
-      AppSnackbar.success(
-        title: 'Request sent',
-        message: result.status == TeamMemberStatus.active
-            ? 'You have joined the team.'
-            : 'Your join request was submitted.',
-      );
+      // Always key by the openings card team id (join payload teamId can be null).
+      _setMembership(teamId, result);
       await _invalidateJoinQueries();
     }
     joiningTeamIds.remove(teamId);
@@ -108,11 +127,24 @@ class TeamOpeningsController extends GetxController {
     joiningTeamIds.add(teamId);
     final ok = await _teamService.memberService.withdrawJoinRequest(teamId);
     if (ok) {
-      myMembershipByTeamId.remove(teamId);
-      AppSnackbar.success(
-        title: 'Request withdrawn',
-        message: 'Your join request was withdrawn.',
-      );
+      _clearMembership(teamId);
+      await _invalidateJoinQueries();
+    }
+    joiningTeamIds.remove(teamId);
+  }
+
+  Future<void> leaveTeam(String teamId) async {
+    final m = membershipForTeam(teamId);
+    if (m == null ||
+        (m.status != TeamMemberStatus.active &&
+            m.status != TeamMemberStatus.suspended)) {
+      return;
+    }
+    if (joiningTeamIds.contains(teamId)) return;
+    joiningTeamIds.add(teamId);
+    final res = await _teamService.memberService.leave(teamId);
+    if (res != null && res.success) {
+      _clearMembership(teamId);
       await _invalidateJoinQueries();
     }
     joiningTeamIds.remove(teamId);
@@ -122,9 +154,6 @@ class TeamOpeningsController extends GetxController {
     if (!Get.isRegistered<QueryClient>()) return;
     final client = Get.find<QueryClient>();
     await Future.wait([
-      client.invalidateQueries(
-        queryKey: QueryKeys.teamOpenings(selectedSport.value.name),
-      ),
       client.invalidateQueries(queryKey: QueryKeys.myMemberships),
       client.invalidateQueries(queryKey: QueryKeys.myJoinRequests('pending')),
     ]);

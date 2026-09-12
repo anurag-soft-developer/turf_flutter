@@ -13,26 +13,33 @@ class SportFilterPicker extends StatelessWidget {
     this.sports,
     this.sheetTitle = 'Select sport',
     this.searchable = false,
+    this.includeAll = false,
   });
 
-  final TeamSportType value;
-  final ValueChanged<TeamSportType> onChanged;
+  /// Selected sport, or `null` when [includeAll] and "All" is selected.
+  final TeamSportType? value;
+  final ValueChanged<TeamSportType?> onChanged;
   final List<TeamSportType>? sports;
   final String sheetTitle;
   final bool searchable;
+
+  /// When true, sheet includes an "All" option that sets [value] to null.
+  final bool includeAll;
 
   List<TeamSportType> get _sports => sports ?? rankingTeamSportTypes;
 
   /// Opens the searchable sport bottom sheet.
   ///
-  /// [value] may be null when nothing is selected yet (e.g. explore filters).
+  /// [value] may be null when nothing is selected yet (e.g. explore filters)
+  /// or when [includeAll] and "All" is selected.
   static Future<void> showSheet({
     required BuildContext context,
     TeamSportType? value,
-    required ValueChanged<TeamSportType> onChanged,
+    required ValueChanged<TeamSportType?> onChanged,
     List<TeamSportType>? sports,
     String sheetTitle = 'Select sport',
     bool searchable = false,
+    bool includeAll = false,
   }) {
     return showModalBottomSheet<void>(
       context: context,
@@ -44,6 +51,7 @@ class SportFilterPicker extends StatelessWidget {
           sports: sports ?? rankingTeamSportTypes,
           sheetTitle: sheetTitle,
           searchable: searchable,
+          includeAll: includeAll,
           onChanged: (sport) {
             onChanged(sport);
             Navigator.pop(sheetContext);
@@ -55,6 +63,7 @@ class SportFilterPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final label = value == null ? 'All' : teamSportLabel(value!);
     return GestureDetector(
       onTap: () => showSheet(
         context: context,
@@ -63,6 +72,7 @@ class SportFilterPicker extends StatelessWidget {
         sports: _sports,
         sheetTitle: sheetTitle,
         searchable: searchable,
+        includeAll: includeAll,
       ),
       child: Container(
         height: 40,
@@ -80,7 +90,7 @@ class SportFilterPicker extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                teamSportLabel(value),
+                label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
@@ -112,6 +122,7 @@ class _SportPickerSheet extends StatefulWidget {
     required this.sports,
     required this.sheetTitle,
     required this.searchable,
+    required this.includeAll,
     required this.onChanged,
   });
 
@@ -119,7 +130,8 @@ class _SportPickerSheet extends StatefulWidget {
   final List<TeamSportType> sports;
   final String sheetTitle;
   final bool searchable;
-  final ValueChanged<TeamSportType> onChanged;
+  final bool includeAll;
+  final ValueChanged<TeamSportType?> onChanged;
 
   @override
   State<_SportPickerSheet> createState() => _SportPickerSheetState();
@@ -143,15 +155,85 @@ class _SportPickerSheetState extends State<_SportPickerSheet> {
         .toList();
   }
 
+  bool get _showAllOption {
+    if (!widget.includeAll) return false;
+    final q = _query.trim().toLowerCase();
+    if (q.isEmpty) return true;
+    return 'all'.contains(q);
+  }
+
+  Widget _sportRow({
+    required String label,
+    required IconData icon,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: isSelected
+            ? const Color(AppColors.primaryColor).withValues(alpha: 0.08)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: const Color(
+                      AppColors.primaryColor,
+                    ).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: const Color(AppColors.primaryColor),
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: isSelected
+                          ? FontWeight.w700
+                          : FontWeight.w500,
+                      color: const Color(AppColors.textColor),
+                    ),
+                  ),
+                ),
+                if (isSelected)
+                  const Icon(
+                    Icons.check_circle,
+                    size: 22,
+                    color: Color(AppColors.primaryColor),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final maxHeight = MediaQuery.of(context).size.height * 0.75;
     // Searchable sheets (full catalog) need a fixed height so the list can scroll.
     final expandList = widget.searchable;
     final sports = _filteredSports;
+    final showAll = _showAllOption;
 
     Widget listBody;
-    if (sports.isEmpty) {
+    if (!showAll && sports.isEmpty) {
       listBody = const Center(
         child: Padding(
           padding: EdgeInsets.symmetric(vertical: 24),
@@ -164,65 +246,22 @@ class _SportPickerSheetState extends State<_SportPickerSheet> {
     } else {
       listBody = ListView.builder(
         shrinkWrap: !expandList,
-        itemCount: sports.length,
+        itemCount: sports.length + (showAll ? 1 : 0),
         itemBuilder: (context, index) {
-          final sport = sports[index];
-          final isSelected = sport == widget.value;
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Material(
-              color: isSelected
-                  ? const Color(AppColors.primaryColor).withValues(alpha: 0.08)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(14),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(14),
-                onTap: () => widget.onChanged(sport),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 12,
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: const Color(
-                            AppColors.primaryColor,
-                          ).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(
-                          sport.icon,
-                          color: const Color(AppColors.primaryColor),
-                          size: 22,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          teamSportLabel(sport),
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight:
-                                isSelected ? FontWeight.w700 : FontWeight.w500,
-                            color: const Color(AppColors.textColor),
-                          ),
-                        ),
-                      ),
-                      if (isSelected)
-                        const Icon(
-                          Icons.check_circle,
-                          size: 22,
-                          color: Color(AppColors.primaryColor),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+          if (showAll && index == 0) {
+            return _sportRow(
+              label: 'All',
+              icon: Icons.apps_rounded,
+              isSelected: widget.value == null,
+              onTap: () => widget.onChanged(null),
+            );
+          }
+          final sport = sports[showAll ? index - 1 : index];
+          return _sportRow(
+            label: teamSportLabel(sport),
+            icon: sport.icon,
+            isSelected: sport == widget.value,
+            onTap: () => widget.onChanged(sport),
           );
         },
       );
@@ -312,7 +351,7 @@ class _SportIconBadge extends StatelessWidget {
     required this.size,
   });
 
-  final TeamSportType sport;
+  final TeamSportType? sport;
   final double size;
 
   @override
@@ -325,7 +364,7 @@ class _SportIconBadge extends StatelessWidget {
         color: const Color(AppColors.primaryColor).withValues(alpha: 0.1),
       ),
       child: Icon(
-        sport.icon,
+        sport?.icon ?? Icons.apps_rounded,
         size: size * 0.64,
         color: const Color(AppColors.primaryColor),
       ),

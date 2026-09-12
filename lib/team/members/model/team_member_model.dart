@@ -61,6 +61,10 @@ class TeamMemberRosterFilterQuery {
 class MyTeamMembershipsFilterQuery {
   final TeamMemberStatus? status;
 
+  /// When false (default): one newest membership per team.
+  /// When true: full history (optionally filtered by [status]).
+  final bool history;
+
   /// Case-insensitive filter on team name / shortName.
   final String? search;
   final int page;
@@ -68,6 +72,7 @@ class MyTeamMembershipsFilterQuery {
 
   const MyTeamMembershipsFilterQuery({
     this.status,
+    this.history = false,
     this.search,
     this.page = 1,
     this.limit = 20,
@@ -77,6 +82,7 @@ class MyTeamMembershipsFilterQuery {
     final params = <String, dynamic>{
       'page': page.toString(),
       'limit': limit.toString(),
+      'history': history ? 'true' : 'false',
     };
     if (status != null) params['status'] = status!.name;
     final trimmedSearch = search?.trim();

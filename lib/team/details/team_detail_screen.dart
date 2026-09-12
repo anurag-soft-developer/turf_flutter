@@ -335,6 +335,9 @@ class TeamDetailScreen extends HookWidget {
               )
             : null;
         final isMember = membership?.status == TeamMemberStatus.active;
+        final isSuspended =
+            membership?.status == TeamMemberStatus.suspended;
+        final canLeave = isMember || isSuspended;
 
         final teamId = t.id;
         final hasTaggedTeamId = teamId != null && teamId.isNotEmpty;
@@ -470,7 +473,7 @@ class TeamDetailScreen extends HookWidget {
                 ),
                 const SizedBox(height: 28),
               ],
-              if (controller.isMyTeamMode && (isOwner || isMember))
+              if (controller.isMyTeamMode && (isOwner || canLeave))
                 Obx(() {
                   final st = controller.team.value ?? t;
                   return Padding(
@@ -494,7 +497,7 @@ class TeamDetailScreen extends HookWidget {
                         ],
                         TeamActionsCard(
                           isOwner: isOwner,
-                          isMember: isMember,
+                          isMember: canLeave,
                           isActionLoading: controller.isActionLoading.value,
                           teamStatus: st.status,
                           onToggleStatus: () =>
@@ -627,6 +630,41 @@ class _BottomJoinBar extends StatelessWidget {
             icon: const Icon(Icons.check_circle, size: 20),
             label: const Text('You are a member'),
             style: OutlinedButton.styleFrom(
+              minimumSize: const Size(double.infinity, 50),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
+        );
+      }
+
+      if (controller.isSuspended) {
+        final leaving = controller.isActionLoading.value;
+        return _bottomBarContainer(
+          child: OutlinedButton.icon(
+            onPressed: leaving ? null : () => controller.leaveTeam(),
+            icon: leaving
+                ? const SizedBox(
+                    height: 18,
+                    width: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Color(AppColors.errorColor),
+                    ),
+                  )
+                : const Icon(Icons.exit_to_app, size: 20),
+            label: Text(leaving ? 'Leaving…' : 'Leave team'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(AppColors.errorColor),
+              disabledForegroundColor: const Color(
+                AppColors.errorColor,
+              ).withValues(alpha: 0.5),
+              side: BorderSide(
+                color: const Color(AppColors.errorColor).withValues(
+                  alpha: leaving ? 0.35 : 0.7,
+                ),
+              ),
               minimumSize: const Size(double.infinity, 50),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
