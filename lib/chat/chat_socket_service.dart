@@ -25,10 +25,13 @@ class ChatSocketService extends GetxService {
       StreamController<ChatReadEvent>.broadcast();
   final StreamController<ChatMessageDeletedEvent> _deletedController =
       StreamController<ChatMessageDeletedEvent>.broadcast();
+  final StreamController<ChatReactionUpdatedEvent> _reactionsController =
+      StreamController<ChatReactionUpdatedEvent>.broadcast();
 
   Stream<ChatMessageModel> get messages => _messagesController.stream;
   Stream<ChatReadEvent> get reads => _readsController.stream;
   Stream<ChatMessageDeletedEvent> get deletions => _deletedController.stream;
+  Stream<ChatReactionUpdatedEvent> get reactions => _reactionsController.stream;
 
   bool get isConnected => _socket?.connected == true;
 
@@ -151,6 +154,18 @@ class ChatSocketService extends GetxService {
       }
     });
 
+    socket.on('chat.reaction.updated', (dynamic raw) {
+      try {
+        final map = _asStringKeyedMap(raw);
+        if (map == null) return;
+        final event = ChatReactionUpdatedEvent.fromJson(map);
+        if (event.messageId.isEmpty) return;
+        _reactionsController.add(event);
+      } catch (e, st) {
+        debugPrint('chat.reaction.updated handle failed: $e\n$st');
+      }
+    });
+
     _socket = socket;
     socket.connect();
   }
@@ -192,6 +207,7 @@ class ChatSocketService extends GetxService {
     required String scopeId,
     required String body,
     String? clientMessageId,
+    String? replyToMessageId,
   }) {
     final socket = _socket;
     if (socket == null || !socket.connected) return;
@@ -200,6 +216,24 @@ class ChatSocketService extends GetxService {
       'scopeId': scopeId,
       'body': body,
       if (clientMessageId != null) 'clientMessageId': clientMessageId,
+      if (replyToMessageId != null && replyToMessageId.isNotEmpty)
+        'replyToMessageId': replyToMessageId,
+    });
+  }
+
+  void reactToMessage({
+    required ChatScope scope,
+    required String scopeId,
+    required String messageId,
+    required String emoji,
+  }) {
+    final socket = _socket;
+    if (socket == null || !socket.connected) return;
+    socket.emit('chat.react', {
+      'scope': scope.apiValue,
+      'scopeId': scopeId,
+      'messageId': messageId,
+      'emoji': emoji,
     });
   }
 
@@ -261,6 +295,7 @@ class ChatSocketService extends GetxService {
     unawaited(_messagesController.close());
     unawaited(_readsController.close());
     unawaited(_deletedController.close());
+    unawaited(_reactionsController.close());
     super.onClose();
   }
 

@@ -12,11 +12,20 @@ import 'package:flutter_application_1/core/utils/app_snackbar.dart';
 import 'package:flutter_chat_core/flutter_chat_core.dart';
 import 'package:get/get.dart';
 
-class ChatThreadController extends GetxController {
-  ChatThreadController({
-    required this.scope,
-    required this.scopeId,
+class ChatReplyTarget {
+  const ChatReplyTarget({
+    required this.messageId,
+    required this.body,
+    required this.senderUserId,
   });
+
+  final String messageId;
+  final String body;
+  final String senderUserId;
+}
+
+class ChatThreadController extends GetxController {
+  ChatThreadController({required this.scope, required this.scopeId});
 
   final ChatScope scope;
   final String scopeId;
@@ -26,15 +35,20 @@ class ChatThreadController extends GetxController {
   final Map<String, User> _userCache = <String, User>{};
 
   final RxList<ChatReadCursor> cursors = <ChatReadCursor>[].obs;
-  final RxnString seenSubtitle = RxnString();
+  final readersByMessageId = <String, List<String>>{}.obs;
+  final Rxn<ChatReplyTarget> replyTo = Rxn<ChatReplyTarget>();
+  final RxnString highlightedMessageId = RxnString();
+  final isLoadingInitial = true.obs;
 
   bool _loadingEarlier = false;
   bool _hasMore = true;
+  Timer? _highlightTimer;
 
   StreamSubscription<dynamic>? _opsSub;
   StreamSubscription<ChatMessageModel>? _msgSub;
   StreamSubscription<ChatReadEvent>? _readSub;
   StreamSubscription<ChatMessageDeletedEvent>? _deletedSub;
+  StreamSubscription<ChatReactionUpdatedEvent>? _reactionSub;
 
   String get me => Get.find<AuthStateController>().user?.id ?? '';
 
@@ -42,10 +56,16 @@ class ChatThreadController extends GetxController {
   void onInit() {
     super.onInit();
     _opsSub = chatController.operationsStream.listen((_) {
-      _recomputeSeenSubtitle();
+      _recomputeSeen();
     });
-    if (scopeId.isEmpty || me.isEmpty) return;
-    if (!Get.isRegistered<ChatSocketService>()) return;
+    if (scopeId.isEmpty || me.isEmpty) {
+      isLoadingInitial.value = false;
+      return;
+    }
+    if (!Get.isRegistered<ChatSocketService>()) {
+      isLoadingInitial.value = false;
+      return;
+    }
     unawaited(_startSession());
   }
 
@@ -55,6 +75,8 @@ class ChatThreadController extends GetxController {
     unawaited(_msgSub?.cancel());
     unawaited(_readSub?.cancel());
     unawaited(_deletedSub?.cancel());
+    unawaited(_reactionSub?.cancel());
+    _highlightTimer?.cancel();
     if (Get.isRegistered<ChatSocketService>()) {
       final socket = ChatSocketService.instance;
       socket.clearActiveRoom();
@@ -89,9 +111,10 @@ class ChatThreadController extends GetxController {
           if (cursor.userId != event.userId) cursor,
         ChatReadCursor(userId: event.userId, lastReadAt: event.lastReadAt),
       ]);
-      _recomputeSeenSubtitle();
+      _recomputeSeen();
     });
     _deletedSub = socket.deletions.listen(_onDeleted);
+    _reactionSub = socket.reactions.listen(_onReactionUpdated);
   }
 
   Future<void> _loadCursors() async {
@@ -100,7 +123,7 @@ class ChatThreadController extends GetxController {
       scopeId: scopeId,
     );
     cursors.assignAll(result);
-    _recomputeSeenSubtitle();
+    _recomputeSeen();
   }
 
   Future<void> _markRead() async {
@@ -114,21 +137,31 @@ class ChatThreadController extends GetxController {
   }
 
   Future<void> _loadInitial() async {
-    final history = await _chatService.listMessages(
-      scope: scope,
-      scopeId: scopeId,
-      limit: 30,
-    );
-    _hasMore = history.length >= 30;
-    await chatController.setMessages(
-      history.reversed.map(toFlyerTextMessage).toList(),
-    );
-    await _loadCursors();
-    await _markRead();
+    isLoadingInitial.value = true;
+    try {
+      final history = await _chatService.listMessages(
+        scope: scope,
+        scopeId: scopeId,
+        limit: 30,
+      );
+      _hasMore = history.length >= 30;
+      await chatController.setMessages(
+        history.reversed.map(toFlyerTextMessage).toList(),
+      );
+      await _loadCursors();
+      await _markRead();
+    } catch (_) {
+      AppSnackbar.error(
+        title: 'Chat',
+        message: 'Could not load messages. Try again.',
+      );
+    } finally {
+      isLoadingInitial.value = false;
+    }
   }
 
-  Future<void> loadEarlier() async {
-    if (_loadingEarlier || !_hasMore) return;
+  Future<bool> loadEarlier() async {
+    if (_loadingEarlier || !_hasMore) return false;
     final oldest = chatController.messages.isEmpty
         ? null
         : chatController.messages.first;
@@ -137,7 +170,7 @@ class ChatThreadController extends GetxController {
         : null;
     if (before == null) {
       _hasMore = false;
-      return;
+      return false;
     }
     _loadingEarlier = true;
     try {
@@ -148,7 +181,7 @@ class ChatThreadController extends GetxController {
         before: before,
       );
       if (older.length < 30) _hasMore = false;
-      if (older.isEmpty) return;
+      if (older.isEmpty) return false;
       final existingIds = chatController.messages.map((m) => m.id).toSet();
       final mapped = older
           .where((item) => !existingIds.contains(item.messageId))
@@ -158,16 +191,41 @@ class ChatThreadController extends GetxController {
           .toList();
       if (mapped.isEmpty) {
         _hasMore = false;
-        return;
+        return false;
       }
-      await chatController.insertAllMessages(
-        mapped,
-        index: 0,
-        animated: false,
-      );
+      await chatController.insertAllMessages(mapped, index: 0, animated: false);
+      return true;
     } finally {
       _loadingEarlier = false;
     }
+  }
+
+  Future<void> scrollToQuotedMessage(String messageId) async {
+    if (messageId.isEmpty) return;
+    var found = chatController.messages.any((m) => m.id == messageId);
+    var pages = 0;
+    while (!found && _hasMore && pages < 15) {
+      pages++;
+      final loaded = await loadEarlier();
+      if (!loaded) break;
+      found = chatController.messages.any((m) => m.id == messageId);
+    }
+    if (!found) {
+      AppSnackbar.error(
+        title: 'Chat',
+        message: 'Original message is no longer available.',
+      );
+      return;
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 80));
+    await chatController.scrollToMessage(messageId, alignment: 0.2);
+    highlightedMessageId.value = messageId;
+    _highlightTimer?.cancel();
+    _highlightTimer = Timer(const Duration(milliseconds: 1600), () {
+      if (highlightedMessageId.value == messageId) {
+        highlightedMessageId.value = null;
+      }
+    });
   }
 
   Future<User?> resolveUser(String id) async {
@@ -199,6 +257,20 @@ class ChatThreadController extends GetxController {
     }
   }
 
+  void setReplyTo(Message message) {
+    final body = message is TextMessage ? message.text : '';
+    if (message.id.isEmpty || body.isEmpty) return;
+    replyTo.value = ChatReplyTarget(
+      messageId: message.id,
+      body: body,
+      senderUserId: message.authorId,
+    );
+  }
+
+  void clearReply() {
+    replyTo.value = null;
+  }
+
   void onSend(String text) {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return;
@@ -210,10 +282,31 @@ class ChatThreadController extends GetxController {
       );
       return;
     }
+    final reply = replyTo.value;
     ChatSocketService.instance.sendMessage(
       scope: scope,
       scopeId: scopeId,
       body: trimmed,
+      replyToMessageId: reply?.messageId,
+    );
+    clearReply();
+  }
+
+  void reactToMessage(String messageId, String emoji) {
+    if (messageId.isEmpty || emoji.isEmpty) return;
+    if (!Get.isRegistered<ChatSocketService>() ||
+        !ChatSocketService.instance.isConnected) {
+      AppSnackbar.error(
+        title: 'Chat',
+        message: 'Not connected. Try again in a moment.',
+      );
+      return;
+    }
+    ChatSocketService.instance.reactToMessage(
+      scope: scope,
+      scopeId: scopeId,
+      messageId: messageId,
+      emoji: emoji,
     );
   }
 
@@ -240,7 +333,20 @@ class ChatThreadController extends GetxController {
     final existing = _messageById(event.messageId);
     if (existing == null) return;
     await chatController.removeMessage(existing);
-    _recomputeSeenSubtitle();
+    if (replyTo.value?.messageId == event.messageId) {
+      clearReply();
+    }
+    _recomputeSeen();
+  }
+
+  Future<void> _onReactionUpdated(ChatReactionUpdatedEvent event) async {
+    if (event.scope != scope || event.scopeId != scopeId) return;
+    final existing = _messageById(event.messageId);
+    if (existing is! TextMessage) return;
+    await chatController.updateMessage(
+      existing,
+      withReactions(existing, event.reactions),
+    );
   }
 
   Message? _messageById(String messageId) {
@@ -250,60 +356,44 @@ class ChatThreadController extends GetxController {
     return null;
   }
 
-  Message? get _latestOwnMessage {
-    Message? latest;
-    for (final message in chatController.messages) {
-      if (message.authorId == me) latest = message;
-    }
-    return latest;
-  }
-
-  Future<List<String>> seenByNames() async {
+  Future<List<String>> seenByNames([List<String>? userIds]) async {
+    final ids =
+        userIds ??
+        readersByMessageId.values.expand((id) => id).toSet().toList();
     final names = <String>[];
-    final lastOwn = _latestOwnMessage;
-    final createdAt = lastOwn?.createdAt;
-    for (final cursor in cursors) {
-      if (cursor.userId == me) continue;
-      if (createdAt != null &&
-          cursor.lastReadAt.isBefore(createdAt.toUtc())) {
-        continue;
-      }
-      final user = await resolveUser(cursor.userId);
-      names.add(user?.name ?? cursor.userId);
+    for (final id in ids) {
+      if (id == me) continue;
+      final user = await resolveUser(id);
+      names.add(user?.name ?? id);
     }
     return names;
   }
 
-  void _recomputeSeenSubtitle() {
-    if (chatController.messages.isEmpty) {
-      seenSubtitle.value = null;
-      return;
+  void _recomputeSeen() {
+    final byMessage = <String, List<String>>{};
+    final messages = chatController.messages;
+    if (messages.isNotEmpty) {
+      for (final cursor in cursors) {
+        if (cursor.userId == me) continue;
+        Message? lastRead;
+        for (final message in messages) {
+          final at = message.createdAt;
+          if (at == null) continue;
+          if (!cursor.lastReadAt.isBefore(at.toUtc())) {
+            lastRead = message;
+          } else {
+            break;
+          }
+        }
+        if (lastRead == null) continue;
+        byMessage.putIfAbsent(lastRead.id, () => []).add(cursor.userId);
+      }
     }
-    final lastOwn = _latestOwnMessage;
-    if (lastOwn == null) {
-      seenSubtitle.value = null;
-      return;
+    readersByMessageId.assignAll(byMessage);
+    for (final ids in byMessage.values) {
+      for (final id in ids.take(3)) {
+        unawaited(resolveUser(id));
+      }
     }
-    final createdAt = lastOwn.createdAt;
-    if (createdAt == null) {
-      seenSubtitle.value = null;
-      return;
-    }
-    final seenBy = cursors
-        .where(
-          (cursor) =>
-              cursor.userId != me &&
-              !cursor.lastReadAt.isBefore(createdAt.toUtc()),
-        )
-        .toList();
-    if (scope == ChatScope.player) {
-      seenSubtitle.value = seenBy.isNotEmpty ? 'Seen' : 'Sent';
-      return;
-    }
-    if (seenBy.isEmpty) {
-      seenSubtitle.value = null;
-      return;
-    }
-    seenSubtitle.value = 'Seen by ${seenBy.length}';
   }
 }

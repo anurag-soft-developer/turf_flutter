@@ -7,6 +7,10 @@ class ChatMessageModel {
   final String senderUserId;
   final String body;
   final String createdAt;
+  final String? replyToMessageId;
+  final String? replyToBody;
+  final String? replyToSenderUserId;
+  final Map<String, List<String>> reactions;
 
   const ChatMessageModel({
     required this.messageId,
@@ -15,6 +19,10 @@ class ChatMessageModel {
     required this.senderUserId,
     required this.body,
     required this.createdAt,
+    this.replyToMessageId,
+    this.replyToBody,
+    this.replyToSenderUserId,
+    this.reactions = const {},
   });
 
   DateTime? get createdAtDate {
@@ -26,6 +34,17 @@ class ChatMessageModel {
   }
 
   factory ChatMessageModel.fromJson(Map<String, dynamic> json) {
+    final reactionsRaw = json['reactions'];
+    final reactions = <String, List<String>>{};
+    if (reactionsRaw is Map) {
+      for (final entry in reactionsRaw.entries) {
+        final key = entry.key.toString();
+        final value = entry.value;
+        if (value is List) {
+          reactions[key] = value.map((e) => e.toString()).toList();
+        }
+      }
+    }
     return ChatMessageModel(
       messageId: json['messageId']?.toString() ?? '',
       scope: ChatScope.fromApi(json['scope']?.toString()) ?? ChatScope.player,
@@ -33,6 +52,44 @@ class ChatMessageModel {
       senderUserId: json['senderUserId']?.toString() ?? '',
       body: json['body']?.toString() ?? '',
       createdAt: json['createdAt']?.toString() ?? '',
+      replyToMessageId: json['replyToMessageId']?.toString(),
+      replyToBody: json['replyToBody']?.toString(),
+      replyToSenderUserId: json['replyToSenderUserId']?.toString(),
+      reactions: reactions,
+    );
+  }
+}
+
+class ChatReactionUpdatedEvent {
+  final ChatScope scope;
+  final String scopeId;
+  final String messageId;
+  final Map<String, List<String>> reactions;
+
+  const ChatReactionUpdatedEvent({
+    required this.scope,
+    required this.scopeId,
+    required this.messageId,
+    required this.reactions,
+  });
+
+  factory ChatReactionUpdatedEvent.fromJson(Map<String, dynamic> json) {
+    final reactionsRaw = json['reactions'];
+    final reactions = <String, List<String>>{};
+    if (reactionsRaw is Map) {
+      for (final entry in reactionsRaw.entries) {
+        final key = entry.key.toString();
+        final value = entry.value;
+        if (value is List) {
+          reactions[key] = value.map((e) => e.toString()).toList();
+        }
+      }
+    }
+    return ChatReactionUpdatedEvent(
+      scope: ChatScope.fromApi(json['scope']?.toString()) ?? ChatScope.player,
+      scopeId: json['scopeId']?.toString() ?? '',
+      messageId: json['messageId']?.toString() ?? '',
+      reactions: reactions,
     );
   }
 }
