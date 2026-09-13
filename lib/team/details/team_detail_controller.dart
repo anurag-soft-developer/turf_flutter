@@ -1,31 +1,38 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
 import '../../core/auth/auth_state_controller.dart';
+import '../../core/models/paginated_response.dart';
 import '../../core/query/query_keys.dart';
 import '../../core/utils/app_snackbar.dart';
+import '../../core/utils/exception_handler.dart';
 import '../members/model/team_member_model.dart';
 import '../model/team_model.dart';
 import '../team_service.dart';
 
 /// Unified controller for both "My Team" and "Team Profile" screens.
 ///
-/// [isMyTeamMode] = true  → no teamId argument; screen resolves the current
-///                          user's active-membership team; shows empty state when none.
-/// [isMyTeamMode] = false → expects `Get.arguments['teamId']`; loads that team.
-///
-/// Fetching is owned by flutter_query on the screen; this controller holds
-/// mutation busy flags and synced query data for Obx UI.
-class TeamDetailController extends GetxController {
+/// [isMyTeamMode] = true  → resolves an active membership team when no id yet.
+/// [isMyTeamMode] = false → expects `Get.arguments['teamId']`.
+class TeamDetailController extends GetxController
+    with GetSingleTickerProviderStateMixin {
   final bool isMyTeamMode;
 
   TeamDetailController({this.isMyTeamMode = false});
 
   final TeamService _teamService = TeamService();
 
+  late final TabController tabController;
+
   final Rxn<TeamModel> team = Rxn<TeamModel>();
   final RxList<TeamMemberModel> members = <TeamMemberModel>[].obs;
   final Rxn<TeamMemberModel> myMembership = Rxn<TeamMemberModel>();
+
+  final RxBool isLoading = false.obs;
+  final RxBool hasError = false.obs;
+  final RxnString errorMessage = RxnString();
+  final RxBool hasNoTeam = false.obs;
 
   final RxBool isActionLoading = false.obs;
   final RxBool isUpdatingTeamSettings = false.obs;
@@ -56,33 +63,151 @@ class TeamDetailController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    tabController = TabController(length: 2, vsync: this);
     final args = Get.arguments;
-    if (args is Map<String, dynamic> && args['teamId'] is String) {
-      _teamId = args['teamId'] as String;
+    if (args is Map && args['teamId'] is String) {
+      final id = (args['teamId'] as String).trim();
+      if (id.isNotEmpty) _teamId = id;
     }
+    load();
+  }
+
+  @override
+  void onClose() {
+    tabController.dispose();
+    super.onClose();
   }
 
   void setTeamId(String? id) {
+    // Sticky once known so nested routes (e.g. edit) cannot wipe/swap the team.
+    if (id == null || id.isEmpty) return;
     _teamId = id;
   }
 
-  void syncTeam(TeamModel? value) {
-    team.value = value;
+  void clearTeamId() {
+    _teamId = null;
   }
 
-  void syncMembers(List<TeamMemberModel> value) {
-    members.assignAll(value);
+  Future<void> refreshData() => load();
+
+  Future<void> load() async {
+    isLoading.value = true;
+    hasError.value = false;
+    errorMessage.value = null;
+    hasNoTeam.value = false;
+
+    try {
+      var id = _teamId;
+      List<TeamMemberModel>? mine;
+
+      if ((id == null || id.isEmpty) && isMyTeamMode) {
+        mine = await _fetchMyMemberships();
+        id = _firstActiveTeamId(mine);
+        if (id == null || id.isEmpty) {
+          hasNoTeam.value = true;
+          team.value = null;
+          members.clear();
+          myMembership.value = null;
+          return;
+        }
+        setTeamId(id);
+      }
+
+      if (id == null || id.isEmpty) {
+        hasError.value = true;
+        errorMessage.value = 'Missing team ID.';
+        return;
+      }
+
+      final teamFuture = _teamService.findById(id);
+      final rosterFuture = _teamService.memberService.listForTeam(
+        id,
+        const TeamMemberRosterFilterQuery(
+          status: TeamMemberStatus.active,
+          limit: 100,
+        ),
+      );
+
+      final TeamModel? loaded;
+      final PaginatedResponse<TeamMemberModel>? rosterPage;
+      if (mine == null) {
+        final results = await Future.wait([
+          teamFuture,
+          rosterFuture,
+          _fetchMyMemberships(),
+        ]);
+        loaded = results[0] as TeamModel?;
+        rosterPage = results[1] as PaginatedResponse<TeamMemberModel>?;
+        mine = results[2] as List<TeamMemberModel>;
+      } else {
+        final results = await Future.wait([teamFuture, rosterFuture]);
+        loaded = results[0] as TeamModel?;
+        rosterPage = results[1] as PaginatedResponse<TeamMemberModel>?;
+      }
+
+      if (loaded == null) {
+        hasError.value = true;
+        errorMessage.value = 'Team not found';
+        team.value = null;
+        members.clear();
+        myMembership.value = null;
+        return;
+      }
+
+      final roster = rosterPage?.data ?? const <TeamMemberModel>[];
+      team.value = loaded;
+      members.assignAll(roster);
+      myMembership.value = _membershipForTeam(
+        teamId: id,
+        roster: roster,
+        mine: mine,
+      );
+    } catch (e) {
+      hasError.value = true;
+      errorMessage.value = ExceptionHandler.handleGenericException(e);
+      debugPrint('Team detail load error: $e');
+    } finally {
+      isLoading.value = false;
+    }
   }
 
-  void syncMyMembership(TeamMemberModel? value) {
-    myMembership.value = value;
+  Future<List<TeamMemberModel>> _fetchMyMemberships() async {
+    final result = await _teamService.memberService.myMemberships(
+      const MyTeamMembershipsFilterQuery(limit: 100),
+    );
+    return result?.data ?? const <TeamMemberModel>[];
   }
 
-  Future<void> refreshData() => _invalidateTeamQueries();
+  static String? _firstActiveTeamId(List<TeamMemberModel> memberships) {
+    for (final m in memberships) {
+      if (m.status == TeamMemberStatus.active &&
+          m.teamId != null &&
+          m.teamId!.isNotEmpty) {
+        return m.teamId;
+      }
+    }
+    return null;
+  }
+
+  static TeamMemberModel? _membershipForTeam({
+    required String teamId,
+    required List<TeamMemberModel> roster,
+    required List<TeamMemberModel> mine,
+  }) {
+    final me = Get.find<AuthStateController>().user?.id;
+    if (me == null) return null;
+
+    for (final m in roster) {
+      if (m.userHelper.getId() == me) return m;
+    }
+    for (final m in mine) {
+      if (m.teamId == teamId) return m;
+    }
+    return null;
+  }
 
   // ── Owner actions ─────────────────────────────────────────────────────────
 
-  /// Partial update for discovery / join preferences (owner only).
   Future<void> updateTeamSettings({
     TeamVisibility? visibility,
     TeamJoinMode? joinMode,
@@ -134,7 +259,7 @@ class TeamDetailController extends GetxController {
         title: 'Settings saved',
         message: 'Team preferences were updated.',
       );
-      await _invalidateTeamQueries();
+      await _afterMutation();
     }
     isUpdatingTeamSettings.value = false;
   }
@@ -152,7 +277,7 @@ class TeamDetailController extends GetxController {
         title: 'Team activated',
         message: '${updated.name} is now active.',
       );
-      await _invalidateTeamQueries();
+      await _afterMutation();
     }
     isActionLoading.value = false;
   }
@@ -170,7 +295,7 @@ class TeamDetailController extends GetxController {
         title: 'Team deactivated',
         message: '${updated.name} is now inactive.',
       );
-      await _invalidateTeamQueries();
+      await _afterMutation();
     }
     isActionLoading.value = false;
   }
@@ -184,7 +309,7 @@ class TeamDetailController extends GetxController {
     final res = await _teamService.memberService.leave(id);
     if (res != null && res.success) {
       AppSnackbar.success(title: 'Left team', message: res.message);
-      await _invalidateTeamQueries(
+      await _invalidateSharedQueries(
         teamId: id,
         includeJoinRequests: true,
       );
@@ -192,7 +317,10 @@ class TeamDetailController extends GetxController {
       if (isMyTeamMode) {
         team.value = null;
         members.clear();
-        _teamId = null;
+        clearTeamId();
+        hasNoTeam.value = true;
+      } else {
+        await load();
       }
     }
     isActionLoading.value = false;
@@ -219,7 +347,7 @@ class TeamDetailController extends GetxController {
             ? 'You have joined the team.'
             : 'Your join request was submitted.',
       );
-      await _invalidateTeamQueries(includeJoinRequests: true);
+      await _afterMutation(includeJoinRequests: true);
     }
     isJoining.value = false;
   }
@@ -235,12 +363,17 @@ class TeamDetailController extends GetxController {
         title: 'Request withdrawn',
         message: 'Your join request was withdrawn.',
       );
-      await _invalidateTeamQueries(includeJoinRequests: true);
+      await _afterMutation(includeJoinRequests: true);
     }
     isJoining.value = false;
   }
 
-  Future<void> _invalidateTeamQueries({
+  Future<void> _afterMutation({bool includeJoinRequests = false}) async {
+    await _invalidateSharedQueries(includeJoinRequests: includeJoinRequests);
+    await load();
+  }
+
+  Future<void> _invalidateSharedQueries({
     String? teamId,
     bool includeJoinRequests = false,
   }) async {

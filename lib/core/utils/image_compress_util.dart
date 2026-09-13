@@ -5,7 +5,7 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 
 /// Compresses editor output (usually JPEG) to a WebP file for upload.
 ///
-/// Caps the long side and quality so post media stays small. Falls back to
+/// Caps the long side and quality so uploads stay small. Falls back to
 /// JPEG if WebP encoding is unavailable on the device.
 Future<XFile> compressEditorBytesToWebp(Uint8List bytes) async {
   const maxBytes = 400 * 1024;
@@ -57,7 +57,7 @@ Future<XFile> compressEditorBytesToWebp(Uint8List bytes) async {
   }
 
   final path =
-      '${Directory.systemTemp.path}/post_${DateTime.now().microsecondsSinceEpoch}.$ext';
+      '${Directory.systemTemp.path}/edited_${DateTime.now().microsecondsSinceEpoch}.$ext';
   final file = File(path);
   await file.writeAsBytes(compressed, flush: true);
   return XFile(

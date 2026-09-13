@@ -289,7 +289,7 @@ class PostMediaCarousel extends StatefulWidget {
 class _PostMediaCarouselState extends State<PostMediaCarousel> {
   static const _fallbackRatio = 1.0;
   static const _videoRatio = 16 / 9;
-  static const _maxScreenHeightFraction = 0.8;
+  static const _maxScreenHeightFraction = 0.7;
 
   int _pageIndex = 0;
   final Map<String, double> _aspectRatios = {};

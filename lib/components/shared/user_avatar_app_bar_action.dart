@@ -40,6 +40,7 @@ class UserAvatarAppBarAction extends StatelessWidget {
                   border: Border.all(color: borderColor, width: borderWidth),
                 ),
                 child: CircleAvatar(
+                  key: ValueKey(avatar ?? 'no-avatar'),
                   radius: size / 2,
                   backgroundColor: Colors.white,
                   backgroundImage:

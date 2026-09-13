@@ -1,18 +1,16 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/auth/auth_state_controller.dart';
+import '../../core/components/image_editor/image_editor_page.dart';
+import '../../core/media/local_image_pipeline.dart';
 import '../../core/models/media_upload_models.dart';
 import '../../core/query/query_keys.dart';
-import '../../core/services/media_upload_service.dart';
 import '../../core/utils/app_snackbar.dart';
 import '../../explore/model/content_post_model.dart';
 import '../../explore/post_service.dart';
-import 'widgets/create_post_image_editor.dart';
 import 'widgets/create_post_mention_sheet.dart';
 
 enum CreatePostStep { pick, edit, caption }
@@ -33,24 +31,11 @@ class PostMentionRef {
   final String? subtitle;
 }
 
-class PostDraftImage {
-  PostDraftImage({
-    required this.original,
-    this.edited,
-    this.stateJson,
-  });
-
-  final XFile original;
-  XFile? edited;
-  String? stateJson;
-
-  XFile get display => edited ?? original;
-}
-
 class CreatePostController extends GetxController {
   static const int maxImages = 10;
 
   final PostService _postService = PostService();
+  final EditedImageTempStore _tempStore = EditedImageTempStore();
 
   final captionController = TextEditingController();
   final Rx<CreatePostStep> step = CreatePostStep.pick.obs;
@@ -62,25 +47,16 @@ class CreatePostController extends GetxController {
   final mentionedMatch = Rxn<PostMentionRef>();
   final mentionedTurf = Rxn<PostMentionRef>();
 
-  final List<PostDraftImage> drafts = [];
-  final List<String> _tempEditedPaths = [];
+  final List<LocalImageDraft> drafts = [];
 
   bool get canAddMore => drafts.length < maxImages;
   int get remainingSlots => maxImages - drafts.length;
-
-  CreatePostEditorImage _toEditorImage(PostDraftImage draft) {
-    return CreatePostEditorImage(
-      original: draft.original,
-      preview: draft.edited,
-      stateJson: draft.stateJson,
-    );
-  }
 
   Future<void> onPhotosPicked(List<XFile> incoming, int afterIndex) async {
     if (incoming.isEmpty || remainingSlots <= 0) return;
 
     final existing = {
-      ...drafts.map((d) => d.original.path),
+      ...drafts.map((d) => d.original?.path).whereType<String>(),
       ...drafts.map((d) => d.edited?.path).whereType<String>(),
     };
     final accepted = <XFile>[];
@@ -95,10 +71,10 @@ class CreatePostController extends GetxController {
         ? afterIndex + 1
         : drafts.length;
 
-    final images = <CreatePostEditorImage>[
-      for (var i = 0; i < insertAt; i++) _toEditorImage(drafts[i]),
-      for (final file in accepted) CreatePostEditorImage(original: file),
-      for (var i = insertAt; i < drafts.length; i++) _toEditorImage(drafts[i]),
+    final images = <ImageEditorInput>[
+      for (var i = 0; i < insertAt; i++) drafts[i].toEditorInput(),
+      for (final file in accepted) ImageEditorInput(original: file),
+      for (var i = insertAt; i < drafts.length; i++) drafts[i].toEditorInput(),
     ];
 
     final result = await _openEditor(images, initialIndex: insertAt);
@@ -109,9 +85,9 @@ class CreatePostController extends GetxController {
 
     final newPaths = {for (final file in accepted) file.path};
     _replaceDraftsFromOutput(result);
-    previewIndex.value = drafts.indexWhere(
-      (d) => newPaths.contains(d.original.path),
-    ).clamp(0, drafts.length - 1);
+    previewIndex.value = drafts
+        .indexWhere((d) => newPaths.contains(d.original?.path))
+        .clamp(0, drafts.length - 1);
     _syncLocalFiles();
     step.value = CreatePostStep.caption;
   }
@@ -119,9 +95,9 @@ class CreatePostController extends GetxController {
   Future<void> reEditAt(int index) async {
     if (index < 0 || index >= drafts.length) return;
 
-    final focused = drafts[index].original.path;
+    final focused = drafts[index].original?.path;
     final result = await _openEditor(
-      drafts.map(_toEditorImage).toList(),
+      drafts.map((d) => d.toEditorInput()).toList(),
       initialIndex: index,
     );
     if (result == null || result.length != drafts.length) {
@@ -131,34 +107,38 @@ class CreatePostController extends GetxController {
     }
 
     _replaceDraftsFromOutput(result);
-    final nextIndex = drafts.indexWhere((d) => d.original.path == focused);
+    final nextIndex = focused == null
+        ? -1
+        : drafts.indexWhere((d) => d.original?.path == focused);
     previewIndex.value = nextIndex >= 0 ? nextIndex : 0;
     _syncLocalFiles();
     step.value = CreatePostStep.caption;
   }
 
-  void _replaceDraftsFromOutput(List<CreatePostEditorOutput> result) {
-    final byOriginal = {for (final d in drafts) d.original.path: d};
-    final nextDrafts = <PostDraftImage>[];
+  void _replaceDraftsFromOutput(List<ImageEditorOutput> result) {
+    final byOriginal = {
+      for (final d in drafts)
+        if (d.original != null) d.original!.path: d,
+    };
+    final nextDrafts = <LocalImageDraft>[];
     for (final out in result) {
       final prev = byOriginal[out.original.path];
       if (prev != null) {
-        prev.stateJson = out.stateJson;
-        if (out.file.path != prev.display.path) {
-          _deleteTemp(prev.edited?.path);
-          prev.edited = out.file;
-          _trackTemp(out.file.path);
-        }
+        prev.applyEditorOutput(
+          out,
+          trackTemp: _tempStore.track,
+          deleteTemp: _tempStore.delete,
+        );
         nextDrafts.add(prev);
       } else {
         nextDrafts.add(
-          PostDraftImage(
+          LocalImageDraft.fromEditor(
             original: out.original,
-            edited: out.file,
+            file: out.file,
             stateJson: out.stateJson,
           ),
         );
-        _trackTemp(out.file.path);
+        _tempStore.track(out.file.path);
       }
     }
     drafts
@@ -166,33 +146,25 @@ class CreatePostController extends GetxController {
       ..addAll(nextDrafts);
   }
 
-  Future<List<CreatePostEditorOutput>?> _openEditor(
-    List<CreatePostEditorImage> images, {
+  Future<List<ImageEditorOutput>?> _openEditor(
+    List<ImageEditorInput> images, {
     int initialIndex = 0,
   }) async {
     if (images.isEmpty) return null;
     step.value = CreatePostStep.edit;
     if (isClosed) return null;
-    return Get.to<List<CreatePostEditorOutput>>(
-      () => CreatePostImageEditorPage(
-        images: images,
-        initialIndex: initialIndex,
-      ),
-      fullscreenDialog: true,
-      transition: Transition.cupertino,
-      preventDuplicates: false,
-    );
+    return openImageEditor(images: images, initialIndex: initialIndex);
   }
 
   void onEditedFileRemoved(XFile file) {
     final i = drafts.indexWhere(
-      (d) => d.edited?.path == file.path || d.original.path == file.path,
+      (d) => d.edited?.path == file.path || d.original?.path == file.path,
     );
     if (i >= 0) {
-      _deleteTemp(drafts[i].edited?.path);
+      _tempStore.delete(drafts[i].edited?.path);
       drafts.removeAt(i);
     } else {
-      _deleteTemp(file.path);
+      _tempStore.delete(file.path);
     }
     if (drafts.isEmpty) {
       localFiles.clear();
@@ -211,12 +183,6 @@ class CreatePostController extends GetxController {
     localFiles.assignAll(drafts.map((d) => d.display));
   }
 
-  void _trackTemp(String path) {
-    if (!_tempEditedPaths.contains(path)) {
-      _tempEditedPaths.add(path);
-    }
-  }
-
   Future<void> submit() async {
     if (isSubmitting.value) return;
 
@@ -233,25 +199,21 @@ class CreatePostController extends GetxController {
 
     isSubmitting.value = true;
     submitMessage.value = 'Uploading…';
-    final uploaded = <UploadedMediaRef>[];
+    var uploaded = <UploadedMediaRef>[];
 
     try {
-      for (final xfile in files) {
-        final ref = await MediaUploadService.instance.uploadLocalFile(
-          file: File(xfile.path),
-          purpose: MediaUploadPurpose.postMedia,
-          onProgress: (_) {},
+      final refs = await DeferredMediaUpload.uploadAll(
+        files: files,
+        purpose: MediaUploadPurpose.postMedia,
+      );
+      if (refs == null) {
+        AppSnackbar.error(
+          title: 'Upload failed',
+          message: 'Could not upload photos. Try again.',
         );
-        if (ref == null) {
-          await _rollbackUploads(uploaded);
-          AppSnackbar.error(
-            title: 'Upload failed',
-            message: 'Could not upload photos. Try again.',
-          );
-          return;
-        }
-        uploaded.add(ref);
+        return;
       }
+      uploaded = refs;
 
       submitMessage.value = 'Publishing…';
       final created = await _postService.create(
@@ -273,7 +235,7 @@ class CreatePostController extends GetxController {
       );
 
       if (created == null) {
-        await _rollbackUploads(uploaded);
+        await DeferredMediaUpload.rollback(uploaded);
         AppSnackbar.error(
           title: 'Failed',
           message: 'Could not publish post. Try again.',
@@ -283,7 +245,7 @@ class CreatePostController extends GetxController {
 
       await _invalidateQueries();
 
-      _clearTempFiles();
+      _tempStore.clear();
       isSubmitting.value = false;
       Get.back();
       AppSnackbar.success(
@@ -292,7 +254,7 @@ class CreatePostController extends GetxController {
       );
     } catch (e) {
       debugPrint('Create post submit error: $e');
-      await _rollbackUploads(uploaded);
+      await DeferredMediaUpload.rollback(uploaded);
       AppSnackbar.error(
         title: 'Failed',
         message: 'Could not publish post. Try again.',
@@ -301,17 +263,6 @@ class CreatePostController extends GetxController {
       if (isSubmitting.value) {
         isSubmitting.value = false;
       }
-    }
-  }
-
-  Future<void> _rollbackUploads(List<UploadedMediaRef> uploaded) async {
-    if (uploaded.isEmpty) return;
-    try {
-      await MediaUploadService.instance.deleteObjects(
-        uploaded.map((u) => u.objectKey).toList(),
-      );
-    } catch (e) {
-      debugPrint('Failed to roll back unpublished uploads: $e');
     }
   }
 
@@ -383,27 +334,10 @@ class CreatePostController extends GetxController {
     );
   }
 
-  void _deleteTemp(String? path) {
-    if (path == null || path.isEmpty) return;
-    if (!_tempEditedPaths.remove(path)) return;
-    try {
-      final file = File(path);
-      if (file.existsSync()) file.deleteSync();
-    } catch (e) {
-      debugPrint('Failed to delete temp post image: $e');
-    }
-  }
-
-  void _clearTempFiles() {
-    for (final path in List<String>.from(_tempEditedPaths)) {
-      _deleteTemp(path);
-    }
-  }
-
   @override
   void onClose() {
     captionController.dispose();
-    _clearTempFiles();
+    _tempStore.clear();
     super.onClose();
   }
 }

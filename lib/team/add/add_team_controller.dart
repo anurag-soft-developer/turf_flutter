@@ -1,16 +1,37 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/core/services/media_upload_service.dart';
 import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
 
+import '../../core/cache/app_image_cache.dart';
+import '../../core/components/image_editor/image_editor_page.dart';
 import '../../core/config/constants.dart';
+import '../../core/models/media_upload_models.dart';
 import '../../core/query/query_keys.dart';
+import '../../core/media/local_image_pipeline.dart';
 import '../../core/utils/app_snackbar.dart';
+import '../../core/services/media_upload_service.dart';
 import '../model/team_model.dart';
 import '../team_service.dart';
+import '../utils/team_media_url.dart';
 
 class AddTeamController extends GetxController {
+  static const int maxCoverImages = 5;
+
+  static const _coverEditorOptions = ImageEditorOptions(
+    title: 'Cover',
+    cropAspectRatio: 16 / 9,
+    lockCropAspectRatio: true,
+  );
+
+  static const _logoEditorOptions = ImageEditorOptions(
+    title: 'Logo',
+    cropAspectRatio: 1,
+    lockCropAspectRatio: true,
+  );
+
   final TeamService _teamService = TeamService();
+  final EditedImageTempStore _tempStore = EditedImageTempStore();
 
   // ── Text controllers ─────────────────────────────────────────────────────
 
@@ -47,12 +68,13 @@ class AddTeamController extends GetxController {
   final RxList<String> pinnedNotices = <String>[].obs;
 
   final RxBool isSubmitting = false.obs;
+  final RxString submitMessage = 'Saving…'.obs;
 
   /// Create-mode stepper index (0 = sport, 1 = basic info). Unused in edit mode.
   final RxInt currentStep = 0.obs;
 
-  final RxList<String> logoImages = <String>[].obs;
-  final RxList<String> coverImages = <String>[].obs;
+  final logoDraft = Rxn<LocalImageDraft>();
+  final RxList<LocalImageDraft> coverDrafts = <LocalImageDraft>[].obs;
 
   SelectedLocation? _selectedLocation;
 
@@ -64,6 +86,8 @@ class AddTeamController extends GetxController {
   final List<String> _pendingRemoteImageDeletes = [];
 
   bool get isEditing => _editingTeamId != null;
+  bool get canAddMoreCovers => coverDrafts.length < maxCoverImages;
+  int get remainingCoverSlots => maxCoverImages - coverDrafts.length;
 
   void queueDeferredRemoteImageDeletion(String url) {
     final trimmed = url.trim();
@@ -134,8 +158,14 @@ class AddTeamController extends GetxController {
       );
     }
 
-    if (t.logo.isNotEmpty) logoImages.add(t.logo);
-    coverImages.addAll(t.coverImages);
+    if (t.logo.isNotEmpty) {
+      logoDraft.value = LocalImageDraft.remote(t.logo);
+    }
+    coverDrafts.assignAll(
+      t.coverImages
+          .where((url) => url.trim().isNotEmpty)
+          .map(LocalImageDraft.remote),
+    );
   }
 
   @override
@@ -155,6 +185,7 @@ class AddTeamController extends GetxController {
     addressController.dispose();
     latController.dispose();
     lngController.dispose();
+    _tempStore.clear();
     super.onClose();
   }
 
@@ -201,6 +232,188 @@ class AddTeamController extends GetxController {
     addressController.text = location.address;
     latController.text = location.latitude.toString();
     lngController.text = location.longitude.toString();
+  }
+
+  // ── Media drafts (local until Save) ──────────────────────────────────────
+
+  Future<void> addCovers(List<XFile> incoming, int afterIndex) async {
+    if (incoming.isEmpty || remainingCoverSlots <= 0) return;
+
+    final accepted = incoming.take(remainingCoverSlots).toList();
+    final result = await openImageEditor(
+      images: [
+        for (final file in accepted) ImageEditorInput(original: file),
+      ],
+      options: _coverEditorOptions,
+    );
+    if (result == null || result.isEmpty) return;
+
+    final insertAt = (afterIndex >= 0 && afterIndex < coverDrafts.length)
+        ? afterIndex + 1
+        : coverDrafts.length;
+
+    var at = insertAt;
+    for (final out in result) {
+      coverDrafts.insert(
+        at,
+        LocalImageDraft.fromEditor(
+          original: out.original,
+          file: out.file,
+          stateJson: out.stateJson,
+        ),
+      );
+      _tempStore.track(out.file.path);
+      at++;
+    }
+  }
+
+  Future<void> reEditCoverAt(int index) async {
+    if (index < 0 || index >= coverDrafts.length) return;
+    final current = coverDrafts[index];
+    final local = await _ensureLocalFile(current);
+    if (local == null) {
+      AppSnackbar.error(
+        title: 'Could not edit',
+        message: 'Download the photo and try again.',
+      );
+      return;
+    }
+
+    final result = await openImageEditor(
+      images: [current.toEditorInput(originalOverride: local)],
+      options: _coverEditorOptions,
+    );
+    if (result == null || result.isEmpty) return;
+
+    final out = result.first;
+    final next = current.copyWith(remoteUrl: current.remoteUrl);
+    next.applyEditorOutput(
+      out,
+      trackTemp: _tempStore.track,
+      deleteTemp: _tempStore.delete,
+    );
+    coverDrafts[index] = next;
+  }
+
+  void removeCoverAt(int index) {
+    if (index < 0 || index >= coverDrafts.length) return;
+    final removed = coverDrafts.removeAt(index);
+    _tempStore.delete(removed.edited?.path);
+    final remote = removed.remoteUrl?.trim();
+    if (remote != null && remote.isNotEmpty) {
+      queueDeferredRemoteImageDeletion(remote);
+    }
+  }
+
+  Future<void> setLogoFromPick(XFile file) async {
+    final previous = logoDraft.value;
+    final result = await openImageEditor(
+      images: [ImageEditorInput(original: file)],
+      options: _logoEditorOptions,
+    );
+    if (result == null || result.isEmpty) return;
+
+    final out = result.first;
+    _tempStore.delete(previous?.edited?.path);
+    _tempStore.track(out.file.path);
+    final oldRemote = previous?.remoteUrl?.trim();
+    if (oldRemote != null && oldRemote.isNotEmpty) {
+      queueDeferredRemoteImageDeletion(oldRemote);
+    }
+    logoDraft.value = LocalImageDraft.fromEditor(
+      original: out.original,
+      file: out.file,
+      stateJson: out.stateJson,
+    );
+  }
+
+  Future<void> reEditLogo() async {
+    final current = logoDraft.value;
+    if (current == null) return;
+    final local = await _ensureLocalFile(current);
+    if (local == null) {
+      AppSnackbar.error(
+        title: 'Could not edit',
+        message: 'Download the photo and try again.',
+      );
+      return;
+    }
+
+    final result = await openImageEditor(
+      images: [current.toEditorInput(originalOverride: local)],
+      options: _logoEditorOptions,
+    );
+    if (result == null || result.isEmpty) return;
+
+    final out = result.first;
+    final next = current.copyWith(remoteUrl: current.remoteUrl);
+    next.applyEditorOutput(
+      out,
+      trackTemp: _tempStore.track,
+      deleteTemp: _tempStore.delete,
+    );
+    logoDraft.value = next;
+  }
+
+  Future<XFile?> _ensureLocalFile(LocalImageDraft draft) async {
+    final existing = draft.original ?? draft.edited;
+    if (existing != null) return existing;
+    final url = resolveTeamMediaUrl(draft.remoteUrl ?? '');
+    if (url == null || url.isEmpty) return null;
+    try {
+      final file = await AppImageCache.instance.getSingleFile(url);
+      return XFile(file.path);
+    } catch (e) {
+      debugPrint('Failed to cache team image: $e');
+      return null;
+    }
+  }
+
+  Future<List<UploadedMediaRef>> _uploadLocalDrafts() async {
+    final files = <XFile>[];
+    final logo = logoDraft.value;
+    final logoHadLocal = logo?.localFile != null;
+    if (logoHadLocal) files.add(logo!.localFile!);
+
+    final coverIndices = <int>[];
+    for (var i = 0; i < coverDrafts.length; i++) {
+      final draft = coverDrafts[i];
+      if (draft.localFile == null) continue;
+      files.add(draft.localFile!);
+      coverIndices.add(i);
+    }
+
+    final uploaded = await DeferredMediaUpload.uploadAll(
+      files: files,
+      purpose: MediaUploadPurpose.teamMedia,
+    );
+    if (uploaded == null) return [];
+
+    var ui = 0;
+    if (logoHadLocal) {
+      logoDraft.value = logo!.copyWith(remoteUrl: uploaded[ui++].fileUrl);
+    }
+    for (final i in coverIndices) {
+      coverDrafts[i] =
+          coverDrafts[i].copyWith(remoteUrl: uploaded[ui++].fileUrl);
+    }
+    return uploaded;
+  }
+
+  String? _logoUrlForRequest() {
+    final draft = logoDraft.value;
+    if (draft == null) return null;
+    return draft.remoteUrl?.trim().isNotEmpty == true
+        ? draft.remoteUrl!.trim()
+        : null;
+  }
+
+  List<String> _coverUrlsForRequest() {
+    return [
+      for (final draft in coverDrafts)
+        if (draft.remoteUrl != null && draft.remoteUrl!.trim().isNotEmpty)
+          draft.remoteUrl!.trim(),
+    ];
   }
 
   // ── Collected DTO helpers ────────────────────────────────────────────────
@@ -274,83 +487,149 @@ class AddTeamController extends GetxController {
       return;
     }
 
-    final logo = logoImages.isNotEmpty ? logoImages.first : null;
-    final covers = coverImages.isNotEmpty ? coverImages.toList() : null;
-    final shortName = shortNameController.text.trim();
-    final tagline = taglineController.text.trim();
-    final description = descriptionController.text.trim();
-    final social = _collectSocialLinks();
-    final founded = _collectFoundedYear();
-    final playDays = _collectPlayDays();
-    final tagsVal = tags.isNotEmpty ? tags.toList() : null;
-    final notices = pinnedNotices.isNotEmpty ? pinnedNotices.toList() : null;
-    final location = _collectLocation();
-
     isSubmitting.value = true;
-    if (isEditing) {
-      final updated = await _teamService.update(
-        _editingTeamId!,
-        UpdateTeamRequest(
-          name: nameController.text.trim(),
-          shortName: shortName.isEmpty ? null : shortName,
-          description: description.isEmpty ? null : description,
-          tagline: tagline.isEmpty ? null : tagline,
-          socialLinks: social,
-          foundedYear: founded,
-          genderCategory: genderCategory.value,
-          maxPendingJoinRequests: maxPending,
-          logo: logo,
-          coverImages: covers,
-          tags: tagsVal,
-          preferredPlayDays: playDays,
-          preferredTimeSlot: preferredTimeSlot.value,
-          lookingForMembers: lookingForMembers.value,
-          pinnedNotices: notices,
-          visibility: visibility.value,
-          joinMode: joinMode.value,
-          location: location,
-        ),
-      );
-      if (updated != null) {
-        await flushPendingRemoteImageDeletions(_pendingRemoteImageDeletes);
-        AppSnackbar.success(title: 'Team updated', message: updated.name);
-        await _invalidateTeamQueries(updated.id);
-        Get.offNamed(AppConstants.routes.myTeams);
+    submitMessage.value = 'Uploading photos…';
+    var uploaded = <UploadedMediaRef>[];
+
+    try {
+      final hadLocal = logoDraft.value?.hasLocal == true ||
+          coverDrafts.any((d) => d.hasLocal);
+      uploaded = await _uploadLocalDrafts();
+      if (hadLocal && uploaded.isEmpty) {
+        AppSnackbar.error(
+          title: 'Upload failed',
+          message: 'Could not upload photos. Try again.',
+        );
+        return;
       }
-    } else {
-      final created = await _teamService.create(
-        CreateTeamRequest(
-          name: nameController.text.trim(),
-          shortName: shortName.isEmpty ? null : shortName,
-          description: description.isEmpty ? null : description,
-          tagline: tagline.isEmpty ? null : tagline,
-          socialLinks: social,
-          foundedYear: founded,
-          genderCategory: genderCategory.value,
-          maxPendingJoinRequests: maxPending,
-          logo: logo,
-          coverImages: covers,
-          tags: tagsVal,
-          preferredPlayDays: playDays,
-          preferredTimeSlot: preferredTimeSlot.value,
-          lookingForMembers: lookingForMembers.value,
-          pinnedNotices: notices,
-          sportType: sportType.value,
-          visibility: visibility.value,
-          joinMode: joinMode.value,
-          location: location,
-        ),
-      );
-      if (created != null) {
-        AppSnackbar.success(
+
+      final logo = _logoUrlForRequest();
+      final covers = _coverUrlsForRequest();
+      final shortName = shortNameController.text.trim();
+      final tagline = taglineController.text.trim();
+      final description = descriptionController.text.trim();
+      final social = _collectSocialLinks();
+      final founded = _collectFoundedYear();
+      final playDays = _collectPlayDays();
+      final tagsVal = tags.isNotEmpty ? tags.toList() : null;
+      final notices = pinnedNotices.isNotEmpty ? pinnedNotices.toList() : null;
+      final location = _collectLocation();
+
+      submitMessage.value = isEditing ? 'Saving…' : 'Creating team…';
+      if (isEditing) {
+        final updated = await _teamService.update(
+          _editingTeamId!,
+          UpdateTeamRequest(
+            name: nameController.text.trim(),
+            shortName: shortName.isEmpty ? null : shortName,
+            description: description.isEmpty ? null : description,
+            tagline: tagline.isEmpty ? null : tagline,
+            socialLinks: social,
+            foundedYear: founded,
+            genderCategory: genderCategory.value,
+            maxPendingJoinRequests: maxPending,
+            logo: logo,
+            coverImages: covers,
+            tags: tagsVal,
+            preferredPlayDays: playDays,
+            preferredTimeSlot: preferredTimeSlot.value,
+            lookingForMembers: lookingForMembers.value,
+            pinnedNotices: notices,
+            visibility: visibility.value,
+            joinMode: joinMode.value,
+            location: location,
+          ),
+        );
+        if (updated == null) {
+          await DeferredMediaUpload.rollback(uploaded);
+          AppSnackbar.error(
+            title: 'Failed',
+            message: 'Could not update team. Try again.',
+          );
+          return;
+        }
+        await flushPendingRemoteImageDeletions(_pendingRemoteImageDeletes);
+        _tempStore.clear();
+        _leaveAfterSuccess(
+          teamId: updated.id,
+          title: 'Team updated',
+          message: updated.name,
+        );
+        return;
+      } else {
+        final created = await _teamService.create(
+          CreateTeamRequest(
+            name: nameController.text.trim(),
+            shortName: shortName.isEmpty ? null : shortName,
+            description: description.isEmpty ? null : description,
+            tagline: tagline.isEmpty ? null : tagline,
+            socialLinks: social,
+            foundedYear: founded,
+            genderCategory: genderCategory.value,
+            maxPendingJoinRequests: maxPending,
+            logo: logo,
+            coverImages: covers.isEmpty ? null : covers,
+            tags: tagsVal,
+            preferredPlayDays: playDays,
+            preferredTimeSlot: preferredTimeSlot.value,
+            lookingForMembers: lookingForMembers.value,
+            pinnedNotices: notices,
+            sportType: sportType.value,
+            visibility: visibility.value,
+            joinMode: joinMode.value,
+            location: location,
+          ),
+        );
+        if (created == null) {
+          await DeferredMediaUpload.rollback(uploaded);
+          AppSnackbar.error(
+            title: 'Failed',
+            message: 'Could not create team. Try again.',
+          );
+          return;
+        }
+        _tempStore.clear();
+        _leaveAfterSuccess(
+          teamId: created.id,
           title: 'Team created',
           message: '${created.name} is ready.',
         );
-        await _invalidateTeamQueries(created.id);
-        Get.offNamed(AppConstants.routes.myTeams);
+        return;
+      }
+    } catch (e) {
+      debugPrint('Team submit error: $e');
+      await DeferredMediaUpload.rollback(uploaded);
+      AppSnackbar.error(
+        title: 'Failed',
+        message: 'Could not save team. Try again.',
+      );
+    } finally {
+      if (!isClosed && isSubmitting.value) {
+        isSubmitting.value = false;
       }
     }
+  }
+
+  /// Navigate first, then snackbar + invalidate after the frame (avoids Get.back
+  /// closing a snackbar instead of the route).
+  void _leaveAfterSuccess({
+    required String? teamId,
+    required String title,
+    required String message,
+  }) {
     isSubmitting.value = false;
+    if (Get.isSnackbarOpen) {
+      Get.closeAllSnackbars();
+    }
+    if (isEditing) {
+      Get.back();
+    } else {
+      Get.offNamed(AppConstants.routes.myTeams);
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      AppSnackbar.success(title: title, message: message);
+      _invalidateTeamQueries(teamId);
+    });
   }
 
   Future<void> _invalidateTeamQueries(String? teamId) async {

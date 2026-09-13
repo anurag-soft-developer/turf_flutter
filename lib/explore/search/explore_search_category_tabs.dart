@@ -1,29 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
-import '../../core/config/constants.dart';
+import '../../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
+import '../explore_controller.dart';
 import '../model/explore_category.dart';
 
 class ExploreSearchCategoryTabs extends StatelessWidget {
-  const ExploreSearchCategoryTabs({
-    super.key,
-    required this.category,
-    required this.onChanged,
-    this.includeAll = false,
-  });
+  const ExploreSearchCategoryTabs({super.key, this.tag});
 
-  final ExploreCategory category;
-  final ValueChanged<ExploreCategory> onChanged;
-  final bool includeAll;
-
-  static const _concreteTabs = <ExploreCategory>[
-    ExploreCategory.post,
-    ExploreCategory.match,
-    ExploreCategory.team,
-    ExploreCategory.player,
-  ];
-
-  /// Theme-matched indigo tint (between washed-out and solid primary).
-  static const _selectedBg = Color(0xFFE0E7FF);
+  final String? tag;
 
   static String label(ExploreCategory value) => switch (value) {
         ExploreCategory.all => 'All',
@@ -43,56 +28,16 @@ class ExploreSearchCategoryTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tabs = <ExploreCategory>[
-      if (includeAll) ExploreCategory.all,
-      ..._concreteTabs,
-    ];
-    final primary = const Color(AppColors.primaryColor);
+    final controller = Get.find<ExploreController>(tag: tag);
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-      child: Row(
-        children: [
-          for (final tab in tabs) ...[
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: ChoiceChip(
-                avatar: Icon(
-                  icon(tab),
-                  size: 16,
-                  color: category == tab
-                      ? primary
-                      : const Color(AppColors.textSecondaryColor),
-                ),
-                label: Text(label(tab)),
-                selected: category == tab,
-                onSelected: (_) => onChanged(tab),
-                showCheckmark: false,
-                color: WidgetStateProperty.resolveWith((states) {
-                  if (states.contains(WidgetState.selected)) {
-                    return _selectedBg;
-                  }
-                  return Colors.white;
-                }),
-                labelStyle: TextStyle(
-                  color: category == tab
-                      ? primary
-                      : const Color(AppColors.textSecondaryColor),
-                  fontWeight:
-                      category == tab ? FontWeight.w600 : FontWeight.w500,
-                ),
-                side: BorderSide(
-                  color: category == tab
-                      ? primary
-                      : const Color(AppColors.dividerColor),
-                ),
-                backgroundColor: Colors.white,
-              ),
-            ),
-          ],
-        ],
-      ),
+    return AppSegmentedTabs(
+      controller: controller.tabController,
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      onTap: controller.selectTabIndex,
+      items: [
+        for (final tab in controller.tabs)
+          AppTabItem(label: label(tab), icon: icon(tab)),
+      ],
     );
   }
 }

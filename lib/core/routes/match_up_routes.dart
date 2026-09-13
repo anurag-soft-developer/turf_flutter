@@ -36,7 +36,7 @@ final List<GetPage<dynamic>> matchUpRoutes = [
   GetPage(
     name: AppConstants.routes.exploreSearch,
     page: () => const ExploreSearchScreen(),
-    binding: ExploreBinding(),
+    binding: ExploreSearchBinding(),
     transition: Transition.cupertino,
     middlewares: [AuthGuard()],
   ),

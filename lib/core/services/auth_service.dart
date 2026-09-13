@@ -219,10 +219,6 @@ class AuthService {
     }
     final updatedUser = UserModel.fromJson(response);
     await _authStorageService.saveUser(updatedUser);
-
-    ExceptionHandler.showSuccessToast(
-      AppConstants.successMessages.profileUpdate,
-    );
     return updatedUser;
   }
 

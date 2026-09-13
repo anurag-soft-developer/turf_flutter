@@ -2,12 +2,13 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
-import '../../../core/config/constants.dart';
-import '../../../core/utils/exception_handler.dart';
-import '../../../core/utils/image_compress_util.dart';
+import '../../config/constants.dart';
+import '../../utils/exception_handler.dart';
+import '../../utils/image_compress_util.dart';
 
 const _kEditorToolbarHeight = 44.0;
 const _kFilmstripHeight = 58.0;
@@ -23,13 +24,35 @@ const _kImportConfigs = ImportEditorConfigs(
   enableInitialEmptyState: true,
 );
 
-/// One photo handed to [CreatePostImageEditorPage].
-class CreatePostEditorImage {
+const _kLockedCropTools = [
+  CropRotateTool.rotate,
+  CropRotateTool.flip,
+  CropRotateTool.tilt,
+  CropRotateTool.reset,
+];
+
+/// Crop / output options for [ImageEditorPage].
+class ImageEditorOptions {
+  final String title;
+  final double? cropAspectRatio;
+  final bool lockCropAspectRatio;
+  final Size maxOutputSize;
+
+  const ImageEditorOptions({
+    this.title = 'Edit',
+    this.cropAspectRatio,
+    this.lockCropAspectRatio = false,
+    this.maxOutputSize = const Size(1440, 1440),
+  });
+}
+
+/// One photo handed to [ImageEditorPage].
+class ImageEditorInput {
   final XFile original;
   final XFile? preview;
   final String? stateJson;
 
-  const CreatePostEditorImage({
+  const ImageEditorInput({
     required this.original,
     this.preview,
     this.stateJson,
@@ -37,42 +60,62 @@ class CreatePostEditorImage {
 }
 
 /// Flattened preview plus optional editor history for one photo.
-class CreatePostEditorOutput {
+class ImageEditorOutput {
   final XFile file;
   final XFile original;
   final String? stateJson;
 
-  const CreatePostEditorOutput({
+  const ImageEditorOutput({
     required this.file,
     required this.original,
     this.stateJson,
   });
 }
 
+/// Opens [ImageEditorPage] as a fullscreen dialog.
+Future<List<ImageEditorOutput>?> openImageEditor({
+  required List<ImageEditorInput> images,
+  int initialIndex = 0,
+  ImageEditorOptions options = const ImageEditorOptions(),
+}) async {
+  if (images.isEmpty) return null;
+  return Get.to<List<ImageEditorOutput>>(
+    () => ImageEditorPage(
+      images: images,
+      initialIndex: initialIndex,
+      options: options,
+    ),
+    fullscreenDialog: true,
+    transition: Transition.cupertino,
+    preventDuplicates: false,
+  );
+}
+
 /// Full-screen editor for one or more photos.
 ///
-/// Always edits [CreatePostEditorImage.original] and restores layers from
-/// [CreatePostEditorImage.stateJson] when present. Swiping saves a flattened
-/// JPEG preview only; WebP compression runs once when leaving for caption.
+/// Always edits [ImageEditorInput.original] and restores layers from
+/// [ImageEditorInput.stateJson] when present. Swiping saves a flattened
+/// JPEG preview only; WebP compression runs once when leaving.
 /// Returns compressed files plus state JSON so a later session can keep
 /// filters/text/crop editable.
-class CreatePostImageEditorPage extends StatefulWidget {
-  final List<CreatePostEditorImage> images;
+class ImageEditorPage extends StatefulWidget {
+  final List<ImageEditorInput> images;
   final int initialIndex;
+  final ImageEditorOptions options;
 
-  const CreatePostImageEditorPage({
+  const ImageEditorPage({
     super.key,
     required this.images,
     this.initialIndex = 0,
+    this.options = const ImageEditorOptions(),
   });
 
   @override
-  State<CreatePostImageEditorPage> createState() =>
-      _CreatePostImageEditorPageState();
+  State<ImageEditorPage> createState() => _ImageEditorPageState();
 }
 
-class _CreatePostImageEditorPageState extends State<CreatePostImageEditorPage> {
-  late final List<CreatePostEditorImage> _images;
+class _ImageEditorPageState extends State<ImageEditorPage> {
+  late final List<ImageEditorInput> _images;
   late int _index;
   var _popped = false;
   var _finishing = false;
@@ -95,7 +138,7 @@ class _CreatePostImageEditorPageState extends State<CreatePostImageEditorPage> {
   @override
   void initState() {
     super.initState();
-    _images = List<CreatePostEditorImage>.from(widget.images);
+    _images = List<ImageEditorInput>.from(widget.images);
     _index = widget.initialIndex.clamp(0, _images.length - 1);
     for (var i = 0; i < _images.length; i++) {
       final image = _images[i];
@@ -115,7 +158,29 @@ class _CreatePostImageEditorPageState extends State<CreatePostImageEditorPage> {
     super.dispose();
   }
 
-  void _popWith(List<CreatePostEditorOutput>? result) {
+  CropRotateEditorConfigs _cropConfigs() {
+    final ratio = widget.options.cropAspectRatio;
+    if (ratio == null) return const CropRotateEditorConfigs();
+    if (widget.options.lockCropAspectRatio) {
+      return CropRotateEditorConfigs(
+        initAspectRatio: ratio,
+        aspectRatios: [
+          AspectRatioItem(text: _ratioLabel(ratio), value: ratio),
+        ],
+        tools: _kLockedCropTools,
+      );
+    }
+    return CropRotateEditorConfigs(initAspectRatio: ratio);
+  }
+
+  String _ratioLabel(double ratio) {
+    if (ratio == 1) return '1:1';
+    if ((ratio - 16 / 9).abs() < 0.01) return '16:9';
+    if ((ratio - 4 / 3).abs() < 0.01) return '4:3';
+    return ratio.toStringAsFixed(2);
+  }
+
+  void _popWith(List<ImageEditorOutput>? result) {
     if (_popped || !mounted) return;
     _popped = true;
     Navigator.of(context).pop(result);
@@ -154,7 +219,7 @@ class _CreatePostImageEditorPageState extends State<CreatePostImageEditorPage> {
 
   Future<XFile> _writePreviewJpeg(Uint8List bytes) async {
     final path =
-        '${Directory.systemTemp.path}/post_preview_${DateTime.now().microsecondsSinceEpoch}.jpg';
+        '${Directory.systemTemp.path}/edited_preview_${DateTime.now().microsecondsSinceEpoch}.jpg';
     final file = File(path);
     await file.writeAsBytes(bytes, flush: true);
     return XFile(file.path, mimeType: 'image/jpeg');
@@ -190,11 +255,12 @@ class _CreatePostImageEditorPageState extends State<CreatePostImageEditorPage> {
         _popWith(_outputs());
       }
     } catch (e) {
-      debugPrint('Create post compress error: $e');
+      debugPrint('Image editor compress error: $e');
       ExceptionHandler.showErrorToast('Could not process photo');
       _pendingIndex = null;
       _pendingStateJson = null;
       _finishing = false;
+      if (mounted) setState(() {});
     } finally {
       _busy = false;
     }
@@ -216,10 +282,10 @@ class _CreatePostImageEditorPageState extends State<CreatePostImageEditorPage> {
     }
   }
 
-  List<CreatePostEditorOutput> _outputs() {
-    return List<CreatePostEditorOutput>.generate(
+  List<ImageEditorOutput> _outputs() {
+    return List<ImageEditorOutput>.generate(
       _images.length,
-      (i) => CreatePostEditorOutput(
+      (i) => ImageEditorOutput(
         file: _previews[i]!,
         original: _images[i].original,
         stateJson: _states[i],
@@ -291,14 +357,14 @@ class _CreatePostImageEditorPageState extends State<CreatePostImageEditorPage> {
         setState(() => _index = next);
         return;
       }
-      _finishing = true;
+      setState(() => _finishing = true);
       try {
         await _compressPendingOutputs();
         _popWith(_outputs());
       } catch (e) {
-        debugPrint('Create post compress error: $e');
+        debugPrint('Image editor compress error: $e');
         ExceptionHandler.showErrorToast('Could not process photo');
-        _finishing = false;
+        if (mounted) setState(() => _finishing = false);
       }
       return;
     }
@@ -307,6 +373,7 @@ class _CreatePostImageEditorPageState extends State<CreatePostImageEditorPage> {
     _pendingIndex = next;
     _finishing = next == null;
     _pendingStateJson = null;
+    if (_finishing) setState(() {});
 
     try {
       if (hasLiveEdits) {
@@ -328,12 +395,13 @@ class _CreatePostImageEditorPageState extends State<CreatePostImageEditorPage> {
       }
       editor.doneEditing();
     } catch (e) {
-      debugPrint('Create post save edits error: $e');
+      debugPrint('Image editor save edits error: $e');
       ExceptionHandler.showErrorToast('Could not save edits');
       _busy = false;
       _pendingIndex = null;
       _pendingStateJson = null;
       _finishing = false;
+      if (mounted) setState(() {});
     }
   }
 
@@ -341,90 +409,129 @@ class _CreatePostImageEditorPageState extends State<CreatePostImageEditorPage> {
   Widget build(BuildContext context) {
     const primary = Color(AppColors.primaryColor);
     final history = _historyFor(_index);
+    final originalPath = _currentOriginal.path;
 
-    return ProImageEditor.file(
-      File(_currentOriginal.path),
-      key: ValueKey('create-post-editor-${_currentOriginal.path}'),
-      callbacks: ProImageEditorCallbacks(
-        onImageEditingComplete: _onEditingComplete,
-      ),
-      configs: ProImageEditorConfigs(
-        heroTag: 'create-post-editor-${_currentOriginal.path}',
-        theme: ThemeData(
-          brightness: Brightness.dark,
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: primary,
-            brightness: Brightness.dark,
+    return Stack(
+      children: [
+        ProImageEditor.file(
+          File(originalPath),
+          key: ValueKey('image-editor-$originalPath'),
+          callbacks: ProImageEditorCallbacks(
+            onImageEditingComplete: _onEditingComplete,
           ),
-        ),
-        i18n: const I18n(
-          doneLoadingMsg: 'Saving…',
-          various: I18nVarious(
-            closeEditorWarningTitle: 'Discard edits?',
-            closeEditorWarningMessage:
-                'Changes to this photo will not be saved.',
-            closeEditorWarningConfirmBtn: 'Discard',
-            closeEditorWarningCancelBtn: 'Keep editing',
-          ),
-        ),
-        imageGeneration: const ImageGenerationConfigs(
-          maxOutputSize: Size(1440, 1440),
-          jpegQuality: 90,
-          allowEmptyEditingCompletion: true,
-          enableUseOriginalBytes: false,
-        ),
-        stateHistory: StateHistoryConfigs(initStateHistory: history),
-        mainEditor: MainEditorConfigs(
-          style: const MainEditorStyle(
-            appBarBackground: primary,
-            appBarColor: Colors.white,
-          ),
-          widgets: MainEditorWidgets(
-            wrapBody: _isMulti
-                ? (editor, rebuildStream, content) {
-                    return Column(
-                      children: [
-                        _Filmstrip(
-                          files: _originals,
-                          saved: _previews,
-                          index: _index,
-                          enabled: !_busy && !_finishing,
-                          onSelect: (i) => _commitCurrent(editor, next: i),
-                          onReorder: _reorder,
-                        ),
-                        Expanded(
-                          child: _SwipeToSwitch(
-                            isEnabled: () =>
-                                !_busy &&
-                                !_finishing &&
-                                !editor.isSubEditorOpen &&
-                                !editor.isLayerBeingTransformed,
-                            onSwipeLeft: () =>
-                                _commitCurrent(editor, next: _index + 1),
-                            onSwipeRight: () =>
-                                _commitCurrent(editor, next: _index - 1),
-                            child: content,
-                          ),
-                        ),
-                      ],
-                    );
-                  }
-                : null,
-            appBar: (editor, rebuildStream) => ReactiveAppbar(
-              stream: rebuildStream,
-              appbarSize: const Size.fromHeight(_kEditorToolbarHeight),
-              builder: (_) => _EditorAppBar(
-                editor: editor,
-                index: _index,
-                total: _images.length,
-                isMulti: _isMulti,
-                onClose: editor.closeEditor,
-                onDone: () => _commitCurrent(editor),
+          configs: ProImageEditorConfigs(
+            heroTag: 'image-editor-$originalPath',
+            theme: ThemeData(
+              brightness: Brightness.dark,
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: primary,
+                brightness: Brightness.dark,
+              ),
+            ),
+            i18n: const I18n(
+              doneLoadingMsg: 'Saving…',
+              various: I18nVarious(
+                closeEditorWarningTitle: 'Discard edits?',
+                closeEditorWarningMessage:
+                    'Changes to this photo will not be saved.',
+                closeEditorWarningConfirmBtn: 'Discard',
+                closeEditorWarningCancelBtn: 'Keep editing',
+              ),
+            ),
+            imageGeneration: ImageGenerationConfigs(
+              maxOutputSize: widget.options.maxOutputSize,
+              jpegQuality: 90,
+              allowEmptyEditingCompletion: true,
+              enableUseOriginalBytes: false,
+            ),
+            cropRotateEditor: _cropConfigs(),
+            stateHistory: StateHistoryConfigs(initStateHistory: history),
+            mainEditor: MainEditorConfigs(
+              style: const MainEditorStyle(
+                appBarBackground: primary,
+                appBarColor: Colors.white,
+              ),
+              widgets: MainEditorWidgets(
+                wrapBody: _isMulti
+                    ? (editor, rebuildStream, content) {
+                        return Column(
+                          children: [
+                            _Filmstrip(
+                              files: _originals,
+                              saved: _previews,
+                              index: _index,
+                              enabled: !_busy && !_finishing,
+                              onSelect: (i) => _commitCurrent(editor, next: i),
+                              onReorder: _reorder,
+                            ),
+                            Expanded(
+                              child: _SwipeToSwitch(
+                                isEnabled: () =>
+                                    !_busy &&
+                                    !_finishing &&
+                                    !editor.isSubEditorOpen &&
+                                    !editor.isLayerBeingTransformed,
+                                onSwipeLeft: () =>
+                                    _commitCurrent(editor, next: _index + 1),
+                                onSwipeRight: () =>
+                                    _commitCurrent(editor, next: _index - 1),
+                                child: content,
+                              ),
+                            ),
+                          ],
+                        );
+                      }
+                    : null,
+                appBar: (editor, rebuildStream) => ReactiveAppbar(
+                  stream: rebuildStream,
+                  appbarSize: const Size.fromHeight(_kEditorToolbarHeight),
+                  builder: (_) => _EditorAppBar(
+                    editor: editor,
+                    index: _index,
+                    total: _images.length,
+                    isMulti: _isMulti,
+                    title: widget.options.title,
+                    onClose: editor.closeEditor,
+                    onDone: () => _commitCurrent(editor),
+                  ),
+                ),
               ),
             ),
           ),
         ),
-      ),
+        if (_finishing) const _SavingOverlay(),
+      ],
+    );
+  }
+}
+
+class _SavingOverlay extends StatelessWidget {
+  const _SavingOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Stack(
+      children: [
+        ModalBarrier(dismissible: false, color: Color(0x99000000)),
+        Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(color: Colors.white),
+              SizedBox(height: 16),
+              Text(
+                'Saving…',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  decoration: TextDecoration.none,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -434,6 +541,7 @@ class _EditorAppBar extends StatelessWidget implements PreferredSizeWidget {
   final int index;
   final int total;
   final bool isMulti;
+  final String title;
   final VoidCallback onClose;
   final VoidCallback onDone;
 
@@ -442,6 +550,7 @@ class _EditorAppBar extends StatelessWidget implements PreferredSizeWidget {
     required this.index,
     required this.total,
     required this.isMulti,
+    required this.title,
     required this.onClose,
     required this.onDone,
   });
@@ -463,7 +572,7 @@ class _EditorAppBar extends StatelessWidget implements PreferredSizeWidget {
       backgroundColor: primary,
       foregroundColor: Colors.white,
       title: Text(
-        isMulti ? '${index + 1}/$total' : 'Edit',
+        isMulti ? '${index + 1}/$total' : title,
         style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
       ),
       leading: IconButton(

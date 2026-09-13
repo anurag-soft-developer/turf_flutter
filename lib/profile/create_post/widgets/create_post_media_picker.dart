@@ -1,11 +1,10 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../../core/config/constants.dart';
+import '../../../core/media/local_image_pipeline.dart';
 import '../../../core/utils/exception_handler.dart';
 
 /// Local-only gallery/camera picker with an Instagram-style carousel preview.
@@ -74,14 +73,6 @@ class _CreatePostMediaPickerState extends State<CreatePostMediaPicker> {
     });
   }
 
-  void _closeSheetThenRun(VoidCallback action) {
-    Get.back();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      action();
-    });
-  }
-
   void _showSourceSheet() {
     if (!_canAddMore) {
       ExceptionHandler.showInfoToast(
@@ -90,51 +81,11 @@ class _CreatePostMediaPickerState extends State<CreatePostMediaPicker> {
       return;
     }
 
-    Get.bottomSheet(
-      Container(
-        padding: const EdgeInsets.all(16),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Add photos',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(AppColors.primaryColor),
-              ),
-            ),
-            const SizedBox(height: 16),
-            ListTile(
-              leading: const Icon(
-                Icons.camera_alt,
-                color: Color(AppColors.primaryColor),
-              ),
-              title: const Text(
-                'Camera',
-                style: TextStyle(color: Color(AppColors.textColor)),
-              ),
-              onTap: () => _closeSheetThenRun(_pickFromCamera),
-            ),
-            ListTile(
-              leading: const Icon(
-                Icons.photo_library,
-                color: Color(AppColors.primaryColor),
-              ),
-              title: const Text(
-                'Gallery',
-                style: TextStyle(color: Color(AppColors.textColor)),
-              ),
-              onTap: () => _closeSheetThenRun(_pickFromGallery),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
+    ImageSourcePicker.showSourceSheet(
+      title: 'Add photos',
+      onCamera: _pickFromCamera,
+      onGallery: _pickFromGallery,
+      isMounted: () => mounted,
     );
   }
 
@@ -150,31 +101,20 @@ class _CreatePostMediaPickerState extends State<CreatePostMediaPicker> {
 
   Future<void> _pickFromGallery() async {
     if (!_canAddMore) return;
-    try {
-      final remaining = widget.maxImages - widget.files.length;
-      final picked = await _picker.pickMultiImage(limit: remaining);
-      if (!mounted || picked.isEmpty) return;
-      await _emitPicked(picked);
-    } on PlatformException catch (e) {
-      _handlePickerError(e, fromCamera: false);
-    } catch (e) {
-      debugPrint('Gallery pick error: $e');
-      ExceptionHandler.showErrorToast('Failed to pick images');
-    }
+    final remaining = widget.maxImages - widget.files.length;
+    final picked = await ImageSourcePicker.pickFromGallery(
+      picker: _picker,
+      limit: remaining,
+    );
+    if (!mounted || picked.isEmpty) return;
+    await _emitPicked(picked);
   }
 
   Future<void> _pickFromCamera() async {
     if (!_canAddMore) return;
-    try {
-      final image = await _picker.pickImage(source: ImageSource.camera);
-      if (!mounted || image == null) return;
-      await _emitPicked([image]);
-    } on PlatformException catch (e) {
-      _handlePickerError(e, fromCamera: true);
-    } catch (e) {
-      debugPrint('Camera pick error: $e');
-      ExceptionHandler.showErrorToast('Failed to take photo');
-    }
+    final image = await ImageSourcePicker.pickFromCamera(picker: _picker);
+    if (!mounted || image == null) return;
+    await _emitPicked([image]);
   }
 
   void _removeCurrent() {
@@ -187,30 +127,6 @@ class _CreatePostMediaPickerState extends State<CreatePostMediaPicker> {
       return;
     }
     _jumpToPage(index.clamp(0, widget.files.length - 1));
-  }
-
-  void _handlePickerError(PlatformException e, {required bool fromCamera}) {
-    String message = fromCamera
-        ? 'Failed to take photo'
-        : 'Failed to pick image from gallery';
-
-    if (e.code == 'channel-error') {
-      message =
-          'Camera/Gallery service unavailable. Please restart the app and try again.';
-    } else if (e.code == 'photo_access_denied' ||
-        e.code == 'camera_access_denied' ||
-        e.message?.contains('Permission denied') == true) {
-      message =
-          'Permission denied. Please enable access in your device settings.';
-    } else if (e.code == 'photo_access_restricted' ||
-        e.code == 'camera_access_restricted') {
-      message = 'Access is restricted on this device.';
-    } else if (e.code == 'camera_no_available') {
-      message = 'No camera available on this device.';
-    }
-
-    debugPrint('Image picker error: ${e.code} - ${e.message}');
-    ExceptionHandler.showErrorToast(message);
   }
 
   @override

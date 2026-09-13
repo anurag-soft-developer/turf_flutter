@@ -103,44 +103,48 @@ class ProfileScreen extends HookWidget {
         state: profileQuery,
         onRetry: () => profileQuery.refetch(),
         data: (resolved) {
-          final helper = UserFieldInstance(resolved);
-          final sports = _availableSports(resolved);
-          final userId = resolved.id ?? authController.user?.id ?? '';
+          return Obx(() {
+            // Prefer session user so edits (e.g. avatar) show immediately on back.
+            final user = authController.user ?? resolved;
+            final helper = UserFieldInstance(user);
+            final sports = _availableSports(user);
+            final userId = user.id ?? authController.user?.id ?? '';
 
-          return ProfileScrollScaffold(
-            header: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                PlayerHeroSection(helper: helper),
-                const SizedBox(height: 24),
-                PlayerBadgesSection(
-                  badges: helper.getModel()?.badges ?? [],
-                ),
-                const SizedBox(height: 24),
-              ],
-            ),
-            outerTabController: outerTabController,
-            photosSliver: userId.isEmpty
-                ? const SliverToBoxAdapter(
-                    child: SizedBox(
-                      height: 120,
-                      child: Center(child: Text('No photos yet')),
-                    ),
-                  )
-                : TaggedPostsGrid(
-                    queryKey: QueryKeys.userPosts(userId),
-                    filter: PostFilterQuery(
-                      postedBy: userId,
-                      status: PostStatus.published,
-                      limit: PostService.userPostsPageSize,
-                    ),
+            return ProfileScrollScaffold(
+              header: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  PlayerHeroSection(helper: helper),
+                  const SizedBox(height: 24),
+                  PlayerBadgesSection(
+                    badges: helper.getModel()?.badges ?? [],
                   ),
-            statsSliver: ProfileStatsSliver(
-              sports: sports,
-              sportTabController: sportTabController,
-              statsForSport: (sport) => _statsForSport(resolved, sport),
-            ),
-          );
+                  const SizedBox(height: 24),
+                ],
+              ),
+              outerTabController: outerTabController,
+              photosSliver: userId.isEmpty
+                  ? const SliverToBoxAdapter(
+                      child: SizedBox(
+                        height: 120,
+                        child: Center(child: Text('No photos yet')),
+                      ),
+                    )
+                  : TaggedPostsGrid(
+                      queryKey: QueryKeys.userPosts(userId),
+                      filter: PostFilterQuery(
+                        postedBy: userId,
+                        status: PostStatus.published,
+                        limit: PostService.userPostsPageSize,
+                      ),
+                    ),
+              statsSliver: ProfileStatsSliver(
+                sports: sports,
+                sportTabController: sportTabController,
+                statsForSport: (sport) => _statsForSport(user, sport),
+              ),
+            );
+          });
         },
       ),
     );

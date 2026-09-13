@@ -110,6 +110,7 @@ class PlayerHeroSection extends StatelessWidget {
                       showFullscreenImage(context, avatar);
                     },
                     child: CircleAvatar(
+                      key: ValueKey(helper.getAvatar() ?? 'no-avatar'),
                       radius: 42,
                       backgroundColor: Colors.white.withValues(alpha: 0.2),
                       backgroundImage:

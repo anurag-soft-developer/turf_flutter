@@ -7,8 +7,10 @@ import 'package:flutter_application_1/core/config/constants.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../core/components/image_editor/image_editor_page.dart';
 import '../../core/models/media_upload_models.dart';
 import '../../core/services/media_upload_service.dart';
+import '../../core/media/local_image_pipeline.dart';
 import '../../core/utils/exception_handler.dart';
 import '../create_turf/section_container.dart';
 
@@ -56,6 +58,15 @@ class ImageInput extends StatefulWidget {
   /// widget receives taps that open the image source sheet (camera / gallery).
   final Widget? buttonChild;
 
+  /// Opens [ImageEditorPage] after pick, before upload. Cancel skips upload.
+  final bool enableEditor;
+
+  /// Initial crop ratio in the editor (`1.0` for square). Null is free crop.
+  final double? editorCropAspectRatio;
+
+  /// When true, the crop ratio cannot be changed in the editor.
+  final bool lockEditorCrop;
+
   const ImageInput({
     super.key,
     this.title = 'Images',
@@ -72,6 +83,9 @@ class ImageInput extends StatefulWidget {
     this.deleteRemoteOnRemove = true,
     this.onDeferredRemoteRemoval,
     this.buttonChild,
+    this.enableEditor = true,
+    this.editorCropAspectRatio,
+    this.lockEditorCrop = false,
   });
 
   @override
@@ -155,14 +169,29 @@ class _ImageInputState extends State<ImageInput> {
 
     try {
       final picker = ImagePicker();
-      final XFile? image = await picker.pickImage(
-        source: source,
-        maxWidth: 1920,
-        maxHeight: 1080,
-        imageQuality: 80,
-      );
+      final XFile? image = widget.enableEditor
+          ? await picker.pickImage(source: source)
+          : await picker.pickImage(
+              source: source,
+              maxWidth: 1920,
+              maxHeight: 1080,
+              imageQuality: 80,
+            );
 
       if (image == null || !mounted) return;
+
+      XFile toUpload = image;
+      if (widget.enableEditor) {
+        final result = await openImageEditor(
+          images: [ImageEditorInput(original: image)],
+          options: ImageEditorOptions(
+            cropAspectRatio: widget.editorCropAspectRatio,
+            lockCropAspectRatio: widget.lockEditorCrop,
+          ),
+        );
+        if (result == null || result.isEmpty || !mounted) return;
+        toUpload = result.first.file;
+      }
 
       setState(() {
         _uploading = true;
@@ -170,7 +199,7 @@ class _ImageInputState extends State<ImageInput> {
       });
 
       final uploaded = await _upload.uploadLocalFile(
-        file: File(image.path),
+        file: File(toUpload.path),
         purpose: widget.uploadPurpose,
         onProgress: (p) {
           if (mounted) setState(() => _progress = p);
@@ -186,27 +215,10 @@ class _ImageInputState extends State<ImageInput> {
         }
       }
     } on PlatformException catch (e) {
-      String message = source == ImageSource.camera
-          ? 'Failed to take photo'
-          : 'Failed to pick image from gallery';
-
-      if (e.code == 'channel-error') {
-        message =
-            'Camera/Gallery service unavailable. Please restart the app and try again.';
-      } else if (e.code == 'photo_access_denied' ||
-          e.code == 'camera_access_denied' ||
-          e.message?.contains('Permission denied') == true) {
-        message =
-            'Permission denied. Please enable access in your device settings.';
-      } else if (e.code == 'photo_access_restricted' ||
-          e.code == 'camera_access_restricted') {
-        message = 'Access is restricted on this device.';
-      } else if (e.code == 'camera_no_available') {
-        message = 'No camera available on this device.';
-      }
-
-      debugPrint('Image picker error: ${e.code} - ${e.message}');
-      ExceptionHandler.showErrorToast(message);
+      ImageSourcePicker.handlePickerError(
+        e,
+        fromCamera: source == ImageSource.camera,
+      );
     } on FormatException catch (_) {
       ExceptionHandler.showErrorToast('Unsupported file type');
     } catch (e) {

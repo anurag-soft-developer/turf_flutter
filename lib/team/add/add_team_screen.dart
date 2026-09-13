@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../components/shared/avatar_image_input.dart';
+import '../../components/shared/form_bottom_actions.dart';
+import '../../components/shared/loading_overlay.dart';
 import '../../components/shared/location_autocomplete_field.dart';
 import '../../components/create_turf/section_container.dart';
-import '../../core/models/media_upload_models.dart';
 import '../../components/create_turf/styled_text_field.dart';
 import '../../core/config/constants.dart';
 import '../../rankings/widgets/rank_sport_filter.dart';
 import '../model/team_model.dart';
 import '../utils/team_ui.dart';
 import 'add_team_controller.dart';
+import 'widgets/team_hero_media_composer.dart';
 
 class AddTeamScreen extends StatelessWidget {
   const AddTeamScreen({super.key});
@@ -32,11 +33,25 @@ class AddTeamScreen extends StatelessWidget {
         elevation: 0,
         iconTheme: const IconThemeData(color: Color(AppColors.textColor)),
       ),
-      body: Form(
-        key: controller.formKey,
-        child: controller.isEditing
-            ? _EditTeamBody(controller: controller)
-            : _CreateTeamStepper(controller: controller),
+      body: Stack(
+        children: [
+          Form(
+            key: controller.formKey,
+            child: controller.isEditing
+                ? _EditTeamBody(controller: controller)
+                : _CreateTeamStepper(controller: controller),
+          ),
+          Obx(() {
+            if (!controller.isSubmitting.value) {
+              return const SizedBox.shrink();
+            }
+            return LoadingOverlay(
+              isLoading: true,
+              message: controller.submitMessage.value,
+              child: const SizedBox.expand(),
+            );
+          }),
+        ],
       ),
     );
   }
@@ -66,11 +81,14 @@ class _CreateTeamStepper extends StatelessWidget {
         Expanded(
           child: Obx(() {
             final step = controller.currentStep.value;
+            if (step == 0) {
+              return SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                child: _SportTypeStep(controller: controller),
+              );
+            }
             return SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: step == 0
-                  ? _SportTypeStep(controller: controller)
-                  : _CreateDetailsStep(controller: controller),
+              child: _CreateDetailsStep(controller: controller),
             );
           }),
         ),
@@ -213,86 +231,25 @@ class _CreateStepBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      elevation: 8,
-      shadowColor: Colors.black.withValues(alpha: 0.08),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-          child: Obx(() {
-            final step = controller.currentStep.value;
-            if (step == 0) {
-              return SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => controller.currentStep.value = 1,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    backgroundColor: const Color(AppColors.primaryColor),
-                    foregroundColor: Colors.white,
-                  ),
-                  child: const Text(
-                    'Next',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-              );
-            }
+    return Obx(() {
+      final step = controller.currentStep.value;
+      if (step == 0) {
+        return FormBottomActions(
+          secondaryLabel: 'Cancel',
+          onSecondary: () => Get.back(),
+          primaryLabel: 'Next',
+          onPrimary: () => controller.currentStep.value = 1,
+        );
+      }
 
-            return Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => controller.currentStep.value = 0,
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    child: const Text('Back'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: controller.isSubmitting.value
-                        ? null
-                        : controller.submit,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      backgroundColor: const Color(AppColors.primaryColor),
-                      foregroundColor: Colors.white,
-                    ),
-                    child: controller.isSubmitting.value
-                        ? const SizedBox(
-                            height: 22,
-                            width: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text(
-                            'Create Team',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                  ),
-                ),
-              ],
-            );
-          }),
-        ),
-      ),
-    );
+      return FormBottomActions(
+        secondaryLabel: 'Back',
+        onSecondary: () => controller.currentStep.value = 0,
+        primaryLabel: 'Create',
+        isLoading: controller.isSubmitting.value,
+        onPrimary: controller.submit,
+      );
+    });
   }
 }
 
@@ -420,19 +377,11 @@ class _CreateDetailsStep extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        AvatarImageInput(
-          imageUrls: controller.logoImages,
-          label: 'Team Logo',
-          placeholderIcon: AppIcons.teamPlaceholder,
-          uploadPurpose: MediaUploadPurpose.teamMedia,
-          allowPasteUrl: true,
-          deleteRemoteOnRemove: !controller.isEditing,
-          onDeferredRemoteRemoval: controller.queueDeferredRemoteImageDeletion,
-          onChange: (_) {},
-          radius: 52,
+        TeamHeroMediaComposer(controller: controller),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+          child: _BasicInfoSection(controller: controller, compact: true),
         ),
-        const SizedBox(height: 20),
-        _BasicInfoSection(controller: controller, compact: true),
       ],
     );
   }
@@ -447,32 +396,41 @@ class _EditTeamBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AvatarImageInput(
-            imageUrls: controller.logoImages,
-            label: 'Team Logo',
-            placeholderIcon: AppIcons.teamPlaceholder,
-            uploadPurpose: MediaUploadPurpose.teamMedia,
-            allowPasteUrl: true,
-            deleteRemoteOnRemove: !controller.isEditing,
-            onDeferredRemoteRemoval: controller.queueDeferredRemoteImageDeletion,
-            onChange: (_) {},
-            radius: 52,
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TeamHeroMediaComposer(controller: controller),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 16, 12, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _BasicInfoSection(controller: controller, compact: false),
+                      const SizedBox(height: 24),
+                      _ScheduleSection(controller: controller),
+                      const SizedBox(height: 24),
+                      _SocialLinksSection(controller: controller),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 24),
-          _BasicInfoSection(controller: controller, compact: false),
-          const SizedBox(height: 24),
-          _ScheduleSection(controller: controller),
-          const SizedBox(height: 24),
-          _SocialLinksSection(controller: controller),
-          const SizedBox(height: 24),
-          _SubmitButton(controller: controller),
-        ],
-      ),
+        ),
+        Obx(
+          () => FormBottomActions(
+            secondaryLabel: 'Cancel',
+            onSecondary: () => Get.back(),
+            primaryLabel: 'Save',
+            isLoading: controller.isSubmitting.value,
+            onPrimary: controller.submit,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -769,51 +727,5 @@ class _NullableDropdown<T> extends StatelessWidget {
     );
   }
 }
+// ── Basic Info ────────────────────────────────────────────────────────────────
 
-// ── Submit Button ─────────────────────────────────────────────────────────────
-
-class _SubmitButton extends StatelessWidget {
-  final AddTeamController controller;
-
-  const _SubmitButton({required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      child: Obx(
-        () => SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: controller.isSubmitting.value ? null : controller.submit,
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              backgroundColor: const Color(AppColors.primaryColor),
-              foregroundColor: Colors.white,
-              elevation: 2,
-            ),
-            child: controller.isSubmitting.value
-                ? const SizedBox(
-                    height: 22,
-                    width: 22,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : const Text(
-                    'Save Changes',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-          ),
-        ),
-      ),
-    );
-  }
-}
