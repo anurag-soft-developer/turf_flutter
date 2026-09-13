@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../components/app_bar/app_bar_background.dart';
 import '../../config/constants.dart';
 
 /// Placeholder legal copy — replace with your final terms or load from CMS / WebView.
@@ -12,12 +13,7 @@ class TermsOfServiceScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(
-        title: const Text('Terms & Conditions'),
-        backgroundColor: const Color(AppColors.primaryColor),
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
+      appBar: AppAppBar(title: const Text('Terms & Conditions')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(

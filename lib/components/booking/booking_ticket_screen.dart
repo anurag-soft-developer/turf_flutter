@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:pretty_qr_code/pretty_qr_code.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../core/components/app_bar/app_bar_background.dart';
 import '../../core/config/constants.dart';
 import '../../core/query/query_keys.dart';
 import '../../core/query/query_retry.dart';
@@ -54,7 +55,7 @@ class BookingTicketScreen extends HookWidget {
     if (bookingId == null || bookingId.isEmpty) {
       return Scaffold(
         backgroundColor: const Color(AppColors.backgroundColor),
-        appBar: AppBar(
+        appBar: AppAppBar(
           title: const Text('Ticket'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
@@ -138,7 +139,7 @@ class BookingTicketScreen extends HookWidget {
     if (booking == null) {
       return Scaffold(
         backgroundColor: const Color(AppColors.backgroundColor),
-        appBar: AppBar(
+        appBar: AppAppBar(
           title: const Text('Ticket'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
@@ -468,7 +469,7 @@ class _TurfHeader extends StatelessWidget {
                           const ColoredBox(
                             color: Color(0xFFE8F5E9),
                             child: Icon(
-                              Icons.grass,
+                              AppIcons.turfPlaceholder,
                               color: Color(AppColors.primaryColor),
                               size: 20,
                             ),
@@ -487,7 +488,7 @@ class _TurfHeader extends StatelessWidget {
                   : const ColoredBox(
                       color: Color(0xFFE8F5E9),
                       child: Icon(
-                        Icons.grass,
+                        AppIcons.turfPlaceholder,
                         color: Color(AppColors.primaryColor),
                         size: 20,
                       ),

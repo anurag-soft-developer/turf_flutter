@@ -46,8 +46,8 @@ class _MainScreenWrapperState extends State<MainScreenWrapper> {
   void _onPopInvoked(bool didPop, Object? result) {
     if (didPop) return;
 
-    if (_navController.currentIndex != 0) {
-      _navController.changeTab(0);
+    if (_navController.currentIndex != kDefaultNavTabIndex) {
+      _navController.changeTab(kDefaultNavTabIndex);
       _lastBackAt = null;
       return;
     }

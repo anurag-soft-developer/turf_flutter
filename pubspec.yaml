@@ -102,6 +102,7 @@ flutter:
     - .env
     - assets/logos/splash_logo.png
     - assets/sports/
+    - assets/graphics/
 
 
   # An image asset can refer to one or more resolution-specific "variants", see

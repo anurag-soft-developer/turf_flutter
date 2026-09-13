@@ -158,7 +158,7 @@ class MyTeamSelector extends StatelessWidget {
       ),
       child: sel.logo.isEmpty
           ? Icon(
-              Icons.shield_outlined,
+              AppIcons.teamPlaceholder,
               size: 14,
               color: Color(AppColors.primaryColor),
             )
@@ -169,7 +169,7 @@ class MyTeamSelector extends StatelessWidget {
                 height: 22,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => Icon(
-                  Icons.shield_outlined,
+                  AppIcons.teamPlaceholder,
                   size: 14,
                   color: Color(AppColors.primaryColor),
                 ),

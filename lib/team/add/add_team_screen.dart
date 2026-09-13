@@ -423,7 +423,7 @@ class _CreateDetailsStep extends StatelessWidget {
         AvatarImageInput(
           imageUrls: controller.logoImages,
           label: 'Team Logo',
-          placeholderIcon: Icons.shield_outlined,
+          placeholderIcon: AppIcons.teamPlaceholder,
           uploadPurpose: MediaUploadPurpose.teamMedia,
           allowPasteUrl: true,
           deleteRemoteOnRemove: !controller.isEditing,
@@ -455,7 +455,7 @@ class _EditTeamBody extends StatelessWidget {
           AvatarImageInput(
             imageUrls: controller.logoImages,
             label: 'Team Logo',
-            placeholderIcon: Icons.shield_outlined,
+            placeholderIcon: AppIcons.teamPlaceholder,
             uploadPurpose: MediaUploadPurpose.teamMedia,
             allowPasteUrl: true,
             deleteRemoteOnRemove: !controller.isEditing,

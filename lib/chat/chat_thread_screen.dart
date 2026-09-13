@@ -12,6 +12,7 @@ import 'package:flutter_application_1/components/chat/seen_avatars/seen_avatars.
 import 'package:flutter_application_1/components/chat/swipe_to_reply/swipe_to_reply.dart';
 import 'package:flutter_application_1/components/chat/text_message_with_extras.dart';
 import 'package:flutter_application_1/core/auth/auth_state_controller.dart';
+import 'package:flutter_application_1/core/components/app_bar/app_bar_background.dart';
 import 'package:flutter_application_1/core/config/constants.dart';
 import 'package:flutter_chat_core/flutter_chat_core.dart';
 import 'package:flutter_chat_ui/flutter_chat_ui.dart';
@@ -50,7 +51,7 @@ class ChatThreadScreen extends StatelessWidget {
     final me = Get.find<AuthStateController>().user?.id ?? '';
     if (scopeId.isEmpty || me.isEmpty) {
       return Scaffold(
-        appBar: AppBar(title: Text(title ?? 'Chat')),
+        appBar: AppAppBar(title: Text(title ?? 'Chat')),
         body: const Center(child: Text('Unable to open this chat.')),
       );
     }
@@ -61,7 +62,7 @@ class ChatThreadScreen extends StatelessWidget {
       builder: (controller) {
         return Scaffold(
           backgroundColor: const Color(AppColors.backgroundColor),
-          appBar: AppBar(
+          appBar: AppAppBar(
             title: Row(
               children: [
                 if (imageUrl != null && imageUrl!.isNotEmpty) ...[

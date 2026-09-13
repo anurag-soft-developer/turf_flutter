@@ -137,8 +137,7 @@ class _TurfListScroll extends HookWidget {
                 ),
               ],
             ),
-            PinnedSliverHeader(
-              backgroundColor: const Color(AppColors.primaryColor),
+            PinnedSliverHeader.surfaceCard(
               child: TurfSearchSection(controller: controller),
             ),
             ..._feedSlivers(turfsQuery, turfs),

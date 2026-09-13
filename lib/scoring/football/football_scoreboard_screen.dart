@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 
 import '../../components/scoring/cricket/match_stats_error_card.dart';
 import '../../components/scoring/cricket/vs_app_bar_title.dart';
+import '../../core/components/app_bar/app_bar_background.dart';
 import '../../core/config/constants.dart';
 import '../../core/query/query_keys.dart';
 import '../../core/query/query_retry.dart';
@@ -217,7 +218,7 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
     final rightTitle = _toTeamName.isNotEmpty ? _toTeamName : 'Loading…';
 
     return Scaffold(
-      appBar: AppBar(
+      appBar: AppAppBar(
         centerTitle: true,
         titleSpacing: 8,
         title: VsAppBarTitle(

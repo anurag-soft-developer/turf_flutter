@@ -7,6 +7,7 @@ import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
 import '../../components/scoring/cricket/cricket_components.dart';
+import '../../core/components/app_bar/app_bar_background.dart';
 import '../../core/config/constants.dart';
 import '../../core/query/query_keys.dart';
 import '../../core/query/query_retry.dart';
@@ -870,7 +871,7 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
     final leftTitle = _fromTeamName.isNotEmpty ? _fromTeamName : 'Loading…';
     final rightTitle = _toTeamName.isNotEmpty ? _toTeamName : 'Loading…';
     return Scaffold(
-      appBar: AppBar(
+      appBar: AppAppBar(
         centerTitle: true,
         titleSpacing: 8,
         title: VsAppBarTitle(

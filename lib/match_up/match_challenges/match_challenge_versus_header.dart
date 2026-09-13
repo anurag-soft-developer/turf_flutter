@@ -220,7 +220,7 @@ class _AvatarWithResultBadge extends StatelessWidget {
                 : null,
             child: logoUrl == null || logoUrl!.isEmpty
                 ? const Icon(
-                    Icons.groups_2_rounded,
+                    AppIcons.teamPlaceholder,
                     color: Color(AppColors.primaryColor),
                   )
                 : null,

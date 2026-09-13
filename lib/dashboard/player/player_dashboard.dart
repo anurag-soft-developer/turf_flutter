@@ -219,6 +219,8 @@ class _PlayerDashboardFeed extends HookWidget {
 
     final data = dashboardQuery.data ?? PlayerDashboardModel.empty;
     final isLoading = dashboardQuery.isLoading && data.turfs.isEmpty;
+    final hasError = dashboardQuery.isError && data.turfs.isEmpty;
+    final showTurfsSection = isLoading || hasError || data.turfs.isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -227,25 +229,27 @@ class _PlayerDashboardFeed extends HookWidget {
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: BattleModeCard(nearbyTeamsCount: data.nearbyTeamsCount),
         ),
-        const SizedBox(height: 28),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Text(
-            data.turfsTitle,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Color(AppColors.textColor),
+        if (showTurfsSection) ...[
+          const SizedBox(height: 28),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Text(
+              data.turfsTitle,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Color(AppColors.textColor),
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 12),
-        FeaturedTurfsSection(
-          turfs: data.turfs,
-          isLoading: isLoading,
-          hasError: dashboardQuery.isError && data.turfs.isEmpty,
-          onRetry: () => dashboardQuery.refetch(),
-        ),
+          const SizedBox(height: 12),
+          FeaturedTurfsSection(
+            turfs: data.turfs,
+            isLoading: isLoading,
+            hasError: hasError,
+            onRetry: () => dashboardQuery.refetch(),
+          ),
+        ],
       ],
     );
   }

@@ -12,7 +12,7 @@ class PendingExploreNav {
 }
 
 class NavigationController extends GetxController {
-  final RxInt _currentIndex = 0.obs;
+  final RxInt _currentIndex = kDefaultNavTabIndex.obs;
   final RxDouble _slideValue = 0.0.obs;
   final RxnString pendingSportFilter = RxnString();
   final Rxn<PendingExploreNav> pendingExplore = Rxn();
@@ -36,9 +36,13 @@ class NavigationController extends GetxController {
     _loadControllerForCurrentTab();
   }
 
+  void goToRank() {
+    changeTab(navTabIndex('Rank'));
+  }
+
   /// Switches to the Turfs tab and optionally applies a sport filter.
   void goToTurfs({String? sportFilter}) {
-    final turfsIndex = kNavTabs.indexWhere((tab) => tab.label == 'Turfs');
+    final turfsIndex = navTabIndex('Turfs');
     if (turfsIndex < 0) return;
 
     if (sportFilter != null) {
@@ -55,7 +59,7 @@ class NavigationController extends GetxController {
 
   /// Switches to the Explore tab and optionally applies category / team filters.
   void goToExplore({ExploreCategory? category, bool? teamOpenForMatch}) {
-    final exploreIndex = kNavTabs.indexWhere((tab) => tab.label == 'Explore');
+    final exploreIndex = navTabIndex('Explore');
     if (exploreIndex < 0) return;
 
     if (category != null || teamOpenForMatch != null) {

@@ -5,6 +5,7 @@ import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
 import '../../components/player/profile/player_hero_section.dart';
+import '../../core/components/app_bar/app_bar_background.dart';
 import '../../core/components/query/query_async_body.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/user/user_model.dart';
@@ -63,7 +64,7 @@ class PlayerProfileScreen extends HookWidget {
 
     if (userId == null || userId.isEmpty) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Player Profile')),
+        appBar: AppAppBar(title: const Text('Player Profile')),
         body: const Center(child: Text('Player not found')),
       );
     }

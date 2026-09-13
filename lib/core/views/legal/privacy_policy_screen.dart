@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../components/app_bar/app_bar_background.dart';
 import '../../config/constants.dart';
 
 /// Placeholder policy copy — replace with your final policy or load from CMS / WebView.
@@ -12,12 +13,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(
-        title: const Text('Privacy Policy'),
-        backgroundColor: const Color(AppColors.primaryColor),
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
+      appBar: AppAppBar(title: const Text('Privacy Policy')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(

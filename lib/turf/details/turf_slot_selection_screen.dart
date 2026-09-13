@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../components/turf/booking_components.dart';
+import '../../core/components/app_bar/app_bar_background.dart';
 import '../../core/config/constants.dart';
 import 'turf_detail_controller.dart';
 
@@ -14,7 +15,7 @@ class TurfSlotSelectionScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(title: const Text('Select slots')),
+      appBar: AppAppBar(title: const Text('Select slots')),
       body: ListView(
         children: [
           TimeSlotsGrid(controller: controller),

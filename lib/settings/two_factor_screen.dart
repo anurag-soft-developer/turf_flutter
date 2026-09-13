@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../components/shared/custom_button.dart';
 import '../components/shared/custom_text_field.dart';
 import '../core/auth/auth_state_controller.dart';
+import '../core/components/app_bar/app_bar_background.dart';
 import '../core/config/constants.dart';
 import '../core/utils/app_snackbar.dart';
 import '../core/utils/validators.dart';
@@ -50,12 +51,7 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(
-        title: const Text('Two-Factor Authentication'),
-        backgroundColor: const Color(AppColors.primaryColor),
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
+      appBar: AppAppBar(title: const Text('Two-Factor Authentication')),
       body: Obx(() {
         final enabled = _auth.user?.twoFactorEnabled == true;
         return SingleChildScrollView(

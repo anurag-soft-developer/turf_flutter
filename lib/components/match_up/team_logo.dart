@@ -43,7 +43,7 @@ class TeamLogo extends StatelessWidget {
         color: const Color(AppColors.primaryColor).withValues(alpha: 0.1),
       ),
       child: Icon(
-        placeholderIcon ?? Icons.groups_rounded,
+        placeholderIcon ?? AppIcons.teamPlaceholder,
         size: size * 0.5,
         color: const Color(AppColors.primaryColor),
       ),

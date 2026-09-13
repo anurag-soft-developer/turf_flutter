@@ -222,14 +222,14 @@ class _TurfTile extends StatelessWidget {
                         width: 56,
                         height: 56,
                         color: Colors.grey.shade200,
-                        child: const Icon(Icons.image_not_supported),
+                        child: const Icon(AppIcons.turfPlaceholder),
                       ),
                     )
                   : Container(
                       width: 56,
                       height: 56,
                       color: Colors.grey.shade200,
-                      child: const Icon(Icons.image),
+                      child: const Icon(AppIcons.turfPlaceholder),
                     ),
             ),
             const SizedBox(width: 10),

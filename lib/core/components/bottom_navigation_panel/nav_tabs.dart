@@ -41,6 +41,29 @@ Future<void> _invalidate(List queryKey) async {
 
 final List<NavTab> kNavTabs = [
   NavTab(
+    icon: Icons.explore_outlined,
+    activeIcon: Icons.explore,
+    label: 'Explore',
+    screenBuilder: () => const ExploreScreen(),
+    loadController: () => ExploreBinding().dependencies(),
+    onRetap: () async {
+      await _invalidate(QueryKeys.explorePrefix);
+      await _invalidate(QueryKeys.activeOpponentIds);
+      if (Get.isRegistered<ChallengeController>()) {
+        await Get.find<ChallengeController>().loadActiveOpponentIds();
+      }
+    },
+  ),
+  NavTab(
+    icon: Icons.grass_outlined,
+    activeIcon: Icons.grass,
+    label: 'Turfs',
+    screenBuilder: () => const TurfListScreen(),
+    loadController: () =>
+        _ensure<TurfListController>(() => TurfListController()),
+    onRetap: () => _invalidate(QueryKeys.turfSearchPrefix),
+  ),
+  NavTab(
     icon: Icons.dashboard_outlined,
     activeIcon: Icons.dashboard,
     label: 'Dashboard',
@@ -55,29 +78,6 @@ final List<NavTab> kNavTabs = [
         _invalidate(QueryKeys.playerDashboardPrefix),
         _invalidate(QueryKeys.dashboardLeaderboard),
       ]);
-    },
-  ),
-  NavTab(
-    icon: Icons.grass_outlined,
-    activeIcon: Icons.grass,
-    label: 'Turfs',
-    screenBuilder: () => const TurfListScreen(),
-    loadController: () =>
-        _ensure<TurfListController>(() => TurfListController()),
-    onRetap: () => _invalidate(QueryKeys.turfSearchPrefix),
-  ),
-  NavTab(
-    icon: Icons.explore_outlined,
-    activeIcon: Icons.explore,
-    label: 'Explore',
-    screenBuilder: () => const ExploreScreen(),
-    loadController: () => ExploreBinding().dependencies(),
-    onRetap: () async {
-      await _invalidate(QueryKeys.explorePrefix);
-      await _invalidate(QueryKeys.activeOpponentIds);
-      if (Get.isRegistered<ChallengeController>()) {
-        await Get.find<ChallengeController>().loadActiveOpponentIds();
-      }
     },
   ),
   NavTab(
@@ -101,6 +101,13 @@ final List<NavTab> kNavTabs = [
     },
   ),
 ];
+
+int navTabIndex(String label, {int fallback = -1}) {
+  final index = kNavTabs.indexWhere((tab) => tab.label == label);
+  return index < 0 ? fallback : index;
+}
+
+int get kDefaultNavTabIndex => navTabIndex('Dashboard', fallback: 0);
 
 void _ensure<T extends GetxController>(
   T Function() factory, {

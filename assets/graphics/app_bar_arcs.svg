@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 160" fill="none">
+  <!-- Soft stadium arcs  abstract watermark for app bars -->
+  <circle cx="220" cy="140" r="36" stroke="white" stroke-width="2"/>
+  <circle cx="220" cy="140" r="58" stroke="white" stroke-width="2"/>
+  <circle cx="220" cy="140" r="82" stroke="white" stroke-width="1.8"/>
+  <circle cx="220" cy="140" r="108" stroke="white" stroke-width="1.6"/>
+  <circle cx="220" cy="140" r="136" stroke="white" stroke-width="1.4"/>
+  <circle cx="220" cy="140" r="28" stroke="white" stroke-width="2.2"/>
+  <!-- Accent dots along an arc -->
+  <circle cx="168" cy="52" r="3" fill="white"/>
+  <circle cx="132" cy="78" r="2.2" fill="white"/>
+  <circle cx="108" cy="112" r="2.6" fill="white"/>
+</svg>

@@ -56,7 +56,7 @@ class TurfImageCarousel extends StatelessWidget {
                               Container(
                                 color: Colors.grey[300],
                                 child: const Icon(
-                                  Icons.sports_soccer,
+                                  AppIcons.turfPlaceholder,
                                   size: 60,
                                   color: Colors.grey,
                                 ),
@@ -115,7 +115,7 @@ class TurfImageCarousel extends StatelessWidget {
               : Container(
                   color: const Color(AppColors.primaryColor),
                   child: const Icon(
-                    Icons.sports_soccer,
+                    AppIcons.turfPlaceholder,
                     size: 80,
                     color: Colors.white,
                   ),

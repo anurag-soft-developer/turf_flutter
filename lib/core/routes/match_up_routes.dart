@@ -4,6 +4,7 @@ import 'package:flutter_application_1/bindings/explore_binding.dart';
 import 'package:flutter_application_1/bindings/match_challenge_detail_binding.dart';
 import 'package:flutter_application_1/bindings/match_challenges_binding.dart';
 import 'package:flutter_application_1/bindings/scoring_binding.dart';
+import 'package:flutter_application_1/core/components/app_bar/app_bar_background.dart';
 import 'package:flutter_application_1/core/config/constants.dart';
 import 'package:flutter_application_1/core/guards/auth_guard.dart';
 import 'package:flutter_application_1/explore/explore_screen.dart';
@@ -59,7 +60,7 @@ final List<GetPage<dynamic>> matchUpRoutes = [
       final match = args['match'] as TeamMatchModel?;
       if (match == null) {
         return Scaffold(
-          appBar: AppBar(title: const Text('Messages')),
+          appBar: AppAppBar(title: const Text('Messages')),
           body: const Center(
             child: Text(
               'Missing challenge data. Go back and open messages again.',

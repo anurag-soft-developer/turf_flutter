@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../config/constants.dart';
+import '../app_bar/app_bar_background.dart';
 
 /// Shared floating+snap app bar for tabs and list screens.
 class FloatingSliverAppBar extends StatelessWidget {
@@ -9,7 +9,6 @@ class FloatingSliverAppBar extends StatelessWidget {
     required this.title,
     this.leading,
     this.actions,
-    this.backgroundColor = const Color(AppColors.primaryColor),
     this.foregroundColor = Colors.white,
     this.centerTitle,
     this.automaticallyImplyLeading,
@@ -20,7 +19,6 @@ class FloatingSliverAppBar extends StatelessWidget {
   final Widget title;
   final Widget? leading;
   final List<Widget>? actions;
-  final Color backgroundColor;
   final Color foregroundColor;
   final bool? centerTitle;
   final bool? automaticallyImplyLeading;
@@ -37,7 +35,6 @@ class FloatingSliverAppBar extends StatelessWidget {
       leading: leading,
       title: title,
       actions: actions,
-      backgroundColor: backgroundColor,
       foregroundColor: foregroundColor,
       centerTitle: centerTitle,
       toolbarHeight: toolbarHeight ?? kToolbarHeight,
@@ -45,6 +42,9 @@ class FloatingSliverAppBar extends StatelessWidget {
       elevation: 0,
       scrolledUnderElevation: 0,
       forceElevated: false,
+      backgroundColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
+      flexibleSpace: const AppBarBackground(),
     );
   }
 }

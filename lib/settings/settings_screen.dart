@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_application_1/components/shared/loading_overlay.dart';
 import 'package:get/get.dart';
 import '../core/auth/auth_state_controller.dart';
+import '../core/components/app_bar/app_bar_background.dart';
 import 'settings_controller.dart';
 import '../core/config/constants.dart';
 import '../core/utils/app_snackbar.dart';
@@ -83,12 +84,7 @@ class SettingsScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(
-        title: const Text('Settings'),
-        backgroundColor: const Color(AppColors.primaryColor),
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
+      appBar: AppAppBar(title: const Text('Settings')),
       body: Obx(
         () => LoadingOverlay(
           isLoading: authController.isLoading,

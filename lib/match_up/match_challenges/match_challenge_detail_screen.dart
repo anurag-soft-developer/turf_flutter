@@ -8,6 +8,7 @@ import '../../components/announced_players/match_announced_players_section.dart'
 import '../../components/scoring/cricket/scorecard/match_scorecard_tab.dart';
 import '../../components/challenges/match_challenge_respond_actions.dart';
 import '../../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
+import '../../core/components/app_bar/app_bar_background.dart';
 import '../../core/components/query/query_async_body.dart';
 import '../../core/config/constants.dart';
 import '../../core/query/query_keys.dart';
@@ -58,7 +59,7 @@ class MatchChallengeDetailScreen extends HookWidget {
     if (matchId == null || matchId.isEmpty) {
       return Scaffold(
         backgroundColor: const Color(AppColors.backgroundColor),
-        appBar: AppBar(title: const Text('Challenge Details')),
+        appBar: AppAppBar(title: const Text('Challenge Details')),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -139,7 +140,7 @@ class MatchChallengeDetailScreen extends HookWidget {
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(
+      appBar: AppAppBar(
         title: const Text('Challenge Details'),
         actions: [
           IconButton(

@@ -125,7 +125,6 @@ class _ExploreTeamTile extends StatelessWidget {
                     url: team.logo,
                     size: 48,
                     teamId: team.id,
-                    placeholderIcon: team.sportType.icon,
                   ),
                   const SizedBox(width: 12),
                   Expanded(

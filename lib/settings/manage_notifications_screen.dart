@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../core/auth/auth_state_controller.dart';
+import '../core/components/app_bar/app_bar_background.dart';
 import '../core/config/constants.dart';
 import '../core/models/user/user_model.dart';
 
@@ -23,12 +24,7 @@ class ManageNotificationsScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(
-        title: const Text('Notifications'),
-        backgroundColor: _primary,
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
+      appBar: AppAppBar(title: const Text('Notifications')),
       body: Obx(() {
         final user = authController.user;
         final busy = authController.notificationSettingsUpdating.value;

@@ -243,7 +243,7 @@ class _TeamHeroHeaderState extends State<TeamHeroHeader> {
           color: const Color(AppColors.primaryColor),
           child: const Center(
             child: Icon(
-              Icons.broken_image_outlined,
+              AppIcons.teamPlaceholder,
               color: Colors.white38,
               size: 48,
             ),
@@ -272,7 +272,7 @@ class _TeamHeroHeaderState extends State<TeamHeroHeader> {
         backgroundImage: logoUrl != null ? AppNetworkImage.provider(logoUrl) : null,
         child: logoUrl == null
             ? const Icon(
-                Icons.shield_outlined,
+                AppIcons.teamPlaceholder,
                 size: 32,
                 color: Color(AppColors.primaryColor),
               )

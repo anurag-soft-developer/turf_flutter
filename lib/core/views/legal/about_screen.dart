@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../components/app_bar/app_bar_background.dart';
 import '../../config/constants.dart';
 
 class AboutScreen extends StatelessWidget {
@@ -16,12 +17,7 @@ class AboutScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(
-        title: const Text('About'),
-        backgroundColor: const Color(AppColors.primaryColor),
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
+      appBar: AppAppBar(title: const Text('About')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
         child: Column(

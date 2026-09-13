@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/config/env_config.dart';
 
 class AppConstants {
@@ -124,6 +125,14 @@ class OtpConstants {
 
   final int length = 6;
   final int timeoutSeconds = 300; // 5 minutes
+}
+
+class AppIcons {
+  /// Fallback when a turf image is missing or fails to load.
+  static const IconData turfPlaceholder = Icons.stadium;
+
+  /// Fallback when a team logo is missing or fails to load.
+  static const IconData teamPlaceholder = Icons.groups_rounded;
 }
 
 class AppColors {

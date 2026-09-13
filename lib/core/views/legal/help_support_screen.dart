@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../../components/shared/custom_button.dart';
 import '../../../components/shared/custom_text_field.dart';
 import '../../auth/auth_state_controller.dart';
+import '../../components/app_bar/app_bar_background.dart';
 import '../../config/constants.dart';
 import '../../utils/app_snackbar.dart';
 import '../../utils/validators.dart';
@@ -82,12 +83,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(
-        title: const Text('Help & support'),
-        backgroundColor: const Color(AppColors.primaryColor),
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
+      appBar: AppAppBar(title: const Text('Help & support')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(

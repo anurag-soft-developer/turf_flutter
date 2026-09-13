@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../core/components/app_bar/app_bar_background.dart';
 import '../../core/config/constants.dart';
 import '../../core/routes/route_query.dart';
 import '../model/content_post_model.dart';
@@ -113,7 +114,7 @@ class _ExplorePostViewerBody extends StatelessWidget {
     final c = Get.find<ExplorePostViewerController>(tag: tag);
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(title: const Text('Posts')),
+      appBar: AppAppBar(title: const Text('Posts')),
       body: Obx(() => _feedBody(c)),
     );
   }
@@ -234,7 +235,7 @@ class _MissingPostScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(title: const Text('Post')),
+      appBar: AppAppBar(title: const Text('Post')),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),

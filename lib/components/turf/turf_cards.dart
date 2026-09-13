@@ -114,7 +114,7 @@ class _FeaturedImageFallback extends StatelessWidget {
       color: const Color(AppColors.primaryColor),
       child: const Center(
         child: Icon(
-          Icons.sports_soccer,
+          AppIcons.turfPlaceholder,
           size: 48,
           color: Colors.white54,
         ),
@@ -168,7 +168,7 @@ class TurfListCard extends StatelessWidget {
                   color: turf.mainImage == null ? Colors.grey[300] : null,
                 ),
                 child: turf.mainImage == null
-                    ? const Icon(Icons.sports_soccer, color: Colors.grey)
+                    ? const Icon(AppIcons.turfPlaceholder, color: Colors.grey)
                     : null,
               ),
 
@@ -319,7 +319,7 @@ class EmptyTurfsView extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.sports_soccer, size: 64, color: Colors.grey[400]),
+          Icon(AppIcons.turfPlaceholder, size: 64, color: Colors.grey[400]),
           const SizedBox(height: 16),
           Text(
             'No turfs found',

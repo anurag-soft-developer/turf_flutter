@@ -6,6 +6,7 @@ import '../components/shared/custom_button.dart';
 import '../components/shared/custom_text_field.dart';
 import '../components/shared/loading_overlay.dart';
 import '../core/auth/auth_state_controller.dart';
+import '../core/components/app_bar/app_bar_background.dart';
 import '../core/config/constants.dart';
 import '../core/models/media_upload_models.dart';
 import '../core/utils/validators.dart';
@@ -21,12 +22,7 @@ class EditProfileScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(
-        title: const Text('Edit Profile'),
-        backgroundColor: const Color(AppColors.primaryColor),
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
+      appBar: AppAppBar(title: const Text('Edit Profile')),
       body: Obx(
         () => LoadingOverlay(
           isLoading: profileController.isLoading,

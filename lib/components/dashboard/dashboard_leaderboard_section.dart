@@ -37,7 +37,7 @@ class DashboardLeaderboardSection extends HookWidget {
 
   void _openRank() {
     if (Get.isRegistered<NavigationController>()) {
-      Get.find<NavigationController>().changeTab(4);
+      Get.find<NavigationController>().goToRank();
       return;
     }
     Get.toNamed(AppConstants.routes.rank);

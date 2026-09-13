@@ -108,7 +108,6 @@ Future<TeamModel?> showCreatePostTeamPicker(BuildContext context) {
       leading: TeamLogo(
         url: createPostTeamLogoUrl(team.logo) ?? '',
         size: 40,
-        placeholderIcon: team.sportType.icon,
       ),
       title: team.name,
       subtitle: team.location?.shortPlaceLabel,
@@ -469,7 +468,7 @@ class _TurfThumb extends StatelessWidget {
             ? Container(
                 color: Colors.black12,
                 child: const Icon(
-                  Icons.grass,
+                  AppIcons.turfPlaceholder,
                   color: Color(AppColors.primaryColor),
                 ),
               )
@@ -478,7 +477,7 @@ class _TurfThumb extends StatelessWidget {
                 fit: BoxFit.cover,
                 errorBuilder: (_, _, _) => Container(
                   color: Colors.black12,
-                  child: const Icon(Icons.grass),
+                  child: const Icon(AppIcons.turfPlaceholder),
                 ),
               ),
       ),

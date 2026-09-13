@@ -6,6 +6,7 @@ import '../components/shared/custom_text_field.dart';
 import '../components/shared/password_text_field.dart';
 import '../components/shared/loading_overlay.dart';
 import '../core/auth/auth_state_controller.dart';
+import '../core/components/app_bar/app_bar_background.dart';
 import '../core/config/constants.dart';
 import '../core/utils/app_snackbar.dart';
 import '../core/utils/validators.dart';
@@ -105,12 +106,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: AppBar(
-        title: const Text('Change Password'),
-        backgroundColor: const Color(AppColors.primaryColor),
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
+      appBar: AppAppBar(title: const Text('Change Password')),
       body: Obx(
         () => LoadingOverlay(
           isLoading: _submitting,

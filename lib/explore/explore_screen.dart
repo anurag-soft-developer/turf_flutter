@@ -75,8 +75,7 @@ class ExploreScreen extends HookWidget {
                 ),
               ],
             ),
-            PinnedSliverHeader(
-              backgroundColor: const Color(AppColors.primaryColor),
+            PinnedSliverHeader.surfaceCard(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,

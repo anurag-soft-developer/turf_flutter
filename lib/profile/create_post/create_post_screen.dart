@@ -6,6 +6,7 @@ import '../../components/shared/app_network_image.dart';
 import '../../components/shared/custom_button.dart';
 import '../../components/shared/custom_text_field.dart';
 import '../../components/shared/loading_overlay.dart';
+import '../../core/components/app_bar/app_bar_background.dart';
 import '../../core/config/constants.dart';
 import 'create_post_controller.dart';
 import 'widgets/create_post_media_picker.dart';
@@ -33,13 +34,10 @@ class CreatePostScreen extends StatelessWidget {
               )
             : Scaffold(
                 backgroundColor: const Color(AppColors.backgroundColor),
-                appBar: AppBar(
+                appBar: AppAppBar(
                   title: Text(
                     step == CreatePostStep.caption ? 'New Post' : 'Add photos',
                   ),
-                  backgroundColor: const Color(AppColors.primaryColor),
-                  foregroundColor: Colors.white,
-                  elevation: 0,
                 ),
                 body: step == CreatePostStep.caption
                     ? LoadingOverlay(
@@ -165,7 +163,7 @@ class _CreatePostMentions extends StatelessWidget {
           _MentionCard(
             emptyLabel: 'Turf',
             emptyHint: 'Tag a turf',
-            icon: Icons.grass_outlined,
+            icon: AppIcons.turfPlaceholder,
             mention: controller.mentionedTurf.value,
             isTurf: true,
             onTap: () => controller.pickTurf(context),
@@ -309,7 +307,6 @@ class _MentionCard extends StatelessWidget {
     return TeamLogo(
       url: mention?.imageUrl ?? '',
       size: 40,
-      placeholderIcon: icon,
     );
   }
 }
@@ -330,7 +327,7 @@ class _TurfAvatar extends StatelessWidget {
             ? Container(
                 color: const Color(AppColors.primaryColor).withValues(alpha: 0.1),
                 child: const Icon(
-                  Icons.grass,
+                  AppIcons.turfPlaceholder,
                   color: Color(AppColors.primaryColor),
                 ),
               )
@@ -342,7 +339,7 @@ class _TurfAvatar extends StatelessWidget {
                     AppColors.primaryColor,
                   ).withValues(alpha: 0.1),
                   child: const Icon(
-                    Icons.grass,
+                    AppIcons.turfPlaceholder,
                     color: Color(AppColors.primaryColor),
                   ),
                 ),
