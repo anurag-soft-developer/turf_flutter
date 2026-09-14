@@ -56,8 +56,20 @@ class ExploreFeedBody extends HookWidget {
   final String errorMessage;
   final List<Widget>? leadingSlivers;
 
+  Key get _scrollKey =>
+      PageStorageKey('explore-$mode-${category.apiValue}');
+
+  /// NestedScrollView / ExtendedNestedScrollView injects the inner controller
+  /// via [PrimaryScrollController]. Standalone leading-sliver feeds must not
+  /// steal that controller.
+  static const _nestedPhysics = AlwaysScrollableScrollPhysics(
+    parent: ClampingScrollPhysics(),
+  );
+
   @override
   Widget build(BuildContext context) {
+    useAutomaticKeepAlive(wantKeepAlive: true);
+
     final query = useInfiniteQuery<ExplorePaginatedResponse, Object, int>(
       QueryKeys.explore(
         mode: mode,
@@ -119,7 +131,9 @@ class ExploreFeedBody extends HookWidget {
             return false;
           },
           child: CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
+            key: _scrollKey,
+            primary: false,
+            physics: _nestedPhysics,
             slivers: [
               ...leading,
               ..._feedSlivers(
@@ -134,52 +148,72 @@ class ExploreFeedBody extends HookWidget {
     }
 
     if (query.isLoading || (query.isFetching && items.isEmpty)) {
-      return const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(
-            Color(AppColors.primaryColor),
+      return ListView(
+        key: _scrollKey,
+        physics: _nestedPhysics,
+        children: const [
+          SizedBox(
+            height: 240,
+            child: Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  Color(AppColors.primaryColor),
+                ),
+              ),
+            ),
           ),
-        ),
+        ],
       );
     }
 
     if (query.isError && items.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.error_outline,
-              size: 42,
-              color: Color(AppColors.textSecondaryColor),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              errorMessage,
-              style: const TextStyle(
-                color: Color(AppColors.textSecondaryColor),
-                fontSize: 14,
+      return ListView(
+        key: _scrollKey,
+        physics: _nestedPhysics,
+        children: [
+          SizedBox(
+            height: 240,
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    size: 42,
+                    color: Color(AppColors.textSecondaryColor),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    errorMessage,
+                    style: const TextStyle(
+                      color: Color(AppColors.textSecondaryColor),
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ElevatedButton(
+                    onPressed: () => query.refetch(),
+                    child: const Text('Retry'),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: () => query.refetch(),
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
+          ),
+        ],
       );
     }
 
     if (items.isEmpty) {
       return RefreshIndicator(
+        edgeOffset: floatingRefreshEdgeOffset(context),
         color: const Color(AppColors.primaryColor),
         onRefresh: () async {
           await query.refetch();
           await _refreshExploreChallengeState();
         },
         child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
+          key: _scrollKey,
+          physics: _nestedPhysics,
           children: [
             SizedBox(
               height: MediaQuery.sizeOf(context).height * 0.5,
@@ -195,6 +229,7 @@ class ExploreFeedBody extends HookWidget {
     }
 
     return RefreshIndicator(
+      edgeOffset: floatingRefreshEdgeOffset(context),
       color: const Color(AppColors.primaryColor),
       onRefresh: () async {
         await query.refetch();
@@ -211,9 +246,10 @@ class ExploreFeedBody extends HookWidget {
           return false;
         },
         child: ListView.builder(
+          key: _scrollKey,
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
           scrollCacheExtent: const ScrollCacheExtent.pixels(800),
-          physics: const AlwaysScrollableScrollPhysics(),
+          physics: _nestedPhysics,
           itemCount: items.length + (query.isFetchingNextPage ? 1 : 0),
           itemBuilder: (context, i) {
             if (i == items.length) {

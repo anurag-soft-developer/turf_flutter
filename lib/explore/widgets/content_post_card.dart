@@ -168,46 +168,39 @@ class _ContentPostCardState extends State<ContentPostCard> {
           children: [
             Row(
               children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: canOpenAuthor ? _openAuthorProfile : null,
-                    behavior: HitTestBehavior.opaque,
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 20,
-                          backgroundImage:
-                              (author.getAvatar() ?? '').isNotEmpty
-                                  ? AppNetworkImage.provider(
-                                      author.getAvatar()!,
-                                    )
-                                  : null,
-                          child: (author.getAvatar() ?? '').isEmpty
-                              ? Text(
-                                  author.getDisplayName().isNotEmpty
-                                      ? author.getDisplayName()[0]
-                                          .toUpperCase()
-                                      : '?',
-                                )
-                              : null,
+                GestureDetector(
+                  onTap: canOpenAuthor ? _openAuthorProfile : null,
+                  behavior: HitTestBehavior.opaque,
+                  child: CircleAvatar(
+                    radius: 20,
+                    backgroundImage: (author.getAvatar() ?? '').isNotEmpty
+                        ? AppNetworkImage.provider(author.getAvatar()!)
+                        : null,
+                    child: (author.getAvatar() ?? '').isEmpty
+                        ? Text(
+                            author.getDisplayName().isNotEmpty
+                                ? author.getDisplayName()[0].toUpperCase()
+                                : '?',
+                          )
+                        : null,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Flexible(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: GestureDetector(
+                      onTap: canOpenAuthor ? _openAuthorProfile : null,
+                      child: Text(
+                        author.getDisplayName(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                          color: Color(AppColors.textColor),
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                author.getDisplayName(),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 15,
-                                  color: Color(AppColors.textColor),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
