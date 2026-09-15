@@ -3,6 +3,7 @@ import 'package:flutter_application_1/chat/model/chat_scope.dart';
 import 'package:flutter_application_1/chat/chat_thread_screen.dart';
 import 'package:flutter_application_1/core/components/app_bar/app_bar_background.dart';
 import 'package:flutter_application_1/core/config/constants.dart';
+import 'package:flutter_application_1/team/utils/team_media_url.dart';
 
 import '../model/team_match_model.dart';
 
@@ -16,6 +17,13 @@ class MatchChallengeMessagesScreen extends StatelessWidget {
     final matchId = match.id;
     final versus =
         '${match.fromTeamHelper.getDisplayName()} vs ${match.toTeamHelper.getDisplayName()}';
+    final from = match.fromTeamHelper.getSubsetModel();
+    final to = match.toTeamHelper.getSubsetModel();
+    final fromLogo = from == null || from.logo.isEmpty
+        ? null
+        : resolveTeamMediaUrl(from.logo);
+    final toLogo =
+        to == null || to.logo.isEmpty ? null : resolveTeamMediaUrl(to.logo);
 
     if (matchId == null || matchId.isEmpty) {
       return Scaffold(
@@ -29,6 +37,8 @@ class MatchChallengeMessagesScreen extends StatelessWidget {
       scope: ChatScope.match,
       scopeId: matchId,
       title: versus,
+      imageUrl: fromLogo,
+      secondaryImageUrl: toLogo,
     );
   }
 }

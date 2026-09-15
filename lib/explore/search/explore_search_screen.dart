@@ -7,10 +7,10 @@ import '../../core/services/search/search_history_store.dart';
 import '../../settings/settings_controller.dart';
 import '../explore_controller.dart';
 import '../model/explore_category.dart';
+import '../widgets/explore_category_page.dart';
 import '../widgets/explore_feed_body.dart';
 import 'explore_search_all_body.dart';
 import 'explore_search_category_tabs.dart';
-import 'explore_search_filters_bar.dart';
 
 class ExploreSearchScreen extends StatelessWidget {
   const ExploreSearchScreen({super.key});
@@ -24,40 +24,30 @@ class ExploreSearchScreen extends StatelessWidget {
       historyScope: SearchHistoryScope.explore,
       hintText: 'Search matches, teams, players, or posts',
       headerBuilder: (context, query) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const ExploreSearchCategoryTabs(tag: ExploreController.searchTag),
-            Obx(
-              () => ExploreSearchFiltersBar(
-                category: controller.category.value,
-                filters: controller.filters.value,
-                onChanged: controller.setFilters,
-              ),
-            ),
-          ],
-        );
+        return const ExploreSearchCategoryTabs(tag: ExploreController.searchTag);
       },
       resultsBuilder: (context, query) {
-        return Obx(() {
-          final location = settings.nearbyLocation.value;
-          final filters = controller.filters.value;
-          return AppSegmentedTabView(
-            controller: controller.tabController,
-            children: [
-              for (final tab in controller.tabs)
-                if (tab == ExploreCategory.all)
-                  ExploreSearchAllBody(
-                    key: ValueKey(
-                      'search-all|$query|${filters.toQueryKeyParts().join(',')}|${location?.latitude}|${location?.longitude}',
-                    ),
-                    q: query,
-                    filters: filters,
-                    location: location,
-                    onViewMore: controller.selectCategory,
-                  )
-                else
-                  ExploreFeedBody(
+        return AppSegmentedTabView(
+          controller: controller.tabController,
+          children: [
+            for (final tab in controller.tabs)
+              ExploreCategoryPage(
+                category: tab,
+                controller: controller,
+                settings: settings,
+                bodyBuilder: (context, {required filters, required location}) {
+                  if (tab == ExploreCategory.all) {
+                    return ExploreSearchAllBody(
+                      key: ValueKey(
+                        'search-all|$query|${filters.toQueryKeyParts().join(',')}|${location?.latitude}|${location?.longitude}',
+                      ),
+                      q: query,
+                      filters: filters,
+                      location: location,
+                      onViewMore: controller.selectCategory,
+                    );
+                  }
+                  return ExploreFeedBody(
                     key: ValueKey(
                       'search|$query|${tab.apiValue}|${filters.toQueryKeyParts().join(',')}|${location?.latitude}|${location?.longitude}',
                     ),
@@ -71,10 +61,11 @@ class ExploreSearchScreen extends StatelessWidget {
                         'Try another keyword or switch the category filter.',
                     emptyIcon: Icons.search_off_outlined,
                     errorMessage: 'Failed to load search results',
-                  ),
-            ],
-          );
-        });
+                  );
+                },
+              ),
+          ],
+        );
       },
     );
   }

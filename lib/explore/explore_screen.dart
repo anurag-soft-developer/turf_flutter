@@ -8,9 +8,8 @@ import '../core/components/scroll/floating_sliver_app_bar.dart';
 import '../core/config/constants.dart';
 import '../settings/settings_controller.dart';
 import 'explore_controller.dart';
-import 'model/explore_category.dart';
 import 'search/explore_search_category_tabs.dart';
-import 'search/explore_search_filters_bar.dart';
+import 'widgets/explore_category_page.dart';
 import 'widgets/explore_feed_body.dart';
 
 class ExploreScreen extends StatelessWidget {
@@ -35,6 +34,12 @@ class ExploreScreen extends StatelessWidget {
               leading: const UserAvatarAppBarAction(),
               title: const Text('Explore'),
               actions: [
+                IconButton(
+                  tooltip: 'New post',
+                  icon: const Icon(Icons.add_a_photo_outlined),
+                  onPressed: () =>
+                      Get.toNamed(AppConstants.routes.createPost),
+                ),
                 IconButton(
                   tooltip: 'Search',
                   icon: const Icon(Icons.search),
@@ -69,10 +74,22 @@ class ExploreScreen extends StatelessWidget {
                   for (final tab in controller.tabs)
                     ExtendedVisibilityDetector(
                       uniqueKey: Key('explore-visible-${tab.apiValue}'),
-                      child: _ExploreCategoryPage(
+                      child: ExploreCategoryPage(
                         category: tab,
                         controller: controller,
                         settings: settings,
+                        wrapFiltersInMaterial: true,
+                        bodyBuilder: (context, {required filters, required location}) {
+                          return ExploreFeedBody(
+                            key: ValueKey(
+                              'feed|${tab.apiValue}|${filters.toQueryKeyParts().join(',')}|${location?.latitude}|${location?.longitude}',
+                            ),
+                            mode: 'feed',
+                            category: tab,
+                            filters: filters,
+                            location: location,
+                          );
+                        },
                       ),
                     ),
                 ],
@@ -81,54 +98,6 @@ class ExploreScreen extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-/// Per-tab chrome: filters slide with the page so tab switches don't resize a
-/// shared header.
-class _ExploreCategoryPage extends StatelessWidget {
-  const _ExploreCategoryPage({
-    required this.category,
-    required this.controller,
-    required this.settings,
-  });
-
-  final ExploreCategory category;
-  final ExploreController controller;
-  final SettingsController settings;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Obx(
-          () => Material(
-            color: const Color(AppColors.surfaceColor),
-            child: ExploreSearchFiltersBar(
-              category: category,
-              filters: controller.filters.value,
-              onChanged: controller.setFilters,
-            ),
-          ),
-        ),
-        Expanded(
-          child: Obx(() {
-            final location = settings.nearbyLocation.value;
-            final filters = controller.filters.value;
-            return ExploreFeedBody(
-              key: ValueKey(
-                'feed|${category.apiValue}|${filters.toQueryKeyParts().join(',')}|${location?.latitude}|${location?.longitude}',
-              ),
-              mode: 'feed',
-              category: category,
-              filters: filters,
-              location: location,
-            );
-          }),
-        ),
-      ],
     );
   }
 }

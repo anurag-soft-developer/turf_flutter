@@ -10,6 +10,7 @@ class ChatNavigation {
     required String scopeId,
     String? title,
     String? imageUrl,
+    String? secondaryImageUrl,
   }) {
     if (scopeId.trim().isEmpty) return null;
     return Get.toNamed(
@@ -19,6 +20,7 @@ class ChatNavigation {
         'scopeId': scopeId.trim(),
         if (title != null) 'title': title,
         if (imageUrl != null) 'imageUrl': imageUrl,
+        if (secondaryImageUrl != null) 'secondaryImageUrl': secondaryImageUrl,
       },
     );
   }
@@ -40,12 +42,14 @@ class ChatNavigation {
     String matchId, {
     String? title,
     String? imageUrl,
+    String? secondaryImageUrl,
   }) {
     return openThread(
       scope: ChatScope.match,
       scopeId: matchId,
       title: title,
       imageUrl: imageUrl,
+      secondaryImageUrl: secondaryImageUrl,
     );
   }
 

@@ -18,7 +18,7 @@ enum MediaKind { image, video }
 /// Backend `PostStatus`.
 enum PostStatus { draft, published, archived }
 
-/// Embedded media on a content post (`{ url, kind }`; caption kept for parse safety).
+/// Embedded media on a content post (`{ url, kind, width?, height? }`; caption kept for parse safety).
 @JsonSerializable()
 class MediaModel {
   @JsonKey(name: '_id', fromJson: mongoIdFromJsonNullable)
@@ -26,12 +26,16 @@ class MediaModel {
   final String url;
   final MediaKind kind;
   final String? caption;
+  final int? width;
+  final int? height;
 
   const MediaModel({
     this.id,
     required this.url,
     required this.kind,
     this.caption,
+    this.width,
+    this.height,
   });
 
   factory MediaModel.fromJson(Map<String, dynamic> json) =>
@@ -154,16 +158,25 @@ class ContentPostModel {
 class CreatePostMediaInput {
   final String url;
   final MediaKind kind;
+  final int? width;
+  final int? height;
 
   const CreatePostMediaInput({
     required this.url,
     required this.kind,
+    this.width,
+    this.height,
   });
 
-  Map<String, dynamic> toJson() => {
-        'url': url,
-        'kind': kind.name,
-      };
+  Map<String, dynamic> toJson() {
+    final map = <String, dynamic>{
+      'url': url,
+      'kind': kind.name,
+    };
+    if (width != null) map['width'] = width;
+    if (height != null) map['height'] = height;
+    return map;
+  }
 }
 
 /// Body for `POST /posts` (mirrors backend `CreatePostDto`).

@@ -5,6 +5,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_query/flutter_query.dart';
 import 'package:intl/intl.dart';
 
+import '../../../components/match_up/match_pair_logos.dart';
 import '../../../components/match_up/team_logo.dart';
 import '../../../components/shared/app_network_image.dart';
 import '../../../components/shared/app_search_field.dart';
@@ -44,47 +45,13 @@ String? createPostMatchScheduleLabel(TeamMatchModel match) {
   return DateFormat('EEE, d MMM y · h:mm a').format(slot.startTime.toLocal());
 }
 
-class CreatePostMatchPairLogos extends StatelessWidget {
+class CreatePostMatchPairLogos extends MatchPairLogos {
   const CreatePostMatchPairLogos({
     super.key,
-    this.leftUrl,
-    this.rightUrl,
-    this.size = 36,
+    super.leftUrl,
+    super.rightUrl,
+    super.size = 36,
   });
-
-  final String? leftUrl;
-  final String? rightUrl;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    final overlap = size * 0.42;
-    return SizedBox(
-      width: size + overlap + 2,
-      height: size + 2,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned(
-            left: 0,
-            top: 1,
-            child: TeamLogo(url: leftUrl ?? '', size: size),
-          ),
-          Positioned(
-            left: overlap,
-            top: 1,
-            child: Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2),
-              ),
-              child: TeamLogo(url: rightUrl ?? '', size: size),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 Future<TeamModel?> showCreatePostTeamPicker(BuildContext context) {
@@ -142,7 +109,7 @@ Future<TeamMatchModel?> showCreatePostMatchPicker(BuildContext context) {
         match.sportType.label,
       ];
       return _MentionTile(
-        leading: CreatePostMatchPairLogos(
+        leading: MatchPairLogos(
           leftUrl: createPostTeamLogoUrl(from?.logo),
           rightUrl: createPostTeamLogoUrl(to?.logo),
         ),

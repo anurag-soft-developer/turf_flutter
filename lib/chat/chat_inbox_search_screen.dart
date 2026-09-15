@@ -179,6 +179,7 @@ class _ChatInboxSearchResults extends HookWidget {
             scopeId: item.scopeId,
             title: item.title,
             imageUrl: item.imageUrl,
+            secondaryImageUrl: item.secondaryImageUrl,
           ),
         );
       },

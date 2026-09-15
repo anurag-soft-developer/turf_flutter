@@ -65,6 +65,7 @@ class ChatInboxCache {
         final nextItem = incoming.copyWith(
           title: existing?.title,
           imageUrl: existing?.imageUrl,
+          secondaryImageUrl: existing?.secondaryImageUrl,
           unreadCount: bumpUnread
               ? (existing?.unreadCount ?? 0) + 1
               : viewing

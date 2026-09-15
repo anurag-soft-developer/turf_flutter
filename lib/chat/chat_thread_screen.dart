@@ -11,9 +11,12 @@ import 'package:flutter_application_1/components/chat/reply_composer.dart';
 import 'package:flutter_application_1/components/chat/seen_avatars/seen_avatars.dart';
 import 'package:flutter_application_1/components/chat/swipe_to_reply/swipe_to_reply.dart';
 import 'package:flutter_application_1/components/chat/text_message_with_extras.dart';
+import 'package:flutter_application_1/components/match_up/match_pair_logos.dart';
+import 'package:flutter_application_1/components/shared/app_network_image.dart';
 import 'package:flutter_application_1/core/auth/auth_state_controller.dart';
 import 'package:flutter_application_1/core/components/app_bar/app_bar_background.dart';
 import 'package:flutter_application_1/core/config/constants.dart';
+import 'package:flutter_application_1/team/utils/team_media_url.dart';
 import 'package:flutter_chat_core/flutter_chat_core.dart';
 import 'package:flutter_chat_ui/flutter_chat_ui.dart';
 import 'package:get/get.dart';
@@ -25,12 +28,14 @@ class ChatThreadScreen extends StatelessWidget {
     required this.scopeId,
     this.title,
     this.imageUrl,
+    this.secondaryImageUrl,
   });
 
   final ChatScope scope;
   final String scopeId;
   final String? title;
   final String? imageUrl;
+  final String? secondaryImageUrl;
 
   static ChatThreadScreen fromRoute() {
     final args = (Get.arguments as Map?)?.cast<String, dynamic>() ?? const {};
@@ -41,6 +46,7 @@ class ChatThreadScreen extends StatelessWidget {
       scopeId: args['scopeId']?.toString() ?? '',
       title: args['title']?.toString(),
       imageUrl: args['imageUrl']?.toString(),
+      secondaryImageUrl: args['secondaryImageUrl']?.toString(),
     );
   }
 
@@ -65,13 +71,11 @@ class ChatThreadScreen extends StatelessWidget {
           appBar: AppAppBar(
             title: Row(
               children: [
-                if (imageUrl != null && imageUrl!.isNotEmpty) ...[
-                  CircleAvatar(
-                    radius: 16,
-                    backgroundImage: NetworkImage(imageUrl!),
-                  ),
-                  const SizedBox(width: 8),
-                ],
+                ..._chatThreadTitleLeading(
+                  scope: scope,
+                  imageUrl: imageUrl,
+                  secondaryImageUrl: secondaryImageUrl,
+                ),
                 Expanded(
                   child: Text(title ?? 'Chat', overflow: TextOverflow.ellipsis),
                 ),
@@ -375,3 +379,33 @@ class ChatThreadScreen extends StatelessWidget {
     );
   }
 }
+
+List<Widget> _chatThreadTitleLeading({
+  required ChatScope scope,
+  String? imageUrl,
+  String? secondaryImageUrl,
+}) {
+  if (scope == ChatScope.match) {
+    return [
+      MatchPairLogos(
+        leftUrl: _teamLogoUrl(imageUrl),
+        rightUrl: _teamLogoUrl(secondaryImageUrl),
+        size: 32,
+      ),
+      const SizedBox(width: 8),
+    ];
+  }
+  if (imageUrl != null && imageUrl.isNotEmpty) {
+    return [
+      CircleAvatar(
+        radius: 16,
+        backgroundImage: AppNetworkImage.provider(imageUrl),
+      ),
+      const SizedBox(width: 8),
+    ];
+  }
+  return const [];
+}
+
+String? _teamLogoUrl(String? raw) =>
+    raw == null ? null : resolveTeamMediaUrl(raw);

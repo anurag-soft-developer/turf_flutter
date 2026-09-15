@@ -11,6 +11,8 @@ MediaModel _$MediaModelFromJson(Map<String, dynamic> json) => MediaModel(
   url: json['url'] as String,
   kind: $enumDecode(_$MediaKindEnumMap, json['kind']),
   caption: json['caption'] as String?,
+  width: (json['width'] as num?)?.toInt(),
+  height: (json['height'] as num?)?.toInt(),
 );
 
 Map<String, dynamic> _$MediaModelToJson(MediaModel instance) =>
@@ -19,6 +21,8 @@ Map<String, dynamic> _$MediaModelToJson(MediaModel instance) =>
       'url': instance.url,
       'kind': _$MediaKindEnumMap[instance.kind]!,
       'caption': instance.caption,
+      'width': instance.width,
+      'height': instance.height,
     };
 
 const _$MediaKindEnumMap = {MediaKind.image: 'image', MediaKind.video: 'video'};

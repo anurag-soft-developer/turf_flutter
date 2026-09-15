@@ -8,7 +8,7 @@ import 'package:pro_image_editor/pro_image_editor.dart';
 
 import '../../config/constants.dart';
 import '../../utils/exception_handler.dart';
-import '../../utils/image_compress_util.dart';
+import '../../utils/image_util.dart';
 
 const _kEditorToolbarHeight = 44.0;
 const _kFilmstripHeight = 58.0;

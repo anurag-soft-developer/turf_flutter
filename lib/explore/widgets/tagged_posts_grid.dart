@@ -153,6 +153,9 @@ class TaggedPostsGrid extends HookWidget {
                 final post = posts[index];
                 final thumb = post.primaryMedia?.url;
                 final id = post.id;
+                final memCacheWidth = ((MediaQuery.sizeOf(context).width / 3) *
+                        MediaQuery.devicePixelRatioOf(context))
+                    .round();
 
                 return GestureDetector(
                   onTap: () {
@@ -181,6 +184,9 @@ class TaggedPostsGrid extends HookWidget {
                       : AppNetworkImage(
                           thumb,
                           fit: BoxFit.cover,
+                          memCacheWidth: memCacheWidth,
+                          fadeInDuration: Duration.zero,
+                          fadeOutDuration: Duration.zero,
                           errorBuilder: (_, _, _) => Container(
                             color: Colors.black12,
                             child: const Icon(

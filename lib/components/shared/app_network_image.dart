@@ -16,6 +16,10 @@ class AppNetworkImage extends StatelessWidget {
     this.alignment = Alignment.center,
     this.errorBuilder,
     this.placeholder,
+    this.memCacheWidth,
+    this.memCacheHeight,
+    this.fadeInDuration = const Duration(milliseconds: 150),
+    this.fadeOutDuration = const Duration(milliseconds: 150),
   });
 
   final String imageUrl;
@@ -25,6 +29,10 @@ class AppNetworkImage extends StatelessWidget {
   final Alignment alignment;
   final ImageErrorWidgetBuilder? errorBuilder;
   final Widget? placeholder;
+  final int? memCacheWidth;
+  final int? memCacheHeight;
+  final Duration fadeInDuration;
+  final Duration fadeOutDuration;
 
   static ImageProvider provider(String url) => CachedNetworkImageProvider(
         url,
@@ -40,7 +48,10 @@ class AppNetworkImage extends StatelessWidget {
       height: height,
       fit: fit,
       alignment: alignment,
-      fadeInDuration: const Duration(milliseconds: 150),
+      memCacheWidth: memCacheWidth,
+      memCacheHeight: memCacheHeight,
+      fadeInDuration: fadeInDuration,
+      fadeOutDuration: fadeOutDuration,
       placeholder: placeholder == null ? null : (_, __) => placeholder!,
       errorWidget: (context, url, error) {
         if (errorBuilder != null) {

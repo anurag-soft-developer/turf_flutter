@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/chat/model/chat_models.dart';
 import 'package:flutter_application_1/chat/model/chat_scope.dart';
+import 'package:flutter_application_1/components/match_up/match_pair_logos.dart';
 import 'package:flutter_application_1/components/shared/app_network_image.dart';
 import 'package:flutter_application_1/core/config/constants.dart';
 import 'package:flutter_application_1/core/utils/date_util.dart';
+import 'package:flutter_application_1/team/utils/team_media_url.dart';
 
 class ChatInboxTile extends StatelessWidget {
   const ChatInboxTile({
@@ -25,7 +27,6 @@ class ChatInboxTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = item.imageUrl;
     final timeLabel =
         item.lastMessageAt.isEmpty ? '' : timeAgo(item.lastMessageAt);
     final unread = item.unreadCount > 0;
@@ -45,18 +46,7 @@ class ChatInboxTile extends StatelessWidget {
                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 visualDensity: VisualDensity.compact,
               )
-            : CircleAvatar(
-                backgroundColor: _primary.withValues(alpha: 0.12),
-                backgroundImage: imageUrl != null && imageUrl.isNotEmpty
-                    ? AppNetworkImage.provider(imageUrl)
-                    : null,
-                child: imageUrl == null || imageUrl.isEmpty
-                    ? Icon(
-                        _iconForScope(item.scope),
-                        color: _primary,
-                      )
-                    : null,
-              ),
+            : _ChatInboxAvatar(item: item),
         title: Text(
           item.title,
           maxLines: 1,
@@ -110,6 +100,46 @@ class ChatInboxTile extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ChatInboxAvatar extends StatelessWidget {
+  const _ChatInboxAvatar({required this.item});
+
+  final ChatInboxItem item;
+
+  static const Color _primary = Color(AppColors.primaryColor);
+
+  @override
+  Widget build(BuildContext context) {
+    if (item.scope == ChatScope.match) {
+      return SizedBox(
+        width: 40,
+        height: 40,
+        child: Center(
+          child: MatchPairLogos(
+            leftUrl: _teamLogoUrl(item.imageUrl),
+            rightUrl: _teamLogoUrl(item.secondaryImageUrl),
+            size: 28,
+            compact: true,
+          ),
+        ),
+      );
+    }
+
+    final imageUrl = item.imageUrl;
+    return CircleAvatar(
+      backgroundColor: _primary.withValues(alpha: 0.12),
+      backgroundImage: imageUrl != null && imageUrl.isNotEmpty
+          ? AppNetworkImage.provider(imageUrl)
+          : null,
+      child: imageUrl == null || imageUrl.isEmpty
+          ? Icon(
+              _iconForScope(item.scope),
+              color: _primary,
+            )
+          : null,
+    );
+  }
 
   IconData _iconForScope(ChatScope scope) {
     return switch (scope) {
@@ -119,3 +149,6 @@ class ChatInboxTile extends StatelessWidget {
     };
   }
 }
+
+String? _teamLogoUrl(String? raw) =>
+    raw == null ? null : resolveTeamMediaUrl(raw);

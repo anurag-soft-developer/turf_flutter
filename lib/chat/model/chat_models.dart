@@ -99,6 +99,7 @@ class ChatInboxItem {
   final String scopeId;
   final String title;
   final String? imageUrl;
+  final String? secondaryImageUrl;
   final String lastMessageId;
   final String lastMessageBody;
   final String lastSenderUserId;
@@ -110,6 +111,7 @@ class ChatInboxItem {
     required this.scopeId,
     required this.title,
     this.imageUrl,
+    this.secondaryImageUrl,
     required this.lastMessageId,
     required this.lastMessageBody,
     required this.lastSenderUserId,
@@ -130,6 +132,7 @@ class ChatInboxItem {
   ChatInboxItem copyWith({
     String? title,
     String? imageUrl,
+    String? secondaryImageUrl,
     String? lastMessageId,
     String? lastMessageBody,
     String? lastSenderUserId,
@@ -141,6 +144,7 @@ class ChatInboxItem {
       scopeId: scopeId,
       title: title ?? this.title,
       imageUrl: imageUrl ?? this.imageUrl,
+      secondaryImageUrl: secondaryImageUrl ?? this.secondaryImageUrl,
       lastMessageId: lastMessageId ?? this.lastMessageId,
       lastMessageBody: lastMessageBody ?? this.lastMessageBody,
       lastSenderUserId: lastSenderUserId ?? this.lastSenderUserId,
@@ -155,6 +159,7 @@ class ChatInboxItem {
       scopeId: json['scopeId']?.toString() ?? '',
       title: json['title']?.toString() ?? 'Chat',
       imageUrl: json['imageUrl']?.toString(),
+      secondaryImageUrl: json['secondaryImageUrl']?.toString(),
       lastMessageId: json['lastMessageId']?.toString() ?? '',
       lastMessageBody: json['lastMessageBody']?.toString() ?? '',
       lastSenderUserId: json['lastSenderUserId']?.toString() ?? '',
@@ -167,6 +172,7 @@ class ChatInboxItem {
     Map<String, dynamic> json, {
     String title = 'Chat',
     String? imageUrl,
+    String? secondaryImageUrl,
     int unreadCount = 0,
   }) {
     return ChatInboxItem(
@@ -174,6 +180,7 @@ class ChatInboxItem {
       scopeId: json['scopeId']?.toString() ?? '',
       title: title,
       imageUrl: imageUrl,
+      secondaryImageUrl: secondaryImageUrl,
       lastMessageId: json['lastMessageId']?.toString() ?? '',
       lastMessageBody: json['lastMessageBody']?.toString() ?? '',
       lastSenderUserId: json['lastSenderUserId']?.toString() ?? '',

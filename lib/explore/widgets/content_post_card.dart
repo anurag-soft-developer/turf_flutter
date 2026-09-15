@@ -9,6 +9,7 @@ import '../../core/auth/auth_state_controller.dart';
 import '../../core/config/constants.dart';
 import '../../core/query/query_keys.dart';
 import '../../core/utils/app_snackbar.dart';
+import '../../core/utils/image_util.dart';
 import '../../engagement/engagement_entity.dart';
 import '../../engagement/engagement_service.dart';
 import '../../engagement/like_store.dart';
@@ -255,7 +256,13 @@ class _ContentPostCardState extends State<ContentPostCard> {
             ],
             if (post.media.isNotEmpty) ...[
               const SizedBox(height: 12),
-              PostMediaCarousel(media: post.media),
+              PostMediaCarousel(
+                key: ValueKey('post-media-$id'),
+                storageId: id.isNotEmpty
+                    ? id
+                    : post.media.map((m) => m.url).join('|'),
+                media: post.media,
+              ),
             ],
           ],
         ),
@@ -271,8 +278,14 @@ class _PostMediaAspectCache {
 }
 
 class PostMediaCarousel extends StatefulWidget {
-  const PostMediaCarousel({super.key, required this.media});
+  const PostMediaCarousel({
+    super.key,
+    required this.storageId,
+    required this.media,
+  });
 
+  /// Isolates [PageStorage] so one post's page does not leak into another.
+  final String storageId;
   final List<MediaModel> media;
 
   @override
@@ -284,24 +297,49 @@ class _PostMediaCarouselState extends State<PostMediaCarousel> {
   static const _videoRatio = 16 / 9;
   static const _maxScreenHeightFraction = 0.7;
 
+  late final PageController _pageController;
+  late final PageStorageKey<String> _pageStorageKey;
   int _pageIndex = 0;
   final Map<String, double> _aspectRatios = {};
   final List<VoidCallback> _cancelResolvers = [];
   double? _lockedHeight;
   double? _lockedWidth;
 
+  static String _mediaIdentity(List<MediaModel> media) =>
+      media.map((m) => '${m.kind.name}:${m.url}').join('|');
+
   @override
   void initState() {
     super.initState();
+    _pageStorageKey =
+        PageStorageKey<String>('post-media-carousel-${widget.storageId}');
+    _pageController = PageController();
     _resolveMedia(widget.media);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _syncPageIndex());
+  }
+
+  void _syncPageIndex() {
+    if (!mounted || !_pageController.hasClients) return;
+    final page = _pageController.page?.round() ?? _pageController.initialPage;
+    if (page != _pageIndex) {
+      setState(() => _pageIndex = page);
+    }
   }
 
   @override
   void didUpdateWidget(PostMediaCarousel oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!identical(oldWidget.media, widget.media)) {
+    final mediaChanged =
+        _mediaIdentity(oldWidget.media) != _mediaIdentity(widget.media);
+    if (oldWidget.storageId != widget.storageId || mediaChanged) {
+      _pageIndex = 0;
+      if (_pageController.hasClients) {
+        _pageController.jumpToPage(0);
+      }
       _lockedHeight = null;
       _lockedWidth = null;
+    }
+    if (!identical(oldWidget.media, widget.media) || mediaChanged) {
       _resolveMedia(widget.media);
     }
   }
@@ -311,12 +349,19 @@ class _PostMediaCarouselState extends State<PostMediaCarousel> {
     for (final cancel in _cancelResolvers) {
       cancel();
     }
+    _pageController.dispose();
     super.dispose();
   }
 
   void _resolveMedia(List<MediaModel> media) {
     for (final item in media) {
       if (item.kind != MediaKind.image) continue;
+      final stored = storedRatio(item.width, item.height);
+      if (stored != null) {
+        _aspectRatios[item.url] = stored;
+        _PostMediaAspectCache.ratioByUrl[item.url] = stored;
+        continue;
+      }
       final cached = _PostMediaAspectCache.ratioByUrl[item.url];
       if (cached != null) {
         _aspectRatios[item.url] = cached;
@@ -369,6 +414,8 @@ class _PostMediaCarouselState extends State<PostMediaCarousel> {
 
   double _ratioFor(MediaModel item) {
     if (item.kind == MediaKind.video) return _videoRatio;
+    final stored = storedRatio(item.width, item.height);
+    if (stored != null) return stored;
     return _aspectRatios[item.url] ??
         _PostMediaAspectCache.ratioByUrl[item.url] ??
         _fallbackRatio;
@@ -376,6 +423,7 @@ class _PostMediaCarouselState extends State<PostMediaCarousel> {
 
   bool _hasRatio(MediaModel item) {
     if (item.kind == MediaKind.video) return true;
+    if (storedRatio(item.width, item.height) != null) return true;
     return _aspectRatios.containsKey(item.url) ||
         _PostMediaAspectCache.ratioByUrl.containsKey(item.url);
   }
@@ -420,6 +468,8 @@ class _PostMediaCarouselState extends State<PostMediaCarousel> {
         LayoutBuilder(
           builder: (context, constraints) {
             final screenWidth = MediaQuery.sizeOf(context).width;
+            final memCacheWidth =
+                (screenWidth * MediaQuery.devicePixelRatioOf(context)).round();
             final height = _carouselHeight(screenWidth);
 
             return SizedBox(
@@ -441,6 +491,8 @@ class _PostMediaCarouselState extends State<PostMediaCarousel> {
                         ColoredBox(
                           color: Colors.black,
                           child: PageView.builder(
+                            key: _pageStorageKey,
+                            controller: _pageController,
                             itemCount: media.length,
                             onPageChanged: (index) =>
                                 setState(() => _pageIndex = index),
@@ -454,6 +506,9 @@ class _PostMediaCarouselState extends State<PostMediaCarousel> {
                                 width: screenWidth,
                                 fit: BoxFit.contain,
                                 alignment: Alignment.center,
+                                memCacheWidth: memCacheWidth,
+                                fadeInDuration: Duration.zero,
+                                fadeOutDuration: Duration.zero,
                                 errorBuilder: (_, _, _) => const Center(
                                   child: Icon(
                                     Icons.broken_image_outlined,

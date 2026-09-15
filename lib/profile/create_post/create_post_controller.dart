@@ -9,6 +9,7 @@ import '../../core/media/local_image_pipeline.dart';
 import '../../core/models/media_upload_models.dart';
 import '../../core/query/query_keys.dart';
 import '../../core/utils/app_snackbar.dart';
+import '../../core/utils/image_util.dart';
 import '../../explore/model/content_post_model.dart';
 import '../../explore/post_service.dart';
 import 'widgets/create_post_mention_sheet.dart';
@@ -216,6 +217,7 @@ class CreatePostController extends GetxController {
       uploaded = refs;
 
       submitMessage.value = 'Publishing…';
+      final dims = await Future.wait(files.map(readPixelSize));
       final created = await _postService.create(
         CreatePostRequest(
           content: content,
@@ -223,14 +225,15 @@ class CreatePostController extends GetxController {
           team: mentionedTeam.value?.id,
           match: mentionedMatch.value?.id,
           turf: mentionedTurf.value?.id,
-          media: uploaded
-              .map(
-                (ref) => CreatePostMediaInput(
-                  url: ref.fileUrl,
-                  kind: MediaKind.image,
-                ),
-              )
-              .toList(),
+          media: [
+            for (var i = 0; i < uploaded.length; i++)
+              CreatePostMediaInput(
+                url: uploaded[i].fileUrl,
+                kind: MediaKind.image,
+                width: dims[i]?.$1,
+                height: dims[i]?.$2,
+              ),
+          ],
         ),
       );
 
