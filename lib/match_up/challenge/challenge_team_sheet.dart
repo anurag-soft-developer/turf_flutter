@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../components/match_up/match_pick_versus_row.dart';
 import '../../components/match_up/my_team_selector.dart';
-import '../../components/match_up/team_logo.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/team/team_member_field_instance.dart';
 import '../../team/model/team_model.dart';
@@ -122,112 +122,24 @@ class ChallengeTeamSheet extends StatelessWidget {
           const SizedBox(height: 24),
           Obx(() {
             final selected = controller.selectedTeam.value;
-            final myTeamName = selected?.name ?? 'Your Team';
-            final myTeamLogo = selected?.logo ?? '';
-            const double logoSize = 75;
-            return Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    SizedBox(
-                      width: 92,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          MyTeamSelector(
-                            teams: teamsForSport
-                                .where((t) => t.id != opponent.id)
-                                .toList(),
-                            selectedTeam: selected,
-                            onTeamSelected: controller.selectTeam,
-                            buttonChild: SizedBox(
-                              width: logoSize,
-                              height: logoSize,
-                              child: Stack(
-                                clipBehavior: Clip.none,
-                                children: [
-                                  TeamLogo(url: myTeamLogo, size: logoSize),
-                                  Positioned(
-                                    right: 0,
-                                    top: 0,
-                                    child: Container(
-                                      width: 24,
-                                      height: 24,
-                                      decoration: BoxDecoration(
-                                        color: const Color(
-                                          AppColors.primaryColor,
-                                        ),
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: Colors.white,
-                                          width: 1.5,
-                                        ),
-                                      ),
-                                      child: const Icon(
-                                        Icons.edit,
-                                        size: 12,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            myTeamName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Color(AppColors.textColor),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        'VS',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
-                          color: const Color(
-                            AppColors.primaryColor,
-                          ).withValues(alpha: 0.7),
-                        ),
-                      ),
-                    ),
-                    SizedBox(
-                      width: 92,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          TeamLogo(url: opponent.logo, size: logoSize),
-                          const SizedBox(height: 8),
-                          Text(
-                            opponent.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Color(AppColors.textColor),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+            final pickerTeams =
+                teamsForSport.where((t) => t.id != opponent.id).toList();
+            return MatchPickVersusRow(
+              left: MatchPickVersusTeam(
+                name: selected?.name ?? 'Your Team',
+                logoUrl: selected?.logo ?? '',
+                showEditBadge: pickerTeams.length > 1,
+                wrapLogo: (logo) => MyTeamSelector(
+                  teams: pickerTeams,
+                  selectedTeam: selected,
+                  onTeamSelected: controller.selectTeam,
+                  buttonChild: logo,
                 ),
-                const SizedBox(height: 16),
-              ],
+              ),
+              right: MatchPickVersusTeam(
+                name: opponent.name,
+                logoUrl: opponent.logo,
+              ),
             );
           }),
           const SizedBox(height: 32),

@@ -56,11 +56,16 @@ class AnnouncedPlayersService {
   Future<List<AnnouncedPlayerModel>> removeAnnouncedPlayers({
     required String teamMatchId,
     required String actorTeamId,
-    required List<String> userIds,
+    List<String> userIds = const [],
+    List<String> guestIds = const [],
   }) async {
     final response = await _apiService.delete<dynamic>(
       ApiConstants.matchmaking.announcedPlayers(teamMatchId),
-      data: <String, dynamic>{'actorTeamId': actorTeamId, 'userIds': userIds},
+      data: <String, dynamic>{
+        'actorTeamId': actorTeamId,
+        if (userIds.isNotEmpty) 'userIds': userIds,
+        if (guestIds.isNotEmpty) 'guestIds': guestIds,
+      },
     );
     return _parsePlayerList(response);
   }

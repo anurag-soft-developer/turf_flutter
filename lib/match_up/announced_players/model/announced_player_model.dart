@@ -4,6 +4,7 @@ import '../../../core/models/team/team_ref_converter.dart';
 import '../../../core/models/team/team_ref_field_instance.dart';
 import '../../../core/models/user_field_converters.dart';
 import '../../../core/models/user_field_instance.dart';
+import '../../../core/utils/mongo_id_util.dart';
 
 part 'announced_player_model.g.dart';
 
@@ -28,10 +29,17 @@ class AnnouncedPlayerModel {
   final String? avatar;
   final String? email;
 
-  /// Lean id or populated user subset.
+  /// Lean id or populated user subset. Null for walk-in guests.
   @JsonKey(name: 'userId')
   @UserConverter()
   final dynamic userId;
+
+  @JsonKey(defaultValue: false)
+  final bool isGuest;
+
+  /// Server-generated walk-in id. Used as the scoring participant id.
+  @JsonKey(name: 'guestId', fromJson: mongoIdFromJsonNullable)
+  final String? guestId;
 
   @JsonKey(name: 'is_substitute', defaultValue: false)
   final bool isSubstitute;
@@ -49,7 +57,9 @@ class AnnouncedPlayerModel {
     required this.name,
     this.avatar,
     this.email,
-    required this.userId,
+    this.userId,
+    this.isGuest = false,
+    this.guestId,
     this.isSubstitute = false,
     required this.role,
     this.isCaption = false,
@@ -64,6 +74,14 @@ class AnnouncedPlayerModel {
   TeamRefFieldInstance get teamIdHelper => TeamRefFieldInstance(teamId);
 
   UserFieldInstance get userIdHelper => UserFieldInstance(userId);
+
+  /// Registered `userId`, otherwise walk-in `guestId`.
+  String? get participantId {
+    final uid = userIdHelper.getId();
+    if (uid != null && uid.isNotEmpty) return uid;
+    if (guestId != null && guestId!.isNotEmpty) return guestId;
+    return null;
+  }
 }
 
 String _announcedPlayerRoleApiValue(AnnouncedPlayerRole role) {
@@ -84,7 +102,8 @@ class AnnouncedPlayerCreatePayload {
   final String name;
   final String? avatar;
   final String? email;
-  final String userId;
+  final String? userId;
+  final bool isGuest;
   final bool isSubstitute;
   final AnnouncedPlayerRole role;
   final bool isCaption;
@@ -94,7 +113,8 @@ class AnnouncedPlayerCreatePayload {
     required this.name,
     this.avatar,
     this.email,
-    required this.userId,
+    this.userId,
+    this.isGuest = false,
     this.isSubstitute = false,
     required this.role,
     this.isCaption = false,
@@ -105,7 +125,8 @@ class AnnouncedPlayerCreatePayload {
     'name': name,
     if (avatar != null && avatar!.isNotEmpty) 'avatar': avatar,
     if (email != null && email!.isNotEmpty) 'email': email,
-    'userId': userId,
+    if (userId != null && userId!.isNotEmpty) 'userId': userId,
+    if (isGuest) 'isGuest': true,
     'is_substitute': isSubstitute,
     'role': _announcedPlayerRoleApiValue(role),
     'isCaption': isCaption,
@@ -115,7 +136,8 @@ class AnnouncedPlayerCreatePayload {
 
 /// Row for `PATCH /matchmaking/:matchId/announced-players` (`updates[]`).
 class AnnouncedPlayerUpdatePayload {
-  final String userId;
+  final String? userId;
+  final String? guestId;
   final String? name;
   final String? avatar;
   final String? email;
@@ -125,7 +147,8 @@ class AnnouncedPlayerUpdatePayload {
   final bool? isWiseCaption;
 
   const AnnouncedPlayerUpdatePayload({
-    required this.userId,
+    this.userId,
+    this.guestId,
     this.name,
     this.avatar,
     this.email,
@@ -136,7 +159,9 @@ class AnnouncedPlayerUpdatePayload {
   });
 
   Map<String, dynamic> toJson() {
-    final m = <String, dynamic>{'userId': userId};
+    final m = <String, dynamic>{};
+    if (userId != null && userId!.isNotEmpty) m['userId'] = userId;
+    if (guestId != null && guestId!.isNotEmpty) m['guestId'] = guestId;
     if (name != null) m['name'] = name;
     if (avatar != null) m['avatar'] = avatar;
     if (email != null) m['email'] = email;

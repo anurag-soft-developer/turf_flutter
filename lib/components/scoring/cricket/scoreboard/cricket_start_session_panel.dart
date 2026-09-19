@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../match_up/team_logo.dart';
 import '../../../../core/config/constants.dart';
+import '../../../../match_up/model/team_match_model.dart';
 
 /// Pre-session UI: pick batting team, overs, then start scoring.
 class CricketStartSessionPanel extends StatelessWidget {
   const CricketStartSessionPanel({
     super.key,
-    required this.metaPending,
-    required this.fromTeamName,
-    required this.toTeamName,
-    required this.fromTeamId,
-    required this.toTeamId,
+    required this.match,
     required this.battingTeamId,
     required this.onBattingTeamIdChanged,
     required this.maxOversController,
@@ -24,11 +22,7 @@ class CricketStartSessionPanel extends StatelessWidget {
     required this.onStart,
   });
 
-  final bool metaPending;
-  final String fromTeamName;
-  final String toTeamName;
-  final String fromTeamId;
-  final String toTeamId;
+  final TeamMatchModel match;
   final String battingTeamId;
   final ValueChanged<String> onBattingTeamIdChanged;
   final TextEditingController maxOversController;
@@ -40,262 +34,144 @@ class CricketStartSessionPanel extends StatelessWidget {
   final String? errorText;
   final VoidCallback onStart;
 
-  static const Color borderMuted = Color(0xFFE5E7EB);
+  static const Color _borderMuted = Color(0xFFE5E7EB);
 
   @override
   Widget build(BuildContext context) {
-    if (metaPending) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
     final primary = const Color(AppColors.primaryColor);
-    final footerHint = canStart
-        ? 'You can start scoring once everything above looks correct.'
-        : 'Select who bats first and enter overs ($minOvers–$maxOversLimit).';
+    final fromId = match.fromTeamHelper.getId() ?? '';
+    final toId = match.toTeamHelper.getId() ?? '';
+    final fromName = match.fromTeamHelper.getDisplayName();
+    final toName = match.toTeamHelper.getDisplayName();
+    final fromLogo = match.fromTeamHelper.getSubsetModel()?.logo ?? '';
+    final toLogo = match.toTeamHelper.getSubsetModel()?.logo ?? '';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _SessionHeader(primary: primary),
-                const SizedBox(height: 22),
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: borderMuted),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.06),
-                        blurRadius: 14,
-                        offset: const Offset(0, 6),
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const Text(
+                    'Select the batting team',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Color(AppColors.textColor),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _TeamPickTile(
+                          label: fromName.isNotEmpty ? fromName : 'Team 1',
+                          logoUrl: fromLogo,
+                          selected: battingTeamId.isNotEmpty &&
+                              battingTeamId == fromId,
+                          enabled: fromId.isNotEmpty,
+                          onTap: () => onBattingTeamIdChanged(fromId),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _TeamPickTile(
+                          label: toName.isNotEmpty ? toName : 'Team 2',
+                          logoUrl: toLogo,
+                          selected: battingTeamId.isNotEmpty &&
+                              battingTeamId == toId,
+                          enabled: toId.isNotEmpty,
+                          onTap: () => onBattingTeamIdChanged(toId),
+                        ),
                       ),
                     ],
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        _SectionLabel(
-                          icon: Icons.groups_2_rounded,
-                          title: 'Who bats first?',
-                          subtitle:
-                              'Bowling is assigned to the other side automatically.',
-                          primary: primary,
-                        ),
-                        const SizedBox(height: 14),
-                        LayoutBuilder(
-                          builder: (context, constraints) {
-                            final narrow = constraints.maxWidth < 340;
-                            final team1 = _TeamPickTile(
-                              label: fromTeamName.isNotEmpty
-                                  ? fromTeamName
-                                  : 'Team 1',
-                              selected: battingTeamId.isNotEmpty &&
-                                  battingTeamId == fromTeamId,
-                              enabled: fromTeamId.isNotEmpty,
-                              onTap: () =>
-                                  onBattingTeamIdChanged(fromTeamId),
-                            );
-                            final team2 = _TeamPickTile(
-                              label: toTeamName.isNotEmpty
-                                  ? toTeamName
-                                  : 'Team 2',
-                              selected: battingTeamId.isNotEmpty &&
-                                  battingTeamId == toTeamId,
-                              enabled: toTeamId.isNotEmpty,
-                              onTap: () => onBattingTeamIdChanged(toTeamId),
-                            );
-                            if (narrow) {
-                              return Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.stretch,
-                                children: [
-                                  team1,
-                                  const SizedBox(height: 10),
-                                  team2,
-                                ],
-                              );
-                            }
-                            return Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(child: team1),
-                                const SizedBox(width: 12),
-                                Expanded(child: team2),
-                              ],
-                            );
-                          },
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 18),
-                          child: Divider(height: 1, color: Colors.grey.shade200),
-                        ),
-                        _SectionLabel(
-                          icon: Icons.timer_outlined,
-                          title: 'Overs per innings',
-                          subtitle:
-                              'Each innings is limited to this many overs.',
-                          primary: primary,
-                        ),
-                        const SizedBox(height: 12),
-                        TextField(
-                          controller: maxOversController,
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
-                          ],
-                          onChanged: (_) => onMaxOversChanged(),
-                          style: const TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w600,
-                            color: Color(AppColors.textColor),
-                          ),
-                          decoration: InputDecoration(
-                            hintText: 'e.g. 20',
-                            filled: true,
-                            fillColor: const Color(AppColors.backgroundColor),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 16,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide:
-                                  const BorderSide(color: borderMuted),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide:
-                                  const BorderSide(color: borderMuted),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(
-                                color: primary,
-                                width: 1.5,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Allowed range: $minOvers–$maxOversLimit overs.',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey.shade600,
-                            height: 1.35,
-                          ),
-                        ),
-                      ],
+                  const SizedBox(height: 28),
+                  const Text(
+                    'Overs / innings',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Color(AppColors.textColor),
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  _OversStepper(
+                    controller: maxOversController,
+                    minOvers: minOvers,
+                    maxOversLimit: maxOversLimit,
+                    primary: primary,
+                    onChanged: onMaxOversChanged,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '$minOvers–$maxOversLimit',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade500,
+                    ),
+                  ),
+                  if (errorText != null && errorText!.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      errorText!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        height: 1.35,
+                        color: Color(AppColors.errorColor),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
         ),
         SafeArea(
           top: false,
-          minimum: const EdgeInsets.only(bottom: 10),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  footerHint,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 13,
-                    height: 1.4,
-                    color: Colors.grey.shade600,
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+            child: SizedBox(
+              height: 52,
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: (isStarting || !canStart) ? null : onStart,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(AppColors.primaryColor),
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: Colors.grey.shade300,
+                  disabledForegroundColor: Colors.grey.shade600,
+                  elevation: 0,
+                  shadowColor: Colors.transparent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
                   ),
                 ),
-                if (errorText != null && errorText!.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(AppColors.errorColor)
-                          .withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: const Color(AppColors.errorColor)
-                            .withValues(alpha: 0.35),
-                      ),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(
-                          Icons.error_outline_rounded,
-                          size: 20,
-                          color: Color(AppColors.errorColor),
+                child: isStarting
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: Colors.white,
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            errorText!,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              height: 1.35,
-                              color: Color(AppColors.errorColor),
-                            ),
-                          ),
+                      )
+                    : const Text(
+                        'Start',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
                         ),
-                      ],
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 14),
-                SizedBox(
-                  height: 52,
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed:
-                        (isStarting || !canStart) ? null : onStart,
-                    icon: isStarting
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Icon(Icons.play_arrow_rounded, size: 26),
-                    label: Text(
-                      isStarting ? 'Starting…' : 'Start scoring',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
                       ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(AppColors.primaryColor),
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor:
-                          Colors.grey.shade300,
-                      disabledForegroundColor: Colors.grey.shade600,
-                      elevation: 0,
-                      shadowColor: Colors.transparent,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -304,98 +180,115 @@ class CricketStartSessionPanel extends StatelessWidget {
   }
 }
 
-class _SessionHeader extends StatelessWidget {
-  const _SessionHeader({required this.primary});
+class _OversStepper extends StatelessWidget {
+  const _OversStepper({
+    required this.controller,
+    required this.minOvers,
+    required this.maxOversLimit,
+    required this.primary,
+    required this.onChanged,
+  });
 
+  final TextEditingController controller;
+  final int minOvers;
+  final int maxOversLimit;
   final Color primary;
+  final VoidCallback onChanged;
+
+  int get _current {
+    final n = int.tryParse(controller.text.trim());
+    return n ?? minOvers;
+  }
+
+  void _set(int value) {
+    final clamped = value.clamp(minOvers, maxOversLimit);
+    controller.text = '$clamped';
+    controller.selection = TextSelection.collapsed(
+      offset: controller.text.length,
+    );
+    onChanged();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: primary.withValues(alpha: 0.12),
-            shape: BoxShape.circle,
+    final value = _current;
+    final canDec = value > minOvers;
+    final canInc = value < maxOversLimit;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _StepButton(
+            icon: Icons.remove_rounded,
+            enabled: canDec,
+            onTap: () => _set(value - 1),
           ),
-          child: Icon(
-            Icons.sports_cricket_rounded,
-            size: 40,
-            color: primary.withValues(alpha: 0.95),
+          SizedBox(
+            width: 56,
+            child: TextField(
+              controller: controller,
+              textAlign: TextAlign.center,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              onChanged: (_) => onChanged(),
+              style: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: Color(AppColors.textColor),
+              ),
+              decoration: const InputDecoration(
+                isDense: true,
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(vertical: 10),
+              ),
+            ),
           ),
-        ),
-        const SizedBox(height: 14),
-        const Text(
-          'Cricket scoring',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            fontSize: 22,
-            letterSpacing: -0.3,
-            color: Color(AppColors.textColor),
+          _StepButton(
+            icon: Icons.add_rounded,
+            enabled: canInc,
+            onTap: () => _set(value + 1),
+            color: primary,
           ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Set up this match, then record balls and track the scorecard.',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 14,
-            height: 1.45,
-            color: Colors.grey.shade600,
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
 
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel({
+class _StepButton extends StatelessWidget {
+  const _StepButton({
     required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.primary,
+    required this.enabled,
+    required this.onTap,
+    this.color,
   });
 
   final IconData icon;
-  final String title;
-  final String subtitle;
-  final Color primary;
+  final bool enabled;
+  final VoidCallback onTap;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 22, color: primary.withValues(alpha: 0.9)),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 16,
-                  color: Color(AppColors.textColor),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 13,
-                  height: 1.35,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-            ],
-          ),
+    return InkWell(
+      onTap: enabled ? onTap : null,
+      borderRadius: BorderRadius.circular(10),
+      child: SizedBox(
+        width: 40,
+        height: 44,
+        child: Icon(
+          icon,
+          size: 20,
+          color: enabled
+              ? (color ?? const Color(AppColors.textSecondaryColor))
+              : Colors.grey.shade300,
         ),
-      ],
+      ),
     );
   }
 }
@@ -403,12 +296,14 @@ class _SectionLabel extends StatelessWidget {
 class _TeamPickTile extends StatelessWidget {
   const _TeamPickTile({
     required this.label,
+    required this.logoUrl,
     required this.selected,
     required this.enabled,
     required this.onTap,
   });
 
   final String label;
+  final String logoUrl;
   final bool selected;
   final bool enabled;
   final VoidCallback onTap;
@@ -418,62 +313,48 @@ class _TeamPickTile extends StatelessWidget {
     final primary = const Color(AppColors.primaryColor);
 
     return Material(
-      color: selected
-          ? primary.withValues(alpha: 0.1)
-          : Colors.white,
-      borderRadius: BorderRadius.circular(12),
+      color: selected ? primary.withValues(alpha: 0.08) : Colors.white,
+      borderRadius: BorderRadius.circular(14),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: enabled ? onTap : null,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
+          duration: const Duration(milliseconds: 160),
           curve: Curves.easeOutCubic,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          padding: const EdgeInsets.fromLTRB(12, 14, 12, 14),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: !enabled
                   ? Colors.grey.shade300
                   : selected
                       ? primary
-                      : CricketStartSessionPanel.borderMuted,
-              width: selected ? 2 : 1,
+                      : CricketStartSessionPanel._borderMuted,
+              width: selected ? 1.5 : 1,
             ),
           ),
-          child: Row(
+          child: Column(
             children: [
-              Icon(
-                Icons.groups_rounded,
-                size: 22,
-                color: !enabled
-                    ? Colors.grey.shade400
-                    : selected
-                        ? primary
-                        : Colors.grey.shade600,
+              Opacity(
+                opacity: enabled ? 1 : 0.45,
+                child: TeamLogo(url: logoUrl, size: 48),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  label,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                    fontSize: 14,
-                    height: 1.25,
-                    color: !enabled
-                        ? Colors.grey.shade500
-                        : const Color(AppColors.textColor),
-                  ),
+              const SizedBox(height: 10),
+              Text(
+                label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  fontSize: 13,
+                  height: 1.25,
+                  color: !enabled
+                      ? Colors.grey.shade500
+                      : const Color(AppColors.textColor),
                 ),
               ),
-              if (selected && enabled)
-                Icon(
-                  Icons.check_circle_rounded,
-                  size: 22,
-                  color: primary,
-                ),
             ],
           ),
         ),

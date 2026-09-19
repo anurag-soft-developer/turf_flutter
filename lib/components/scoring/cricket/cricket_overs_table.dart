@@ -35,38 +35,32 @@ class CricketOversTable extends StatelessWidget {
       return Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(AppColors.dividerColor)),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: const Color(AppColors.dividerColor).withValues(alpha: 0.7),
+          ),
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
               child: Row(
                 children: [
-                  Icon(
-                    Icons.format_list_numbered_rounded,
-                    size: 20,
-                    color: const Color(
-                      AppColors.primaryColor,
-                    ).withValues(alpha: 0.85),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Overs · Inn. $innings',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                      color: Color(AppColors.textColor),
+                  const Text(
+                    'Overs',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      color: Color(AppColors.textSecondaryColor),
                     ),
                   ),
                   const Spacer(),
                   if (loading)
                     const SizedBox(
-                      width: 18,
-                      height: 18,
+                      width: 16,
+                      height: 16,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     ),
                 ],

@@ -205,6 +205,8 @@ class MatchmakingEndpoints {
   /// Pre-match challenge inbox (`?type=incoming|outgoing`).
   String get inbox => '/matchmaking/inbox';
 
+  String get casual => '/matchmaking/casual';
+
   /// Active challenge opponent ids, keyed by our team (sent + received).
   String get activeOpponentIds => '/matchmaking/active-opponent-ids';
 

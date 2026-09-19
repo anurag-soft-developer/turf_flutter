@@ -8,11 +8,12 @@ class MatchChallengeDetailBinding extends Bindings {
   @override
   void dependencies() {
     ScoringBinding().dependencies();
+    // Capture path id once at navigation time (before child routes clear Get.parameters).
     final id = routeParam('id') ?? '';
     final tag = id.isEmpty ? null : id;
     if (Get.isRegistered<MatchChallengeDetailController>(tag: tag)) {
       Get.delete<MatchChallengeDetailController>(tag: tag, force: true);
     }
-    Get.put(MatchChallengeDetailController(), tag: tag);
+    Get.put(MatchChallengeDetailController(matchId: id), tag: tag);
   }
 }

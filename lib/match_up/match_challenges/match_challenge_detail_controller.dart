@@ -14,22 +14,32 @@ import '../../scoring/cricket/cricket_scoring_live_cache.dart';
 import '../../scoring/football/football_scoring_live_cache.dart';
 import '../../scoring/shared/scoring_shared_models.dart';
 import '../../scoring/shared/scoring_socket_service.dart';
-import '../../team/model/team_model.dart' show TeamSportType;
+import '../../team/members/model/team_member_model.dart';
+import '../../team/team_service.dart';
 import '../matchmaking_service.dart';
 import '../model/team_match_model.dart';
+import 'match_incoming_resolver.dart';
 
-/// Tab + mutation state for challenge detail. Match data is owned by flutter_query.
+/// Tab + mutation state for challenge detail.
 class MatchChallengeDetailController extends GetxController
     with GetSingleTickerProviderStateMixin {
-  MatchChallengeDetailController();
+  MatchChallengeDetailController({required this.matchId});
 
-  late final String? matchIdArg;
+  /// Captured once at open (binding). Do not re-read [Get.parameters] after push.
+  final String matchId;
   late final bool? explicitIsIncoming;
 
   final Rxn<TeamMatchModel> match = Rxn<TeamMatchModel>();
   final RxBool isIncoming = false.obs;
 
+  /// Match team ids the current user belongs to (from and/or to).
+  final Rx<Set<String>> myMatchTeamIds = Rx<Set<String>>({});
+
+  final RxBool isBootstrapping = false.obs;
+  final RxnString loadError = RxnString();
+
   final MatchmakingService _matchmakingService = MatchmakingService();
+  final TeamService _teamService = TeamService();
 
   late final TabController detailTabController;
 
@@ -37,16 +47,17 @@ class MatchChallengeDetailController extends GetxController
   final RxBool isUpdatingTurf = false.obs;
   final RxBool isRejectingChallenge = false.obs;
   final RxBool isAcceptingChallenge = false.obs;
-  final RxBool actionsChildBusy = false.obs;
+  final RxBool isCancellingMatch = false.obs;
 
   StreamSubscription<ScoringUpdatePayload>? _scoringSub;
   String? _joinedLiveMatchId;
+  Set<String> _myTeamIds = {};
 
   String? get resolvedMatchId {
     final fromMatch = match.value?.id;
     if (fromMatch != null && fromMatch.isNotEmpty) return fromMatch;
-    final arg = matchIdArg?.trim();
-    if (arg != null && arg.isNotEmpty) return arg;
+    final arg = matchId.trim();
+    if (arg.isNotEmpty) return arg;
     return null;
   }
 
@@ -55,7 +66,7 @@ class MatchChallengeDetailController extends GetxController
       isUpdatingTurf.value ||
       isRejectingChallenge.value ||
       isAcceptingChallenge.value ||
-      actionsChildBusy.value;
+      isCancellingMatch.value;
 
   bool get canEditSchedule {
     final m = match.value;
@@ -72,6 +83,9 @@ class MatchChallengeDetailController extends GetxController
   String get myTeamId => isIncoming.value
       ? (match.value?.toTeamHelper.getId() ?? '')
       : (match.value?.fromTeamHelper.getId() ?? '');
+
+  /// Teams on this match the user can announce for.
+  Set<String> get editableAnnounceTeamIds => myMatchTeamIds.value;
 
   bool get isExpiredByDeadline {
     final expiresAt = match.value?.expiresAt;
@@ -90,12 +104,29 @@ class MatchChallengeDetailController extends GetxController
 
   bool get canStartScoring {
     if (!isCricketMatch && !isFootballMatch) return false;
+    if (isCasual && !isCricketMatch) return false;
     final status = match.value?.status;
     return status == TeamMatchStatus.accepted ||
         status == TeamMatchStatus.scheduleFinalized;
   }
 
-  bool get canUseScheduleControls => canEditSchedule && !actionsChildBusy.value;
+  bool get canUseScheduleControls => canEditSchedule && !isCancellingMatch.value;
+
+  bool get isCasual => match.value?.isCasual == true;
+
+  bool get isAbandonMatch => match.value?.status == TeamMatchStatus.ongoing;
+
+  bool get canCancelOrAbandonMatch {
+    return switch (match.value?.status) {
+      TeamMatchStatus.requested ||
+      TeamMatchStatus.accepted ||
+      TeamMatchStatus.negotiating ||
+      TeamMatchStatus.scheduleFinalized ||
+      TeamMatchStatus.ongoing =>
+        myTeamId.isNotEmpty,
+      _ => false,
+    };
+  }
 
   ScoringSocketService? get _socket =>
       Get.isRegistered<ScoringSocketService>()
@@ -106,7 +137,6 @@ class MatchChallengeDetailController extends GetxController
   void onInit() {
     super.onInit();
     detailTabController = TabController(length: 3, vsync: this);
-    matchIdArg = routeParam('id');
     final args = Get.arguments;
     if (args is Map && args['isIncoming'] is bool) {
       explicitIsIncoming = args['isIncoming'] as bool;
@@ -116,9 +146,7 @@ class MatchChallengeDetailController extends GetxController
     if (explicitIsIncoming != null) {
       isIncoming.value = explicitIsIncoming!;
     }
-    if (isCricketMatch || isFootballMatch) {
-      unawaited(_ensureLiveScoringUpdates());
-    }
+    unawaited(bootstrap());
   }
 
   @override
@@ -126,6 +154,97 @@ class MatchChallengeDetailController extends GetxController
     unawaited(_teardownLiveScoringUpdates());
     detailTabController.dispose();
     super.onClose();
+  }
+
+  Future<void> bootstrap() async {
+    if (matchId.isEmpty) {
+      loadError.value = 'Challenge not found.';
+      isBootstrapping.value = false;
+      return;
+    }
+    isBootstrapping.value = true;
+    loadError.value = null;
+    await Future.wait([_fetchMatch(), _fetchMemberships()]);
+    if (isClosed) return;
+    _applyMembershipContext();
+    isBootstrapping.value = false;
+    if (isCricketMatch || isFootballMatch) {
+      unawaited(_ensureLiveScoringUpdates());
+    }
+  }
+
+  Future<void> reload() => bootstrap();
+
+  Future<void> _fetchMatch() async {
+    try {
+      final loaded = await _matchmakingService.getTeamMatchById(matchId);
+      if (isClosed) return;
+      if (loaded == null) {
+        loadError.value = 'Could not load challenge.';
+        match.value = null;
+        return;
+      }
+      match.value = loaded;
+      _syncDetailQueryCache(loaded);
+    } catch (e) {
+      if (!isClosed) loadError.value = e.toString();
+    }
+  }
+
+  Future<void> _fetchMemberships() async {
+    try {
+      final res = await _teamService.memberService.myMemberships(
+        const MyTeamMembershipsFilterQuery(
+          status: TeamMemberStatus.active,
+          limit: 50,
+        ),
+      );
+      if (isClosed) return;
+      final ids = <String>{};
+      for (final m in res?.data ?? const <TeamMemberModel>[]) {
+        final t = m.team;
+        if (t is TeamMemberFieldInstance &&
+            t.id != null &&
+            t.id!.isNotEmpty) {
+          ids.add(t.id!);
+        }
+      }
+      _myTeamIds = ids;
+    } catch (_) {
+      // Membership failure should not block match view; keep prior ids.
+    }
+  }
+
+  void _applyMembershipContext() {
+    final current = match.value;
+    if (current == null) {
+      if (explicitIsIncoming != null) {
+        isIncoming.value = explicitIsIncoming!;
+      }
+      return;
+    }
+    final fromId = current.fromTeamHelper.getId();
+    final toId = current.toTeamHelper.getId();
+    final onMatch = <String>{
+      if (fromId != null && _myTeamIds.contains(fromId)) fromId,
+      if (toId != null && _myTeamIds.contains(toId)) toId,
+    };
+    myMatchTeamIds.value = onMatch;
+    if (explicitIsIncoming != null) {
+      isIncoming.value = explicitIsIncoming!;
+    } else {
+      isIncoming.value = resolveIsIncoming(current, _myTeamIds);
+    }
+  }
+
+  void _syncDetailQueryCache(TeamMatchModel loaded) {
+    if (!Get.isRegistered<QueryClient>()) return;
+    final id = loaded.id;
+    if (id == null || id.isEmpty) return;
+    Get.find<QueryClient>().setQueryData<TeamMatchModel, Object>(
+      QueryKeys.matchChallengeDetail(id),
+      (_) => loaded,
+    );
   }
 
   void syncMatch(TeamMatchModel? value) {
@@ -138,20 +257,20 @@ class MatchChallengeDetailController extends GetxController
   }
 
   Future<void> _ensureLiveScoringUpdates() async {
-    final matchId = resolvedMatchId?.trim();
-    if (matchId == null || matchId.isEmpty) return;
-    if (_joinedLiveMatchId == matchId && _scoringSub != null) return;
+    final id = resolvedMatchId?.trim();
+    if (id == null || id.isEmpty) return;
+    if (_joinedLiveMatchId == id && _scoringSub != null) return;
 
     final socket = _socket;
     if (socket == null) return;
 
-    if (_joinedLiveMatchId != null && _joinedLiveMatchId != matchId) {
+    if (_joinedLiveMatchId != null && _joinedLiveMatchId != id) {
       await _teardownLiveScoringUpdates();
     }
 
     _scoringSub ??= socket.updates.listen(_onScoringUpdate);
-    await socket.joinMatch(matchId);
-    _joinedLiveMatchId = matchId;
+    await socket.joinMatch(id);
+    _joinedLiveMatchId = id;
   }
 
   Future<void> _teardownLiveScoringUpdates() async {
@@ -168,9 +287,9 @@ class MatchChallengeDetailController extends GetxController
   }
 
   void _onScoringUpdate(ScoringUpdatePayload payload) {
-    final matchId = _joinedLiveMatchId ?? resolvedMatchId;
-    if (matchId == null || matchId.isEmpty) return;
-    if (payload.teamMatchId != matchId) return;
+    final id = _joinedLiveMatchId ?? resolvedMatchId;
+    if (id == null || id.isEmpty) return;
+    if (payload.teamMatchId != id) return;
     if (!Get.isRegistered<QueryClient>()) return;
 
     final client = Get.find<QueryClient>();
@@ -178,34 +297,35 @@ class MatchChallengeDetailController extends GetxController
       applyCricketScoringUpdateToCache(
         client,
         payload,
-        expectedMatchId: matchId,
+        expectedMatchId: id,
       );
     } else if (payload.sport == ScoringSport.football) {
       applyFootballScoringUpdateToCache(
         client,
         payload,
-        expectedMatchId: matchId,
+        expectedMatchId: id,
       );
     }
+    final updated = client.getQueryData<TeamMatchModel>(
+      QueryKeys.matchChallengeDetail(id),
+    );
+    if (updated != null) syncMatch(updated);
   }
 
   void syncIsIncoming(bool value) {
     isIncoming.value = value;
   }
 
+  void syncMyMatchTeamIds(Set<String> ids) {
+    myMatchTeamIds.value = ids;
+  }
+
   void scheduleMatchUpdate(TeamMatchModel updated) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (isClosed) return;
       match.value = updated;
+      _applyMembershipContext();
       _invalidateMatchQueries(updated);
-    });
-  }
-
-  void scheduleActionsChildBusy(bool busy) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (isClosed) return;
-      if (actionsChildBusy.value == busy) return;
-      actionsChildBusy.value = busy;
     });
   }
 
@@ -227,8 +347,8 @@ class MatchChallengeDetailController extends GetxController
   Future<void> respondToChallenge(MatchResponseAction action) async {
     if (actionBusy) return;
     if (!canRespondToChallenge) return;
-    final matchId = match.value?.id;
-    if (matchId == null || matchId.isEmpty || myTeamId.isEmpty) return;
+    final id = match.value?.id;
+    if (id == null || id.isEmpty || myTeamId.isEmpty) return;
 
     if (action == MatchResponseAction.reject) {
       isRejectingChallenge.value = true;
@@ -237,7 +357,7 @@ class MatchChallengeDetailController extends GetxController
     }
 
     final updated = await _matchmakingService.respond(
-      matchId,
+      id,
       RespondMatchRequest(actorTeamId: myTeamId, action: action),
     );
 
@@ -250,18 +370,49 @@ class MatchChallengeDetailController extends GetxController
     await _invalidateMatchQueries(updated);
     AppSnackbar.success(
       title: action == MatchResponseAction.accept
-          ? 'Challenge accepted'
-          : 'Challenge rejected',
+          ? (isCasual ? 'Request accepted' : 'Challenge accepted')
+          : (isCasual ? 'Request rejected' : 'Challenge rejected'),
       message: action == MatchResponseAction.accept
           ? 'You can continue scheduling now.'
-          : 'The challenge was declined.',
+          : (isCasual
+              ? 'The casual match request was declined.'
+              : 'The challenge was declined.'),
+    );
+  }
+
+  Future<void> cancelOrAbandonMatch({String? reason}) async {
+    if (actionBusy) return;
+    if (!canCancelOrAbandonMatch) return;
+    final id = match.value?.id;
+    if (id == null || id.isEmpty || myTeamId.isEmpty) return;
+
+    final abandon = isAbandonMatch;
+    isCancellingMatch.value = true;
+    final updated = await _matchmakingService.cancel(
+      id,
+      CancelNegotiationRequest(
+        actorTeamId: myTeamId,
+        reason: reason,
+      ),
+    );
+    isCancellingMatch.value = false;
+
+    if (updated == null) return;
+
+    match.value = updated;
+    await _invalidateMatchQueries(updated);
+    AppSnackbar.success(
+      title: abandon ? 'Match abandoned' : 'Match cancelled',
+      message: abandon
+          ? 'This match has been abandoned.'
+          : 'This match has been cancelled.',
     );
   }
 
   Future<void> setTimeSlot(BuildContext context) async {
     if (actionBusy) return;
-    final matchId = match.value?.id;
-    if (matchId == null || matchId.isEmpty || myTeamId.isEmpty) return;
+    final id = match.value?.id;
+    if (id == null || id.isEmpty || myTeamId.isEmpty) return;
 
     final selected = await showModalBottomSheet<ProposeScheduleTimeSlot>(
       context: context,
@@ -272,7 +423,7 @@ class MatchChallengeDetailController extends GetxController
 
     isUpdatingSlot.value = true;
     final updated = await _matchmakingService.updateRequest(
-      matchId,
+      id,
       UpdateTeamMatchRequest(
         slot: TeamMatchTimeSlot(
           startTime: selected.startTime,
@@ -295,8 +446,8 @@ class MatchChallengeDetailController extends GetxController
 
   Future<void> setTurf(BuildContext context) async {
     if (actionBusy) return;
-    final matchId = match.value?.id;
-    if (matchId == null || matchId.isEmpty || myTeamId.isEmpty) return;
+    final id = match.value?.id;
+    if (id == null || id.isEmpty || myTeamId.isEmpty) return;
 
     final selectedTurfId = await showModalBottomSheet<String>(
       context: context,
@@ -310,7 +461,7 @@ class MatchChallengeDetailController extends GetxController
 
     isUpdatingTurf.value = true;
     final updated = await _matchmakingService.updateRequest(
-      matchId,
+      id,
       UpdateTeamMatchRequest(
         turfId: selectedTurfId,
         selfAcceptTeamId: myTeamId,
@@ -328,9 +479,9 @@ class MatchChallengeDetailController extends GetxController
     );
   }
 
-  void openScoreboard() {
-    final matchId = match.value?.id;
-    if (matchId == null || matchId.isEmpty) {
+  Future<void> openScoreboard() async {
+    final id = match.value?.id;
+    if (id == null || id.isEmpty) {
       AppSnackbar.error(
         title: 'Missing match id',
         message: 'Unable to open scoreboard for this challenge.',
@@ -340,7 +491,14 @@ class MatchChallengeDetailController extends GetxController
     final route = isFootballMatch
         ? AppConstants.routes.footballScoreBoard
         : AppConstants.routes.cricketScoreBoard;
-    Get.toNamed(route, arguments: {'matchId': matchId});
+    await Get.toNamed(route, arguments: {'matchId': id});
+    if (!isClosed) await loadMatchQuiet();
+  }
+
+  /// Refresh match after returning from scoreboard without full bootstrap spinner.
+  Future<void> loadMatchQuiet() async {
+    await _fetchMatch();
+    if (!isClosed) _applyMembershipContext();
   }
 
   void openMessages() {

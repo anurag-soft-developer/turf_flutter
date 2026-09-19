@@ -248,7 +248,7 @@ class MatchChallengesScreen extends HookWidget {
                   emptyIcon: Icons.inventory_2_outlined,
                   emptyTitle: 'Nothing archived',
                   emptySubtitle:
-                      'Rejected, cancelled, and expired requests appear here.',
+                      'Rejected, cancelled, abandoned, and expired requests appear here.',
                 ),
               ],
             ),
@@ -329,6 +329,7 @@ Future<PaginatedResponse<TeamMatchModel>> _fetchChallengesPage({
           statuses: const [
             TeamMatchStatus.rejected,
             TeamMatchStatus.cancelled,
+            TeamMatchStatus.abandoned,
             TeamMatchStatus.expired,
           ],
           page: page,

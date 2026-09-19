@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_query/flutter_query.dart';
@@ -94,26 +96,7 @@ class PlayerDashboard extends HookWidget {
             ),
           ),
           const SliverToBoxAdapter(child: SizedBox(height: 20)),
-          SliverToBoxAdapter(
-            child: Obx(() {
-              final ready = settings.isLocationReady.value;
-              final location = settings.nearbyLocation.value;
-
-              if (!ready) {
-                return const _PlayerDashboardFeedPlaceholder();
-              }
-
-              final locKey = location == null
-                  ? 'no-location'
-                  : '${location.latitude.toStringAsFixed(4)},'
-                      '${location.longitude.toStringAsFixed(4)}';
-
-              return _PlayerDashboardFeed(
-                key: ValueKey(locKey),
-                location: location,
-              );
-            }),
-          ),
+          const SliverToBoxAdapter(child: _PlayerDashboardLocationAwareFeed()),
           const SliverToBoxAdapter(child: SizedBox(height: 16)),
           const SliverToBoxAdapter(
             child: Padding(
@@ -139,6 +122,49 @@ class PlayerDashboard extends HookWidget {
         ],
       ),
     );
+  }
+}
+
+class _PlayerDashboardLocationAwareFeed extends HookWidget {
+  const _PlayerDashboardLocationAwareFeed();
+
+  static const _locationWait = Duration(seconds: 3);
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = Get.find<SettingsController>();
+    final waitElapsed = useState(false);
+
+    useEffect(() {
+      if (settings.isLocationReady.value) {
+        waitElapsed.value = true;
+        return null;
+      }
+      final timer = Timer(_locationWait, () {
+        waitElapsed.value = true;
+      });
+      return timer.cancel;
+    }, const []);
+
+    return Obx(() {
+      final ready = settings.isLocationReady.value;
+      final location = settings.nearbyLocation.value;
+      final allowFetch = ready || waitElapsed.value;
+
+      if (!allowFetch) {
+        return const _PlayerDashboardFeedPlaceholder();
+      }
+
+      final locKey = location == null
+          ? 'no-location'
+          : '${location.latitude.toStringAsFixed(4)},'
+              '${location.longitude.toStringAsFixed(4)}';
+
+      return _PlayerDashboardFeed(
+        key: ValueKey(locKey),
+        location: location,
+      );
+    });
   }
 }
 

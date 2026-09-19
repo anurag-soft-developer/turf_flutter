@@ -1,28 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/components/shared/app_network_image.dart';
-import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
+import '../match_up/team_logo.dart';
 import '../../core/config/constants.dart';
-import '../../core/models/paginated_response.dart';
-import '../../core/query/query_keys.dart';
-import '../../core/query/query_retry.dart';
-import '../../core/utils/app_snackbar.dart';
-import '../../match_up/announced_players/announced_players_service.dart';
-import '../../match_up/announced_players/model/announced_player_model.dart';
 import '../../match_up/model/team_match_model.dart';
-import '../../team/members/model/team_member_model.dart';
-import '../../team/members/team_member_service.dart';
+import 'casual_guest_sheets.dart';
+import 'manage_announced_players_controller.dart';
 
-/// Opens a modal sheet to toggle active roster members as announced players; persists via matchmaking API.
+/// Opens a modal sheet to toggle active roster members as announced players.
 Future<void> openManageAnnouncedPlayersSheet({
   required BuildContext context,
   required TeamMatchModel match,
   required String actorTeamId,
   required void Function(TeamMatchModel updated) onSaved,
-}) async {
-  await showModalBottomSheet<void>(
+}) {
+  return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
@@ -30,7 +23,7 @@ Future<void> openManageAnnouncedPlayersSheet({
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
-    builder: (ctx) => _ManageAnnouncedPlayersSheetBody(
+    builder: (ctx) => ManageAnnouncedPlayersSheet(
       match: match,
       actorTeamId: actorTeamId,
       onSaved: onSaved,
@@ -38,16 +31,9 @@ Future<void> openManageAnnouncedPlayersSheet({
   );
 }
 
-AnnouncedPlayerRole _defaultRoleForSport(TeamSportType sport) {
-  return switch (sport) {
-    TeamSportType.cricket => AnnouncedPlayerRole.batsman,
-    TeamSportType.football => AnnouncedPlayerRole.allrounder,
-    _ => AnnouncedPlayerRole.allrounder,
-  };
-}
-
-class _ManageAnnouncedPlayersSheetBody extends HookWidget {
-  const _ManageAnnouncedPlayersSheetBody({
+class ManageAnnouncedPlayersSheet extends StatefulWidget {
+  const ManageAnnouncedPlayersSheet({
+    super.key,
     required this.match,
     required this.actorTeamId,
     required this.onSaved,
@@ -57,134 +43,334 @@ class _ManageAnnouncedPlayersSheetBody extends HookWidget {
   final String actorTeamId;
   final void Function(TeamMatchModel updated) onSaved;
 
-  String? get _matchId => match.id;
+  @override
+  State<ManageAnnouncedPlayersSheet> createState() =>
+      _ManageAnnouncedPlayersSheetState();
+}
+
+class _ManageAnnouncedPlayersSheetState
+    extends State<ManageAnnouncedPlayersSheet> {
+  late final ManageAnnouncedPlayersController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = ManageAnnouncedPlayersController(
+      match: widget.match,
+      actorTeamId: widget.actorTeamId,
+      onSaved: widget.onSaved,
+    );
+    // Not registered with Get — drive lifecycle manually.
+    controller.onStart();
+  }
+
+  @override
+  void dispose() {
+    controller.onDelete();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final announcedApi = useMemoized(() => AnnouncedPlayersService());
-    final memberApi = useMemoized(() => TeamMemberService());
+    final bottomPad = MediaQuery.paddingOf(context).bottom;
+    final viewInsets = MediaQuery.viewInsetsOf(context).bottom;
+    final c = controller;
 
-    final announcedForTeam = useMemoized(
-      () => match.announcedPlayers
-          .where((p) => p.teamIdHelper.getId() == actorTeamId)
-          .toList(),
-      [match, actorTeamId],
-    );
+    return Padding(
+      padding: EdgeInsets.only(bottom: viewInsets),
+      child: DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.72,
+        minChildSize: 0.45,
+        maxChildSize: 0.92,
+        builder: (context, scrollController) {
+          return Obx(() {
+            final saving = c.saving.value;
+            final loadingRoster = c.loadingRoster.value;
+            // Read selection here — ListView.builder itemBuilder runs too late for Obx.
+            final selectedIds = c.selectedUserIds.toSet();
+            final guestRows = c.visibleGuestRows;
+            final orphans = c.orphans;
+            final roster = c.roster.toList();
+            final rosterError = c.rosterError.value;
 
-    final selectedUserIds = useState<Set<String>>({
-      for (final p in announcedForTeam)
-        if (p.userIdHelper.getId() != null) p.userIdHelper.getId()!,
-    });
-    final captainUserId = useState<String?>(null);
-    final viceCaptainUserId = useState<String?>(null);
-    final saving = useState(false);
-
-    useEffect(() {
-      String? captain;
-      String? vice;
-      for (final p in announcedForTeam) {
-        final uid = p.userIdHelper.getId();
-        if (uid == null) continue;
-        if (p.isCaption) captain = uid;
-        if (p.isWiseCaption) vice = uid;
-      }
-      captainUserId.value = captain;
-      viceCaptainUserId.value = vice;
-      return null;
-    }, [announcedForTeam]);
-
-    final rosterQuery = useQuery<PaginatedResponse<TeamMemberModel>, Object>(
-      QueryKeys.teamRoster(
-        actorTeamId,
-        status: TeamMemberStatus.active.name,
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
+                  child: Row(
+                    children: [
+                      TeamLogo(url: c.teamLogo, size: 40),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          c.teamName,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                            color: Color(AppColors.textColor),
+                          ),
+                        ),
+                      ),
+                      if (c.isCasual)
+                        TextButton.icon(
+                          onPressed: saving
+                              ? null
+                              : () async {
+                                  final draft = await showAddGuestSheet(
+                                    context: context,
+                                  );
+                                  if (draft == null) return;
+                                  c.addPendingGuest(draft);
+                                },
+                          icon: const Icon(
+                            Icons.person_add_alt_outlined,
+                            size: 18,
+                          ),
+                          label: const Text('Add'),
+                          style: TextButton.styleFrom(
+                            foregroundColor:
+                                const Color(AppColors.primaryColor),
+                            visualDensity: VisualDensity.compact,
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 8),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                if (c.isCasual && guestRows.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (final g in guestRows)
+                          _PlayerCard(
+                            name: g.name,
+                            avatar: g.avatar,
+                            roleLabel: announcedRoleLabel(g.role),
+                            selected: true,
+                            showCheckbox: false,
+                            onTap: null,
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _CaptainViceToggles(
+                                  controller: c,
+                                  participantId: g.participantId,
+                                ),
+                                IconButton(
+                                  tooltip: 'Remove guest',
+                                  onPressed: saving
+                                      ? null
+                                      : () => c.removeGuestFromUi(
+                                            g.participantId,
+                                            pending: g.pending,
+                                          ),
+                                  icon: const Icon(Icons.close_rounded),
+                                  color: const Color(
+                                    AppColors.textSecondaryColor,
+                                  ),
+                                  visualDensity: VisualDensity.compact,
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(
+                                    minWidth: 36,
+                                    minHeight: 36,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: loadingRoster
+                      ? const Center(
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Color(AppColors.primaryColor),
+                            ),
+                          ),
+                        )
+                      : rosterError != null
+                          ? Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(24),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      rosterError,
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                        color: Color(
+                                          AppColors.textSecondaryColor,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    TextButton(
+                                      onPressed: c.loadRoster,
+                                      child: const Text('Retry'),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          : ListView.builder(
+                              controller: scrollController,
+                              padding:
+                                  const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                              itemCount: orphans.length + roster.length,
+                              itemBuilder: (context, i) {
+                                if (i < orphans.length) {
+                                  final o = orphans[i];
+                                  final uid = o.userIdHelper.getId();
+                                  if (uid == null) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  final selected = selectedIds.contains(uid);
+                                  return _PlayerCard(
+                                    name: o.name,
+                                    avatar: o.avatar,
+                                    roleLabel: announcedRoleLabel(o.role),
+                                    selected: selected,
+                                    highlight: true,
+                                    onTap: saving
+                                        ? null
+                                        : () => c.toggle(uid),
+                                    trailing: selected
+                                        ? _CaptainViceToggles(
+                                            controller: c,
+                                            participantId: uid,
+                                          )
+                                        : null,
+                                  );
+                                }
+                                final m = roster[i - orphans.length];
+                                final uid = m.userHelper.getId();
+                                if (uid == null) {
+                                  return const SizedBox.shrink();
+                                }
+                                final selected = selectedIds.contains(uid);
+                                return _PlayerCard(
+                                  name: m.userHelper.getDisplayName(),
+                                  avatar: m.userHelper.getAvatar(),
+                                  roleLabel: announcedRoleLabel(
+                                    c.roleForUserId(uid),
+                                  ),
+                                  selected: selected,
+                                  onTap:
+                                      saving ? null : () => c.toggle(uid),
+                                  trailing: selected
+                                      ? _CaptainViceToggles(
+                                          controller: c,
+                                          participantId: uid,
+                                        )
+                                      : null,
+                                );
+                              },
+                            ),
+                ),
+                Padding(
+                  padding: EdgeInsets.fromLTRB(16, 8, 16, 12 + bottomPad),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: saving || loadingRoster
+                              ? null
+                              : () => Navigator.of(context).pop(),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(40),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            visualDensity: VisualDensity.compact,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: saving || loadingRoster
+                              ? null
+                              : () => c.save(context),
+                          style: FilledButton.styleFrom(
+                            minimumSize: const Size.fromHeight(40),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            visualDensity: VisualDensity.compact,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: saving
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text(
+                                  'Save',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          });
+        },
       ),
-      (_) async {
-        final page = await memberApi.listForTeam(
-          actorTeamId,
-          const TeamMemberRosterFilterQuery(
-            status: TeamMemberStatus.active,
-            limit: 100,
-          ),
-        );
-        return page ?? EmptyPaginatedResponse<TeamMemberModel>();
-      },
-      retry: noRetry,
     );
+  }
+}
 
-    final roster = rosterQuery.data?.data ?? const <TeamMemberModel>[];
-    final rosterIds = {
-      for (final m in roster)
-        if (m.userHelper.getId() != null) m.userHelper.getId()!,
-    };
-    final orphans = announcedForTeam.where((p) {
-      final uid = p.userIdHelper.getId();
-      if (uid == null) return true;
-      return !rosterIds.contains(uid);
-    }).toList();
+class _CaptainViceToggles extends StatelessWidget {
+  const _CaptainViceToggles({
+    required this.controller,
+    required this.participantId,
+  });
 
-    final loadingRoster = rosterQuery.isLoading ||
-        (rosterQuery.isFetching && rosterQuery.data == null);
-    final rosterError = rosterQuery.isError
-        ? (rosterQuery.error?.toString() ?? 'Failed to load roster.')
-        : (rosterQuery.isSuccess && roster.isEmpty && orphans.isEmpty)
-            ? 'No active members found for this team.'
-            : null;
+  final ManageAnnouncedPlayersController controller;
+  final String participantId;
 
-    TeamMemberModel? findRosterMember(String userId) {
-      for (final m in roster) {
-        if (m.userHelper.getId() == userId) return m;
-      }
-      return null;
-    }
-
-    void toggle(String userId) {
-      final next = {...selectedUserIds.value};
-      if (next.contains(userId)) {
-        next.remove(userId);
-        if (captainUserId.value == userId) captainUserId.value = null;
-        if (viceCaptainUserId.value == userId) viceCaptainUserId.value = null;
-      } else {
-        next.add(userId);
-      }
-      selectedUserIds.value = next;
-    }
-
-    void onCaptainTap(String userId) {
-      if (!selectedUserIds.value.contains(userId) ||
-          saving.value ||
-          loadingRoster) {
-        return;
-      }
-      if (captainUserId.value == userId) {
-        captainUserId.value = null;
-      } else {
-        captainUserId.value = userId;
-        if (viceCaptainUserId.value == userId) {
-          viceCaptainUserId.value = null;
-        }
-      }
-    }
-
-    void onViceCaptainTap(String userId) {
-      if (!selectedUserIds.value.contains(userId) ||
-          saving.value ||
-          loadingRoster) {
-        return;
-      }
-      if (viceCaptainUserId.value == userId) {
-        viceCaptainUserId.value = null;
-      } else {
-        viceCaptainUserId.value = userId;
-        if (captainUserId.value == userId) {
-          captainUserId.value = null;
-        }
-      }
-    }
-
-    Widget captainViceToggles(String userId) {
-      final cap = captainUserId.value == userId;
-      final vice = viceCaptainUserId.value == userId;
-      final disabled = saving.value || loadingRoster;
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final cap = controller.captainParticipantId.value == participantId;
+      final vice =
+          controller.viceCaptainParticipantId.value == participantId;
+      final disabled =
+          controller.saving.value || controller.loadingRoster.value;
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -196,7 +382,9 @@ class _ManageAnnouncedPlayersSheetBody extends HookWidget {
                   : const Color(AppColors.backgroundColor),
               borderRadius: BorderRadius.circular(8),
               child: InkWell(
-                onTap: disabled ? null : () => onCaptainTap(userId),
+                onTap: disabled
+                    ? null
+                    : () => controller.onCaptainTap(participantId),
                 borderRadius: BorderRadius.circular(8),
                 child: Container(
                   padding:
@@ -234,7 +422,9 @@ class _ManageAnnouncedPlayersSheetBody extends HookWidget {
                   : const Color(AppColors.backgroundColor),
               borderRadius: BorderRadius.circular(8),
               child: InkWell(
-                onTap: disabled ? null : () => onViceCaptainTap(userId),
+                onTap: disabled
+                    ? null
+                    : () => controller.onViceCaptainTap(participantId),
                 borderRadius: BorderRadius.circular(8),
                 child: Container(
                   padding:
@@ -264,483 +454,109 @@ class _ManageAnnouncedPlayersSheetBody extends HookWidget {
           ),
         ],
       );
-    }
-
-    List<AnnouncedPlayerUpdatePayload> buildLeadershipPatches(
-      List<AnnouncedPlayerModel> slice, {
-      required String? captainId,
-      required String? viceCaptainId,
-    }) {
-      final updates = <AnnouncedPlayerUpdatePayload>[];
-      for (final p in slice) {
-        final uid = p.userIdHelper.getId();
-        if (uid == null) continue;
-        final wantCaptain = captainId == uid;
-        final wantVice = viceCaptainId == uid;
-        if (wantCaptain != p.isCaption || wantVice != p.isWiseCaption) {
-          updates.add(
-            AnnouncedPlayerUpdatePayload(
-              userId: uid,
-              isCaption: wantCaptain,
-              isWiseCaption: wantVice,
-            ),
-          );
-        }
-      }
-      return updates;
-    }
-
-    Future<void> save() async {
-      final mid = _matchId;
-      if (mid == null || mid.isEmpty) {
-        AppSnackbar.error(
-          title: 'Missing match',
-          message: 'Cannot save squad.',
-        );
-        return;
-      }
-
-      final previousIds = {
-        for (final p in announcedForTeam)
-          if (p.userIdHelper.getId() != null) p.userIdHelper.getId()!,
-      };
-
-      final toRemove =
-          previousIds.difference(selectedUserIds.value).toList();
-      final toAddIds =
-          selectedUserIds.value.difference(previousIds).toList();
-      final rosterChanged = toRemove.isNotEmpty || toAddIds.isNotEmpty;
-      final capEffective = captainUserId.value != null &&
-              selectedUserIds.value.contains(captainUserId.value)
-          ? captainUserId.value
-          : null;
-      final viceEffective = viceCaptainUserId.value != null &&
-              selectedUserIds.value.contains(viceCaptainUserId.value)
-          ? viceCaptainUserId.value
-          : null;
-      final leadershipOnlyPatches = rosterChanged
-          ? const <AnnouncedPlayerUpdatePayload>[]
-          : buildLeadershipPatches(
-              announcedForTeam,
-              captainId: capEffective,
-              viceCaptainId: viceEffective,
-            );
-
-      if (!rosterChanged && leadershipOnlyPatches.isEmpty) {
-        if (context.mounted) Navigator.of(context).pop();
-        return;
-      }
-
-      saving.value = true;
-      try {
-        List<AnnouncedPlayerModel> latestSlice = announcedForTeam;
-
-        if (toRemove.isNotEmpty) {
-          latestSlice = await announcedApi.removeAnnouncedPlayers(
-            teamMatchId: mid,
-            actorTeamId: actorTeamId,
-            userIds: toRemove,
-          );
-        }
-
-        if (toAddIds.isNotEmpty) {
-          final role = _defaultRoleForSport(match.sportType);
-          final payloads = <AnnouncedPlayerCreatePayload>[];
-          for (final uid in toAddIds) {
-            final m = findRosterMember(uid);
-            if (m == null) continue;
-            final h = m.userHelper;
-            final id = h.getId();
-            if (id == null) continue;
-            payloads.add(
-              AnnouncedPlayerCreatePayload(
-                name: h.getDisplayName(),
-                avatar: h.getAvatar(),
-                email: h.getEmail(),
-                userId: id,
-                role: role,
-                isCaption: uid == capEffective,
-                isWiseCaption: uid == viceEffective,
-              ),
-            );
-          }
-          if (payloads.isNotEmpty) {
-            latestSlice = await announcedApi.addAnnouncedPlayers(
-              teamMatchId: mid,
-              actorTeamId: actorTeamId,
-              players: payloads,
-            );
-          }
-        }
-
-        final leadershipPatches = buildLeadershipPatches(
-          latestSlice,
-          captainId: capEffective,
-          viceCaptainId: viceEffective,
-        );
-        if (leadershipPatches.isNotEmpty) {
-          latestSlice = await announcedApi.updateAnnouncedPlayers(
-            teamMatchId: mid,
-            actorTeamId: actorTeamId,
-            updates: leadershipPatches,
-          );
-        }
-
-        final merged = mergeAnnouncedPlayersForTeam(
-          match,
-          actorTeamId,
-          latestSlice,
-        );
-        onSaved(merged);
-        if (Get.isRegistered<QueryClient>()) {
-          await Get.find<QueryClient>().invalidateQueries(
-            queryKey: QueryKeys.matchChallengeDetail(mid),
-          );
-        }
-        if (context.mounted) {
-          Navigator.of(context).pop();
-          AppSnackbar.success(
-            title: 'Squad updated',
-            message: 'Announced players were saved.',
-          );
-        }
-      } catch (e) {
-        if (context.mounted) {
-          AppSnackbar.error(
-            title: 'Could not save',
-            message: e.toString(),
-          );
-        }
-      } finally {
-        saving.value = false;
-      }
-    }
-
-    final bottomPad = MediaQuery.paddingOf(context).bottom;
-    final viewInsets = MediaQuery.viewInsetsOf(context).bottom;
-
-    return Padding(
-      padding: EdgeInsets.only(bottom: viewInsets),
-      child: DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.72,
-        minChildSize: 0.45,
-        maxChildSize: 0.92,
-        builder: (context, scrollController) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
-                child: Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        'Announced squad',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: Color(AppColors.textColor),
-                        ),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: saving.value || loadingRoster
-                          ? null
-                          : () => Navigator.of(context).pop(),
-                      child: const Text('Cancel'),
-                    ),
-                    const SizedBox(width: 4),
-                    FilledButton(
-                      onPressed: saving.value || loadingRoster ? null : save,
-                      child: saving.value
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Text('Save'),
-                    ),
-                  ],
-                ),
-              ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  'Tap members to include or exclude. Use C / VC for captain and vice-captain (selected players only). Tap again to clear.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Color(AppColors.textSecondaryColor),
-                    height: 1.35,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Expanded(
-                child: loadingRoster
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Color(AppColors.primaryColor),
-                          ),
-                        ),
-                      )
-                    : rosterError != null
-                        ? Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(24),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    rosterError,
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      color: Color(
-                                        AppColors.textSecondaryColor,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  TextButton(
-                                    onPressed: () => rosterQuery.refetch(),
-                                    child: const Text('Retry'),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          )
-                        : ListView.builder(
-                            controller: scrollController,
-                            padding: EdgeInsets.fromLTRB(
-                              16,
-                              0,
-                              16,
-                              16 + bottomPad,
-                            ),
-                            itemCount: orphans.length + roster.length,
-                            itemBuilder: (context, i) {
-                              if (i < orphans.length) {
-                                final o = orphans[i];
-                                final uid = o.userIdHelper.getId();
-                                if (uid == null) {
-                                  return const SizedBox.shrink();
-                                }
-                                final selected =
-                                    selectedUserIds.value.contains(uid);
-                                final avatar = o.avatar;
-                                return Padding(
-                                  padding: const EdgeInsets.only(bottom: 8),
-                                  child: Material(
-                                    color: Colors.orange.shade50,
-                                    borderRadius: BorderRadius.circular(12),
-                                    child: InkWell(
-                                      onTap: saving.value
-                                          ? null
-                                          : () => toggle(uid),
-                                      borderRadius: BorderRadius.circular(12),
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 10,
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            CircleAvatar(
-                                              radius: 22,
-                                              backgroundColor: Colors.orange
-                                                  .withValues(alpha: 0.2),
-                                              backgroundImage: avatar !=
-                                                          null &&
-                                                      avatar.isNotEmpty
-                                                  ? AppNetworkImage.provider(avatar)
-                                                  : null,
-                                              child: avatar == null ||
-                                                      avatar.isEmpty
-                                                  ? Icon(
-                                                      Icons.person_off_outlined,
-                                                      color: Colors
-                                                          .orange.shade800,
-                                                    )
-                                                  : null,
-                                            ),
-                                            const SizedBox(width: 12),
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    o.name,
-                                                    style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                      fontSize: 15,
-                                                      color: Color(
-                                                        AppColors.textColor,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  Text(
-                                                    'Not on active roster — tap to remove from squad',
-                                                    style: TextStyle(
-                                                      fontSize: 11,
-                                                      color: Colors
-                                                          .orange.shade900,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            if (selected) ...[
-                                              const SizedBox(width: 8),
-                                              captainViceToggles(uid),
-                                            ],
-                                            const SizedBox(width: 8),
-                                            Icon(
-                                              selected
-                                                  ? Icons.check_circle
-                                                  : Icons.circle_outlined,
-                                              color: selected
-                                                  ? const Color(
-                                                      AppColors.primaryColor,
-                                                    )
-                                                  : const Color(
-                                                      AppColors
-                                                          .textSecondaryColor,
-                                                    ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              }
-                              final m = roster[i - orphans.length];
-                              final uid = m.userHelper.getId();
-                              if (uid == null) return const SizedBox.shrink();
-                              final selected =
-                                  selectedUserIds.value.contains(uid);
-                              final name = m.userHelper.getDisplayName();
-                              final avatar = m.userHelper.getAvatar();
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 8),
-                                child: Material(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: InkWell(
-                                    onTap: saving.value
-                                        ? null
-                                        : () => toggle(uid),
-                                    borderRadius: BorderRadius.circular(12),
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 10,
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          CircleAvatar(
-                                            radius: 22,
-                                            backgroundColor: const Color(
-                                              AppColors.primaryColor,
-                                            ).withValues(alpha: 0.1),
-                                            backgroundImage: avatar != null &&
-                                                    avatar.isNotEmpty
-                                                ? AppNetworkImage.provider(avatar)
-                                                : null,
-                                            child: avatar == null ||
-                                                    avatar.isEmpty
-                                                ? const Icon(
-                                                    Icons.person,
-                                                    color: Color(
-                                                      AppColors.primaryColor,
-                                                    ),
-                                                  )
-                                                : null,
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: Text(
-                                              name,
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.w600,
-                                                fontSize: 15,
-                                                color: Color(
-                                                  AppColors.textColor,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                          if (selected) ...[
-                                            const SizedBox(width: 8),
-                                            captainViceToggles(uid),
-                                          ],
-                                          const SizedBox(width: 8),
-                                          Icon(
-                                            selected
-                                                ? Icons.check_circle
-                                                : Icons.circle_outlined,
-                                            color: selected
-                                                ? const Color(
-                                                    AppColors.primaryColor,
-                                                  )
-                                                : const Color(
-                                                    AppColors
-                                                        .textSecondaryColor,
-                                                  ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
+    });
   }
 }
 
-TeamMatchModel mergeAnnouncedPlayersForTeam(
-  TeamMatchModel match,
-  String teamId,
-  List<AnnouncedPlayerModel> updatedForTeam,
-) {
-  final kept = match.announcedPlayers
-      .where((p) => p.teamIdHelper.getId() != teamId)
-      .toList();
-  return TeamMatchModel(
-    id: match.id,
-    source: match.source,
-    fromTeam: match.fromTeam,
-    toTeam: match.toTeam,
-    sportType: match.sportType,
-    status: match.status,
-    statusUpdatedBy: match.statusUpdatedBy,
-    statusUpdatedAt: match.statusUpdatedAt,
-    proposedSlots: match.proposedSlots,
-    proposedTurfs: match.proposedTurfs,
-    selectedSlotProposalId: match.selectedSlotProposalId,
-    selectedTurfProposalId: match.selectedTurfProposalId,
-    winnerTeam: match.winnerTeam,
-    notes: match.notes,
-    turfBookingId: match.turfBookingId,
-    expiresAt: match.expiresAt,
-    closedAt: match.closedAt,
-    announcedPlayers: [...kept, ...updatedForTeam],
-    cricketState: match.cricketState,
-    footballState: match.footballState,
-    createdAt: match.createdAt,
-    updatedAt: match.updatedAt,
-  );
+class _PlayerCard extends StatelessWidget {
+  const _PlayerCard({
+    required this.name,
+    required this.roleLabel,
+    required this.selected,
+    this.avatar,
+    this.onTap,
+    this.trailing,
+    this.highlight = false,
+    this.showCheckbox = true,
+  });
+
+  final String name;
+  final String? avatar;
+  final String roleLabel;
+  final bool selected;
+  final VoidCallback? onTap;
+  final Widget? trailing;
+  final bool highlight;
+  final bool showCheckbox;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: highlight ? Colors.orange.shade50 : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 22,
+                  backgroundColor: highlight
+                      ? Colors.orange.withValues(alpha: 0.2)
+                      : const Color(AppColors.primaryColor)
+                          .withValues(alpha: 0.1),
+                  backgroundImage: avatar != null && avatar!.isNotEmpty
+                      ? AppNetworkImage.provider(avatar!)
+                      : null,
+                  child: avatar == null || avatar!.isEmpty
+                      ? Icon(
+                          highlight
+                              ? Icons.person_off_outlined
+                              : Icons.person,
+                          color: highlight
+                              ? Colors.orange.shade800
+                              : const Color(AppColors.primaryColor),
+                        )
+                      : null,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                          color: Color(AppColors.textColor),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        roleLabel,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: highlight
+                              ? Colors.orange.shade900
+                              : const Color(AppColors.textSecondaryColor),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (trailing != null) ...[
+                  const SizedBox(width: 8),
+                  trailing!,
+                ],
+                if (showCheckbox) ...[
+                  const SizedBox(width: 8),
+                  Icon(
+                    selected ? Icons.check_circle : Icons.circle_outlined,
+                    color: selected
+                        ? const Color(AppColors.primaryColor)
+                        : const Color(AppColors.textSecondaryColor),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

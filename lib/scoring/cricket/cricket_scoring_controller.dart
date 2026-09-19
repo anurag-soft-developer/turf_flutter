@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
@@ -21,6 +21,9 @@ class CricketScoringController extends GetxController {
 
   final CricketScoringApiService _apiService;
 
+  static const int minOvers = 1;
+  static const int maxOversLimit = 120;
+
   final RxBool isConnected = false.obs;
   final RxBool isJoiningSession = false.obs;
   final RxBool isSendingUpdate = false.obs;
@@ -38,6 +41,14 @@ class CricketScoringController extends GetxController {
   final RxList<CricketOverEvent> cricketOvers = <CricketOverEvent>[].obs;
   final RxBool isFetchingOvers = false.obs;
 
+  /// Start-session UI: who bats first (empty until user picks).
+  final RxString battingTeamId = ''.obs;
+
+  /// Bumps when overs text changes so Obx can recompute [canSubmitStart].
+  final RxInt maxOversRevision = 0.obs;
+
+  late final TextEditingController maxOversController;
+
   final List<AppendCricketBallRequest> _ballRequestHistory =
       <AppendCricketBallRequest>[];
   final List<AppendCricketBallRequest> _redoBallRequests =
@@ -50,6 +61,43 @@ class CricketScoringController extends GetxController {
   bool get canUndoCricketBall =>
       cricketOvers.any((over) => over.ballEvents.isNotEmpty);
 
+  String get fromTeamId =>
+      cricketMatch.value?.fromTeamHelper.getId() ?? '';
+
+  String get toTeamId => cricketMatch.value?.toTeamHelper.getId() ?? '';
+
+  String get fromTeamName =>
+      cricketMatch.value?.fromTeamHelper.getDisplayName() ?? '';
+
+  String get toTeamName =>
+      cricketMatch.value?.toTeamHelper.getDisplayName() ?? '';
+
+  String get bowlingTeamIdResolved {
+    final bat = battingTeamId.value;
+    if (bat.isEmpty) return '';
+    if (bat == fromTeamId) return toTeamId;
+    if (bat == toTeamId) return fromTeamId;
+    return '';
+  }
+
+  int? get parsedMaxOvers {
+    // Depend on revision so Obx rebuilds when the text field changes.
+    maxOversRevision.value;
+    final t = maxOversController.text.trim();
+    if (t.isEmpty) return null;
+    final n = int.tryParse(t);
+    if (n == null) return null;
+    if (n < minOvers || n > maxOversLimit) return null;
+    return n;
+  }
+
+  bool get canSubmitStart =>
+      battingTeamId.value.isNotEmpty &&
+      fromTeamId.isNotEmpty &&
+      toTeamId.isNotEmpty &&
+      bowlingTeamIdResolved.isNotEmpty &&
+      parsedMaxOvers != null;
+
   ScoringSocketService? get _socket =>
       Get.isRegistered<ScoringSocketService>()
           ? Get.find<ScoringSocketService>()
@@ -60,12 +108,58 @@ class CricketScoringController extends GetxController {
     return AuthStateController.instance.user?.id;
   }
 
+  @override
+  void onInit() {
+    super.onInit();
+    maxOversController = TextEditingController(text: '20');
+  }
+
+  /// Bind scoreboard to a match id; resets start-session UI when the id changes.
+  void bindScoreboard(String teamMatchId) {
+    final id = teamMatchId.trim();
+    if (currentSessionId.value != id) {
+      battingTeamId.value = '';
+      maxOversController.text = '20';
+      maxOversRevision.value = 0;
+      cricketMatch.value = null;
+      cricketOvers.clear();
+      errorMessage.value = null;
+      _resetCricketBallHistory();
+    }
+    currentSessionId.value = id;
+  }
+
+  void setBattingTeamId(String id) {
+    battingTeamId.value = id;
+  }
+
+  void onMaxOversChanged() {
+    maxOversRevision.value++;
+  }
+
+  String teamLabelForId(String teamId) {
+    if (teamId.isEmpty) return '—';
+    if (teamId == fromTeamId) {
+      return fromTeamName.isNotEmpty ? fromTeamName : 'Team';
+    }
+    if (teamId == toTeamId) {
+      return toTeamName.isNotEmpty ? toTeamName : 'Team';
+    }
+    return 'Team';
+  }
+
   void seedFromQuery({
     TeamMatchModel? match,
     List<CricketOverEvent>? overs,
   }) {
     if (match != null) {
-      cricketMatch.value = match;
+      final current = cricketMatch.value;
+      // Don't clobber an active scoring session with a meta-only payload.
+      if (current?.cricketState != null && match.cricketState == null) {
+        // keep current
+      } else {
+        cricketMatch.value = match;
+      }
     }
     if (overs != null) {
       cricketOvers.assignAll(overs);
@@ -483,6 +577,7 @@ class CricketScoringController extends GetxController {
 
   @override
   void onClose() {
+    maxOversController.dispose();
     unawaited(leaveLiveSession());
     super.onClose();
   }

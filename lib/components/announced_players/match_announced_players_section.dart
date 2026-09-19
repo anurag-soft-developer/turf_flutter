@@ -5,14 +5,15 @@ import 'package:get/get.dart';
 import '../../core/config/constants.dart';
 import '../../match_up/announced_players/model/announced_player_model.dart';
 import '../../match_up/model/team_match_model.dart';
+import 'manage_announced_players_controller.dart';
 import 'manage_announced_players_sheet.dart';
 
 /// Header row height: fits two lines of team title + vertical center with edit slot.
 const double _kSquadHeaderMinHeight = 44;
 const double _kSquadHeaderEditSlot = 40;
 
-/// Player tile row height in squad grids (avatar + name).
-const double _kPlayerGridTileExtent = 132;
+/// Player tile row height in squad grids (avatar + name + role).
+const double _kPlayerGridTileExtent = 156;
 /// Minimum squad-column width for two player tiles (tile ~104dp + spacing).
 const double _kTwoPlayerColumnsMinWidth = 230;
 
@@ -32,18 +33,22 @@ void _sortAnnouncedPlayersForDisplay(List<AnnouncedPlayerModel> players) {
   });
 }
 
-/// Shows announced squads for both challenge teams; edit control only for [myTeamId].
+/// Shows announced squads for both challenge teams; edit when [editableTeamIds] includes that side.
 class MatchAnnouncedPlayersSection extends StatelessWidget {
   const MatchAnnouncedPlayersSection({
     super.key,
     required this.match,
     required this.myTeamId,
     required this.onMatchUpdated,
+    this.editableTeamIds,
   });
 
   final TeamMatchModel match;
   final String myTeamId;
   final ValueChanged<TeamMatchModel> onMatchUpdated;
+
+  /// Match team ids the current user may announce for. Defaults to [myTeamId] only.
+  final Set<String>? editableTeamIds;
 
   static bool allowsAnnouncedPlayerEdits(TeamMatchModel m) {
     if (m.cricketState != null) return false;
@@ -98,10 +103,9 @@ class MatchAnnouncedPlayersSection extends StatelessWidget {
         .toList();
     _sortAnnouncedPlayersForDisplay(toPlayers);
 
-    final canEdit =
-        allowsAnnouncedPlayerEdits(match) &&
-        myTeamId.isNotEmpty &&
-        (myTeamId == fromId || myTeamId == toId);
+    final canEditBase = allowsAnnouncedPlayerEdits(match);
+    final editable = editableTeamIds ??
+        (myTeamId.isNotEmpty ? {myTeamId} : const <String>{});
 
     // Same side order as [MatchChallengeVersusHeader]: fromTeam left, toTeam right.
     return _SquadSectionCard(
@@ -112,7 +116,9 @@ class MatchAnnouncedPlayersSection extends StatelessWidget {
             child: _TeamSquadBlock(
               teamLabel: fromName,
               players: fromPlayers,
-              showEdit: canEdit && myTeamId == fromId,
+              showEdit: canEditBase &&
+                  fromId.isNotEmpty &&
+                  editable.contains(fromId),
               onEdit: () => openManageAnnouncedPlayersSheet(
                 context: context,
                 match: match,
@@ -126,7 +132,9 @@ class MatchAnnouncedPlayersSection extends StatelessWidget {
             child: _TeamSquadBlock(
               teamLabel: toName,
               players: toPlayers,
-              showEdit: canEdit && myTeamId == toId,
+              showEdit: canEditBase &&
+                  toId.isNotEmpty &&
+                  editable.contains(toId),
               onEdit: () => openManageAnnouncedPlayersSheet(
                 context: context,
                 match: match,
@@ -359,6 +367,29 @@ class _AnnouncedPlayerChip extends StatelessWidget {
                   color: Color(AppColors.textColor),
                 ),
               ),
+              const SizedBox(height: 2),
+              Text(
+                announcedRoleLabel(player.role),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                  height: 1.2,
+                  color: Color(AppColors.textSecondaryColor),
+                ),
+              ),
+              if (player.isGuest)
+                const Text(
+                  'Guest',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: Color(AppColors.textSecondaryColor),
+                  ),
+                ),
             ],
           ),
         ),

@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
 import '../../components/announced_players/manage_announced_players_sheet.dart';
@@ -9,24 +7,15 @@ import '../../components/scoring/cricket/scorecard/match_scorecard_tab.dart';
 import '../../components/challenges/match_challenge_respond_actions.dart';
 import '../../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
 import '../../core/components/app_bar/app_bar_background.dart';
-import '../../core/components/query/query_async_body.dart';
 import '../../core/config/constants.dart';
-import '../../core/query/query_keys.dart';
-import '../../core/query/query_retry.dart';
-import '../../core/routes/route_query.dart';
+import '../../core/models/location_model.dart';
 import '../../core/utils/map_launch_util.dart';
 import '../../explore/model/content_post_model.dart';
 import '../../explore/post_service.dart';
 import '../../explore/widgets/tagged_posts_grid.dart';
-import '../../team/members/model/team_member_model.dart';
-import '../../team/team_service.dart';
-import '../matchmaking_service.dart';
 import '../model/team_match_model.dart';
-import 'match_challenge_actions_card.dart';
 import 'match_challenge_detail_controller.dart';
 import 'match_challenge_versus_header.dart';
-import 'match_incoming_resolver.dart';
-
 
 Future<T?>? openMatchChallengeDetail<T>({
   TeamMatchModel? match,
@@ -43,20 +32,25 @@ Future<T?>? openMatchChallengeDetail<T>({
   return Get.toNamed<T>(
     AppConstants.routes.matchChallengeDetail(id),
     arguments: {
+      'matchId': id,
       if (isIncoming != null) 'isIncoming': isIncoming,
     },
     preventDuplicates: false,
   );
 }
 
-class MatchChallengeDetailScreen extends HookWidget {
-  const MatchChallengeDetailScreen({super.key});
+class MatchChallengeDetailScreen extends StatelessWidget {
+  const MatchChallengeDetailScreen({super.key, required this.matchId});
+
+  /// Fixed at route factory time so rebuilds after scoreboard pop keep the id.
+  final String matchId;
+
+  MatchChallengeDetailController get controller =>
+      Get.find<MatchChallengeDetailController>(tag: matchId);
 
   @override
   Widget build(BuildContext context) {
-    final matchId = routeParam('id');
-
-    if (matchId == null || matchId.isEmpty) {
+    if (matchId.isEmpty) {
       return Scaffold(
         backgroundColor: const Color(AppColors.backgroundColor),
         appBar: AppAppBar(title: const Text('Challenge Details')),
@@ -86,99 +80,110 @@ class MatchChallengeDetailScreen extends HookWidget {
       );
     }
 
-    final controller = Get.find<MatchChallengeDetailController>(tag: matchId);
-
-    final matchQuery = useQuery<TeamMatchModel, Object>(
-      QueryKeys.matchChallengeDetail(matchId),
-      (_) async {
-        final loaded = await MatchmakingService().getTeamMatchById(matchId);
-        if (loaded == null) throw Exception('Could not load challenge.');
-        return loaded;
-      },
-      retry: noRetry,
-    );
-
-    final needsMemberships = controller.explicitIsIncoming == null;
-    final membershipsQuery = useQuery<List<TeamMemberModel>, Object>(
-      QueryKeys.myMemberships,
-      (_) async {
-        final res = await TeamService().memberService.myMemberships(
-          const MyTeamMembershipsFilterQuery(
-            status: TeamMemberStatus.active,
-            limit: 50,
-          ),
-        );
-        return res?.data ?? const <TeamMemberModel>[];
-      },
-      retry: noRetry,
-      enabled: needsMemberships,
-    );
-
-    useEffect(() {
-      controller.syncMatch(matchQuery.data);
-      return null;
-    }, [matchQuery.data]);
-
-    useEffect(() {
-      if (controller.explicitIsIncoming != null) {
-        controller.syncIsIncoming(controller.explicitIsIncoming!);
-        return null;
-      }
-      final data = membershipsQuery.data;
-      final current = matchQuery.data;
-      if (data == null || current == null) return null;
-      final myTeamIds = <String>{};
-      for (final m in data) {
-        final t = m.team;
-        if (t is TeamMemberFieldInstance && t.id != null && t.id!.isNotEmpty) {
-          myTeamIds.add(t.id!);
-        }
-      }
-      controller.syncIsIncoming(resolveIsIncoming(current, myTeamIds));
-      return null;
-    }, [membershipsQuery.data, matchQuery.data]);
+    final c = controller;
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
       appBar: AppAppBar(
-        title: const Text('Challenge Details'),
+        title: Obx(() {
+          final casual = c.match.value?.isCasual == true;
+          return Text(casual ? 'Casual match' : 'Challenge Details');
+        }),
         actions: [
+          Obx(() {
+            if (!c.canCancelOrAbandonMatch) {
+              return const SizedBox.shrink();
+            }
+            final abandon = c.isAbandonMatch;
+            final busy = c.actionBusy;
+            return PopupMenuButton<String>(
+              tooltip: 'More',
+              enabled: !busy,
+              icon: busy && c.isCancellingMatch.value
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.more_vert),
+              onSelected: (value) async {
+                if (value != 'cancel_or_abandon') return;
+                final reason = await showCancelOrAbandonMatchDialog(
+                  context,
+                  abandon: abandon,
+                );
+                if (reason == null) return;
+                await c.cancelOrAbandonMatch(
+                  reason: reason.isEmpty ? null : reason,
+                );
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem<String>(
+                  value: 'cancel_or_abandon',
+                  child: Text(
+                    abandon ? 'Abandon' : 'Cancel',
+                    style: TextStyle(color: Colors.red.shade700),
+                  ),
+                ),
+              ],
+            );
+          }),
           IconButton(
             icon: const Icon(Icons.message_outlined),
             tooltip: 'Messages',
-            onPressed: controller.openMessages,
+            onPressed: c.openMessages,
           ),
         ],
       ),
-      body: QueryAsyncBody<TeamMatchModel, Object>(
-        state: matchQuery,
-        onRetry: () => matchQuery.refetch(),
-        data: (_) {
-          if (needsMemberships &&
-              (membershipsQuery.isLoading ||
-                  (membershipsQuery.isFetching &&
-                      membershipsQuery.data == null))) {
-            return const Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  Color(AppColors.primaryColor),
-                ),
+      body: Obx(() {
+        if (c.isBootstrapping.value) {
+          return const Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(
+                Color(AppColors.primaryColor),
               ),
-            );
-          }
-          return Obx(() {
-            final currentMatch = controller.match.value;
-            final _ = controller.isIncoming.value;
-            if (currentMatch == null) {
-              return const SizedBox.shrink();
-            }
-            return _MatchChallengeDetailBody(
-              controller: controller,
-              match: currentMatch,
-            );
-          });
-        },
-      ),
+            ),
+          );
+        }
+
+        final err = c.loadError.value;
+        final currentMatch = c.match.value;
+        if (currentMatch == null) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    (err != null && err.isNotEmpty)
+                        ? err
+                        : 'Could not load challenge.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Color(AppColors.textSecondaryColor),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: c.reload,
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        // Touch side flags so Obx rebuilds when incoming/membership context changes.
+        c.isIncoming.value;
+        c.myMatchTeamIds.value;
+
+        return _MatchChallengeDetailBody(
+          controller: c,
+          match: currentMatch,
+        );
+      }),
     );
   }
 }
@@ -296,7 +301,7 @@ class _MatchChallengeDetailBody extends StatelessWidget {
                                             controller.isUpdatingSlot.value,
                                         otherFieldBusy:
                                             controller.isUpdatingTurf.value ||
-                                            controller.actionsChildBusy.value,
+                                            controller.isCancellingMatch.value,
                                         onEditPressed: () =>
                                             controller.setTimeSlot(context),
                                         editTooltip:
@@ -321,7 +326,7 @@ class _MatchChallengeDetailBody extends StatelessWidget {
                                             controller.isUpdatingTurf.value,
                                         otherFieldBusy:
                                             controller.isUpdatingSlot.value ||
-                                            controller.actionsChildBusy.value,
+                                            controller.isCancellingMatch.value,
                                         onEditPressed: () =>
                                             controller.setTurf(context),
                                         editTooltip:
@@ -333,15 +338,6 @@ class _MatchChallengeDetailBody extends StatelessWidget {
                                     ),
                                   ],
                                 ),
-                              ),
-                              const SizedBox(height: 12),
-                              MatchChallengeActionsCard(
-                                match: currentMatch,
-                                myTeamId: controller.myTeamId,
-                                onMatchUpdated:
-                                    controller.scheduleMatchUpdate,
-                                onInternalBusyChanged:
-                                    controller.scheduleActionsChildBusy,
                               ),
                               const SizedBox(height: 20),
                               const Text(
@@ -375,10 +371,13 @@ class _MatchChallengeDetailBody extends StatelessWidget {
                       parentTabController: controller.detailTabController,
                     ),
                     SingleChildScrollView(
-                      child: MatchAnnouncedPlayersSection(
-                        match: currentMatch,
-                        myTeamId: controller.myTeamId,
-                        onMatchUpdated: controller.scheduleMatchUpdate,
+                      child: Obx(
+                        () => MatchAnnouncedPlayersSection(
+                          match: currentMatch,
+                          myTeamId: controller.myTeamId,
+                          editableTeamIds: controller.editableAnnounceTeamIds,
+                          onMatchUpdated: controller.scheduleMatchUpdate,
+                        ),
                       ),
                     ),
                   ],
@@ -405,6 +404,7 @@ class _MatchChallengeDetailBody extends StatelessWidget {
                       final fromId =
                           currentMatch.fromTeamHelper.getId() ?? '';
                       final toId = currentMatch.toTeamHelper.getId() ?? '';
+                      final editable = controller.editableAnnounceTeamIds;
                       final opponentId =
                           myTeamId == fromId ? toId : fromId;
                       final myReady =
@@ -417,48 +417,71 @@ class _MatchChallengeDetailBody extends StatelessWidget {
                             currentMatch,
                             opponentId,
                           );
-                      final canAnnounce =
+                      final canEditEdits =
                           MatchAnnouncedPlayersSection
-                              .allowsAnnouncedPlayerEdits(currentMatch) &&
-                          myTeamId.isNotEmpty;
+                              .allowsAnnouncedPlayerEdits(currentMatch);
+
+                      String? nextAnnounceTeamId;
+                      if (canEditEdits) {
+                        if (editable.contains(fromId) &&
+                            !MatchAnnouncedPlayersSection
+                                .teamHasAnnouncedPlayers(
+                              currentMatch,
+                              fromId,
+                            )) {
+                          nextAnnounceTeamId = fromId;
+                        } else if (editable.contains(toId) &&
+                            !MatchAnnouncedPlayersSection
+                                .teamHasAnnouncedPlayers(
+                              currentMatch,
+                              toId,
+                            )) {
+                          nextAnnounceTeamId = toId;
+                        } else if (editable.contains(myTeamId) &&
+                            myTeamId.isNotEmpty &&
+                            !myReady) {
+                          nextAnnounceTeamId = myTeamId;
+                        }
+                      }
 
                       if (!ongoing && !(myReady && opponentReady)) {
-                        if (myReady && !opponentReady) {
-                          return Container(
+                        if (nextAnnounceTeamId != null) {
+                          return SizedBox(
                             width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 14,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Text(
-                              'Awaiting opponent squad',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Color(AppColors.textSecondaryColor),
-                              ),
+                            child: ElevatedButton.icon(
+                              onPressed: controller.actionBusy
+                                  ? null
+                                  : () => openManageAnnouncedPlayersSheet(
+                                        context: context,
+                                        match: currentMatch,
+                                        actorTeamId: nextAnnounceTeamId!,
+                                        onSaved:
+                                            controller.scheduleMatchUpdate,
+                                      ),
+                              icon: const Icon(Icons.groups_outlined),
+                              label: const Text('Announce players'),
                             ),
                           );
                         }
 
-                        return SizedBox(
+                        return Container(
                           width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: controller.actionBusy || !canAnnounce
-                                ? null
-                                : () => openManageAnnouncedPlayersSheet(
-                                      context: context,
-                                      match: currentMatch,
-                                      actorTeamId: myTeamId,
-                                      onSaved: controller.scheduleMatchUpdate,
-                                    ),
-                            icon: const Icon(Icons.groups_outlined),
-                            label: const Text('Announce players'),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Text(
+                            'Awaiting opponent squad',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Color(AppColors.textSecondaryColor),
+                            ),
                           ),
                         );
                       }
@@ -492,7 +515,7 @@ class _MatchChallengeDetailBody extends StatelessWidget {
                       enabled:
                           !controller.isUpdatingSlot.value &&
                           !controller.isUpdatingTurf.value &&
-                          !controller.actionsChildBusy.value,
+                          !controller.isCancellingMatch.value,
                       onReject: () => controller.respondToChallenge(
                         MatchResponseAction.reject,
                       ),
@@ -710,4 +733,94 @@ String _fmt(DateTime d) {
   final local = d.toLocal();
   return '${local.day.toString().padLeft(2, '0')}/${local.month.toString().padLeft(2, '0')} '
       '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+}
+
+/// Returns trimmed reason text when confirmed, or `null` when dismissed.
+Future<String?> showCancelOrAbandonMatchDialog(
+  BuildContext context, {
+  required bool abandon,
+}) {
+  return showDialog<String>(
+    context: context,
+    builder: (ctx) => _CancelOrAbandonMatchDialog(abandon: abandon),
+  );
+}
+
+class _CancelOrAbandonMatchDialog extends StatefulWidget {
+  const _CancelOrAbandonMatchDialog({required this.abandon});
+
+  final bool abandon;
+
+  @override
+  State<_CancelOrAbandonMatchDialog> createState() =>
+      _CancelOrAbandonMatchDialogState();
+}
+
+class _CancelOrAbandonMatchDialogState
+    extends State<_CancelOrAbandonMatchDialog> {
+  late final TextEditingController _reasonController;
+
+  @override
+  void initState() {
+    super.initState();
+    _reasonController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _reasonController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final abandon = widget.abandon;
+    return AlertDialog(
+      title: Text(abandon ? 'Abandon this match?' : 'Cancel this match?'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            abandon
+                ? 'This will abandon the live match for both teams. You can add an optional note below.'
+                : 'This will cancel the match for both teams. You can add an optional note below.',
+            style: const TextStyle(
+              fontSize: 14,
+              color: Color(AppColors.textSecondaryColor),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _reasonController,
+            maxLines: 2,
+            decoration: const InputDecoration(
+              hintText: 'Reason (optional)',
+              isDense: true,
+              border: OutlineInputBorder(),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            FocusScope.of(context).unfocus();
+            Navigator.pop(context);
+          },
+          child: const Text('Back'),
+        ),
+        TextButton(
+          onPressed: () {
+            FocusScope.of(context).unfocus();
+            Navigator.pop(context, _reasonController.text.trim());
+          },
+          child: Text(
+            abandon ? 'Abandon match' : 'Cancel match',
+            style: TextStyle(color: Colors.red.shade700),
+          ),
+        ),
+      ],
+    );
+  }
 }

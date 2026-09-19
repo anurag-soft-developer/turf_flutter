@@ -34,28 +34,14 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
   late final CricketScoringController _scoringController;
 
   late final String _teamMatchId;
-  String _fromTeamName = '';
-  String _toTeamName = '';
-  String _fromTeamId = '';
-  String _toTeamId = '';
-
-  /// Empty until the user picks who bats first (start-only flow).
-  String _battingTeamId = '';
-
-  /// Default matches backend `CreateCricketSessionSchema` default (20 overs).
-  late final TextEditingController _maxOversController;
-
-  static const int _minOvers = 1;
-  static const int _maxOversLimit = 120;
 
   @override
   void initState() {
     super.initState();
-    _maxOversController = TextEditingController(text: '20');
     _scoringController = Get.find<CricketScoringController>();
     final args = (Get.arguments as Map?)?.cast<String, dynamic>() ?? const {};
     _teamMatchId = args['matchId']?.toString() ?? '';
-    _scoringController.currentSessionId.value = _teamMatchId;
+    _scoringController.bindScoreboard(_teamMatchId);
     if (_teamMatchId.isNotEmpty) {
       unawaited(_scoringController.joinLiveSession(_teamMatchId));
     }
@@ -64,34 +50,8 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
   @override
   void dispose() {
     unawaited(_scoringController.leaveLiveSession());
-    _maxOversController.dispose();
     super.dispose();
   }
-
-  int? _parsedMaxOvers() {
-    final t = _maxOversController.text.trim();
-    if (t.isEmpty) return null;
-    final n = int.tryParse(t);
-    if (n == null) return null;
-    if (n < _minOvers || n > _maxOversLimit) return null;
-    return n;
-  }
-
-  bool get _canSubmitStart =>
-      _battingTeamId.isNotEmpty &&
-      _fromTeamId.isNotEmpty &&
-      _toTeamId.isNotEmpty &&
-      _parsedMaxOvers() != null;
-
-  void _applyTeamLabelsFromMatch(TeamMatchModel m) {
-    _fromTeamId = m.fromTeamHelper.getId() ?? '';
-    _toTeamId = m.toTeamHelper.getId() ?? '';
-    _fromTeamName = m.fromTeamHelper.getDisplayName();
-    _toTeamName = m.toTeamHelper.getDisplayName();
-  }
-
-  String get _bowlingTeamIdResolved =>
-      _battingTeamId == _fromTeamId ? _toTeamId : _fromTeamId;
 
   Future<void> _send(
     CricketOutcome outcome, {
@@ -185,159 +145,211 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
         : _scoringController.isCompletingCricketMatch.value;
     final buttonLabel = hasNextInnings ? 'Start next innings' : 'End match';
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: const Color(AppColors.dividerColor).withValues(alpha: 0.85),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text(
+          'Innings completed',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
+            color: Color(AppColors.textColor),
+          ),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
+        const SizedBox(height: 6),
+        Text(
+          hasNextInnings
+              ? 'Set the lineup for the next innings, then start scoring.'
+              : 'Confirm to finish the match.',
+          style: const TextStyle(
+            fontSize: 13,
+            height: 1.35,
+            color: Color(AppColors.textSecondaryColor),
           ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            height: 3,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Color(AppColors.primaryColor),
-                  Color(AppColors.secondaryColor),
-                ],
-              ),
+        ),
+        const SizedBox(height: 12),
+        FilledButton(
+          onPressed: busy ? null : () => _onInningsCompletedAction(cs),
+          style: FilledButton.styleFrom(
+            minimumSize: const Size.fromHeight(48),
+            backgroundColor: const Color(AppColors.primaryColor),
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.flag_rounded,
-                      size: 22,
-                      color: const Color(
-                        AppColors.primaryColor,
-                      ).withValues(alpha: 0.9),
-                    ),
-                    const SizedBox(width: 10),
-                    const Expanded(
-                      child: Text(
-                        'Innings completed',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
-                          color: Color(AppColors.textColor),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  hasNextInnings
-                      ? 'Set the lineup for the next innings, then start scoring.'
-                      : 'Confirm to finish the match.',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    height: 1.35,
-                    color: Color(AppColors.textSecondaryColor),
+          child: busy
+              ? const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
                   ),
-                ),
-                const SizedBox(height: 14),
-                FilledButton(
-                  onPressed: busy ? null : () => _onInningsCompletedAction(cs),
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size.fromHeight(48),
-                    backgroundColor: const Color(AppColors.primaryColor),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: busy
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Text(buttonLabel),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+                )
+              : Text(buttonLabel),
+        ),
+      ],
     );
   }
 
   Widget _buildMatchCompletedFooter() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: const Color(AppColors.dividerColor).withValues(alpha: 0.85),
+    return const Row(
+      children: [
+        Icon(
+          Icons.emoji_events_rounded,
+          color: Color(AppColors.primaryColor),
         ),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-      child: const Row(
-        children: [
-          Icon(
-            Icons.emoji_events_rounded,
-            color: Color(AppColors.primaryColor),
-          ),
-          SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Match completed',
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 16,
-                color: Color(AppColors.textColor),
-              ),
+        SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            'Match completed',
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 16,
+              color: Color(AppColors.textColor),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  Widget _buildScoringFooter(TeamMatchModel match) {
-    final cs = match.cricketState!;
-    if (match.status == TeamMatchStatus.completed ||
-        match.status == TeamMatchStatus.draw) {
-      return _buildMatchCompletedFooter();
+  Future<void> _sendRuns(int runs) async {
+    if (runs <= 0) {
+      await _send(const DotOutcome());
+      return;
     }
+    await _send(RunsOutcome(offBat: runs));
+  }
 
-    final inningsComplete = isCricketInningsComplete(cs);
-    if (inningsComplete) {
-      return _buildInningsCompletedFooter(cs);
-    }
+  void _openControlsSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 8, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.only(left: 8),
+                        child: Text(
+                          'Score ball',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 17,
+                            color: Color(AppColors.textColor),
+                          ),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(right: 8, top: 4),
+                  child: _buildKeypad(),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
+  void _openOversSheet(int innings) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        final height = MediaQuery.sizeOf(ctx).height * 0.65;
+        return SafeArea(
+          child: SizedBox(
+            height: height,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
+                  child: Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Overs',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 17,
+                            color: Color(AppColors.textColor),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: CricketOversTable(
+                      controller: _scoringController,
+                      innings: innings,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Active keypad only — innings/match footers are handled separately.
+  Widget _buildKeypad() {
     return CricketActionButtons(
       controller: _scoringController,
-      onDot: () => _send(const DotOutcome()),
-      onRun: _showRunPicker,
+      onRuns: _sendRuns,
       onWide: _showWidePicker,
       onNoBall: _showNoBallPicker,
       onWicket: _showWicketFlow,
       onUndo: _undoLastBall,
       onRedo: _redoLastBall,
     );
+  }
+
+  Widget? _buildStatusFooter(TeamMatchModel match) {
+    final cs = match.cricketState!;
+    if (match.status == TeamMatchStatus.completed ||
+        match.status == TeamMatchStatus.draw) {
+      return _buildMatchCompletedFooter();
+    }
+    if (isCricketInningsComplete(cs)) {
+      return _buildInningsCompletedFooter(cs);
+    }
+    return null;
   }
 
   Future<int?> _pickRunsGrid({
@@ -402,12 +414,6 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
     );
   }
 
-  Future<void> _showRunPicker() async {
-    final runs = await _pickRunsGrid(title: 'Runs off bat', min: 1, max: 6);
-    if (!mounted || runs == null) return;
-    await _send(RunsOutcome(offBat: runs));
-  }
-
   Future<void> _showWidePicker() async {
     final extra = await _pickRunsGrid(
       title: 'Wide — extra runs (0–5)',
@@ -438,7 +444,7 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
       cs.currentInnings,
     );
     final candidates = playingXiForTeam(match, battingId).where((p) {
-      final id = p.userIdHelper.getId() ?? '';
+      final id = p.participantId ?? '';
       return id.isNotEmpty && id != dismissedUserId && !dismissed.contains(id);
     }).toList();
     if (candidates.isEmpty) {
@@ -498,7 +504,7 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
         ),
       ),
     );
-    return picked?.userIdHelper.getId();
+    return picked?.participantId;
   }
 
   Future<void> _sendDismissal(
@@ -674,7 +680,7 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
       case _WicketUiKind.caught:
         final fielder = await _pickBowlingSquadPlayer('Fielder (catcher)');
         if (!mounted || fielder == null) return;
-        final fielderId = fielder.userIdHelper.getId();
+        final fielderId = fielder.participantId;
         if (fielderId == null || fielderId.isEmpty) return;
         final offBat = await _pickRunsGrid(
           title: 'Runs off bat before catch',
@@ -788,7 +794,7 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
         if (addFielder == true) {
           final f = await _pickBowlingSquadPlayer('Throwing fielder');
           if (!mounted) return;
-          fielderId = f?.userIdHelper.getId();
+          fielderId = f?.participantId;
         }
         await _sendDismissal(
           WicketRunOutOutcome(
@@ -801,7 +807,7 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
       case _WicketUiKind.stumped:
         final keeper = await _pickBowlingSquadPlayer('Wicket-keeper');
         if (!mounted || keeper == null) return;
-        final keeperId = keeper.userIdHelper.getId();
+        final keeperId = keeper.participantId;
         if (keeperId == null || keeperId.isEmpty) return;
         final offBat = await _pickRunsGrid(
           title: 'Runs off bat (if any)',
@@ -828,11 +834,11 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
   }
 
   Future<void> _startCricketSession() async {
-    final overs = _parsedMaxOvers();
-    if (_battingTeamId.isEmpty ||
-        _bowlingTeamIdResolved.isEmpty ||
-        _fromTeamId.isEmpty ||
-        _toTeamId.isEmpty) {
+    final overs = _scoringController.parsedMaxOvers;
+    if (_scoringController.battingTeamId.value.isEmpty ||
+        _scoringController.bowlingTeamIdResolved.isEmpty ||
+        _scoringController.fromTeamId.isEmpty ||
+        _scoringController.toTeamId.isEmpty) {
       AppSnackbar.info(
         title: 'Choose batting side',
         message:
@@ -843,42 +849,44 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
     if (overs == null) {
       AppSnackbar.info(
         title: 'Overs',
-        message: 'Enter overs per innings ($_minOvers–$_maxOversLimit).',
+        message:
+            'Enter overs per innings (${CricketScoringController.minOvers}–${CricketScoringController.maxOversLimit}).',
       );
       return;
     }
 
     await _scoringController.createCricketSession(
       CreateCricketSessionRequest(
-        battingTeamId: _battingTeamId,
-        bowlingTeamId: _bowlingTeamIdResolved,
+        battingTeamId: _scoringController.battingTeamId.value,
+        bowlingTeamId: _scoringController.bowlingTeamIdResolved,
         maxOvers: overs,
       ),
     );
   }
 
-  String _teamLabelForId(String teamId) {
-    if (teamId.isEmpty) return '—';
-    if (teamId == _fromTeamId) return _fromTeamName;
-    if (teamId == _toTeamId) return _toTeamName;
-    return 'Team';
-  }
-
   @override
   Widget build(BuildContext context) {
-    final titleMax =
-        (MediaQuery.sizeOf(context).width - 120).clamp(72.0, 160.0) / 2;
-    final leftTitle = _fromTeamName.isNotEmpty ? _fromTeamName : 'Loading…';
-    final rightTitle = _toTeamName.isNotEmpty ? _toTeamName : 'Loading…';
     return Scaffold(
       appBar: AppAppBar(
         centerTitle: true,
         titleSpacing: 8,
-        title: VsAppBarTitle(
-          leftName: leftTitle,
-          rightName: rightTitle,
-          maxNameWidth: titleMax,
-        ),
+        title: Obx(() {
+          final match = _scoringController.cricketMatch.value;
+          if (match == null || match.cricketState == null) {
+            return const Text('Start match');
+          }
+          final left = _scoringController.fromTeamName;
+          final right = _scoringController.toTeamName;
+          final leftLogo =
+              match.fromTeamHelper.getSubsetModel()?.logo;
+          final rightLogo = match.toTeamHelper.getSubsetModel()?.logo;
+          return VsAppBarTitle(
+            leftName: left.isNotEmpty ? left : '?',
+            rightName: right.isNotEmpty ? right : '?',
+            leftLogoUrl: leftLogo,
+            rightLogoUrl: rightLogo,
+          );
+        }),
       ),
       backgroundColor: const Color(AppColors.backgroundColor),
       body: HookBuilder(
@@ -931,22 +939,22 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
           );
 
           useEffect(() {
-            final m = metaQuery.data ?? sessionQuery.data;
-            if (m == null) return null;
+            final session = sessionQuery.data;
+            final meta = metaQuery.data;
+            final matchForSeed = session?.cricketState != null
+                ? session
+                : (meta ?? session);
+            final overs = oversQuery.data;
+            // Defer Rx writes — seeding during HookBuilder build marks Obx dirty mid-frame.
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (!mounted) return;
-              setState(() => _applyTeamLabelsFromMatch(m));
+              _scoringController.seedFromQuery(
+                match: matchForSeed,
+                overs: overs,
+              );
             });
             return null;
-          }, [metaQuery.data, sessionQuery.data]);
-
-          useEffect(() {
-            _scoringController.seedFromQuery(
-              match: sessionQuery.data,
-              overs: oversQuery.data,
-            );
-            return null;
-          }, [sessionQuery.data, oversQuery.data]);
+          }, [sessionQuery.data, metaQuery.data, oversQuery.data]);
 
           void retryColdLoad() {
             metaQuery.refetch();
@@ -989,16 +997,93 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
             );
           }
 
+          final queryMatch = metaQuery.data ?? sessionQuery.data;
           final metaPending = (metaQuery.isLoading ||
                   (metaQuery.isFetching && metaQuery.data == null)) &&
-              _fromTeamId.isEmpty &&
-              _toTeamId.isEmpty;
+              queryMatch == null;
 
           return Obx(() {
-            final match = _scoringController.cricketMatch.value;
+            final live = _scoringController.cricketMatch.value;
             final err = _scoringController.errorMessage.value;
+            final hasLiveState = live?.cricketState != null;
 
-            if (match == null) {
+            if (hasLiveState) {
+              final match = live!;
+              final innings = match.cricketState!.currentInnings;
+              final statusFooter = _buildStatusFooter(match);
+              final canScore = statusFooter == null;
+
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  Positioned.fill(
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.fromLTRB(
+                        16,
+                        12,
+                        16,
+                        canScore ? 96 : 24,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          CricketMatchStatsPanel(
+                            controller: _scoringController,
+                            teamLabelForId: _scoringController.teamLabelForId,
+                            onRetry: retryColdLoad,
+                          ),
+                          const SizedBox(height: 24),
+                          CricketLineupCard(
+                            controller: _scoringController,
+                            onThisOverTap: () => _openOversSheet(innings),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (statusFooter != null)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border(
+                            top: BorderSide(
+                              color: const Color(
+                                AppColors.dividerColor,
+                              ).withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ),
+                        child: SafeArea(
+                          top: false,
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                            child: statusFooter,
+                          ),
+                        ),
+                      ),
+                    ),
+                  // Overs FAB always; scoring FAB only while actively scoring.
+                  CricketScoreboardFabShell(
+                    onOpenControls: _openControlsSheet,
+                    onOpenOvers: () => _openOversSheet(innings),
+                    showScoringFab: canScore,
+                    showOversFab: true,
+                    fabBottomInset: statusFooter != null ? 120 : 16,
+                  ),
+                ],
+              );
+            }
+
+            if (metaPending) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            final startMatch = queryMatch ?? live;
+            if (startMatch == null) {
               return Center(
                 child: Padding(
                   padding: const EdgeInsets.all(24),
@@ -1012,64 +1097,24 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
               );
             }
 
-            if (match.cricketState == null) {
-              return CricketStartSessionPanel(
-                metaPending: metaPending,
-                fromTeamName: _fromTeamName,
-                toTeamName: _toTeamName,
-                fromTeamId: _fromTeamId,
-                toTeamId: _toTeamId,
-                battingTeamId: _battingTeamId,
-                onBattingTeamIdChanged: (id) =>
-                    setState(() => _battingTeamId = id),
-                maxOversController: _maxOversController,
-                onMaxOversChanged: () => setState(() {}),
-                minOvers: _minOvers,
-                maxOversLimit: _maxOversLimit,
-                isStarting:
-                    _scoringController.isCreatingCricketSession.value,
-                canStart: _canSubmitStart,
-                errorText: err,
-                onStart: _startCricketSession,
-              );
-            }
+            // Touch start-session observables so Obx rebuilds on pick/overs.
+            final battingId = _scoringController.battingTeamId.value;
+            final canStart = _scoringController.canSubmitStart;
+            final isStarting =
+                _scoringController.isCreatingCricketSession.value;
 
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-                    children: [
-                      CricketMatchStatsPanel(
-                        controller: _scoringController,
-                        teamLabelForId: _teamLabelForId,
-                        onRetry: retryColdLoad,
-                      ),
-                      const SizedBox(height: 10),
-                      CricketLineupCard(controller: _scoringController),
-                      const SizedBox(height: 10),
-                      CricketOversTable(
-                        controller: _scoringController,
-                        innings: match.cricketState!.currentInnings,
-                      ),
-                    ],
-                  ),
-                ),
-                Material(
-                  elevation: 10,
-                  shadowColor: Colors.black26,
-                  color: const Color(AppColors.backgroundColor),
-                  child: SafeArea(
-                    top: false,
-                    minimum: EdgeInsets.zero,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-                      child: _buildScoringFooter(match),
-                    ),
-                  ),
-                ),
-              ],
+            return CricketStartSessionPanel(
+              match: startMatch,
+              battingTeamId: battingId,
+              onBattingTeamIdChanged: _scoringController.setBattingTeamId,
+              maxOversController: _scoringController.maxOversController,
+              onMaxOversChanged: _scoringController.onMaxOversChanged,
+              minOvers: CricketScoringController.minOvers,
+              maxOversLimit: CricketScoringController.maxOversLimit,
+              isStarting: isStarting,
+              canStart: canStart,
+              errorText: err,
+              onStart: _startCricketSession,
             );
           });
         },

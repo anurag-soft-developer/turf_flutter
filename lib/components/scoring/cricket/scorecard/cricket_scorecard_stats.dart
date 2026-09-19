@@ -253,7 +253,7 @@ CricketTeamInningsScorecard? buildTeamInningsScorecard({
   });
 
   final yetToBat = battingXi
-      .map((player) => player.userIdHelper.getId())
+      .map((player) => player.participantId)
       .whereType<String>()
       .where((id) => id.isNotEmpty && !hasBatted.contains(id))
       .toList();

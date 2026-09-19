@@ -17,9 +17,11 @@ class BattleModeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final teamsLabel = nearbyTeamsCount == 1
-        ? '1 Team battling near you'
-        : '$nearbyTeamsCount Teams battling near you';
+    final teamsLabel = nearbyTeamsCount == 0
+        ? 'Teams battling near you'
+        : nearbyTeamsCount == 1
+            ? '1 Team battling near you'
+            : '$nearbyTeamsCount Teams battling near you';
 
     return Container(
       width: double.infinity,

@@ -178,6 +178,14 @@ class QueryKeys {
   static List<Object> matchChallengeDetail(String matchId) =>
       [...matchChallengeDetailPrefix, matchId];
 
+  static const casualOpponentSearchPrefix = ['casualOpponentSearch'];
+
+  static List<Object?> casualOpponentSearch({
+    required String fromTeamId,
+    required String query,
+  }) =>
+      [...casualOpponentSearchPrefix, fromTeamId, query];
+
   static const explorePostPrefix = ['explorePost'];
 
   static List<Object> explorePost(String postId) =>

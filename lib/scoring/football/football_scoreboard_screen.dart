@@ -212,10 +212,11 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final titleMax =
-        (MediaQuery.sizeOf(context).width - 120).clamp(72.0, 160.0) / 2;
     final leftTitle = _fromTeamName.isNotEmpty ? _fromTeamName : 'Loading…';
     final rightTitle = _toTeamName.isNotEmpty ? _toTeamName : 'Loading…';
+    final match = _controller.footballMatch.value;
+    final leftLogo = match?.fromTeamHelper.getSubsetModel()?.logo;
+    final rightLogo = match?.toTeamHelper.getSubsetModel()?.logo;
 
     return Scaffold(
       appBar: AppAppBar(
@@ -224,7 +225,8 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
         title: VsAppBarTitle(
           leftName: leftTitle,
           rightName: rightTitle,
-          maxNameWidth: titleMax,
+          leftLogoUrl: leftLogo,
+          rightLogoUrl: rightLogo,
         ),
       ),
       backgroundColor: const Color(AppColors.backgroundColor),

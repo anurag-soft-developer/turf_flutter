@@ -21,6 +21,18 @@ class MatchmakingService {
     return TeamMatchModel.fromJson(response);
   }
 
+  /// `POST /matchmaking/casual`
+  Future<TeamMatchModel?> createCasualMatch(
+    CreateCasualMatchRequest body,
+  ) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiConstants.matchmaking.casual,
+      data: body.toJson(),
+    );
+    if (response == null) return null;
+    return TeamMatchModel.fromJson(response);
+  }
+
   /// `GET /matchmaking/requests/:id`
   Future<TeamMatchModel?> getTeamMatchById(String matchId) async {
     final response = await _apiService.get<Map<String, dynamic>>(

@@ -23,7 +23,7 @@ const int kMatchmakingListRequestsMaxLimit = 50;
 // --- Enums (backend string values) ---
 
 /// Backend [TeamMatchSource].
-enum TeamMatchSource { feed }
+enum TeamMatchSource { feed, casual }
 
 /// Backend [TeamMatchStatus].
 enum TeamMatchStatus {
@@ -400,11 +400,67 @@ class TeamMatchModel {
 
   Map<String, dynamic> toJson() => _$TeamMatchModelToJson(this);
 
+  TeamMatchModel copyWith({
+    String? id,
+    TeamMatchSource? source,
+    dynamic fromTeam,
+    dynamic toTeam,
+    TeamSportType? sportType,
+    TeamMatchStatus? status,
+    String? statusUpdatedBy,
+    DateTime? statusUpdatedAt,
+    List<ProposedSlotModel>? proposedSlots,
+    List<ProposedTurfModel>? proposedTurfs,
+    String? selectedSlotProposalId,
+    String? selectedTurfProposalId,
+    LocationModel? venueLocation,
+    dynamic winnerTeam,
+    String? notes,
+    dynamic turfBookingId,
+    DateTime? expiresAt,
+    DateTime? closedAt,
+    List<AnnouncedPlayerModel>? announcedPlayers,
+    CricketStateModel? cricketState,
+    FootballStateModel? footballState,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return TeamMatchModel(
+      id: id ?? this.id,
+      source: source ?? this.source,
+      fromTeam: fromTeam ?? this.fromTeam,
+      toTeam: toTeam ?? this.toTeam,
+      sportType: sportType ?? this.sportType,
+      status: status ?? this.status,
+      statusUpdatedBy: statusUpdatedBy ?? this.statusUpdatedBy,
+      statusUpdatedAt: statusUpdatedAt ?? this.statusUpdatedAt,
+      proposedSlots: proposedSlots ?? this.proposedSlots,
+      proposedTurfs: proposedTurfs ?? this.proposedTurfs,
+      selectedSlotProposalId:
+          selectedSlotProposalId ?? this.selectedSlotProposalId,
+      selectedTurfProposalId:
+          selectedTurfProposalId ?? this.selectedTurfProposalId,
+      venueLocation: venueLocation ?? this.venueLocation,
+      winnerTeam: winnerTeam ?? this.winnerTeam,
+      notes: notes ?? this.notes,
+      turfBookingId: turfBookingId ?? this.turfBookingId,
+      expiresAt: expiresAt ?? this.expiresAt,
+      closedAt: closedAt ?? this.closedAt,
+      announcedPlayers: announcedPlayers ?? this.announcedPlayers,
+      cricketState: cricketState ?? this.cricketState,
+      footballState: footballState ?? this.footballState,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
   TeamRefFieldInstance get fromTeamHelper => TeamRefFieldInstance(fromTeam);
 
   TeamRefFieldInstance get toTeamHelper => TeamRefFieldInstance(toTeam);
 
   TeamRefFieldInstance get winnerTeamHelper => TeamRefFieldInstance(winnerTeam);
+
+  bool get isCasual => source == TeamMatchSource.casual;
 
   TurfBookingRefFieldInstance get turfBookingIdHelper =>
       TurfBookingRefFieldInstance(turfBookingId);
@@ -592,6 +648,21 @@ String _$teamMatchStatusToApiString(TeamMatchStatus s) => switch (s) {
 };
 
 // --- Request bodies ---
+
+class CreateCasualMatchRequest {
+  final String fromTeamId;
+  final String toTeamId;
+
+  const CreateCasualMatchRequest({
+    required this.fromTeamId,
+    required this.toTeamId,
+  });
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'fromTeamId': fromTeamId,
+    'toTeamId': toTeamId,
+  };
+}
 
 @JsonSerializable(includeIfNull: false)
 class SendMatchRequest {

@@ -9,8 +9,7 @@ import 'match_stats_error_card.dart';
 import 'match_stats_loading_card.dart';
 import 'match_status_chip.dart';
 
-/// Hero panel: batting side above the score, runs/wickets, then overs as
-/// current/max (e.g. `2.1 / 20 ov`) and innings index.
+/// Hero score: batting side, big runs/wickets, overs + run rate.
 ///
 /// Self-observes [CricketScoringController] so the parent does not need to wrap it
 /// in [Obx].
@@ -20,6 +19,12 @@ String _teamLabel(dynamic ref, String Function(String teamId) teamLabelForId) {
   final id = h.getId();
   if (id != null && id.isNotEmpty) return teamLabelForId(id);
   return h.getDisplayName();
+}
+
+String _runRateLabel(int runs, int legalBalls) {
+  if (legalBalls <= 0) return '—';
+  final rr = runs / (legalBalls / 6.0);
+  return rr.toStringAsFixed(1);
 }
 
 class CricketMatchStatsPanel extends StatelessWidget {
@@ -66,114 +71,67 @@ class CricketMatchStatsPanel extends StatelessWidget {
       final wickets = summary?.wickets ?? 0;
       final legalBalls = summary?.legalBalls ?? 0;
       final oversStr = oversFromBalls(legalBalls);
-
       final battingName = _teamLabel(cs.battingTeamId, teamLabelForId);
+      final rr = _runRateLabel(runs, legalBalls);
 
-      return Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 24,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        clipBehavior: Clip.antiAlias,
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(4, 4, 4, 0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              height: 4,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Color(AppColors.primaryColor),
-                    Color(AppColors.secondaryColor),
-                  ],
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.sports_cricket_rounded,
-                        size: 22,
-                        color: const Color(
-                          AppColors.primaryColor,
-                        ).withValues(alpha: 0.9),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        battingName,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
-                          color: Color(AppColors.textColor),
-                        ),
-                      ),
-                      const Spacer(),
-                      MatchStatusChip(status: match.status),
-                      if (loading) ...[
-                        const SizedBox(width: 8),
-                        SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: const Color(
-                              AppColors.primaryColor,
-                            ).withValues(alpha: 0.7),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  // Text(
-                  //   battingName,
-                  //   maxLines: 2,
-                  //   overflow: TextOverflow.ellipsis,
-                  //   style: const TextStyle(
-                  //     fontSize: 16,
-                  //     fontWeight: FontWeight.w600,
-                  //     height: 1.25,
-                  //     color: Color(AppColors.textColor),
-                  //   ),
-                  // ),
-                  // const SizedBox(height: 6),
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      '$runs/$wickets',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 44,
-                        height: 1.05,
-                        letterSpacing: -1,
-                        color: Color(AppColors.textColor),
-                      ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    battingName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                      color: Color(AppColors.textColor),
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    '$oversStr / ${cs.maxOvers} ov · Innings '
-                    '${cs.currentInnings}/${cs.inningsSummaries.length}',
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                      color: Color(AppColors.textSecondaryColor),
+                ),
+                MatchStatusChip(status: match.status),
+                if (loading) ...[
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: const Color(
+                        AppColors.primaryColor,
+                      ).withValues(alpha: 0.7),
                     ),
                   ),
                 ],
+              ],
+            ),
+            const SizedBox(height: 6),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                '$runs/$wickets',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 52,
+                  height: 1.0,
+                  letterSpacing: -1.5,
+                  color: Color(AppColors.textColor),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '$oversStr / ${cs.maxOvers} ov  ·  RR $rr  ·  '
+              'Inn ${cs.currentInnings}/${cs.inningsSummaries.length}',
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: Color(AppColors.textSecondaryColor),
               ),
             ),
           ],

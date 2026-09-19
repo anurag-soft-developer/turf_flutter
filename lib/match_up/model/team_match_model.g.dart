@@ -305,7 +305,10 @@ Map<String, dynamic> _$TeamMatchModelToJson(
   'updatedAt': instance.updatedAt?.toIso8601String(),
 };
 
-const _$TeamMatchSourceEnumMap = {TeamMatchSource.feed: 'feed'};
+const _$TeamMatchSourceEnumMap = {
+  TeamMatchSource.feed: 'feed',
+  TeamMatchSource.casual: 'casual',
+};
 
 const _$TeamSportTypeEnumMap = {
   TeamSportType.football: 'football',

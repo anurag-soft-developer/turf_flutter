@@ -24,6 +24,12 @@ class DashboardScreen extends StatelessWidget {
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
             actions: [
+              IconButton(
+                onPressed: () =>
+                    Get.toNamed(AppConstants.routes.matchUpCasual),
+                tooltip: 'Casual cricket match',
+                icon: const Icon(Icons.sports_cricket_rounded),
+              ),
               Obx(() {
                 final count = Get.find<PlayerDashboardController>()
                     .unreadNotificationCount

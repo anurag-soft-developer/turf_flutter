@@ -9,6 +9,7 @@ import '../../../match_up/model/team_match_model.dart';
 import '../../../scoring/cricket/cricket_scoring_controller.dart';
 import '../../../scoring/cricket/model/cricket_ball_event_model.dart';
 import '../../../scoring/cricket/model/cricket_scoring_models.dart';
+import 'cricket_this_over_strip.dart';
 
 /// User ids dismissed (out) in [innings], from over event ball data.
 Set<String> dismissedBatsmanUserIds(List<CricketOverEvent> overs, int innings) {
@@ -30,7 +31,7 @@ AnnouncedPlayerModel? announcedPlayerForUserId(
 ) {
   if (userId == null || userId.isEmpty) return null;
   for (final p in match.announcedPlayers) {
-    if (p.userIdHelper.getId() == userId) return p;
+    if (p.participantId == userId) return p;
   }
   return null;
 }
@@ -80,28 +81,21 @@ _BattingFigures battingFiguresForUser(
   return _BattingFigures(runs: runs, balls: balls);
 }
 
-List<CricketBallEvent> currentOverBallsForBowler(
+List<CricketBallEvent> latestOverBalls(
   List<CricketOverEvent> overs,
   int innings,
-  String? bowlerUserId,
 ) {
-  if (bowlerUserId == null || bowlerUserId.isEmpty) {
-    return const [];
-  }
-
-  CricketOverEvent? latestOver;
+  CricketOverEvent? latest;
   for (final over in overs) {
     if (over.innings != innings) continue;
-    final overBowlerId = UserFieldInstance(over.bowlerUserId).getId();
-    if (overBowlerId != bowlerUserId) continue;
-    if (latestOver == null ||
-        over.overAfter > latestOver.overAfter ||
-        over.sequence > latestOver.sequence) {
-      latestOver = over;
+    if (latest == null ||
+        over.overAfter > latest.overAfter ||
+        (over.overAfter == latest.overAfter &&
+            over.sequence > latest.sequence)) {
+      latest = over;
     }
   }
-
-  return latestOver?.ballEvents ?? const [];
+  return latest?.ballEvents ?? const [];
 }
 
 int _runsConcededInOver(List<CricketBallEvent> balls) {
@@ -112,36 +106,18 @@ int _runsConcededInOver(List<CricketBallEvent> balls) {
   return sum;
 }
 
-String _ballDeliveryLabel(CricketBallEvent ball) {
-  if (ball.isWicket) return 'W';
-  if (ball.extrasNoBall) {
-    return ball.runsOffBat > 0 ? '${ball.runsOffBat}Nb' : 'Nb';
-  }
-  if (ball.extrasWide > 0) {
-    return ball.totalRunsOnDelivery > 1
-        ? '${ball.totalRunsOnDelivery}Wd'
-        : 'Wd';
-  }
-  if (ball.extrasBye > 0) {
-    return '${ball.extrasBye}B';
-  }
-  if (ball.extrasLegBye > 0) {
-    return '${ball.extrasLegBye}Lb';
-  }
-  if (ball.runsOffBat == 0 && ball.totalRunsOnDelivery == 0) {
-    return '·';
-  }
-  return '${ball.runsOffBat}';
-}
-
-/// Striker, non-striker, and bowler with avatars; tap to pick from announced squads.
+/// Striker / non-striker cards in a row, plus bowler merged with this over.
 class CricketLineupCard extends StatefulWidget {
   const CricketLineupCard({
     super.key,
     required this.controller,
+    this.onThisOverTap,
   });
 
   final CricketScoringController controller;
+
+  /// Opens overs history from the merged bowler + this-over card.
+  final VoidCallback? onThisOverTap;
 
   @override
   State<CricketLineupCard> createState() => _CricketLineupCardState();
@@ -245,7 +221,7 @@ class _CricketLineupCardState extends State<CricketLineupCard> {
                   Builder(
                     builder: (context) {
                       final p = candidates[index];
-                      final uid = p.userIdHelper.getId() ?? '';
+                      final uid = p.participantId ?? '';
                       var disabled = uid.isEmpty;
                       if (role == _LineupRole.striker ||
                           role == _LineupRole.nonStriker) {
@@ -310,7 +286,7 @@ class _CricketLineupCardState extends State<CricketLineupCard> {
     );
 
     if (!mounted || picked == null) return;
-    final id = picked.userIdHelper.getId();
+    final id = picked.participantId;
     if (id == null || id.isEmpty) return;
 
     setState(() {
@@ -357,188 +333,123 @@ class _CricketLineupCardState extends State<CricketLineupCard> {
         cs.currentInnings,
         nId,
       );
-      final bowlerOverBalls = currentOverBallsForBowler(
-        overs,
-        cs.currentInnings,
-        bId,
-      );
-      final bowlerOverRuns = _runsConcededInOver(bowlerOverBalls);
+      final thisOverBalls = latestOverBalls(overs, cs.currentInnings);
+      final bowlerOverRuns = _runsConcededInOver(thisOverBalls);
+      final bowlerLegalBalls =
+          thisOverBalls.where((b) => b.isLegalDelivery).length;
+      final needsPick = sId == null ||
+          sId.isEmpty ||
+          nId == null ||
+          nId.isEmpty ||
+          bId == null ||
+          bId.isEmpty;
 
-      return Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade200),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.groups_rounded,
-                  size: 20,
-                  color: Colors.grey.shade700,
-                ),
-                const SizedBox(width: 8),
-                const Text(
-                  'Lineup',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                    color: Color(AppColors.textColor),
-                  ),
-                ),
-                if (busy) ...[
-                  const SizedBox(width: 10),
-                  const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                ],
-              ],
-            ),
-            if (sId == null ||
-                sId.isEmpty ||
-                nId == null ||
-                nId.isEmpty ||
-                bId == null ||
-                bId.isEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  'Select striker, non-striker and bowler from your squads.',
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+      final thisOverStrip = CricketThisOverStrip(
+        controller: widget.controller,
+        innings: cs.currentInnings,
+        onTap: widget.onThisOverTap,
+        embedded: true,
+      );
+
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (needsPick)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                'Tap a player to set striker, non-striker and bowler.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
                 ),
               ),
-            const SizedBox(height: 12),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: _BatsmanCard(
-                    label: 'Striker',
-                    labelIcon: Icons.flash_on_rounded,
-                    player: announcedPlayerForUserId(m, sId),
-                    fallbackUserField: cs.strikerUserId,
-                    runs: strikerFigures.runs,
-                    balls: strikerFigures.balls,
-                    busy: busy,
-                    onTap: busy
-                        ? null
-                        : () => _openPicker(
-                            context: context,
-                            match: m,
-                            cs: cs,
-                            role: _LineupRole.striker,
-                            dismissed: dismissed,
-                          ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _BatsmanCard(
-                    label: 'Non-striker',
-                    labelIcon: Icons.pause_circle_outline_rounded,
-                    player: announcedPlayerForUserId(m, nId),
-                    fallbackUserField: cs.nonStrikerUserId,
-                    runs: nonStrikerFigures.runs,
-                    balls: nonStrikerFigures.balls,
-                    busy: busy,
-                    onTap: busy
-                        ? null
-                        : () => _openPicker(
-                            context: context,
-                            match: m,
-                            cs: cs,
-                            role: _LineupRole.nonStriker,
-                            dismissed: dismissed,
-                          ),
-                  ),
-                ),
-              ],
             ),
-            const SizedBox(height: 10),
-            _BowlerCard(
-              player: announcedPlayerForUserId(m, bId),
-              fallbackUserField: cs.bowlerUserId,
-              overBalls: bowlerOverBalls,
-              overRuns: bowlerOverRuns,
-              busy: busy,
-              onTap: busy
-                  ? null
-                  : () => _openPicker(
-                      context: context,
-                      match: m,
-                      cs: cs,
-                      role: _LineupRole.bowler,
-                      dismissed: dismissed,
-                    ),
-            ),
-          ],
-        ),
+          Row(
+            children: [
+              Expanded(
+                child: _BatsmanCard(
+                  role: 'Striker',
+                  highlight: true,
+                  player: announcedPlayerForUserId(m, sId),
+                  fallbackUserField: cs.strikerUserId,
+                  figures: strikerFigures,
+                  busy: busy,
+                  onTap: busy
+                      ? null
+                      : () => _openPicker(
+                          context: context,
+                          match: m,
+                          cs: cs,
+                          role: _LineupRole.striker,
+                          dismissed: dismissed,
+                        ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: _BatsmanCard(
+                  role: 'Non-striker',
+                  player: announcedPlayerForUserId(m, nId),
+                  fallbackUserField: cs.nonStrikerUserId,
+                  figures: nonStrikerFigures,
+                  busy: busy,
+                  onTap: busy
+                      ? null
+                      : () => _openPicker(
+                          context: context,
+                          match: m,
+                          cs: cs,
+                          role: _LineupRole.nonStriker,
+                          dismissed: dismissed,
+                        ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          _BowlerOverCard(
+            player: announcedPlayerForUserId(m, bId),
+            fallbackUserField: cs.bowlerUserId,
+            overRuns: bowlerOverRuns,
+            overBalls: bowlerLegalBalls,
+            busy: busy,
+            onBowlerTap: busy
+                ? null
+                : () => _openPicker(
+                    context: context,
+                    match: m,
+                    cs: cs,
+                    role: _LineupRole.bowler,
+                    dismissed: dismissed,
+                  ),
+            thisOver: thisOverStrip,
+          ),
+        ],
       );
     });
   }
 }
 
-class _RoleLabel extends StatelessWidget {
-  const _RoleLabel({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 14, color: Colors.grey.shade600),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey.shade600,
-            letterSpacing: 0.2,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _BatsmanCard extends StatelessWidget {
   const _BatsmanCard({
-    required this.label,
-    required this.labelIcon,
+    required this.role,
     required this.player,
     required this.fallbackUserField,
-    required this.runs,
-    required this.balls,
+    required this.figures,
     required this.busy,
     required this.onTap,
+    this.highlight = false,
   });
 
-  final String label;
-  final IconData labelIcon;
+  final String role;
   final AnnouncedPlayerModel? player;
   final dynamic fallbackUserField;
-  final int runs;
-  final int balls;
+  final _BattingFigures figures;
   final bool busy;
   final VoidCallback? onTap;
+  final bool highlight;
 
   @override
   Widget build(BuildContext context) {
@@ -553,252 +464,122 @@ class _BatsmanCard extends StatelessWidget {
             UserFieldInstance(fallbackUserField).getId()!.isEmpty);
 
     return Material(
-      color: const Color(AppColors.backgroundColor),
-      borderRadius: BorderRadius.circular(14),
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 40, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: highlight
+                  ? const Color(AppColors.primaryColor).withValues(alpha: 0.45)
+                  : const Color(AppColors.dividerColor).withValues(alpha: 0.75),
+              width: highlight ? 1.5 : 1,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
                 children: [
-                  _RoleLabel(icon: labelIcon, label: label),
-                  const SizedBox(height: 10),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      CircleAvatar(
-                        radius: 18,
-                        backgroundColor: const Color(
-                          AppColors.primaryColor,
-                        ).withValues(alpha: 0.12),
-                        backgroundImage:
-                            avatarUrl != null && avatarUrl.isNotEmpty
-                            ? AppNetworkImage.provider(avatarUrl)
-                            : null,
-                        child: avatarUrl == null || avatarUrl.isEmpty
-                            ? Icon(
-                                Icons.person,
-                                size: 18,
-                                color: placeholder
-                                    ? Colors.grey.shade400
-                                    : const Color(AppColors.primaryColor),
-                              )
-                            : null,
+                  Expanded(
+                    child: Text(
+                      role.toUpperCase(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.4,
+                        color: highlight
+                            ? const Color(AppColors.primaryColor)
+                            : const Color(AppColors.textSecondaryColor),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              placeholder ? 'Tap to select' : name,
-                              softWrap: true,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                                height: 1.25,
-                                color: placeholder
-                                    ? Colors.grey.shade500
-                                    : const Color(AppColors.textColor),
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '$runs ($balls)',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: Color(AppColors.textSecondaryColor),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                    ),
+                  ),
+                  Icon(
+                    Icons.swap_horiz_rounded,
+                    size: 18,
+                    color: onTap != null && !busy
+                        ? const Color(AppColors.primaryColor)
+                        : Colors.grey.shade400,
                   ),
                 ],
               ),
-            ),
-            Positioned(
-              top: 4,
-              right: 4,
-              child: _LineupSwitchButton(onTap: onTap, busy: busy),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _BowlerCard extends StatelessWidget {
-  const _BowlerCard({
-    required this.player,
-    required this.fallbackUserField,
-    required this.overBalls,
-    required this.overRuns,
-    required this.busy,
-    required this.onTap,
-  });
-
-  final AnnouncedPlayerModel? player;
-  final dynamic fallbackUserField;
-  final List<CricketBallEvent> overBalls;
-  final int overRuns;
-  final bool busy;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final avatarUrl = player?.avatar;
-    final name =
-        player?.name ??
-        UserFieldInstance(fallbackUserField).getName() ??
-        'Select player';
-    final placeholder =
-        player == null &&
-        (UserFieldInstance(fallbackUserField).getId() == null ||
-            UserFieldInstance(fallbackUserField).getId()!.isEmpty);
-
-    return Material(
-      color: const Color(AppColors.backgroundColor),
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 40, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+              const SizedBox(height: 8),
+              Row(
                 children: [
-                  const _RoleLabel(
-                    icon: Icons.sports_baseball_rounded,
-                    label: 'Bowler',
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundColor: const Color(
+                      AppColors.primaryColor,
+                    ).withValues(alpha: 0.12),
+                    backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
+                        ? AppNetworkImage.provider(avatarUrl)
+                        : null,
+                    child: avatarUrl == null || avatarUrl.isEmpty
+                        ? Icon(
+                            Icons.person,
+                            size: 18,
+                            color: placeholder
+                                ? Colors.grey.shade400
+                                : const Color(AppColors.primaryColor),
+                          )
+                        : null,
                   ),
-                  const SizedBox(height: 10),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      CircleAvatar(
-                        radius: 18,
-                        backgroundColor: const Color(
-                          AppColors.primaryColor,
-                        ).withValues(alpha: 0.12),
-                        backgroundImage:
-                            avatarUrl != null && avatarUrl.isNotEmpty
-                            ? AppNetworkImage.provider(avatarUrl)
-                            : null,
-                        child: avatarUrl == null || avatarUrl.isEmpty
-                            ? Icon(
-                                Icons.person,
-                                size: 18,
-                                color: placeholder
-                                    ? Colors.grey.shade400
-                                    : const Color(AppColors.primaryColor),
-                              )
-                            : null,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              placeholder ? 'Tap to select' : name,
-                              softWrap: true,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                                height: 1.25,
-                                color: placeholder
-                                    ? Colors.grey.shade500
-                                    : const Color(AppColors.textColor),
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '$overRuns (${overBalls.length})',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: Color(AppColors.textSecondaryColor),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  if (overBalls.isEmpty)
-                    Text(
-                      'No balls bowled yet.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                      ),
-                    )
-                  else
-                    Wrap(
-                      spacing: 4,
-                      runSpacing: 4,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        for (final ball in overBalls)
-                          _DeliveryChip(
-                            label: _ballDeliveryLabel(ball),
-                            isWicket: ball.isWicket,
-                            isExtra: !ball.isLegalDelivery,
+                        Text(
+                          placeholder ? 'Tap to select' : name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                            color: placeholder
+                                ? Colors.grey.shade500
+                                : const Color(AppColors.textColor),
                           ),
+                        ),
+                        const SizedBox(height: 1),
+                        Text.rich(
+                          TextSpan(
+                            children: [
+                              TextSpan(
+                                text: '${figures.runs}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 16,
+                                  letterSpacing: -0.3,
+                                  color: Color(AppColors.textColor),
+                                ),
+                              ),
+                              TextSpan(
+                                text: ' (${figures.balls})',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 12,
+                                  color: Color(AppColors.textSecondaryColor),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
+                  ),
                 ],
               ),
-            ),
-            Positioned(
-              top: 4,
-              right: 4,
-              child: _LineupSwitchButton(onTap: onTap, busy: busy),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _LineupSwitchButton extends StatelessWidget {
-  const _LineupSwitchButton({required this.onTap, required this.busy});
-
-  final VoidCallback? onTap;
-  final bool busy;
-
-  @override
-  Widget build(BuildContext context) {
-    final enabled = onTap != null && !busy;
-
-    return Material(
-      color: Colors.transparent,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      child: InkWell(
-        onTap: enabled ? onTap : null,
-        borderRadius: BorderRadius.circular(10),
-        child: SizedBox(
-          width: 32,
-          height: 32,
-          child: Icon(
-            Icons.swap_horiz_rounded,
-            size: 18,
-            color: enabled
-                ? const Color(AppColors.primaryColor)
-                : Colors.grey.shade400,
+            ],
           ),
         ),
       ),
@@ -806,47 +587,140 @@ class _LineupSwitchButton extends StatelessWidget {
   }
 }
 
-class _DeliveryChip extends StatelessWidget {
-  const _DeliveryChip({
-    required this.label,
-    required this.isWicket,
-    required this.isExtra,
+class _BowlerOverCard extends StatelessWidget {
+  const _BowlerOverCard({
+    required this.player,
+    required this.fallbackUserField,
+    required this.overRuns,
+    required this.overBalls,
+    required this.busy,
+    required this.onBowlerTap,
+    required this.thisOver,
   });
 
-  final String label;
-  final bool isWicket;
-  final bool isExtra;
+  final AnnouncedPlayerModel? player;
+  final dynamic fallbackUserField;
+  final int overRuns;
+  final int overBalls;
+  final bool busy;
+  final VoidCallback? onBowlerTap;
+  final Widget thisOver;
 
   @override
   Widget build(BuildContext context) {
-    final Color background;
-    final Color foreground;
-    if (isWicket) {
-      background = const Color(0xFFFFE8E8);
-      foreground = const Color(0xFFB42318);
-    } else if (isExtra) {
-      background = const Color(0xFFFFF4E5);
-      foreground = const Color(0xFFB54708);
-    } else {
-      background = Colors.white;
-      foreground = const Color(AppColors.textColor);
-    }
+    final avatarUrl = player?.avatar;
+    final name =
+        player?.name ??
+        UserFieldInstance(fallbackUserField).getName() ??
+        'Select player';
+    final placeholder =
+        player == null &&
+        (UserFieldInstance(fallbackUserField).getId() == null ||
+            UserFieldInstance(fallbackUserField).getId()!.isEmpty);
 
-    return Container(
-      constraints: const BoxConstraints(minWidth: 28),
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: foreground.withValues(alpha: 0.2)),
-      ),
-      child: Text(
-        label,
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: foreground,
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: const Color(AppColors.dividerColor).withValues(alpha: 0.75),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: onBowlerTap,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(16),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 20,
+                        backgroundColor: const Color(
+                          AppColors.primaryColor,
+                        ).withValues(alpha: 0.12),
+                        backgroundImage:
+                            avatarUrl != null && avatarUrl.isNotEmpty
+                            ? AppNetworkImage.provider(avatarUrl)
+                            : null,
+                        child: avatarUrl == null || avatarUrl.isEmpty
+                            ? Icon(
+                                Icons.person,
+                                size: 20,
+                                color: placeholder
+                                    ? Colors.grey.shade400
+                                    : const Color(AppColors.primaryColor),
+                              )
+                            : null,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'BOWLER',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.4,
+                                color: Color(AppColors.textSecondaryColor),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              placeholder ? 'Tap to select' : name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15,
+                                color: placeholder
+                                    ? Colors.grey.shade500
+                                    : const Color(AppColors.textColor),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        '$overRuns ($overBalls)',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Color(AppColors.textSecondaryColor),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.swap_horiz_rounded,
+                        size: 18,
+                        color: onBowlerTap != null && !busy
+                            ? const Color(AppColors.primaryColor)
+                            : Colors.grey.shade400,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const Divider(height: 1, color: Color(AppColors.dividerColor)),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+              child: thisOver,
+            ),
+          ],
         ),
       ),
     );
