@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 
 import '../../../explore/model/explore_category.dart';
 import '../../../turf/feed/turf_list_controller.dart';
+import '../../config/constants.dart';
 import 'nav_tabs.dart';
 
 class PendingExploreNav {
@@ -37,7 +38,7 @@ class NavigationController extends GetxController {
   }
 
   void goToRank() {
-    changeTab(navTabIndex('Rank'));
+    Get.toNamed(AppConstants.routes.rank);
   }
 
   /// Switches to the Turfs tab and optionally applies a sport filter.

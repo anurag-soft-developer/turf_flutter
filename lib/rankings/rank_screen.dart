@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/components/shared/user_avatar_app_bar_action.dart';
 import 'package:get/get.dart';
 
 import '../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
@@ -73,7 +72,6 @@ class _RankScreenState extends State<RankScreen>
           headerSliverBuilder: (context, innerBoxIsScrolled) {
             return [
               const FloatingSliverAppBar(
-                leading: UserAvatarAppBarAction(),
                 title: Text('Rank'),
               ),
               PinnedSliverHeader(

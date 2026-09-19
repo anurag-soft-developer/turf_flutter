@@ -8,8 +8,7 @@ import 'package:get/get.dart';
 
 import '../../../dashboard/dashboard_screen.dart';
 import '../../../dashboard/player/player_dashboard_controller.dart';
-import '../../../rankings/rank_controller.dart';
-import '../../../rankings/rank_screen.dart';
+import '../../../scoreboard/scoreboard_screen.dart';
 import '../../../turf/feed/turf_list_controller.dart';
 import '../../../turf/feed/turf_list_screen.dart';
 import '../../query/query_keys.dart';
@@ -88,17 +87,10 @@ final List<NavTab> kNavTabs = [
     onRetap: () => _invalidate(QueryKeys.chatInbox),
   ),
   NavTab(
-    icon: Icons.emoji_events_outlined,
-    activeIcon: Icons.emoji_events,
-    label: 'Rank',
-    screenBuilder: () => const RankScreen(),
-    loadController: () => _ensure<RankController>(() => RankController()),
-    onRetap: () async {
-      await Future.wait([
-        _invalidate(QueryKeys.playerLeaderboardPrefix),
-        _invalidate(QueryKeys.teamLeaderboardPrefix),
-      ]);
-    },
+    icon: Icons.scoreboard_outlined,
+    activeIcon: Icons.scoreboard,
+    label: 'Scoreboard',
+    screenBuilder: () => const ScoreboardScreen(),
   ),
 ];
 

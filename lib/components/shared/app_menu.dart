@@ -52,6 +52,11 @@ class AppMenuScreen extends StatelessWidget {
         icon: Icons.sports_soccer_rounded,
         onTap: () => _navigateTo(AppConstants.routes.matchUpChallenges),
       ),
+      AppMenuItem(
+        title: 'Rank',
+        icon: Icons.emoji_events_rounded,
+        onTap: () => _navigateTo(AppConstants.routes.rank),
+      ),
       // AppMenuItem(
       //   title: 'Matches',
       //   icon: Icons.emoji_events_rounded,
