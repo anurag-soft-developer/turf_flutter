@@ -1,32 +1,35 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/config/constants.dart';
+import '../../core/config/constants.dart';
 
-/// Bottom-right FAB cluster for overs history and scoring controls.
-class CricketScoreboardFabShell extends StatelessWidget {
-  const CricketScoreboardFabShell({
+/// Bottom-right FAB cluster shared by cricket and football scoreboards.
+class ScoreboardFabShell extends StatelessWidget {
+  const ScoreboardFabShell({
     super.key,
     required this.onOpenControls,
-    required this.onOpenOvers,
-    this.showScoringFab = true,
-    this.showOversFab = true,
+    required this.onOpenSecondary,
+    required this.secondaryTooltip,
+    this.showControlsFab = true,
+    this.showSecondaryFab = true,
     this.fabBottomInset = 16,
   });
 
   final VoidCallback onOpenControls;
-  final VoidCallback onOpenOvers;
-  final bool showScoringFab;
-  final bool showOversFab;
-
-  /// Extra lift for the FAB cluster (e.g. above an innings-complete bar).
+  final VoidCallback onOpenSecondary;
+  final String secondaryTooltip;
+  final bool showControlsFab;
+  final bool showSecondaryFab;
   final double fabBottomInset;
 
   static const double _fabSize = 56;
   static const double _iconSize = 24;
 
+  static const IconData controlsIcon = Icons.sports_score_rounded;
+  static const IconData secondaryIcon = Icons.format_list_bulleted_rounded;
+
   @override
   Widget build(BuildContext context) {
-    if (!showScoringFab && !showOversFab) {
+    if (!showControlsFab && !showSecondaryFab) {
       return const SizedBox.shrink();
     }
 
@@ -39,21 +42,21 @@ class CricketScoreboardFabShell extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          if (showOversFab)
+          if (showSecondaryFab)
             _ScoreboardFab(
-              tooltip: 'Overs',
+              tooltip: secondaryTooltip,
               backgroundColor: Colors.white,
               foregroundColor: const Color(AppColors.textColor),
-              icon: Icons.format_list_numbered_rounded,
-              onPressed: onOpenOvers,
+              icon: secondaryIcon,
+              onPressed: onOpenSecondary,
             ),
-          if (showOversFab && showScoringFab) const SizedBox(height: 12),
-          if (showScoringFab)
+          if (showSecondaryFab && showControlsFab) const SizedBox(height: 12),
+          if (showControlsFab)
             _ScoreboardFab(
               tooltip: 'Score',
               backgroundColor: const Color(AppColors.primaryColor),
               foregroundColor: Colors.white,
-              icon: Icons.sports_cricket_rounded,
+              icon: controlsIcon,
               onPressed: onOpenControls,
             ),
         ],
@@ -91,11 +94,11 @@ class _ScoreboardFab extends StatelessWidget {
           customBorder: const CircleBorder(),
           onTap: onPressed,
           child: SizedBox(
-            width: CricketScoreboardFabShell._fabSize,
-            height: CricketScoreboardFabShell._fabSize,
+            width: ScoreboardFabShell._fabSize,
+            height: ScoreboardFabShell._fabSize,
             child: Icon(
               icon,
-              size: CricketScoreboardFabShell._iconSize,
+              size: ScoreboardFabShell._iconSize,
               color: foregroundColor,
             ),
           ),

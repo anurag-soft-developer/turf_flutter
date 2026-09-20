@@ -22,17 +22,25 @@ class _ScoreboardSportOption {
 class ScoreboardScreen extends StatelessWidget {
   const ScoreboardScreen({super.key});
 
-  static final _sports = <_ScoreboardSportOption>[
-    _ScoreboardSportOption(
-      sport: TeamSportType.cricket,
-      enabled: true,
-      onTap: () => Get.toNamed(AppConstants.routes.matchUpCasual),
-    ),
-    const _ScoreboardSportOption(
-      sport: TeamSportType.football,
-      enabled: false,
-    ),
-  ];
+  static List<_ScoreboardSportOption> get _sports => [
+        _ScoreboardSportOption(
+          sport: TeamSportType.cricket,
+          enabled: true,
+          onTap: () => _openCasualMatch(TeamSportType.cricket),
+        ),
+        _ScoreboardSportOption(
+          sport: TeamSportType.football,
+          enabled: true,
+          onTap: () => _openCasualMatch(TeamSportType.football),
+        ),
+      ];
+
+  static void _openCasualMatch(TeamSportType sport) {
+    Get.toNamed(
+      AppConstants.routes.matchUpCasual,
+      parameters: {'sport': sport.name},
+    );
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import '../match_up/team_logo.dart';
 import '../../core/config/constants.dart';
 import '../../match_up/model/team_match_model.dart';
+import 'util/announced_player_roles_helpers.dart';
 import 'casual_guest_sheets.dart';
 import 'manage_announced_players_controller.dart';
 
@@ -122,6 +123,7 @@ class _ManageAnnouncedPlayersSheetState
                               : () async {
                                   final draft = await showAddGuestSheet(
                                     context: context,
+                                    sport: widget.match.sportType,
                                   );
                                   if (draft == null) return;
                                   c.addPendingGuest(draft);
@@ -152,7 +154,10 @@ class _ManageAnnouncedPlayersSheetState
                           _PlayerCard(
                             name: g.name,
                             avatar: g.avatar,
-                            roleLabel: announcedRoleLabel(g.role),
+                            roleLabel: announcedRoleLabelForSport(
+                              widget.match.sportType,
+                              g.role,
+                            ),
                             selected: true,
                             showCheckbox: false,
                             onTap: null,
@@ -239,7 +244,10 @@ class _ManageAnnouncedPlayersSheetState
                                   return _PlayerCard(
                                     name: o.name,
                                     avatar: o.avatar,
-                                    roleLabel: announcedRoleLabel(o.role),
+                                    roleLabel: announcedRoleLabelForSport(
+                                      widget.match.sportType,
+                                      o.role,
+                                    ),
                                     selected: selected,
                                     highlight: true,
                                     onTap: saving
@@ -262,7 +270,8 @@ class _ManageAnnouncedPlayersSheetState
                                 return _PlayerCard(
                                   name: m.userHelper.getDisplayName(),
                                   avatar: m.userHelper.getAvatar(),
-                                  roleLabel: announcedRoleLabel(
+                                  roleLabel: announcedRoleLabelForSport(
+                                    widget.match.sportType,
                                     c.roleForUserId(uid),
                                   ),
                                   selected: selected,

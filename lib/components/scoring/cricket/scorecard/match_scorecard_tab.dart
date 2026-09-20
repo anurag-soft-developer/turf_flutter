@@ -11,7 +11,7 @@ import '../../../../scoring/cricket/cricket_scoring_api_service.dart';
 import '../../../../scoring/cricket/model/cricket_ball_event_model.dart';
 import '../../../../scoring/football/football_scoring_api_service.dart';
 import '../../../../scoring/football/model/football_match_event_model.dart';
-import '../../../../scoring/football/widgets/football_scorecard.dart';
+import '../../football/football_scorecard.dart';
 import '../../../../team/model/team_model.dart';
 import 'cricket_scorecard.dart';
 

@@ -1067,11 +1067,12 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
                       ),
                     ),
                   // Overs FAB always; scoring FAB only while actively scoring.
-                  CricketScoreboardFabShell(
+                  ScoreboardFabShell(
                     onOpenControls: _openControlsSheet,
-                    onOpenOvers: () => _openOversSheet(innings),
-                    showScoringFab: canScore,
-                    showOversFab: true,
+                    onOpenSecondary: () => _openOversSheet(innings),
+                    secondaryTooltip: 'Overs',
+                    showControlsFab: canScore,
+                    showSecondaryFab: true,
                     fabBottomInset: statusFooter != null ? 120 : 16,
                   ),
                 ],

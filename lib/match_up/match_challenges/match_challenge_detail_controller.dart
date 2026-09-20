@@ -104,7 +104,6 @@ class MatchChallengeDetailController extends GetxController
 
   bool get canStartScoring {
     if (!isCricketMatch && !isFootballMatch) return false;
-    if (isCasual && !isCricketMatch) return false;
     final status = match.value?.status;
     return status == TeamMatchStatus.accepted ||
         status == TeamMatchStatus.scheduleFinalized;

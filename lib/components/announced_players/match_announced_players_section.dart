@@ -5,7 +5,8 @@ import 'package:get/get.dart';
 import '../../core/config/constants.dart';
 import '../../match_up/announced_players/model/announced_player_model.dart';
 import '../../match_up/model/team_match_model.dart';
-import 'manage_announced_players_controller.dart';
+import '../../team/model/team_model.dart';
+import 'util/announced_player_roles_helpers.dart';
 import 'manage_announced_players_sheet.dart';
 
 /// Header row height: fits two lines of team title + vertical center with edit slot.
@@ -51,7 +52,7 @@ class MatchAnnouncedPlayersSection extends StatelessWidget {
   final Set<String>? editableTeamIds;
 
   static bool allowsAnnouncedPlayerEdits(TeamMatchModel m) {
-    if (m.cricketState != null) return false;
+    if (m.cricketState != null || m.footballState != null) return false;
     const terminal = {
       TeamMatchStatus.rejected,
       TeamMatchStatus.expired,
@@ -114,6 +115,7 @@ class MatchAnnouncedPlayersSection extends StatelessWidget {
         children: [
           Expanded(
             child: _TeamSquadBlock(
+              sport: match.sportType,
               teamLabel: fromName,
               players: fromPlayers,
               showEdit: canEditBase &&
@@ -130,6 +132,7 @@ class MatchAnnouncedPlayersSection extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: _TeamSquadBlock(
+              sport: match.sportType,
               teamLabel: toName,
               players: toPlayers,
               showEdit: canEditBase &&
@@ -151,12 +154,14 @@ class MatchAnnouncedPlayersSection extends StatelessWidget {
 
 class _TeamSquadBlock extends StatelessWidget {
   const _TeamSquadBlock({
+    required this.sport,
     required this.teamLabel,
     required this.players,
     required this.showEdit,
     required this.onEdit,
   });
 
+  final TeamSportType sport;
   final String teamLabel;
   final List<AnnouncedPlayerModel> players;
   final bool showEdit;
@@ -248,7 +253,10 @@ class _TeamSquadBlock extends StatelessWidget {
               itemCount: players.length,
               itemBuilder: (context, index) {
                 return Center(
-                  child: _AnnouncedPlayerChip(players[index]),
+                  child: _AnnouncedPlayerChip(
+                    sport: sport,
+                    player: players[index],
+                  ),
                 );
               },
             );
@@ -260,8 +268,12 @@ class _TeamSquadBlock extends StatelessWidget {
 }
 
 class _AnnouncedPlayerChip extends StatelessWidget {
-  const _AnnouncedPlayerChip(this.player);
+  const _AnnouncedPlayerChip({
+    required this.sport,
+    required this.player,
+  });
 
+  final TeamSportType sport;
   final AnnouncedPlayerModel player;
 
   void _openProfile() {
@@ -369,7 +381,7 @@ class _AnnouncedPlayerChip extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                announcedRoleLabel(player.role),
+                announcedRoleLabelForSport(sport, player.role),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,

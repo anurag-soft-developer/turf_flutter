@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../core/config/constants.dart';
-import '../football_scoring_controller.dart';
-import '../util/football_scoring_helpers.dart';
+import '../../../scoring/football/football_scoring_controller.dart';
+import '../../../scoring/football/util/football_scoring_helpers.dart';
 
 class FootballMatchTimer extends StatefulWidget {
   const FootballMatchTimer({
@@ -48,9 +48,8 @@ class _FootballMatchTimerState extends State<FootballMatchTimer> {
       _autoPauseInFlight = false;
     }
 
-    if (widget.enabled &&
-        !_autoPauseInFlight &&
-        shouldAutoPauseFootballTimer(fs)) {
+    // Auto-pause must run even when scoring is disabled (period footer visible).
+    if (!_autoPauseInFlight && shouldAutoPauseFootballTimer(fs)) {
       _autoPauseInFlight = true;
       unawaited(
         widget.controller.pauseFootballTimer().whenComplete(() {

@@ -8,7 +8,7 @@ export 'cricket_lineup_card.dart';
 export 'cricket_match_stats_panel.dart';
 export 'scoreboard/cricket_start_session_panel.dart';
 export 'cricket_overs_table.dart';
-export 'cricket_scoreboard_fab_shell.dart';
+export '../scoreboard_fab_shell.dart';
 export 'cricket_this_over_strip.dart';
 export 'cricket_player_selector.dart';
 export 'match_stats_error_card.dart';

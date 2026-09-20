@@ -4,9 +4,9 @@ import '../../../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
 import '../../../core/config/constants.dart';
 import '../../../core/models/user_field_instance.dart';
 import '../../../match_up/model/team_match_model.dart';
-import '../model/football_match_event_model.dart';
-import '../model/football_scoring_models.dart';
-import '../util/football_scoring_helpers.dart';
+import '../../../scoring/football/model/football_match_event_model.dart';
+import '../../../scoring/football/model/football_scoring_models.dart';
+import '../../../scoring/football/util/football_scoring_helpers.dart';
 
 class FootballScorecard extends StatelessWidget {
   const FootballScorecard({

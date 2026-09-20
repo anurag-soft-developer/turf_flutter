@@ -11,6 +11,8 @@ import '../../core/models/media_upload_models.dart';
 import '../../core/services/media_upload_service.dart';
 import '../../core/utils/app_snackbar.dart';
 import '../../match_up/announced_players/model/announced_player_model.dart';
+import '../../team/model/team_model.dart';
+import 'util/announced_player_roles_helpers.dart';
 
 /// Draft guest collected in the UI; persisted only when the parent sheet saves.
 class GuestDraft {
@@ -46,7 +48,10 @@ class GuestDraft {
 }
 
 /// Collects walk-in guest details without writing to the backend.
-Future<GuestDraft?> showAddGuestSheet({required BuildContext context}) {
+Future<GuestDraft?> showAddGuestSheet({
+  required BuildContext context,
+  required TeamSportType sport,
+}) {
   return showModalBottomSheet<GuestDraft>(
     context: context,
     isScrollControlled: true,
@@ -55,21 +60,39 @@ Future<GuestDraft?> showAddGuestSheet({required BuildContext context}) {
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
-    builder: (ctx) => const _AddGuestSheet(),
+    builder: (ctx) => _AddGuestSheet(sport: sport),
   );
 }
 
 class _AddGuestSheet extends HookWidget {
-  const _AddGuestSheet();
+  const _AddGuestSheet({required this.sport});
+
+  final TeamSportType sport;
+
+  static const _fieldDecoration = InputDecoration(
+    border: OutlineInputBorder(),
+    isDense: true,
+    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+  );
 
   @override
   Widget build(BuildContext context) {
+    final roleOptions = useMemoized(
+      () => announcedRolesForSport(sport),
+      [sport],
+    );
     final nameController = useTextEditingController();
-    final role = useState(AnnouncedPlayerRole.batsman);
+    final role = useState(defaultAnnouncedRoleForSport(sport));
     final isSubstitute = useState(false);
     final avatarUrl = useState<String?>(null);
     final uploading = useState(false);
     final picker = useMemoized(ImagePicker.new);
+
+    useEffect(() {
+      if (roleOptions.contains(role.value)) return null;
+      role.value = roleOptions.first;
+      return null;
+    }, [roleOptions]);
 
     Future<void> pickAvatar(ImageSource source) async {
       final file = await ImageSourcePicker.pickSingle(
@@ -191,44 +214,24 @@ class _AddGuestSheet extends HookWidget {
             TextField(
               controller: nameController,
               textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(
-                labelText: 'Name',
-                border: OutlineInputBorder(),
-              ),
+              decoration: _fieldDecoration.copyWith(labelText: 'Name'),
             ),
             const SizedBox(height: 12),
-            InputDecorator(
-              decoration: const InputDecoration(
-                labelText: 'Role',
-                border: OutlineInputBorder(),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<AnnouncedPlayerRole>(
-                  isExpanded: true,
-                  value: role.value,
-                  items: const [
-                    DropdownMenuItem(
-                      value: AnnouncedPlayerRole.batsman,
-                      child: Text('Batsman'),
-                    ),
-                    DropdownMenuItem(
-                      value: AnnouncedPlayerRole.bowler,
-                      child: Text('Bowler'),
-                    ),
-                    DropdownMenuItem(
-                      value: AnnouncedPlayerRole.allrounder,
-                      child: Text('All-rounder'),
-                    ),
-                    DropdownMenuItem(
-                      value: AnnouncedPlayerRole.wicketKeeper,
-                      child: Text('Wicket-keeper'),
-                    ),
-                  ],
-                  onChanged: (v) {
-                    if (v != null) role.value = v;
-                  },
-                ),
-              ),
+            DropdownButtonFormField<AnnouncedPlayerRole>(
+              key: ValueKey(role.value),
+              initialValue: role.value,
+              isExpanded: true,
+              decoration: _fieldDecoration.copyWith(labelText: 'Role'),
+              items: [
+                for (final option in roleOptions)
+                  DropdownMenuItem(
+                    value: option,
+                    child: Text(announcedRoleLabelForSport(sport, option)),
+                  ),
+              ],
+              onChanged: (v) {
+                if (v != null) role.value = v;
+              },
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,

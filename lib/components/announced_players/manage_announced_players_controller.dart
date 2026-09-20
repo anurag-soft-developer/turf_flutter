@@ -9,25 +9,8 @@ import '../../match_up/announced_players/model/announced_player_model.dart';
 import '../../match_up/model/team_match_model.dart';
 import '../../team/members/model/team_member_model.dart';
 import '../../team/members/team_member_service.dart';
-import '../../team/model/team_model.dart' show TeamSportType;
+import 'util/announced_player_roles_helpers.dart';
 import 'casual_guest_sheets.dart';
-
-AnnouncedPlayerRole defaultAnnouncedRoleForSport(TeamSportType sport) {
-  return switch (sport) {
-    TeamSportType.cricket => AnnouncedPlayerRole.batsman,
-    TeamSportType.football => AnnouncedPlayerRole.allrounder,
-    _ => AnnouncedPlayerRole.allrounder,
-  };
-}
-
-String announcedRoleLabel(AnnouncedPlayerRole role) {
-  return switch (role) {
-    AnnouncedPlayerRole.batsman => 'Batsman',
-    AnnouncedPlayerRole.bowler => 'Bowler',
-    AnnouncedPlayerRole.allrounder => 'All-rounder',
-    AnnouncedPlayerRole.wicketKeeper => 'Wicket-keeper',
-  };
-}
 
 class GuestRowVm {
   const GuestRowVm({

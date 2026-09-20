@@ -7,6 +7,8 @@ import 'package:get/get.dart';
 
 import '../../components/scoring/cricket/match_stats_error_card.dart';
 import '../../components/scoring/cricket/vs_app_bar_title.dart';
+import '../../components/scoring/football/football_components.dart';
+import '../../components/scoring/football/football_event_player_sheet.dart';
 import '../../core/components/app_bar/app_bar_background.dart';
 import '../../core/config/constants.dart';
 import '../../core/query/query_keys.dart';
@@ -18,8 +20,7 @@ import 'football_scoring_api_service.dart';
 import 'football_scoring_controller.dart';
 import 'model/football_match_event_model.dart';
 import 'model/football_scoring_models.dart';
-import 'widgets/football_components.dart';
-import 'widgets/football_event_player_sheet.dart';
+import 'util/football_scoring_helpers.dart';
 
 class FootballScoreboardScreen extends StatefulWidget {
   const FootballScoreboardScreen({super.key});
@@ -33,16 +34,14 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
   late final FootballScoringController _controller;
 
   late final String _teamMatchId;
-  String _fromTeamName = '';
-  String _toTeamName = '';
-  String _fromTeamId = '';
-  String _toTeamId = '';
 
   final TextEditingController _matchMinuteController =
       TextEditingController(text: '90');
 
-  static const int _minMatchMinutes = 5;
+  static const int _minMatchMinutes = 2;
   static const int _maxMatchMinutes = 90;
+
+  bool _eventFlowInProgress = false;
 
   @override
   void initState() {
@@ -63,13 +62,6 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
     super.dispose();
   }
 
-  void _applyTeamLabelsFromMatch(TeamMatchModel m) {
-    _fromTeamId = m.fromTeamHelper.getId() ?? '';
-    _toTeamId = m.toTeamHelper.getId() ?? '';
-    _fromTeamName = m.fromTeamHelper.getDisplayName();
-    _toTeamName = m.toTeamHelper.getDisplayName();
-  }
-
   int? _parsedMatchMinute() {
     final t = _matchMinuteController.text.trim();
     if (t.isEmpty) return null;
@@ -82,29 +74,38 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
 
   bool get _canStartSession => _parsedMatchMinute() != null;
 
-  Future<void> _onEventTap(FootballEventKind kind) async {
+  Future<void> _onEventTap(
+    FootballEventKind kind, {
+    required BuildContext modalContext,
+  }) async {
+    if (_eventFlowInProgress) return;
     final match = _controller.footballMatch.value;
     if (match == null) return;
 
+    _eventFlowInProgress = true;
     final payload = await FootballEventPlayerSheet.show(
-      context: context,
+      context: modalContext,
       kind: kind,
       match: match,
-      fromTeamId: _fromTeamId,
-      toTeamId: _toTeamId,
-      teamLabelForId: _teamLabelForId,
+      fromTeamId: _controller.fromTeamId,
+      toTeamId: _controller.toTeamId,
+      teamLabelForId: _controller.teamLabelForId,
     );
-    if (!mounted || payload == null) return;
+    try {
+      if (!mounted || payload == null) return;
 
-    final event = await _controller.appendFootballEvent(
-      AppendFootballEventRequest(payload: payload),
-    );
-    if (!mounted) return;
-    if (event == null) {
-      AppSnackbar.error(
-        title: 'Update failed',
-        message: _controller.errorMessage.value ?? 'Could not record event.',
+      final event = await _controller.appendFootballEvent(
+        AppendFootballEventRequest(payload: payload),
       );
+      if (!mounted) return;
+      if (event == null) {
+        AppSnackbar.error(
+          title: 'Update failed',
+          message: _controller.errorMessage.value ?? 'Could not record event.',
+        );
+      }
+    } finally {
+      _eventFlowInProgress = false;
     }
   }
 
@@ -203,31 +204,250 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
     );
   }
 
-  String _teamLabelForId(String teamId) {
-    if (teamId.isEmpty) return '—';
-    if (teamId == _fromTeamId) return _fromTeamName;
-    if (teamId == _toTeamId) return _toTeamName;
-    return 'Team';
+  Future<void> _onPeriodFooterAction(FootballStateModel fs) async {
+    final hasNextInning = fs.currentInnings < fs.inningsSummaries.length;
+    if (hasNextInning && shouldShowFootballStartNextInning(fs)) {
+      await _changeInning();
+    } else {
+      await _completeMatch();
+    }
+  }
+
+  Widget? _buildStatusFooter(TeamMatchModel match) {
+    final fs = match.footballState;
+    if (fs == null) return null;
+
+    if (match.status == TeamMatchStatus.completed ||
+        match.status == TeamMatchStatus.draw) {
+      return _buildMatchCompletedFooter();
+    }
+
+    if (shouldShowFootballStartNextInning(fs)) {
+      return _buildPeriodTransitionFooter(fs);
+    }
+
+    if (shouldShowFootballEndMatchFooter(fs)) {
+      return _buildPeriodTransitionFooter(fs);
+    }
+
+    return null;
+  }
+
+  Widget _buildPeriodTransitionFooter(FootballStateModel fs) {
+    final hasNextInning = fs.currentInnings < fs.inningsSummaries.length;
+    final busy = hasNextInning
+        ? _controller.isChangingInning.value
+        : _controller.isCompletingFootballMatch.value;
+    final buttonLabel =
+        hasNextInning ? 'Start next innings' : 'End match';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text(
+          'Period complete',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
+            color: Color(AppColors.textColor),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          hasNextInning
+              ? 'Start the next period when both teams are ready.'
+              : 'Confirm to finish the match.',
+          style: const TextStyle(
+            fontSize: 13,
+            height: 1.35,
+            color: Color(AppColors.textSecondaryColor),
+          ),
+        ),
+        const SizedBox(height: 12),
+        FilledButton(
+          onPressed: busy ? null : () => _onPeriodFooterAction(fs),
+          style: FilledButton.styleFrom(
+            minimumSize: const Size.fromHeight(48),
+            backgroundColor: const Color(AppColors.primaryColor),
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+          child: busy
+              ? const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(buttonLabel),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMatchCompletedFooter() {
+    return const Row(
+      children: [
+        Icon(
+          Icons.emoji_events_rounded,
+          color: Color(AppColors.primaryColor),
+        ),
+        SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            'Match completed',
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 16,
+              color: Color(AppColors.textColor),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _openScoringSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      useRootNavigator: false,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 8, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.only(left: 8),
+                        child: Text(
+                          'Record event',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 17,
+                            color: Color(AppColors.textColor),
+                          ),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(right: 8, top: 4),
+                  child: FootballActionButtons(
+                    controller: _controller,
+                    onEventTap: (kind) {
+                      unawaited(_onEventTap(kind, modalContext: ctx));
+                    },
+                    onUndo: _undo,
+                    onRedo: _redo,
+                    onComplete: _completeMatch,
+                    onChangeInning: _changeInning,
+                    showPeriodActions: false,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _openEventsSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      useRootNavigator: false,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        final height = MediaQuery.sizeOf(ctx).height * 0.65;
+        return SafeArea(
+          child: SizedBox(
+            height: height,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
+                  child: Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Events',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 17,
+                            color: Color(AppColors.textColor),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: FootballEventsTimeline(controller: _controller),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final leftTitle = _fromTeamName.isNotEmpty ? _fromTeamName : 'Loading…';
-    final rightTitle = _toTeamName.isNotEmpty ? _toTeamName : 'Loading…';
-    final match = _controller.footballMatch.value;
-    final leftLogo = match?.fromTeamHelper.getSubsetModel()?.logo;
-    final rightLogo = match?.toTeamHelper.getSubsetModel()?.logo;
-
     return Scaffold(
       appBar: AppAppBar(
         centerTitle: true,
         titleSpacing: 8,
-        title: VsAppBarTitle(
-          leftName: leftTitle,
-          rightName: rightTitle,
-          leftLogoUrl: leftLogo,
-          rightLogoUrl: rightLogo,
-        ),
+        title: Obx(() {
+          final match = _controller.footballMatch.value;
+          if (match == null || match.footballState == null) {
+            return const Text('Start match');
+          }
+          final leftLogo = match.fromTeamHelper.getSubsetModel()?.logo;
+          final rightLogo = match.toTeamHelper.getSubsetModel()?.logo;
+          return VsAppBarTitle(
+            leftName: _controller.fromTeamName.isNotEmpty
+                ? _controller.fromTeamName
+                : '?',
+            rightName: _controller.toTeamName.isNotEmpty
+                ? _controller.toTeamName
+                : '?',
+            leftLogoUrl: leftLogo,
+            rightLogoUrl: rightLogo,
+          );
+        }),
       ),
       backgroundColor: const Color(AppColors.backgroundColor),
       body: HookBuilder(
@@ -280,16 +500,6 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
           );
 
           useEffect(() {
-            final m = metaQuery.data ?? sessionQuery.data;
-            if (m == null) return null;
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!mounted) return;
-              setState(() => _applyTeamLabelsFromMatch(m));
-            });
-            return null;
-          }, [metaQuery.data, sessionQuery.data]);
-
-          useEffect(() {
             final fs = sessionQuery.data?.footballState;
             if (fs?.matchMinute != null &&
                 _matchMinuteController.text.isEmpty) {
@@ -299,12 +509,15 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
           }, [sessionQuery.data]);
 
           useEffect(() {
-            _controller.seedFromQuery(
-              match: sessionQuery.data,
-              events: eventsQuery.data,
-            );
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              _controller.seedFromQuery(
+                match: sessionQuery.data ?? metaQuery.data,
+                events: eventsQuery.data,
+              );
+            });
             return null;
-          }, [sessionQuery.data, eventsQuery.data]);
+          }, [sessionQuery.data, metaQuery.data, eventsQuery.data]);
 
           void retryColdLoad() {
             metaQuery.refetch();
@@ -347,16 +560,93 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
             );
           }
 
+          final queryMatch = metaQuery.data ?? sessionQuery.data;
           final metaPending = (metaQuery.isLoading ||
                   (metaQuery.isFetching && metaQuery.data == null)) &&
-              _fromTeamId.isEmpty &&
-              _toTeamId.isEmpty;
+              queryMatch == null;
 
           return Obx(() {
-            final match = _controller.footballMatch.value;
+            final live = _controller.footballMatch.value;
             final err = _controller.errorMessage.value;
+            final hasLiveState = live?.footballState != null;
 
-            if (match == null) {
+            if (hasLiveState) {
+              final match = live!;
+              final statusFooter = _buildStatusFooter(match);
+              final canScore = statusFooter == null;
+
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  Positioned.fill(
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.fromLTRB(
+                        16,
+                        12,
+                        16,
+                        canScore ? 96 : 24,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          FootballMatchStatsPanel(
+                            controller: _controller,
+                            fromTeamName: _controller.fromTeamName,
+                            toTeamName: _controller.toTeamName,
+                            onRetry: retryColdLoad,
+                          ),
+                          const SizedBox(height: 24),
+                          FootballMatchTimer(
+                            controller: _controller,
+                            enabled: canScore,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (statusFooter != null)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border(
+                            top: BorderSide(
+                              color: const Color(
+                                AppColors.dividerColor,
+                              ).withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ),
+                        child: SafeArea(
+                          top: false,
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                            child: statusFooter,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ScoreboardFabShell(
+                    onOpenControls: _openScoringSheet,
+                    onOpenSecondary: _openEventsSheet,
+                    secondaryTooltip: 'Events',
+                    showControlsFab: canScore,
+                    showSecondaryFab: true,
+                    fabBottomInset: statusFooter != null ? 120 : 16,
+                  ),
+                ],
+              );
+            }
+
+            if (metaPending) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            final startMatch = queryMatch ?? live;
+            if (startMatch == null) {
               return Center(
                 child: Padding(
                   padding: const EdgeInsets.all(24),
@@ -370,9 +660,9 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
               );
             }
 
-            if (match.footballState == null) {
+            if (startMatch.footballState == null) {
               return FootballStartSessionPanel(
-                metaPending: metaPending,
+                metaPending: false,
                 matchMinuteController: _matchMinuteController,
                 isStarting: _controller.isCreatingFootballSession.value,
                 canStart: _canStartSession,
@@ -384,85 +674,7 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
               );
             }
 
-            final completed = match.status == TeamMatchStatus.completed ||
-                match.status == TeamMatchStatus.draw;
-
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-                    children: [
-                      FootballMatchStatsPanel(
-                        controller: _controller,
-                        fromTeamName: _fromTeamName,
-                        toTeamName: _toTeamName,
-                        onRetry: retryColdLoad,
-                      ),
-                      const SizedBox(height: 10),
-                      FootballMatchTimer(
-                        controller: _controller,
-                        enabled: !completed,
-                      ),
-                      const SizedBox(height: 10),
-                      FootballEventsTimeline(controller: _controller),
-                    ],
-                  ),
-                ),
-                if (!completed)
-                  Material(
-                    elevation: 10,
-                    shadowColor: Colors.black26,
-                    color: const Color(AppColors.backgroundColor),
-                    child: SafeArea(
-                      top: false,
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-                        child: FootballActionButtons(
-                          controller: _controller,
-                          onEventTap: _onEventTap,
-                          onUndo: _undo,
-                          onRedo: _redo,
-                          onComplete: _completeMatch,
-                          onChangeInning: _changeInning,
-                        ),
-                      ),
-                    ),
-                  )
-                else
-                  SafeArea(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: const Row(
-                          children: [
-                            Icon(
-                              Icons.emoji_events_rounded,
-                              color: Color(AppColors.primaryColor),
-                            ),
-                            SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                'Match completed',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(AppColors.textColor),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            );
+            return const SizedBox.shrink();
           });
         },
       ),

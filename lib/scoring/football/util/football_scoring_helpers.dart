@@ -5,13 +5,26 @@ import '../../../match_up/model/team_match_model.dart';
 import '../model/football_match_event_model.dart';
 import '../model/football_scoring_models.dart';
 
+/// Compares match / announced-player team refs (string or populated subset).
+bool footballTeamIdsMatch(String? a, String? b) {
+  if (a == null || b == null) return false;
+  final left = a.trim();
+  final right = b.trim();
+  if (left.isEmpty || right.isEmpty) return false;
+  return left == right;
+}
+
 List<AnnouncedPlayerModel> playingXiForTeam(
   TeamMatchModel match,
   String teamId,
 ) {
   if (teamId.isEmpty) return const [];
   return match.announcedPlayers
-      .where((p) => p.teamIdHelper.getId() == teamId && !p.isSubstitute)
+      .where(
+        (p) =>
+            footballTeamIdsMatch(p.teamIdHelper.getId(), teamId) &&
+            !p.isSubstitute,
+      )
       .toList();
 }
 
@@ -123,6 +136,17 @@ bool shouldShowFootballStartNextInning(
 
 bool canEndFootballMatch(FootballStateModel fs) =>
     fs.currentInnings >= fs.inningsSummaries.length;
+
+/// Full time on the last scheduled regulation half (e.g. 2nd half of a 2-innings match).
+bool shouldShowFootballEndMatchFooter(
+  FootballStateModel fs, [
+  DateTime? now,
+]) {
+  if (fs.inningsSummaries.isEmpty) return false;
+  if (fs.currentInnings < fs.inningsSummaries.length) return false;
+  if (!isFootballRegulationPeriod(fs.currentPeriod)) return false;
+  return isFootballRegulationTimerReached(fs, now);
+}
 
 String formatFootballTimer(int elapsedMs) {
   final totalSeconds = elapsedMs ~/ 1000;

@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../core/config/constants.dart';
 import '../../../match_up/announced_players/model/announced_player_model.dart';
 import '../../../match_up/model/team_match_model.dart';
-import '../model/football_match_event_model.dart';
-import '../model/football_scoring_models.dart';
-import '../util/football_scoring_helpers.dart';
+import '../../../scoring/football/model/football_match_event_model.dart';
+import '../../../scoring/football/model/football_scoring_models.dart';
+import '../../../scoring/football/util/football_scoring_helpers.dart';
 
 /// Bottom sheet to collect players/teams for a football scoring event.
 class FootballEventPlayerSheet {
@@ -21,17 +21,21 @@ class FootballEventPlayerSheet {
   }) {
     return showModalBottomSheet<FootballEventPayload>(
       context: context,
+      useRootNavigator: false,
       isScrollControlled: true,
+      isDismissible: true,
+      enableDrag: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => _FootballEventSheetBody(
+      builder: (sheetContext) => _FootballEventSheetBody(
         kind: kind,
         match: match,
         fromTeamId: fromTeamId,
         toTeamId: toTeamId,
         teamLabelForId: teamLabelForId,
+        sheetModalContext: sheetContext,
       ),
     );
   }
@@ -44,6 +48,7 @@ class _FootballEventSheetBody extends StatefulWidget {
     required this.fromTeamId,
     required this.toTeamId,
     required this.teamLabelForId,
+    required this.sheetModalContext,
   });
 
   final FootballEventKind kind;
@@ -51,6 +56,7 @@ class _FootballEventSheetBody extends StatefulWidget {
   final String fromTeamId;
   final String toTeamId;
   final String Function(String teamId) teamLabelForId;
+  final BuildContext sheetModalContext;
 
   @override
   State<_FootballEventSheetBody> createState() => _FootballEventSheetBodyState();
@@ -100,7 +106,11 @@ class _FootballEventSheetBodyState extends State<_FootballEventSheetBody> {
               const SizedBox(height: 8),
               _teamPicker(
                 selectedId: _beneficiaryTeamId,
-                onSelected: (id) => setState(() => _beneficiaryTeamId = id),
+                onSelected: (id) => setState(() {
+                  _beneficiaryTeamId = id;
+                  _playerUserId = null;
+                  _secondPlayerUserId = null;
+                }),
               ),
               const SizedBox(height: 12),
             ],
@@ -202,7 +212,9 @@ class _FootballEventSheetBodyState extends State<_FootballEventSheetBody> {
 
   String? _otherTeam(String? beneficiaryId) {
     if (beneficiaryId == null || beneficiaryId.isEmpty) return null;
-    if (beneficiaryId == widget.fromTeamId) return widget.toTeamId;
+    if (footballTeamIdsMatch(beneficiaryId, widget.fromTeamId)) {
+      return widget.toTeamId;
+    }
     return widget.fromTeamId;
   }
 
@@ -215,7 +227,7 @@ class _FootballEventSheetBodyState extends State<_FootballEventSheetBody> {
         Expanded(
           child: _TeamTile(
             label: widget.teamLabelForId(widget.fromTeamId),
-            selected: selectedId == widget.fromTeamId,
+            selected: footballTeamIdsMatch(selectedId, widget.fromTeamId),
             onTap: () => onSelected(widget.fromTeamId),
           ),
         ),
@@ -223,7 +235,7 @@ class _FootballEventSheetBodyState extends State<_FootballEventSheetBody> {
         Expanded(
           child: _TeamTile(
             label: widget.teamLabelForId(widget.toTeamId),
-            selected: selectedId == widget.toTeamId,
+            selected: footballTeamIdsMatch(selectedId, widget.toTeamId),
             onTap: () => onSelected(widget.toTeamId),
           ),
         ),
@@ -248,11 +260,11 @@ class _FootballEventSheetBodyState extends State<_FootballEventSheetBody> {
     var players = playingXiForTeam(widget.match, teamId);
     if (excludeUserId != null && excludeUserId.isNotEmpty) {
       players = players
-          .where((p) => p.userIdHelper.getId() != excludeUserId)
+          .where((p) => p.participantId != excludeUserId)
           .toList();
     }
     final selectedName = players
-        .where((p) => p.userIdHelper.getId() == selectedUserId)
+        .where((p) => p.participantId == selectedUserId)
         .map((p) => p.name)
         .firstOrNull;
 
@@ -265,8 +277,14 @@ class _FootballEventSheetBodyState extends State<_FootballEventSheetBody> {
           onPressed: players.isEmpty
               ? null
               : () async {
-                  final picked = await _pickPlayer(context, label, players);
-                  if (picked != null) onSelected(picked);
+                  final picked = await _pickPlayer(
+                    widget.sheetModalContext,
+                    label,
+                    players,
+                  );
+                  if (picked != null && picked.isNotEmpty) {
+                    onSelected(picked);
+                  }
                 },
           style: OutlinedButton.styleFrom(
             foregroundColor: const Color(AppColors.textColor),
@@ -291,12 +309,17 @@ class _FootballEventSheetBodyState extends State<_FootballEventSheetBody> {
   }
 
   Future<String?> _pickPlayer(
-    BuildContext context,
+    BuildContext sheetContext,
     String title,
     List<AnnouncedPlayerModel> players,
   ) async {
+    final maxListHeight = MediaQuery.sizeOf(sheetContext).height * 0.45;
     final picked = await showModalBottomSheet<AnnouncedPlayerModel>(
-      context: context,
+      context: sheetContext,
+      useRootNavigator: false,
+      isScrollControlled: true,
+      isDismissible: true,
+      enableDrag: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -304,12 +327,27 @@ class _FootballEventSheetBodyState extends State<_FootballEventSheetBody> {
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(title, style: _titleStyle),
+              padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 8),
+                      child: Text(title, style: _titleStyle),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
             ),
-            Flexible(
+            ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: maxListHeight),
               child: ListView.builder(
                 shrinkWrap: true,
                 itemCount: players.length,
@@ -332,7 +370,9 @@ class _FootballEventSheetBodyState extends State<_FootballEventSheetBody> {
         ),
       ),
     );
-    return picked?.userIdHelper.getId();
+    final id = picked?.participantId;
+    if (id == null || id.isEmpty) return null;
+    return id;
   }
 
   bool get _canSubmit {

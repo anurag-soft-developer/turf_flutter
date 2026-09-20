@@ -21,12 +21,33 @@ import '../../team/team_service.dart';
 import '../../team/utils/team_ui.dart';
 import '../matchmaking_service.dart';
 import '../model/team_match_model.dart';
+import 'casual_match_start_controller.dart';
 
 class CasualMatchStartScreen extends HookWidget {
   const CasualMatchStartScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<CasualMatchStartController>();
+    final sport = controller.sport;
+
+    if (!controller.isSportSupported) {
+      return Scaffold(
+        backgroundColor: const Color(AppColors.backgroundColor),
+        appBar: AppAppBar(title: const Text('Casual match')),
+        body: const Center(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Text(
+              'Casual matches are not available for this sport yet.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Color(AppColors.textSecondaryColor)),
+            ),
+          ),
+        ),
+      );
+    }
+
     final selectedTeam = useState<TeamMemberFieldInstance?>(null);
     final selectedOpponent = useState<TeamModel?>(null);
     final creating = useState(false);
@@ -45,28 +66,28 @@ class CasualMatchStartScreen extends HookWidget {
       retry: noRetry,
     );
 
-    final cricketTeams = useMemoized(() {
+    final mySportTeams = useMemoized(() {
       final list = <TeamMemberFieldInstance>[];
       for (final m in membershipsQuery.data ?? const <TeamMemberModel>[]) {
         final t = m.team;
         if (t is TeamMemberFieldInstance &&
-            t.sportType == TeamSportType.cricket &&
+            t.sportType == sport &&
             t.id != null &&
             t.id!.isNotEmpty) {
           list.add(t);
         }
       }
       return list;
-    }, [membershipsQuery.data]);
+    }, [membershipsQuery.data, sport]);
 
     useEffect(() {
       final current = selectedTeam.value;
-      if (current != null && cricketTeams.any((t) => t.id == current.id)) {
+      if (current != null && mySportTeams.any((t) => t.id == current.id)) {
         return null;
       }
-      selectedTeam.value = cricketTeams.isEmpty ? null : cricketTeams.first;
+      selectedTeam.value = mySportTeams.isEmpty ? null : mySportTeams.first;
       return null;
-    }, [cricketTeams]);
+    }, [mySportTeams]);
 
     useEffect(() {
       final opponent = selectedOpponent.value;
@@ -84,6 +105,7 @@ class CasualMatchStartScreen extends HookWidget {
       final picked = await showCasualOpponentPickerSheet(
         context: context,
         fromTeamId: fromId,
+        sport: sport,
       );
       if (picked != null) {
         selectedOpponent.value = picked;
@@ -99,7 +121,7 @@ class CasualMatchStartScreen extends HookWidget {
       }
       if (creating.value) return;
 
-      final opponentIsAlsoMine = cricketTeams.any((t) => t.id == toId);
+      final opponentIsAlsoMine = mySportTeams.any((t) => t.id == toId);
 
       creating.value = true;
       try {
@@ -145,14 +167,16 @@ class CasualMatchStartScreen extends HookWidget {
     final myTeam = selectedTeam.value;
     final opponent = selectedOpponent.value;
     final pickerTeams =
-        cricketTeams.where((t) => t.id != opponent?.id).toList();
+        mySportTeams.where((t) => t.id != opponent?.id).toList();
     final opponentIsAlsoMine =
-        opponent?.id != null && cricketTeams.any((t) => t.id == opponent!.id);
+        opponent?.id != null && mySportTeams.any((t) => t.id == opponent!.id);
     final primaryLabel = opponentIsAlsoMine ? 'Start' : 'Send request';
+    final sportLabel = controller.sportLabel;
+    final screenTitle = controller.screenTitle;
 
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
-      appBar: const AppAppBar(title: Text('Casual cricket')),
+      appBar: AppAppBar(title: Text(screenTitle)),
       body: membershipsLoading
           ? const Center(
               child: CircularProgressIndicator(
@@ -161,7 +185,7 @@ class CasualMatchStartScreen extends HookWidget {
                 ),
               ),
             )
-          : cricketTeams.isEmpty
+          : mySportTeams.isEmpty
               ? Center(
                   child: Padding(
                     padding: const EdgeInsets.all(24),
@@ -169,15 +193,15 @@ class CasualMatchStartScreen extends HookWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          Icons.sports_cricket_outlined,
+                          sport.icon,
                           size: 56,
                           color: Colors.grey.shade400,
                         ),
                         const SizedBox(height: 12),
-                        const Text(
-                          'Join or create a cricket team first. Only captains and owners can start a casual match.',
+                        Text(
+                          'Join or create a $sportLabel team first. Only captains and owners can start a casual match.',
                           textAlign: TextAlign.center,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: Color(AppColors.textSecondaryColor),
                             fontSize: 15,
                             height: 1.4,
@@ -207,7 +231,7 @@ class CasualMatchStartScreen extends HookWidget {
                             wrapLogo: (logo) => MyTeamSelector(
                               teams: pickerTeams,
                               selectedTeam: myTeam,
-                              sheetTitle: 'Select your cricket team',
+                              sheetTitle: 'Select your $sportLabel team',
                               onTeamSelected: (team) =>
                                   selectedTeam.value = team,
                               buttonChild: logo,
@@ -275,20 +299,28 @@ class CasualMatchStartScreen extends HookWidget {
 Future<TeamModel?> showCasualOpponentPickerSheet({
   required BuildContext context,
   required String fromTeamId,
+  required TeamSportType sport,
 }) {
   return showModalBottomSheet<TeamModel>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
     backgroundColor: Colors.transparent,
-    builder: (ctx) => _CasualOpponentPickerSheet(fromTeamId: fromTeamId),
+    builder: (ctx) => _CasualOpponentPickerSheet(
+      fromTeamId: fromTeamId,
+      sport: sport,
+    ),
   );
 }
 
 class _CasualOpponentPickerSheet extends HookWidget {
-  const _CasualOpponentPickerSheet({required this.fromTeamId});
+  const _CasualOpponentPickerSheet({
+    required this.fromTeamId,
+    required this.sport,
+  });
 
   final String fromTeamId;
+  final TeamSportType sport;
 
   @override
   Widget build(BuildContext context) {
@@ -310,15 +342,20 @@ class _CasualOpponentPickerSheet extends HookWidget {
     }, [searchText.value]);
 
     final query = debouncedSearch.value;
+    final sportLabel = sport.label.toLowerCase();
 
     final opponentsQuery =
         useInfiniteQuery<PaginatedResponse<TeamModel>, Object, int>(
-      QueryKeys.casualOpponentSearch(fromTeamId: fromTeamId, query: query),
+      QueryKeys.casualOpponentSearch(
+        fromTeamId: fromTeamId,
+        query: query,
+        sportType: sport.name,
+      ),
       (ctx) async {
         final result = await TeamService().findMany(
           TeamFilterQuery(
             status: TeamStatus.active,
-            sportType: TeamSportType.cricket,
+            sportType: sport,
             search: query.isEmpty ? null : query,
             page: ctx.pageParam,
             limit: 20,
@@ -372,7 +409,7 @@ class _CasualOpponentPickerSheet extends HookWidget {
           const SizedBox(height: 14),
           AppSearchField(
             controller: searchController,
-            hintText: 'Search cricket teams',
+            hintText: 'Search $sportLabel teams',
           ),
           const SizedBox(height: 12),
           Expanded(
@@ -390,6 +427,7 @@ class _CasualOpponentPickerSheet extends HookWidget {
               child: _OpponentList(
                 query: opponentsQuery,
                 items: opponents,
+                sportLabel: sportLabel,
                 onPick: (team) => Navigator.pop(context, team),
               ),
             ),
@@ -404,11 +442,13 @@ class _OpponentList extends StatelessWidget {
   const _OpponentList({
     required this.query,
     required this.items,
+    required this.sportLabel,
     required this.onPick,
   });
 
   final InfiniteQueryResult<PaginatedResponse<TeamModel>, Object, int> query;
   final List<TeamModel> items;
+  final String sportLabel;
   final ValueChanged<TeamModel> onPick;
 
   @override
@@ -443,13 +483,13 @@ class _OpponentList extends StatelessWidget {
     }
 
     if (items.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(24),
+          padding: const EdgeInsets.all(24),
           child: Text(
-            'No cricket teams found. Try another search.',
+            'No $sportLabel teams found. Try another search.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Color(AppColors.textSecondaryColor)),
+            style: const TextStyle(color: Color(AppColors.textSecondaryColor)),
           ),
         ),
       );

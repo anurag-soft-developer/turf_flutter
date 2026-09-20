@@ -48,6 +48,28 @@ class FootballScoringController extends GetxController {
 
   bool get canUndoFootballEvent => footballEvents.isNotEmpty;
 
+  String get fromTeamId =>
+      footballMatch.value?.fromTeamHelper.getId() ?? '';
+
+  String get toTeamId => footballMatch.value?.toTeamHelper.getId() ?? '';
+
+  String get fromTeamName =>
+      footballMatch.value?.fromTeamHelper.getDisplayName() ?? '';
+
+  String get toTeamName =>
+      footballMatch.value?.toTeamHelper.getDisplayName() ?? '';
+
+  String teamLabelForId(String teamId) {
+    if (teamId.isEmpty) return '—';
+    if (teamId == fromTeamId) {
+      return fromTeamName.isNotEmpty ? fromTeamName : 'Team';
+    }
+    if (teamId == toTeamId) {
+      return toTeamName.isNotEmpty ? toTeamName : 'Team';
+    }
+    return 'Team';
+  }
+
   ScoringSocketService? get _socket =>
       Get.isRegistered<ScoringSocketService>()
           ? Get.find<ScoringSocketService>()

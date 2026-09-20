@@ -183,8 +183,9 @@ class QueryKeys {
   static List<Object?> casualOpponentSearch({
     required String fromTeamId,
     required String query,
+    required String sportType,
   }) =>
-      [...casualOpponentSearchPrefix, fromTeamId, query];
+      [...casualOpponentSearchPrefix, fromTeamId, query, sportType];
 
   static const explorePostPrefix = ['explorePost'];
 
