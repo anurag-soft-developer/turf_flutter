@@ -28,6 +28,37 @@ String formatDateTime(String raw, String localeName) {
 ///
 /// Rules: seconds → minutes → hours → days (integer); then fractional months
 /// until 12 months; from 12 months onward only fractional years.
+/// Relative past time from [when], or null if [when] is null.
+String? timeAgoFrom(DateTime? when, {DateTime? clock}) {
+  if (when == null) return null;
+  return timeAgo(when.toIso8601String(), clock: clock);
+}
+
+/// Past → `timeAgo`; future → `in 2 days` / `in 1 hour` / `just now`.
+String? relativeTimeFrom(DateTime? when, {DateTime? clock}) {
+  if (when == null) return null;
+  final local = when.toLocal();
+  final now = (clock ?? DateTime.now()).toLocal();
+  final diff = local.difference(now);
+  if (!diff.isNegative && diff.inSeconds < 60) {
+    return 'just now';
+  }
+  if (diff.isNegative) {
+    return timeAgo(local.toIso8601String(), clock: clock);
+  }
+
+  final minutes = diff.inMinutes;
+  if (minutes < 60) {
+    return minutes <= 1 ? 'in 1 min' : 'in $minutes min';
+  }
+  final hours = diff.inHours;
+  if (hours < 24) {
+    return hours == 1 ? 'in 1 hour' : 'in $hours hours';
+  }
+  final days = diff.inDays;
+  return days == 1 ? 'in 1 day' : 'in $days days';
+}
+
 String timeAgo(
   String reference, {
   DateTime? clock,

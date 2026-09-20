@@ -3,80 +3,19 @@ import 'package:get/get.dart';
 
 import '../../core/query/query_keys.dart';
 import '../../core/utils/app_snackbar.dart';
-import '../../team/members/model/team_member_model.dart';
 import '../matchmaking_service.dart';
 import '../model/team_match_model.dart';
+import '../shared/match_team_filter_controller.dart';
 
-enum MatchChallengesTab { received, sent, live, upcoming, completed, archive }
+enum MatchChallengesTab { received, sent }
 
-/// UI + accept/reject mutations. List fetching is owned by flutter_query on the screen.
-class MatchChallengesController extends GetxController {
+/// Accept/reject mutations + tab state. List fetching is owned by flutter_query.
+class MatchChallengesController extends MatchTeamFilterController {
   final MatchmakingService _matchmakingService = MatchmakingService();
 
   final Rx<MatchChallengesTab> selectedTab = MatchChallengesTab.received.obs;
   final Rxn<String> acceptingMatchId = Rxn<String>();
   final Rxn<String> rejectingMatchId = Rxn<String>();
-
-  final RxList<TeamMemberModel> memberships = <TeamMemberModel>[].obs;
-  final RxBool filterAllTeams = true.obs;
-  final Rxn<TeamMemberFieldInstance> selectedMembershipTeam =
-      Rxn<TeamMemberFieldInstance>();
-
-  List<TeamMemberFieldInstance> get myTeams {
-    final list = <TeamMemberFieldInstance>[];
-    for (final m in memberships) {
-      final t = m.team;
-      if (t is TeamMemberFieldInstance && t.id != null && t.id!.isNotEmpty) {
-        list.add(t);
-      }
-    }
-    final seen = <String>{};
-    return list.where((t) => seen.add(t.id!)).toList();
-  }
-
-  /// Team filter key segment for [QueryKeys.matchChallenges].
-  String get teamFilterKey {
-    if (filterAllTeams.value) return 'all';
-    return selectedMembershipTeam.value?.id ?? 'all';
-  }
-
-  /// Team ids for list endpoints: one selected team or all distinct [myTeams] ids.
-  List<String> activeTeamIdsForList() {
-    if (!filterAllTeams.value) {
-      final tid = selectedMembershipTeam.value?.id;
-      if (tid == null || tid.isEmpty) return <String>[];
-      return <String>[tid];
-    }
-    final ids = <String>[];
-    final seen = <String>{};
-    for (final t in myTeams) {
-      final tid = t.id;
-      if (tid == null || tid.isEmpty) continue;
-      if (seen.add(tid)) ids.add(tid);
-    }
-    return ids;
-  }
-
-  void syncMemberships(List<TeamMemberModel> data) {
-    memberships.assignAll(data);
-    if (!filterAllTeams.value) {
-      final sel = selectedMembershipTeam.value;
-      if (sel != null && !myTeams.any((t) => t.id == sel.id)) {
-        selectedMembershipTeam.value = myTeams.isNotEmpty
-            ? myTeams.first
-            : null;
-      }
-    }
-  }
-
-  void selectTeamForFilter(TeamMemberFieldInstance team) {
-    filterAllTeams.value = false;
-    selectedMembershipTeam.value = team;
-  }
-
-  void selectAllTeamsFilter() {
-    filterAllTeams.value = true;
-  }
 
   @override
   void onInit() {
@@ -85,16 +24,8 @@ class MatchChallengesController extends GetxController {
   }
 
   void applyTabFromArguments() {
-    final raw = Get.arguments;
-    if (raw is! Map) return;
-    final tabName = raw['tab'];
-    if (tabName is! String) return;
-    for (final tab in MatchChallengesTab.values) {
-      if (tab.name == tabName) {
-        selectedTab.value = tab;
-        return;
-      }
-    }
+    final tab = enumTabFromArguments(MatchChallengesTab.values);
+    if (tab != null) selectedTab.value = tab;
   }
 
   void switchTab(int index) {
@@ -106,9 +37,9 @@ class MatchChallengesController extends GetxController {
 
   Future<void> invalidateChallengeQueries() async {
     if (!Get.isRegistered<QueryClient>()) return;
-    await Get.find<QueryClient>().invalidateQueries(
-      queryKey: const ['matchChallenges'],
-    );
+    final client = Get.find<QueryClient>();
+    await client.invalidateQueries(queryKey: QueryKeys.matchChallengesPrefix);
+    await client.invalidateQueries(queryKey: QueryKeys.myMatchesPrefix);
   }
 
   Future<void> acceptChallenge(TeamMatchModel match) async {

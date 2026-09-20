@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/bindings/explore_binding.dart';
 import 'package:flutter_application_1/bindings/match_challenge_detail_binding.dart';
 import 'package:flutter_application_1/bindings/match_challenges_binding.dart';
+import 'package:flutter_application_1/bindings/my_matches_binding.dart';
 import 'package:flutter_application_1/bindings/scoring_binding.dart';
 import 'package:flutter_application_1/core/components/app_bar/app_bar_background.dart';
 import 'package:flutter_application_1/core/config/constants.dart';
@@ -15,6 +16,7 @@ import 'package:flutter_application_1/match_up/casual/casual_match_start_binding
 import 'package:flutter_application_1/match_up/casual/casual_match_start_screen.dart';
 import 'package:flutter_application_1/match_up/match_challenges/match_challenge_detail_screen.dart';
 import 'package:flutter_application_1/match_up/match_challenges/match_challenges_screen.dart';
+import 'package:flutter_application_1/match_up/my_matches/my_matches_screen.dart';
 import 'package:flutter_application_1/match_up/messages/match_challenge_messages_screen.dart';
 import 'package:flutter_application_1/match_up/model/team_match_model.dart';
 import 'package:flutter_application_1/scoring/cricket/cricket_scoreboard_screen.dart';
@@ -26,6 +28,13 @@ final List<GetPage<dynamic>> matchUpRoutes = [
     name: AppConstants.routes.matchUpChallenges,
     page: () => const MatchChallengesScreen(),
     binding: MatchChallengesBinding(),
+    transition: Transition.cupertino,
+    middlewares: [AuthGuard()],
+  ),
+  GetPage(
+    name: AppConstants.routes.myMatches,
+    page: () => const MyMatchesScreen(),
+    binding: MyMatchesBinding(),
     transition: Transition.cupertino,
     middlewares: [AuthGuard()],
   ),
@@ -60,8 +69,7 @@ final List<GetPage<dynamic>> matchUpRoutes = [
     name: AppConstants.routes.matchChallengeDetail(),
     page: () {
       final args = Get.arguments;
-      final fromArgs =
-          args is Map ? args['matchId']?.toString().trim() : null;
+      final fromArgs = args is Map ? args['matchId']?.toString().trim() : null;
       final fromRoute = routeParam('id');
       final id = (fromRoute != null && fromRoute.isNotEmpty)
           ? fromRoute

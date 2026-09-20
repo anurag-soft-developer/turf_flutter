@@ -32,6 +32,16 @@ class AppMenuScreen extends StatelessWidget {
         icon: Icons.book_online_rounded,
         onTap: () => _navigateTo(AppConstants.routes.myBookings),
       ),
+       AppMenuItem(
+        title: 'Challenges',
+        icon: Icons.sports_soccer_rounded,
+        onTap: () => _navigateTo(AppConstants.routes.matchUpChallenges),
+      ),
+      AppMenuItem(
+        title: 'Matches',
+        icon: Icons.sports_score_rounded,
+        onTap: () => _navigateTo(AppConstants.routes.myMatches),
+      ),
       AppMenuItem(
         title: 'My Teams',
         icon: Icons.groups_rounded,
@@ -48,20 +58,10 @@ class AppMenuScreen extends StatelessWidget {
         onTap: () => _navigateTo(AppConstants.routes.myInvitations),
       ),
       AppMenuItem(
-        title: 'Challenges',
-        icon: Icons.sports_soccer_rounded,
-        onTap: () => _navigateTo(AppConstants.routes.matchUpChallenges),
-      ),
-      AppMenuItem(
         title: 'Rank',
         icon: Icons.emoji_events_rounded,
         onTap: () => _navigateTo(AppConstants.routes.rank),
       ),
-      // AppMenuItem(
-      //   title: 'Matches',
-      //   icon: Icons.emoji_events_rounded,
-      //   onTap: () => _navigateTo(AppConstants.routes.matches),
-      // ),
       AppMenuItem(
         title: 'Notifications',
         icon: Icons.notifications_rounded,
@@ -217,7 +217,9 @@ class AppMenuScreen extends StatelessWidget {
               CircleAvatar(
                 radius: 28,
                 backgroundColor: Colors.white,
-                backgroundImage: avatar != null ? AppNetworkImage.provider(avatar) : null,
+                backgroundImage: avatar != null
+                    ? AppNetworkImage.provider(avatar)
+                    : null,
                 child: avatar == null
                     ? const Icon(
                         Icons.person_rounded,
@@ -300,10 +302,7 @@ class AppMenuScreen extends StatelessWidget {
           runSpacing: spacing,
           children: [
             for (final item in items)
-              SizedBox(
-                width: tileWidth,
-                child: _buildGridTile(item),
-              ),
+              SizedBox(width: tileWidth, child: _buildGridTile(item)),
           ],
         );
       },

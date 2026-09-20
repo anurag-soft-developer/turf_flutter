@@ -3,8 +3,12 @@ import 'package:intl/intl.dart';
 
 import '../match_up/team_logo.dart';
 import '../../core/config/constants.dart';
+import '../../core/utils/date_util.dart';
 import '../../match_up/match_challenges/match_challenge_versus_header.dart';
 import '../../match_up/model/team_match_model.dart';
+import '../../team/model/team_model.dart';
+
+enum MatchChallengeInboxKind { received, sent }
 
 class MatchCard extends StatelessWidget {
   const MatchCard({
@@ -16,6 +20,8 @@ class MatchCard extends StatelessWidget {
     /// Challenges: personalize Won/Lost and "Your team won".
     /// Public Matches: keep false so the winner team name is shown instead.
     this.personalizeForTeam = false,
+    this.challengeInboxKind,
+    this.showMyMatchesMeta = false,
     this.onTap,
     this.footer,
   });
@@ -24,6 +30,8 @@ class MatchCard extends StatelessWidget {
   final String? selectedTeamId;
   final bool isHistory;
   final bool personalizeForTeam;
+  final MatchChallengeInboxKind? challengeInboxKind;
+  final bool showMyMatchesMeta;
   final VoidCallback? onTap;
   final Widget? footer;
 
@@ -51,11 +59,17 @@ class MatchCard extends StatelessWidget {
     final selectedSlot = _getSelectedSlot();
     final fromScore = scoreForTeam(match, fromId);
     final toScore = scoreForTeam(match, toId);
+    final metaLine = _buildMetaLine(selectedSlot);
+    final showSlotDetail =
+        selectedSlot != null &&
+        !showMyMatchesMeta &&
+        challengeInboxKind == null;
 
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
+        if (metaLine != null) ...[metaLine, const SizedBox(height: 10)],
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -127,7 +141,7 @@ class MatchCard extends StatelessWidget {
             ),
           ],
         ),
-        if (selectedSlot != null) ...[
+        if (showSlotDetail) ...[
           const SizedBox(height: 10),
           Text(
             _formatSlot(selectedSlot),
@@ -237,10 +251,7 @@ class MatchCard extends StatelessWidget {
       ),
     );
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: body,
-    );
+    return Container(margin: const EdgeInsets.only(bottom: 10), child: body);
   }
 
   TeamMatchTimeSlot? _getSelectedSlot() {
@@ -251,6 +262,83 @@ class MatchCard extends StatelessWidget {
       }
     }
     return null;
+  }
+
+  Widget? _buildMetaLine(TeamMatchTimeSlot? selectedSlot) {
+    final sport = match.sportType.label;
+    String? trailing;
+
+    if (challengeInboxKind != null) {
+      final when = timeAgoFrom(match.createdAt);
+      if (when == null) return null;
+      final verb = challengeInboxKind == MatchChallengeInboxKind.received
+          ? 'Received'
+          : 'Sent';
+      trailing = '$verb $when';
+    } else if (showMyMatchesMeta) {
+      trailing = _myMatchesMetaTrailing(selectedSlot);
+    } else {
+      return null;
+    }
+
+    return Row(
+      children: [
+        Icon(
+          match.sportType.icon,
+          size: 14,
+          color: const Color(AppColors.primaryColor),
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            trailing == null ? sport : '$sport · $trailing',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(AppColors.textSecondaryColor),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String? _myMatchesMetaTrailing(TeamMatchTimeSlot? selectedSlot) {
+    final slotStart = selectedSlot?.startTime;
+    return switch (match.status) {
+      TeamMatchStatus.ongoing => () {
+        final when = relativeTimeFrom(
+          slotStart ?? match.statusUpdatedAt ?? match.createdAt,
+        );
+        return when == null ? null : 'Started $when';
+      }(),
+      TeamMatchStatus.scheduleFinalized => () {
+        if (slotStart == null) return null;
+        final when = relativeTimeFrom(slotStart);
+        return when == null ? null : 'Plays $when';
+      }(),
+      TeamMatchStatus.completed || TeamMatchStatus.draw => () {
+        final when = timeAgoFrom(
+          match.closedAt ?? slotStart ?? match.updatedAt ?? match.createdAt,
+        );
+        return when == null ? null : 'Played $when';
+      }(),
+      TeamMatchStatus.rejected ||
+      TeamMatchStatus.cancelled ||
+      TeamMatchStatus.abandoned ||
+      TeamMatchStatus.expired => () {
+        final when = timeAgoFrom(
+          match.closedAt ?? match.updatedAt ?? match.createdAt,
+        );
+        return when == null ? null : 'Closed $when';
+      }(),
+      _ => () {
+        final when = relativeTimeFrom(slotStart ?? match.createdAt);
+        return when == null ? null : 'Updated $when';
+      }(),
+    };
   }
 
   Color _statusColor(TeamMatchStatus status, String? winnerId, bool hasSide) {

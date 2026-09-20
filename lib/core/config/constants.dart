@@ -68,6 +68,7 @@ class Routes {
   String following(String userId) => '/following/$userId';
   String teamFollowers(String teamId) => '/team-followers/$teamId';
   final String matchUpChallenges = '/match-up/challenges';
+  final String myMatches = '/match-up/my-matches';
   final String matchUpCasual = '/match-up/casual';
   String matchChallengeDetail([String id = ':id']) =>
       '/match-up/challenges/detail/$id';
