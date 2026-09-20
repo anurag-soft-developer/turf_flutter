@@ -21,6 +21,8 @@ class NotificationRouter {
         return _openTeams(notification, kind);
       case NotificationModule.turfApproval:
         return _openTurfApproval(notification);
+      case NotificationModule.support:
+        return _openSupport(notification);
       case NotificationModule.connections:
         return _openConnections(notification, kind);
       case NotificationModule.eventBooking:
@@ -130,6 +132,16 @@ class NotificationRouter {
       AppConstants.routes.turfDetail,
       arguments: {'turfId': id},
     );
+  }
+
+  static Future<void> _openSupport(AppNotification notification) async {
+    final id = notification.queryId;
+    if (id == null || id.isEmpty) {
+      await Get.toNamed(AppConstants.routes.helpSupport);
+      return;
+    }
+
+    await Get.toNamed(AppConstants.routes.supportQueryDetail(id));
   }
 
   static Future<void> _openConnections(

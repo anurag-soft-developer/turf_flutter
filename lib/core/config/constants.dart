@@ -34,6 +34,8 @@ class Routes {
   final String notifications = '/notifications';
   final String about = '/about';
   final String helpSupport = '/help-support';
+  final String supportQueries = '/help-support/queries';
+  String supportQueryDetail(String id) => '/help-support/queries/$id';
   final String termsOfService = '/terms-of-service';
   final String privacyPolicy = '/privacy-policy';
   final String changePassword = '/change-password';

@@ -283,4 +283,10 @@ class QueryKeys {
 
   static List<Object> chatReadCursors(String scope, String scopeId) =>
       [...chatReadCursorsPrefix, scope, scopeId];
+
+  static const supportQueriesPreview = ['supportQueries', 'preview'];
+
+  static const supportQueriesHistoryPrefix = ['supportQueries', 'history'];
+
+  static List<Object> supportQuery(String id) => ['supportQuery', id];
 }

@@ -187,7 +187,8 @@ class NotificationInboxCache {
       data: data,
       sourceId: data?['bookingId']?.toString() ??
           data?['matchId']?.toString() ??
-          data?['turfId']?.toString(),
+          data?['turfId']?.toString() ??
+          data?['queryId']?.toString(),
       createdAt: payload['createdAt']?.toString(),
     );
   }

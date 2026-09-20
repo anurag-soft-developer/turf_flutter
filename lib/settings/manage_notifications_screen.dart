@@ -45,6 +45,8 @@ class ManageNotificationsScreen extends StatelessWidget {
             user?.notificationModules?[NotificationModule.withdrawals] ?? true;
         final turfApprovalModuleOn =
             user?.notificationModules?[NotificationModule.turfApproval] ?? true;
+        final supportModuleOn =
+            user?.notificationModules?[NotificationModule.support] ?? true;
 
         final hasDeliveryChannel = smsOn || emailOn;
         final canEditChannels = masterOn && !busy;
@@ -272,6 +274,21 @@ class ManageNotificationsScreen extends StatelessWidget {
                         authController.updateNotificationSettings(
                           notificationModules: {
                             NotificationModule.turfApproval: enabled,
+                          },
+                        );
+                      },
+                    ),
+                    const Divider(height: 1, color: _divider),
+                    _CompactSwitchTile(
+                      icon: Icons.support_agent_outlined,
+                      title: 'Help & support',
+                      subtitle: 'Replies and status updates on your queries',
+                      value: supportModuleOn,
+                      enabled: canEditModules,
+                      onChanged: (enabled) {
+                        authController.updateNotificationSettings(
+                          notificationModules: {
+                            NotificationModule.support: enabled,
                           },
                         );
                       },

@@ -10,5 +10,6 @@ extension AppNotificationNavigation on AppNotification {
   String? get matchId => sourceId ?? idFromData('matchId');
   String? get teamId => idFromData('teamId');
   String? get turfId => sourceId ?? idFromData('turfId');
+  String? get queryId => sourceId ?? idFromData('queryId');
   String? get actorUserId => idFromData('actorUserId');
 }

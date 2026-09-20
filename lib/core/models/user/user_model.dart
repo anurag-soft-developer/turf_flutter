@@ -16,6 +16,7 @@ enum NotificationModule {
   connections,
   withdrawals,
   turfApproval,
+  support,
 }
 
 extension NotificationModuleApi on NotificationModule {
@@ -28,6 +29,7 @@ extension NotificationModuleApi on NotificationModule {
         NotificationModule.connections => 'connections',
         NotificationModule.withdrawals => 'withdrawals',
         NotificationModule.turfApproval => 'turfApproval',
+        NotificationModule.support => 'support',
       };
 }
 
@@ -48,6 +50,8 @@ NotificationModule? notificationModuleFromApiString(String key) {
       return NotificationModule.withdrawals;
     case 'turfApproval':
       return NotificationModule.turfApproval;
+    case 'support':
+      return NotificationModule.support;
     default:
       return null;
   }

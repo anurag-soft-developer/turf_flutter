@@ -22,6 +22,7 @@ class ApiConstants {
   static const engagement = EngagementEndpoints();
   static const posts = PostEndpoints();
   static const chat = ChatEndpoints();
+  static const support = SupportEndpoints();
 
   // Headers
   static const Map<String, String> defaultHeaders = {
@@ -345,6 +346,15 @@ class ChatEndpoints {
   String get read => '/chat/read';
   String get hide => '/chat/hide';
   String get readCursors => '/chat/read-cursors';
+}
+
+class SupportEndpoints {
+  const SupportEndpoints();
+
+  String get queries => '/support/queries';
+  String get mine => '/support/queries/mine';
+  String byId(String id) => '/support/queries/$id';
+  String replies(String id) => '/support/queries/$id/replies';
 }
 
 /// Impressions / likes (`POST /engagement/batch`, `POST`/`DELETE /likes`) — JWT required.

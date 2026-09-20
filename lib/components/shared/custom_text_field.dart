@@ -10,6 +10,8 @@ class CustomTextField extends StatefulWidget {
   final String? Function(String?)? validator;
   final VoidCallback? onTap;
   final Function(String)? onChanged;
+  final void Function(String)? onFieldSubmitted;
+  final FocusNode? focusNode;
   final bool readOnly;
   final Widget? prefixIcon;
   final Widget? suffixIcon;
@@ -34,6 +36,8 @@ class CustomTextField extends StatefulWidget {
     this.validator,
     this.onTap,
     this.onChanged,
+    this.onFieldSubmitted,
+    this.focusNode,
     this.readOnly = false,
     this.prefixIcon,
     this.suffixIcon,
@@ -89,11 +93,13 @@ class _CustomTextFieldState extends State<CustomTextField> {
           ),
         TextFormField(
           controller: widget.controller,
+          focusNode: widget.focusNode,
           obscureText: _obscureText,
           keyboardType: widget.keyboardType,
           validator: widget.validator,
           onTap: widget.onTap,
           onChanged: widget.onChanged,
+          onFieldSubmitted: widget.onFieldSubmitted,
           readOnly: widget.readOnly,
           minLines: textFieldMinLines,
           maxLines: textFieldMaxLines,
