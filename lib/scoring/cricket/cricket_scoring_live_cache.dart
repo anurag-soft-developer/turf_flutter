@@ -7,7 +7,7 @@ import '../../core/query/query_keys.dart';
 import '../../match_up/announced_players/model/announced_player_model.dart';
 import '../../match_up/model/team_match_model.dart';
 import '../shared/scoring_shared_models.dart';
-import 'model/cricket_ball_event_model.dart';
+import 'model/cricket_over_event_model.dart';
 
 /// Whether [data] carries match-level cricket fields to merge.
 bool cricketMatchPatchPresent(Map<String, dynamic> data) {
@@ -123,16 +123,18 @@ List<CricketOverEvent> removeCricketOverFromList(
   return overs.where((over) => over.id != overId).toList();
 }
 
-/// Applies ball append/undo from [payload] onto [currentOvers].
+/// Applies ball/substitution append/undo from [payload] onto [currentOvers].
 ///
-/// Returns `null` when the action is not ball-related.
+/// Returns `null` when the action is not over-doc related.
 List<CricketOverEvent>? patchCricketOversFromPayload(
   List<CricketOverEvent> currentOvers,
   ScoringUpdatePayload payload,
 ) {
-  final ballRelated = payload.action == ScoringAction.appendBall ||
-      payload.action == ScoringAction.undoBall;
-  if (!ballRelated) return null;
+  final overRelated = payload.action == ScoringAction.appendBall ||
+      payload.action == ScoringAction.appendSubstitution ||
+      payload.action == ScoringAction.undoBall ||
+      payload.action == ScoringAction.undoScoringEntry;
+  if (!overRelated) return null;
 
   final data = payload.data;
   final overJson = data['over'];
@@ -140,7 +142,8 @@ List<CricketOverEvent>? patchCricketOversFromPayload(
     final over = CricketOverEvent.fromJson(overJson.cast<String, dynamic>());
     return upsertCricketOverInList(currentOvers, over);
   }
-  if (payload.action == ScoringAction.undoBall) {
+  if (payload.action == ScoringAction.undoBall ||
+      payload.action == ScoringAction.undoScoringEntry) {
     final overId = data['overId']?.toString() ?? '';
     if (overId.isNotEmpty) {
       return removeCricketOverFromList(currentOvers, overId);
@@ -202,8 +205,10 @@ void _applyToCache(QueryClient client, ScoringUpdatePayload payload, String id) 
   );
   final base = session ?? detail;
 
-  final ballRelated = payload.action == ScoringAction.appendBall ||
-      payload.action == ScoringAction.undoBall;
+  final overRelated = payload.action == ScoringAction.appendBall ||
+      payload.action == ScoringAction.appendSubstitution ||
+      payload.action == ScoringAction.undoBall ||
+      payload.action == ScoringAction.undoScoringEntry;
 
   if (base == null) {
     unawaited(
@@ -212,7 +217,7 @@ void _applyToCache(QueryClient client, ScoringUpdatePayload payload, String id) 
     unawaited(
       client.invalidateQueries(queryKey: QueryKeys.matchChallengeDetail(id)),
     );
-    if (ballRelated) {
+    if (overRelated) {
       unawaited(
         client.invalidateQueries(queryKey: QueryKeys.cricketOvers(id)),
       );
@@ -228,7 +233,7 @@ void _applyToCache(QueryClient client, ScoringUpdatePayload payload, String id) 
 
   List<CricketOverEvent>? nextOvers;
   var includeOvers = false;
-  if (ballRelated) {
+  if (overRelated) {
     final currentOvers =
         client.getQueryData<List<CricketOverEvent>>(QueryKeys.cricketOvers(id));
     if (currentOvers == null) {

@@ -1,4 +1,5 @@
 import 'user/user_model.dart';
+import '../utils/mongo_id_util.dart';
 
 /// Instance-based helper for working with dynamic user fields
 ///
@@ -13,6 +14,8 @@ class UserFieldInstance {
   String? getId() {
     if (_user is String) return _user;
     if (_user is UserModel) return _user.id;
+    // Plain ObjectId maps / Extended JSON after skipping User populate.
+    if (_user is Map) return mongoIdFromJsonNullable(_user);
     return null;
   }
 

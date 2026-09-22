@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'cricket_ball_event_model.dart';
+part of 'cricket_over_event_model.dart';
 
 // **************************************************************************
 // JsonSerializableGenerator
@@ -8,6 +8,7 @@ part of 'cricket_ball_event_model.dart';
 
 CricketBallEvent _$CricketBallEventFromJson(Map<String, dynamic> json) =>
     CricketBallEvent(
+      recordedAt: _entryRecordedAtFromJson(json['recordedAt']),
       ballInOverAfter: (json['ballInOverAfter'] as num).toInt(),
       strikerUserId: const UserConverter().fromJson(json['strikerUserId']),
       nonStrikerUserId: const UserConverter().fromJson(
@@ -35,6 +36,7 @@ CricketBallEvent _$CricketBallEventFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$CricketBallEventToJson(
   CricketBallEvent instance,
 ) => <String, dynamic>{
+  'recordedAt': instance.recordedAt.toIso8601String(),
   'ballInOverAfter': instance.ballInOverAfter,
   'strikerUserId': const UserConverter().toJson(instance.strikerUserId),
   'nonStrikerUserId': const UserConverter().toJson(instance.nonStrikerUserId),
@@ -64,6 +66,24 @@ const _$CricketWicketKindEnumMap = {
   CricketWicketKind.other: 'other',
 };
 
+CricketSubstitutionEvent _$CricketSubstitutionEventFromJson(
+  Map<String, dynamic> json,
+) => CricketSubstitutionEvent(
+  recordedAt: _entryRecordedAtFromJson(json['recordedAt']),
+  teamId: const TeamRefConverter().fromJson(json['teamId']),
+  playerOffParticipantId: mongoIdFromJson(json['playerOffParticipantId']),
+  playerOnParticipantId: mongoIdFromJson(json['playerOnParticipantId']),
+);
+
+Map<String, dynamic> _$CricketSubstitutionEventToJson(
+  CricketSubstitutionEvent instance,
+) => <String, dynamic>{
+  'recordedAt': instance.recordedAt.toIso8601String(),
+  'teamId': const TeamRefConverter().toJson(instance.teamId),
+  'playerOffParticipantId': instance.playerOffParticipantId,
+  'playerOnParticipantId': instance.playerOnParticipantId,
+};
+
 CricketOverEvent _$CricketOverEventFromJson(Map<String, dynamic> json) =>
     CricketOverEvent(
       id: json['_id'] == null ? '' : mongoIdFromJson(json['_id']),
@@ -72,11 +92,9 @@ CricketOverEvent _$CricketOverEventFromJson(Map<String, dynamic> json) =>
       sequence: (json['sequence'] as num).toInt(),
       innings: (json['innings'] as num).toInt(),
       overAfter: (json['overAfter'] as num).toInt(),
-      ballEvents:
-          (json['ballEvents'] as List<dynamic>?)
-              ?.map((e) => CricketBallEvent.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [],
+      events: json['events'] == null
+          ? const []
+          : _eventsFromJson(json['events'] as List?),
       createdAt: json['createdAt'] == null
           ? null
           : DateTime.parse(json['createdAt'] as String),
@@ -93,7 +111,7 @@ Map<String, dynamic> _$CricketOverEventToJson(CricketOverEvent instance) =>
       'sequence': instance.sequence,
       'innings': instance.innings,
       'overAfter': instance.overAfter,
-      'ballEvents': instance.ballEvents.map((e) => e.toJson()).toList(),
+      'events': _eventsToJson(instance.events),
       'createdAt': instance.createdAt?.toIso8601String(),
       'updatedAt': instance.updatedAt?.toIso8601String(),
     };

@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/components/shared/app_network_image.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
@@ -17,7 +16,7 @@ import '../../match_up/announced_players/model/announced_player_model.dart';
 import '../../match_up/model/team_match_model.dart';
 import 'cricket_scoring_api_service.dart';
 import 'cricket_scoring_controller.dart';
-import 'model/cricket_ball_event_model.dart';
+import 'model/cricket_over_event_model.dart';
 import 'model/cricket_scoring_models.dart';
 
 enum _WicketUiKind { bowled, caught, lbw, runOut, stumped, hitWicket }
@@ -35,6 +34,9 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
 
   late final String _teamMatchId;
 
+  /// Context of the open scoring keypad sheet (if any).
+  BuildContext? _controlsSheetContext;
+
   @override
   void initState() {
     super.initState();
@@ -51,6 +53,22 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
   void dispose() {
     unawaited(_scoringController.leaveLiveSession());
     super.dispose();
+  }
+
+  void _closeControlsSheetIfNeeded() {
+    final sheetContext = _controlsSheetContext;
+    if (sheetContext == null || !sheetContext.mounted) return;
+
+    final match = _scoringController.cricketMatch.value;
+    final cs = match?.cricketState;
+    if (cs == null) return;
+
+    final overs = _scoringController.cricketOvers.toList();
+    final shouldClose =
+        isCricketInningsComplete(cs) || isAwaitingNextOverBowler(cs, overs);
+    if (!shouldClose) return;
+
+    Navigator.pop(sheetContext);
   }
 
   Future<void> _send(
@@ -88,7 +106,9 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
         message:
             _scoringController.errorMessage.value ?? 'Could not send event.',
       );
+      return;
     }
+    _closeControlsSheetIfNeeded();
   }
 
   Future<void> _undoLastBall() async {
@@ -107,6 +127,78 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
       title: 'Redo failed',
       message: _scoringController.errorMessage.value ?? 'Could not redo ball.',
     );
+  }
+
+  Future<void> _showSubstitution() async {
+    final match = _scoringController.cricketMatch.value;
+    if (match == null || match.cricketState == null) return;
+
+    final fromId = _scoringController.fromTeamId;
+    final toId = _scoringController.toTeamId;
+    if (fromId.isEmpty || toId.isEmpty) {
+      AppSnackbar.info(
+        title: 'Teams needed',
+        message: 'Match teams are not available yet.',
+      );
+      return;
+    }
+
+    final cs = match.cricketState!;
+    final prevStriker = cs.strikerUserHelper.getId() ?? '';
+    final prevNon = cs.nonStrikerUserHelper.getId() ?? '';
+    final prevBowler = cs.bowlerUserHelper.getId() ?? '';
+
+    final result = await CricketSubstitutionSheet.show(
+      context: context,
+      match: match,
+      fromTeamId: fromId,
+      toTeamId: toId,
+      teamLabelForId: _scoringController.teamLabelForId,
+    );
+    if (!mounted || result == null) return;
+
+    final over = await _scoringController.appendCricketSubstitution(
+      teamId: result.teamId,
+      playerOffParticipantId: result.playerOffParticipantId,
+      playerOnParticipantId: result.playerOnParticipantId,
+    );
+    if (!mounted) return;
+    if (over == null) {
+      AppSnackbar.error(
+        title: 'Substitution failed',
+        message:
+            _scoringController.errorMessage.value ??
+            'Could not record substitution.',
+      );
+      return;
+    }
+
+    // If the player off held a live role, put the player on into that role.
+    final off = result.playerOffParticipantId;
+    final on = result.playerOnParticipantId;
+    final UpdateCricketStateRequest? rolePatch;
+    if (off == prevStriker && prevStriker.isNotEmpty) {
+      rolePatch = UpdateCricketStateRequest(strikerUserId: on);
+    } else if (off == prevNon && prevNon.isNotEmpty) {
+      rolePatch = UpdateCricketStateRequest(nonStrikerUserId: on);
+    } else if (off == prevBowler && prevBowler.isNotEmpty) {
+      rolePatch = UpdateCricketStateRequest(bowlerUserId: on);
+    } else {
+      rolePatch = null;
+    }
+
+    if (rolePatch != null) {
+      final ok = await _scoringController.updateCricketState(rolePatch);
+      if (!mounted) return;
+      if (!ok) {
+        AppSnackbar.info(
+          title: 'Update lineup',
+          message:
+              'Substitution recorded. Please set the vacant '
+              'striker / non-striker / bowler role.',
+        );
+      }
+    }
   }
 
   Future<void> _startNextInning() async {
@@ -233,6 +325,7 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
+        _controlsSheetContext = ctx;
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 8, 16),
@@ -270,7 +363,9 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
           ),
         );
       },
-    );
+    ).whenComplete(() {
+      _controlsSheetContext = null;
+    });
   }
 
   void _openOversSheet(int innings) {
@@ -335,6 +430,7 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
       onWide: _showWidePicker,
       onNoBall: _showNoBallPicker,
       onWicket: _showWicketFlow,
+      onSubstitute: _showSubstitution,
       onUndo: _undoLastBall,
       onRedo: _redoLastBall,
     );
@@ -349,7 +445,140 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
     if (isCricketInningsComplete(cs)) {
       return _buildInningsCompletedFooter(cs);
     }
+    final overs = _scoringController.cricketOvers.toList();
+    if (isAwaitingNextOverBowler(cs, overs)) {
+      return _buildOverCompletedFooter(match, cs, overs);
+    }
     return null;
+  }
+
+  Widget _buildOverCompletedFooter(
+    TeamMatchModel match,
+    CricketStateModel cs,
+    List<CricketOverEvent> overs,
+  ) {
+    final busy = _scoringController.isUpdatingCricketLineup.value;
+    final overNumber = (currentInningsSummary(cs)?.legalBalls ?? 0) ~/ 6;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'Over $overNumber complete',
+          style: const TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
+            color: Color(AppColors.textColor),
+          ),
+        ),
+        const SizedBox(height: 6),
+        const Text(
+          'Select a new bowler to start the next over.',
+          style: TextStyle(
+            fontSize: 13,
+            height: 1.35,
+            color: Color(AppColors.textSecondaryColor),
+          ),
+        ),
+        const SizedBox(height: 12),
+        FilledButton(
+          onPressed: busy
+              ? null
+              : () => _startNextOver(match, cs, overs),
+          style: FilledButton.styleFrom(
+            minimumSize: const Size.fromHeight(48),
+            backgroundColor: const Color(AppColors.primaryColor),
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+          child: busy
+              ? const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Text('Next over'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _startNextOver(
+    TeamMatchModel match,
+    CricketStateModel cs,
+    List<CricketOverEvent> overs,
+  ) async {
+    final previousBowlerId = completedOverBowlerId(cs, overs) ?? '';
+    final bowlingId = cs.bowlingTeamHelper.getId() ?? '';
+    final candidates = playingXiForTeam(match, bowlingId).where((p) {
+      final id = p.participantId ?? '';
+      return id.isNotEmpty && id != previousBowlerId;
+    }).toList();
+
+    if (candidates.isEmpty) {
+      AppSnackbar.info(
+        title: 'No bowler available',
+        message: previousBowlerId.isEmpty
+            ? 'No eligible players in the bowling XI.'
+            : 'Need another bowler — previous bowler cannot continue.',
+      );
+      return;
+    }
+
+    final picked = await showModalBottomSheet<AnnouncedPlayerModel>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: Text(
+                  'Select bowler for next over',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                    color: Color(AppColors.textColor),
+                  ),
+                ),
+              ),
+              for (final p in candidates)
+                AnnouncedPlayerListTile.fromPlayer(
+                  p,
+                  onTap: () => Navigator.pop(ctx, p),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (!mounted || picked == null) return;
+    final id = picked.participantId;
+    if (id == null || id.isEmpty || id == previousBowlerId) return;
+
+    final ok = await _scoringController.updateCricketState(
+      UpdateCricketStateRequest(bowlerUserId: id),
+    );
+    if (!mounted) return;
+    if (!ok) {
+      AppSnackbar.error(
+        title: 'Could not set bowler',
+        message:
+            _scoringController.errorMessage.value ??
+            'Could not start the next over.',
+      );
+    }
   }
 
   Future<int?> _pickRunsGrid({
@@ -477,26 +706,8 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
                 ),
               ),
               for (final player in candidates)
-                ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: const Color(
-                      AppColors.primaryColor,
-                    ).withValues(alpha: 0.12),
-                    backgroundImage:
-                        player.avatar != null && player.avatar!.isNotEmpty
-                        ? AppNetworkImage.provider(player.avatar!)
-                        : null,
-                    child: player.avatar == null || player.avatar!.isEmpty
-                        ? const Icon(
-                            Icons.person,
-                            color: Color(AppColors.primaryColor),
-                          )
-                        : null,
-                  ),
-                  title: Text(
-                    player.name,
-                    style: const TextStyle(color: Color(AppColors.textColor)),
-                  ),
+                AnnouncedPlayerListTile.fromPlayer(
+                  player,
                   onTap: () => Navigator.pop(ctx, player),
                 ),
             ],
@@ -552,26 +763,8 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
                 ),
               ),
               for (final player in candidates)
-                ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: const Color(
-                      AppColors.primaryColor,
-                    ).withValues(alpha: 0.12),
-                    backgroundImage:
-                        player.avatar != null && player.avatar!.isNotEmpty
-                        ? AppNetworkImage.provider(player.avatar!)
-                        : null,
-                    child: player.avatar == null || player.avatar!.isEmpty
-                        ? const Icon(
-                            Icons.person,
-                            color: Color(AppColors.primaryColor),
-                          )
-                        : null,
-                  ),
-                  title: Text(
-                    player.name,
-                    style: const TextStyle(color: Color(AppColors.textColor)),
-                  ),
+                AnnouncedPlayerListTile.fromPlayer(
+                  player,
                   onTap: () => Navigator.pop(ctx, player),
                 ),
             ],
@@ -704,11 +897,10 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
           dismissedUserId: strikerId,
         );
       case _WicketUiKind.runOut:
-        final strikerName =
-            announcedPlayerForUserId(match, strikerId)?.name ?? 'Striker';
-        final nonName =
-            announcedPlayerForUserId(match, nonStrikerId)?.name ??
-            'Non-striker';
+        final strikerPlayer = announcedPlayerForUserId(match, strikerId);
+        final nonPlayer = announcedPlayerForUserId(match, nonStrikerId);
+        final strikerName = strikerPlayer?.name ?? 'Striker';
+        final nonName = nonPlayer?.name ?? 'Non-striker';
         final dismissed = await showModalBottomSheet<String>(
           context: context,
           backgroundColor: Colors.white,
@@ -728,18 +920,16 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
                     color: Color(AppColors.textColor),
                   ),
                 ),
-                ListTile(
-                  title: Text(
-                    'Striker ($strikerName)',
-                    style: const TextStyle(color: Color(AppColors.textColor)),
-                  ),
+                AnnouncedPlayerListTile(
+                  name: strikerName,
+                  avatarUrl: strikerPlayer?.avatar,
+                  subtitle: 'Striker',
                   onTap: () => Navigator.pop(ctx, strikerId),
                 ),
-                ListTile(
-                  title: Text(
-                    'Non-striker ($nonName)',
-                    style: const TextStyle(color: Color(AppColors.textColor)),
-                  ),
+                AnnouncedPlayerListTile(
+                  name: nonName,
+                  avatarUrl: nonPlayer?.avatar,
+                  subtitle: 'Non-striker',
                   onTap: () => Navigator.pop(ctx, nonStrikerId),
                 ),
               ],

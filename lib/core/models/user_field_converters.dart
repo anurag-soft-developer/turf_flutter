@@ -1,4 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
+import '../utils/mongo_id_util.dart';
 import 'user/user_model.dart';
 
 // Custom converter for user fields to handle both ID and populated data
@@ -16,9 +17,19 @@ class UserConverter implements JsonConverter<dynamic, dynamic> {
       return json;
     }
 
-    // If it's a Map, it's a populated user object
-    if (json is Map<String, dynamic>) {
-      return UserModel.fromJson(json);
+    // Map: populated User, or bare ObjectId / Extended JSON.
+    if (json is Map) {
+      final map = Map<String, dynamic>.from(json);
+      final looksLikeUser = map.containsKey('email') ||
+          map.containsKey('fullName') ||
+          map.containsKey('firstName') ||
+          map.containsKey('avatar') ||
+          map.containsKey('phoneNumber');
+      if (looksLikeUser) {
+        return UserModel.fromJson(map);
+      }
+      final id = mongoIdFromJsonNullable(map);
+      if (id != null) return id;
     }
 
     throw FormatException('Invalid type for user field: ${json.runtimeType}');

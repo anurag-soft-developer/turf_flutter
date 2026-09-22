@@ -227,6 +227,20 @@ class CricketStateModel {
   @UserConverter()
   final dynamic bowlerUserId;
 
+  @JsonKey(
+    name: 'fromTeamActiveParticipantIds',
+    fromJson: mongoIdListFromJson,
+    defaultValue: <String>[],
+  )
+  final List<String> fromTeamActiveParticipantIds;
+
+  @JsonKey(
+    name: 'toTeamActiveParticipantIds',
+    fromJson: mongoIdListFromJson,
+    defaultValue: <String>[],
+  )
+  final List<String> toTeamActiveParticipantIds;
+
   @JsonKey(defaultValue: <CricketInningsSummaryModel>[])
   final List<CricketInningsSummaryModel> inningsSummaries;
 
@@ -239,6 +253,8 @@ class CricketStateModel {
     this.strikerUserId,
     this.nonStrikerUserId,
     this.bowlerUserId,
+    this.fromTeamActiveParticipantIds = const [],
+    this.toTeamActiveParticipantIds = const [],
   });
 
   factory CricketStateModel.fromJson(Map<String, dynamic> json) =>
@@ -296,6 +312,20 @@ class FootballStateModel {
   final DateTime? timerStartedAt;
   final bool isTimerPaused;
 
+  @JsonKey(
+    name: 'fromTeamActiveParticipantIds',
+    fromJson: mongoIdListFromJson,
+    defaultValue: <String>[],
+  )
+  final List<String> fromTeamActiveParticipantIds;
+
+  @JsonKey(
+    name: 'toTeamActiveParticipantIds',
+    fromJson: mongoIdListFromJson,
+    defaultValue: <String>[],
+  )
+  final List<String> toTeamActiveParticipantIds;
+
   const FootballStateModel({
     required this.scoreTeamOne,
     required this.scoreTeamTwo,
@@ -307,6 +337,8 @@ class FootballStateModel {
     this.totalTimerElapsedMs = 0,
     this.timerStartedAt,
     this.isTimerPaused = true,
+    this.fromTeamActiveParticipantIds = const [],
+    this.toTeamActiveParticipantIds = const [],
   });
 
   factory FootballStateModel.fromJson(Map<String, dynamic> json) =>

@@ -1,7 +1,7 @@
 import '../../../../core/models/user_field_instance.dart';
 import '../../../../match_up/announced_players/model/announced_player_model.dart';
 import '../../../../match_up/model/team_match_model.dart';
-import '../../../../scoring/cricket/model/cricket_ball_event_model.dart';
+import '../../../../scoring/cricket/model/cricket_over_event_model.dart';
 import '../cricket_lineup_card.dart';
 
 class CricketBatsmanScorecardRow {
@@ -240,7 +240,7 @@ CricketTeamInningsScorecard? buildTeamInningsScorecard({
             (userId == strikerId || userId == nonStrikerId) &&
             innings == cs.currentInnings,
         dismissalText: isOut
-            ? _dismissalTextForBatsman(inningsOvers, userId)
+            ? _dismissalTextForBatsman(match, inningsOvers, userId)
             : null,
       ),
     );
@@ -312,6 +312,7 @@ class _InningsExtrasAccumulator {
 }
 
 String? _dismissalTextForBatsman(
+  TeamMatchModel match,
   List<CricketOverEvent> overs,
   String batsmanUserId,
 ) {
@@ -321,8 +322,8 @@ String? _dismissalTextForBatsman(
       final dismissed = UserFieldInstance(ball.dismissedUserId).getId();
       if (dismissed != batsmanUserId) continue;
 
-      final bowler = _playerName(over.bowlerUserId);
-      final fielder = _playerName(ball.primaryFielderUserId);
+      final bowler = _playerName(match, over.bowlerUserId);
+      final fielder = _playerName(match, ball.primaryFielderUserId);
       return switch (ball.wicketKind) {
         CricketWicketKind.caught => 'c $fielder b $bowler',
         CricketWicketKind.bowled => 'b $bowler',
@@ -340,9 +341,10 @@ String? _dismissalTextForBatsman(
   return 'out';
 }
 
-String _playerName(dynamic userField) {
-  final helper = UserFieldInstance(userField);
-  return helper.getName() ?? helper.getDisplayName();
+String _playerName(TeamMatchModel match, dynamic userField) {
+  final id = UserFieldInstance(userField).getId();
+  if (id == null || id.isEmpty) return '';
+  return playerDisplayName(match, id);
 }
 
 List<CricketBowlerScorecardRow> _buildBowlingRows({

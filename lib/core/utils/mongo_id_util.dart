@@ -24,3 +24,13 @@ String? mongoIdFromJsonNullable(dynamic json) {
   final id = mongoIdFromJson(json);
   return id.isEmpty ? null : id;
 }
+
+/// Parses a list of Mongo ids (plain strings or Extended JSON / populated docs).
+List<String> mongoIdListFromJson(dynamic json) {
+  if (json is! List) return const [];
+  return json
+      .map(mongoIdFromJsonNullable)
+      .whereType<String>()
+      .where((id) => id.isNotEmpty)
+      .toList();
+}

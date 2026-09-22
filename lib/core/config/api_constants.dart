@@ -256,9 +256,13 @@ class ScoringEndpoints {
   String cricketSessionBalls(String teamMatchId) =>
       '/scoring/cricket/matches/$teamMatchId/balls';
 
-  /// Remove the latest delivery (`DELETE`).
-  String cricketUndoLastBall(String teamMatchId) =>
-      '/scoring/cricket/matches/$teamMatchId/balls/last';
+  /// Append a substitution (`POST`).
+  String cricketSessionSubstitutions(String teamMatchId) =>
+      '/scoring/cricket/matches/$teamMatchId/substitutions';
+
+  /// Undo globally latest scoring entry (`DELETE`).
+  String cricketUndoLastScoringEntry(String teamMatchId) =>
+      '/scoring/cricket/matches/$teamMatchId/events/last';
 
   /// Paginated over documents (`GET`).
   String cricketSessionOvers(String teamMatchId) =>

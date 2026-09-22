@@ -44,6 +44,14 @@ class AnnouncedPlayerModel {
   @JsonKey(name: 'is_substitute', defaultValue: false)
   final bool isSubstitute;
 
+  /// True once involved in any live substitution (off or on).
+  @JsonKey(name: 'is_substituted', defaultValue: false)
+  final bool isSubstituted;
+
+  /// Times involved in a substitution (off or on).
+  @JsonKey(name: 'substitute_count', defaultValue: 0)
+  final int substituteCount;
+
   final AnnouncedPlayerRole role;
 
   @JsonKey(defaultValue: false)
@@ -61,6 +69,8 @@ class AnnouncedPlayerModel {
     this.isGuest = false,
     this.guestId,
     this.isSubstitute = false,
+    this.isSubstituted = false,
+    this.substituteCount = 0,
     required this.role,
     this.isCaption = false,
     this.isWiseCaption = false,

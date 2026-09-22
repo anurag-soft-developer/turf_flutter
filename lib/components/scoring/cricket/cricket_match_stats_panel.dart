@@ -3,8 +3,10 @@ import 'package:get/get.dart';
 
 import '../../../core/config/constants.dart';
 import '../../../core/models/team/team_ref_field_instance.dart';
+import '../../../core/models/user_field_instance.dart';
 import '../../../match_up/model/team_match_model.dart';
 import '../../../scoring/cricket/cricket_scoring_controller.dart';
+import '../../../scoring/cricket/model/cricket_over_event_model.dart';
 import 'match_stats_error_card.dart';
 import 'match_stats_loading_card.dart';
 import 'match_status_chip.dart';
@@ -170,6 +172,47 @@ bool isCricketInningsComplete(CricketStateModel cs) {
   }
 
   return false;
+}
+
+/// True when the current innings sits on an over boundary (6, 12, … legal balls).
+bool isCricketOverBoundary(CricketStateModel cs) {
+  if (isCricketInningsComplete(cs)) return false;
+  final balls = currentInningsSummary(cs)?.legalBalls ?? 0;
+  return balls > 0 && balls % 6 == 0;
+}
+
+/// Bowler who finished the just-completed over (from over docs, else state).
+String? completedOverBowlerId(
+  CricketStateModel cs,
+  List<CricketOverEvent> overs,
+) {
+  final balls = currentInningsSummary(cs)?.legalBalls ?? 0;
+  if (balls <= 0 || balls % 6 != 0) return null;
+  final overAfter = (balls ~/ 6) - 1;
+  CricketOverEvent? completed;
+  for (final o in overs) {
+    if (o.innings != cs.currentInnings) continue;
+    if (o.overAfter != overAfter) continue;
+    if (completed == null || o.sequence > completed.sequence) {
+      completed = o;
+    }
+  }
+  final fromOver = UserFieldInstance(completed?.bowlerUserId).getId();
+  if (fromOver != null && fromOver.isNotEmpty) return fromOver;
+  return cs.bowlerUserHelper.getId();
+}
+
+/// Scoring should pause for a new bowler until state bowler ≠ completed-over bowler.
+bool isAwaitingNextOverBowler(
+  CricketStateModel cs,
+  List<CricketOverEvent> overs,
+) {
+  if (!isCricketOverBoundary(cs)) return false;
+  final previous = completedOverBowlerId(cs, overs) ?? '';
+  final current = cs.bowlerUserHelper.getId() ?? '';
+  if (current.isEmpty) return true;
+  if (previous.isEmpty) return true;
+  return current == previous;
 }
 
 /// Formats a count of legal balls into a cricket-style "overs.balls" string,

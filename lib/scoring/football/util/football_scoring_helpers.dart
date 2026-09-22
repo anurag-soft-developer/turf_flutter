@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../match_up/announced_players/model/announced_player_model.dart';
 import '../../../match_up/model/team_match_model.dart';
+import '../../common/lineup_helpers.dart';
 import '../model/football_match_event_model.dart';
 import '../model/football_scoring_models.dart';
 
@@ -19,6 +20,10 @@ List<AnnouncedPlayerModel> playingXiForTeam(
   String teamId,
 ) {
   if (teamId.isEmpty) return const [];
+  // Prefer live active lineup when scoring state is present.
+  if (match.footballState != null || match.cricketState != null) {
+    return activePlayersForTeam(match, teamId);
+  }
   return match.announcedPlayers
       .where(
         (p) =>

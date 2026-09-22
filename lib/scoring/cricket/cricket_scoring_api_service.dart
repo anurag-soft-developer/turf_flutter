@@ -1,7 +1,7 @@
 import '../../core/config/api_constants.dart';
 import '../../core/services/api_service.dart';
 import '../../match_up/model/team_match_model.dart';
-import 'model/cricket_ball_event_model.dart';
+import 'model/cricket_over_event_model.dart';
 import 'model/cricket_scoring_models.dart';
 
 /// HTTP client for cricket live scoring.
@@ -23,9 +23,29 @@ class CricketScoringApiService {
     return CricketOverEvent.fromJson(response);
   }
 
-  Future<bool> undoLastCricketBall({required String teamMatchId}) async {
+  Future<CricketOverEvent?> appendCricketSubstitution({
+    required String teamMatchId,
+    required String teamId,
+    required String playerOffParticipantId,
+    required String playerOnParticipantId,
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiConstants.scoring.cricketSessionSubstitutions(teamMatchId),
+      data: {
+        'teamId': teamId,
+        'playerOffParticipantId': playerOffParticipantId,
+        'playerOnParticipantId': playerOnParticipantId,
+      },
+    );
+    if (response == null) return null;
+    return CricketOverEvent.fromJson(response);
+  }
+
+  Future<bool> undoLastCricketScoringEntry({
+    required String teamMatchId,
+  }) async {
     return _apiService.deleteResource(
-      ApiConstants.scoring.cricketUndoLastBall(teamMatchId),
+      ApiConstants.scoring.cricketUndoLastScoringEntry(teamMatchId),
     );
   }
 

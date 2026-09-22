@@ -8,7 +8,7 @@ import '../../../../core/query/query_keys.dart';
 import '../../../../core/query/query_retry.dart';
 import '../../../../match_up/model/team_match_model.dart';
 import '../../../../scoring/cricket/cricket_scoring_api_service.dart';
-import '../../../../scoring/cricket/model/cricket_ball_event_model.dart';
+import '../../../../scoring/cricket/model/cricket_over_event_model.dart';
 import '../../../../scoring/football/football_scoring_api_service.dart';
 import '../../../../scoring/football/model/football_match_event_model.dart';
 import '../../football/football_scorecard.dart';

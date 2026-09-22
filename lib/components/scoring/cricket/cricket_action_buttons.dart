@@ -16,6 +16,7 @@ class CricketActionButtons extends StatelessWidget {
     required this.onWide,
     required this.onNoBall,
     required this.onWicket,
+    required this.onSubstitute,
     required this.onUndo,
     required this.onRedo,
   });
@@ -27,6 +28,7 @@ class CricketActionButtons extends StatelessWidget {
   final VoidCallback onWide;
   final VoidCallback onNoBall;
   final VoidCallback onWicket;
+  final VoidCallback onSubstitute;
   final VoidCallback onUndo;
   final VoidCallback onRedo;
 
@@ -37,7 +39,7 @@ class CricketActionButtons extends StatelessWidget {
     return Obx(() {
       final disabled = controller.isSendingUpdate.value;
       final canUndo = controller.cricketOvers.any(
-        (over) => over.ballEvents.isNotEmpty,
+        (over) => over.events.isNotEmpty,
       );
       final canRedo = controller.canRedoCricketBall.value;
 
@@ -115,6 +117,14 @@ class CricketActionButtons extends StatelessWidget {
                   label: 'W',
                   accent: const Color(AppColors.errorColor),
                   onTap: disabled ? null : onWicket,
+                ),
+              ),
+              const SizedBox(width: _gap),
+              Expanded(
+                child: _ActionKey(
+                  label: 'Sub',
+                  accent: const Color(AppColors.primaryColor),
+                  onTap: disabled ? null : onSubstitute,
                 ),
               ),
             ],

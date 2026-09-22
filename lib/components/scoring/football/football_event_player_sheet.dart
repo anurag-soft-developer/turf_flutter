@@ -6,6 +6,7 @@ import '../../../match_up/model/team_match_model.dart';
 import '../../../scoring/football/model/football_match_event_model.dart';
 import '../../../scoring/football/model/football_scoring_models.dart';
 import '../../../scoring/football/util/football_scoring_helpers.dart';
+import '../announced_player_list_tile.dart';
 
 /// Bottom sheet to collect players/teams for a football scoring event.
 class FootballEventPlayerSheet {
@@ -353,14 +354,8 @@ class _FootballEventSheetBodyState extends State<_FootballEventSheetBody> {
                 itemCount: players.length,
                 itemBuilder: (_, i) {
                   final p = players[i];
-                  return ListTile(
-                    title: Text(
-                      p.name,
-                      style: const TextStyle(
-                        color: Color(AppColors.textColor),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                  return AnnouncedPlayerListTile.fromPlayer(
+                    p,
                     onTap: () => Navigator.pop(ctx, p),
                   );
                 },

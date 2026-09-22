@@ -3,7 +3,8 @@ import 'package:get/get.dart';
 
 import '../../../core/config/constants.dart';
 import '../../../scoring/cricket/cricket_scoring_controller.dart';
-import '../../../scoring/cricket/model/cricket_ball_event_model.dart';
+import '../../../scoring/cricket/model/cricket_over_event_model.dart';
+import 'cricket_match_stats_panel.dart';
 
 /// Modern “this over” strip: label + over runs + ball sequence with empty slots.
 class CricketThisOverStrip extends StatelessWidget {
@@ -30,9 +31,21 @@ class CricketThisOverStrip extends StatelessWidget {
       final overs = controller.cricketOvers
           .where((o) => o.innings == innings)
           .toList();
-      final current = _latestOver(overs);
+      final latest = _latestOver(overs);
+      final latestLegal =
+          latest?.ballEvents.where((b) => b.isLegalDelivery).length ?? 0;
+      final cs = controller.cricketMatch.value?.cricketState;
+      final awaitingNextBowler = cs != null &&
+          isAwaitingNextOverBowler(cs, controller.cricketOvers.toList());
+      final inningsDone = cs != null && isCricketInningsComplete(cs);
+      // Keep completed-over balls until a new bowler is chosen (or innings ends);
+      // then empty until the next over's first ball.
+      final showEmptyNextOver =
+          latestLegal >= 6 && !awaitingNextBowler && !inningsDone;
+      final current = showEmptyNextOver ? null : latest;
       final balls = current?.ballEvents ?? const <CricketBallEvent>[];
-      final overNumber = current?.overAfter;
+      final overNumber = current?.overAfter ??
+          (showEmptyNextOver && latest != null ? latest.overAfter + 1 : null);
       final overRuns = _runsInOver(balls);
       final legalBowled = balls.where((b) => b.isLegalDelivery).length;
       final remainingSlots = (6 - legalBowled).clamp(0, 6);

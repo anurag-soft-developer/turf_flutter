@@ -1,6 +1,13 @@
 enum ScoringSport { cricket, football }
 
-enum ScoringAction { appendBall, appendEvent, undoBall, undoEvent }
+enum ScoringAction {
+  appendBall,
+  appendEvent,
+  appendSubstitution,
+  undoBall,
+  undoEvent,
+  undoScoringEntry,
+}
 
 /// Known `data.kind` values on cricket / football / announced-player scoring events.
 abstract final class ScoringEventKind {
@@ -119,8 +126,10 @@ String _sportToApi(ScoringSport sport) {
 ScoringAction _actionFromApi(String? value) {
   return switch (value) {
     'append_event' => ScoringAction.appendEvent,
+    'append_substitution' => ScoringAction.appendSubstitution,
     'undo_ball' => ScoringAction.undoBall,
     'undo_event' => ScoringAction.undoEvent,
+    'undo_scoring_entry' => ScoringAction.undoScoringEntry,
     _ => ScoringAction.appendBall,
   };
 }
@@ -129,7 +138,9 @@ String _actionToApi(ScoringAction action) {
   return switch (action) {
     ScoringAction.appendBall => 'append_ball',
     ScoringAction.appendEvent => 'append_event',
+    ScoringAction.appendSubstitution => 'append_substitution',
     ScoringAction.undoBall => 'undo_ball',
     ScoringAction.undoEvent => 'undo_event',
+    ScoringAction.undoScoringEntry => 'undo_scoring_entry',
   };
 }

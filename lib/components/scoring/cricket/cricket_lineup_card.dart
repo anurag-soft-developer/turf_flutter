@@ -6,9 +6,12 @@ import '../../../core/config/constants.dart';
 import '../../../core/models/user_field_instance.dart';
 import '../../../match_up/announced_players/model/announced_player_model.dart';
 import '../../../match_up/model/team_match_model.dart';
+import '../../../scoring/common/lineup_helpers.dart';
 import '../../../scoring/cricket/cricket_scoring_controller.dart';
-import '../../../scoring/cricket/model/cricket_ball_event_model.dart';
+import '../../../scoring/cricket/model/cricket_over_event_model.dart';
 import '../../../scoring/cricket/model/cricket_scoring_models.dart';
+import '../announced_player_list_tile.dart';
+import 'cricket_match_stats_panel.dart';
 import 'cricket_this_over_strip.dart';
 
 /// User ids dismissed (out) in [innings], from over event ball data.
@@ -41,6 +44,10 @@ List<AnnouncedPlayerModel> playingXiForTeam(
   String teamId,
 ) {
   if (teamId.isEmpty) return const [];
+  // Prefer live active lineup once scoring state is present.
+  if (match.cricketState != null) {
+    return activePlayersForTeam(match, teamId);
+  }
   return match.announcedPlayers
       .where((p) => p.teamIdHelper.getId() == teamId && !p.isSubstitute)
       .toList();
@@ -83,8 +90,9 @@ _BattingFigures battingFiguresForUser(
 
 List<CricketBallEvent> latestOverBalls(
   List<CricketOverEvent> overs,
-  int innings,
-) {
+  int innings, {
+  bool clearCompletedOver = false,
+}) {
   CricketOverEvent? latest;
   for (final over in overs) {
     if (over.innings != innings) continue;
@@ -95,7 +103,11 @@ List<CricketBallEvent> latestOverBalls(
       latest = over;
     }
   }
-  return latest?.ballEvents ?? const [];
+  if (latest == null) return const [];
+  final legal = latest.ballEvents.where((b) => b.isLegalDelivery).length;
+  // After next bowler is selected, hide the finished over until new balls.
+  if (legal >= 6 && clearCompletedOver) return const [];
+  return latest.ballEvents;
 }
 
 int _runsConcededInOver(List<CricketBallEvent> balls) {
@@ -238,43 +250,15 @@ class _CricketLineupCardState extends State<CricketLineupCard> {
                         }
                       }
 
-                      return ListTile(
+                      return AnnouncedPlayerListTile.fromPlayer(
+                        p,
                         enabled: !disabled,
-                        leading: CircleAvatar(
-                          backgroundColor: const Color(
-                            AppColors.primaryColor,
-                          ).withValues(alpha: 0.12),
-                          backgroundImage:
-                              p.avatar != null && p.avatar!.isNotEmpty
-                              ? AppNetworkImage.provider(p.avatar!)
-                              : null,
-                          child: p.avatar == null || p.avatar!.isEmpty
-                              ? const Icon(
-                                  Icons.person,
-                                  color: Color(AppColors.primaryColor),
-                                )
-                              : null,
-                        ),
-                        title: Text(
-                          p.name,
-                          style: TextStyle(
-                            color: disabled
-                                ? const Color(AppColors.textSecondaryColor)
-                                : const Color(AppColors.textColor),
-                          ),
-                        ),
                         subtitle: disabled
-                            ? Text(
-                                dismissed.contains(uid)
-                                    ? 'Out'
-                                    : 'Already at other crease',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Color(AppColors.errorColor),
-                                ),
-                              )
+                            ? (dismissed.contains(uid)
+                                  ? 'Out'
+                                  : 'Already at other crease')
                             : null,
-                        onTap: disabled ? null : () => Navigator.pop(ctx, p),
+                        onTap: () => Navigator.pop(ctx, p),
                       );
                     },
                   ),
@@ -333,7 +317,13 @@ class _CricketLineupCardState extends State<CricketLineupCard> {
         cs.currentInnings,
         nId,
       );
-      final thisOverBalls = latestOverBalls(overs, cs.currentInnings);
+      final awaitingNextBowler = isAwaitingNextOverBowler(cs, overs.toList());
+      final thisOverBalls = latestOverBalls(
+        overs,
+        cs.currentInnings,
+        clearCompletedOver:
+            !awaitingNextBowler && !isCricketInningsComplete(cs),
+      );
       final bowlerOverRuns = _runsConcededInOver(thisOverBalls);
       final bowlerLegalBalls =
           thisOverBalls.where((b) => b.isLegalDelivery).length;

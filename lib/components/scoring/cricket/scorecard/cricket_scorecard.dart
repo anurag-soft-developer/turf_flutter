@@ -4,7 +4,7 @@ import 'package:flutter_application_1/components/shared/app_network_image.dart';
 import '../../../../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
 import '../../../../core/config/constants.dart';
 import '../../../../match_up/model/team_match_model.dart';
-import '../../../../scoring/cricket/model/cricket_ball_event_model.dart';
+import '../../../../scoring/cricket/model/cricket_over_event_model.dart';
 import '../cricket_lineup_card.dart';
 import 'cricket_scorecard_stats.dart';
 

@@ -11,7 +11,7 @@ import '../shared/scoring_shared_models.dart';
 import '../shared/scoring_socket_service.dart';
 import 'cricket_scoring_api_service.dart';
 import 'cricket_scoring_live_cache.dart';
-import 'model/cricket_ball_event_model.dart';
+import 'model/cricket_over_event_model.dart';
 import 'model/cricket_scoring_models.dart';
 
 /// Coordinates live cricket scoring for the current session.
@@ -59,7 +59,7 @@ class CricketScoringController extends GetxController {
   String? _joinedMatchId;
 
   bool get canUndoCricketBall =>
-      cricketOvers.any((over) => over.ballEvents.isNotEmpty);
+      cricketOvers.any((over) => over.events.isNotEmpty);
 
   String get fromTeamId =>
       cricketMatch.value?.fromTeamHelper.getId() ?? '';
@@ -235,7 +235,9 @@ class CricketScoringController extends GetxController {
       if (sessionId.isNotEmpty) {
         unawaited(fetchCricketMatch(sessionId));
         if (payload.action == ScoringAction.appendBall ||
-            payload.action == ScoringAction.undoBall) {
+            payload.action == ScoringAction.appendSubstitution ||
+            payload.action == ScoringAction.undoBall ||
+            payload.action == ScoringAction.undoScoringEntry) {
           unawaited(fetchCricketOvers(sessionId));
         }
       }
@@ -519,6 +521,47 @@ class CricketScoringController extends GetxController {
     }
   }
 
+  Future<CricketOverEvent?> appendCricketSubstitution({
+    required String teamId,
+    required String playerOffParticipantId,
+    required String playerOnParticipantId,
+  }) async {
+    final sessionId = currentSessionId.value;
+    if (sessionId.isEmpty) {
+      errorMessage.value = 'No scoring session selected.';
+      return null;
+    }
+
+    errorMessage.value = null;
+    isSendingUpdate.value = true;
+    try {
+      final response = await _apiService.appendCricketSubstitution(
+        teamMatchId: sessionId,
+        teamId: teamId,
+        playerOffParticipantId: playerOffParticipantId,
+        playerOnParticipantId: playerOnParticipantId,
+      );
+      if (response == null) {
+        errorMessage.value = 'Could not record substitution.';
+        return null;
+      }
+      _redoBallRequests.clear();
+      _syncRedoAvailability();
+      upsertCricketOver(response);
+      final match = await _apiService.getCricketSession(sessionId);
+      if (match != null) {
+        cricketMatch.value = match;
+      }
+      _syncQueryCache();
+      return response;
+    } catch (error) {
+      errorMessage.value = error.toString();
+      return null;
+    } finally {
+      isSendingUpdate.value = false;
+    }
+  }
+
   Future<bool> undoLastCricketBall() async {
     final sessionId = currentSessionId.value;
     if (sessionId.isEmpty) {
@@ -526,16 +569,18 @@ class CricketScoringController extends GetxController {
       return false;
     }
     if (!canUndoCricketBall) {
-      errorMessage.value = 'No ball to undo.';
+      errorMessage.value = 'No scoring entry to undo.';
       return false;
     }
 
     errorMessage.value = null;
     isSendingUpdate.value = true;
     try {
-      final ok = await _apiService.undoLastCricketBall(teamMatchId: sessionId);
+      final ok = await _apiService.undoLastCricketScoringEntry(
+        teamMatchId: sessionId,
+      );
       if (!ok) {
-        errorMessage.value = 'Could not undo the last ball.';
+        errorMessage.value = 'Could not undo the last scoring entry.';
         return false;
       }
       if (_ballRequestHistory.isNotEmpty) {

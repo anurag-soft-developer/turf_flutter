@@ -128,6 +128,12 @@ CricketStateModel _$CricketStateModelFromJson(
   strikerUserId: const UserConverter().fromJson(json['strikerUserId']),
   nonStrikerUserId: const UserConverter().fromJson(json['nonStrikerUserId']),
   bowlerUserId: const UserConverter().fromJson(json['bowlerUserId']),
+  fromTeamActiveParticipantIds: json['fromTeamActiveParticipantIds'] == null
+      ? []
+      : mongoIdListFromJson(json['fromTeamActiveParticipantIds']),
+  toTeamActiveParticipantIds: json['toTeamActiveParticipantIds'] == null
+      ? []
+      : mongoIdListFromJson(json['toTeamActiveParticipantIds']),
 );
 
 Map<String, dynamic> _$CricketStateModelToJson(
@@ -140,6 +146,8 @@ Map<String, dynamic> _$CricketStateModelToJson(
   'strikerUserId': const UserConverter().toJson(instance.strikerUserId),
   'nonStrikerUserId': const UserConverter().toJson(instance.nonStrikerUserId),
   'bowlerUserId': const UserConverter().toJson(instance.bowlerUserId),
+  'fromTeamActiveParticipantIds': instance.fromTeamActiveParticipantIds,
+  'toTeamActiveParticipantIds': instance.toTeamActiveParticipantIds,
   'inningsSummaries': instance.inningsSummaries.map((e) => e.toJson()).toList(),
 };
 
@@ -192,6 +200,12 @@ FootballStateModel _$FootballStateModelFromJson(Map<String, dynamic> json) =>
           ? null
           : DateTime.parse(json['timerStartedAt'] as String),
       isTimerPaused: json['isTimerPaused'] as bool? ?? true,
+      fromTeamActiveParticipantIds: json['fromTeamActiveParticipantIds'] == null
+          ? []
+          : mongoIdListFromJson(json['fromTeamActiveParticipantIds']),
+      toTeamActiveParticipantIds: json['toTeamActiveParticipantIds'] == null
+          ? []
+          : mongoIdListFromJson(json['toTeamActiveParticipantIds']),
     );
 
 Map<String, dynamic> _$FootballStateModelToJson(
@@ -207,6 +221,8 @@ Map<String, dynamic> _$FootballStateModelToJson(
   'totalTimerElapsedMs': instance.totalTimerElapsedMs,
   'timerStartedAt': instance.timerStartedAt?.toIso8601String(),
   'isTimerPaused': instance.isTimerPaused,
+  'fromTeamActiveParticipantIds': instance.fromTeamActiveParticipantIds,
+  'toTeamActiveParticipantIds': instance.toTeamActiveParticipantIds,
 };
 
 TeamMatchModel _$TeamMatchModelFromJson(

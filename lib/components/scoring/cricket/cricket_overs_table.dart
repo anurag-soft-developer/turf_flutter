@@ -4,7 +4,7 @@ import 'package:get/get.dart';
 import '../../../core/config/constants.dart';
 import '../../../core/models/user_field_instance.dart';
 import '../../../scoring/cricket/cricket_scoring_controller.dart';
-import '../../../scoring/cricket/model/cricket_ball_event_model.dart';
+import '../../../scoring/cricket/model/cricket_over_event_model.dart';
 
 /// Table that lists every recorded over with a small per-row summary.
 ///
@@ -31,6 +31,13 @@ class CricketOversTable extends StatelessWidget {
           controller.cricketOvers.where((o) => o.innings == innings).toList();
       final currentOver = _currentOver(inningsOvers, innings);
       final tableOvers = _oversForTable(inningsOvers, currentOver);
+      final participantNames = <String, String>{
+        for (final p
+            in controller.cricketMatch.value?.announcedPlayers ??
+                const [])
+          if ((p.participantId ?? '').isNotEmpty)
+            p.participantId!: p.name,
+      };
 
       return Container(
         decoration: BoxDecoration(
@@ -125,8 +132,17 @@ class CricketOversTable extends StatelessWidget {
                             ],
                           ),
                           if (currentOver != null)
-                            _overTableRow(currentOver, isCurrent: true),
-                          ...tableOvers.map((o) => _overTableRow(o)),
+                            _overTableRow(
+                              currentOver,
+                              isCurrent: true,
+                              participantNames: participantNames,
+                            ),
+                          ...tableOvers.map(
+                            (o) => _overTableRow(
+                              o,
+                              participantNames: participantNames,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -141,7 +157,11 @@ class CricketOversTable extends StatelessWidget {
   }
 }
 
-TableRow _overTableRow(CricketOverEvent over, {bool isCurrent = false}) {
+TableRow _overTableRow(
+  CricketOverEvent over, {
+  bool isCurrent = false,
+  required Map<String, String> participantNames,
+}) {
   return TableRow(
     decoration: isCurrent
         ? BoxDecoration(
@@ -159,7 +179,10 @@ TableRow _overTableRow(CricketOverEvent over, {bool isCurrent = false}) {
         '${over.ballEvents.where((b) => b.isLegalDelivery).length}',
         emphasized: isCurrent,
       ),
-      _OverTableCell(_bowlerCellLabel(over.bowlerUserId), emphasized: isCurrent),
+      _OverTableCell(
+        _bowlerCellLabel(over.bowlerUserId, participantNames),
+        emphasized: isCurrent,
+      ),
       _BallsBreakdownCell(over.ballEvents, emphasized: isCurrent),
     ],
   );
@@ -227,11 +250,18 @@ int _totalRunsInOver(CricketOverEvent over) {
   return sum;
 }
 
-String _bowlerCellLabel(dynamic bowlerRef) {
+String _bowlerCellLabel(
+  dynamic bowlerRef,
+  Map<String, String> participantNames,
+) {
   final h = UserFieldInstance(bowlerRef);
+  final id = h.getId();
+  if (id != null && id.isNotEmpty) {
+    final fromSquad = participantNames[id];
+    if (fromSquad != null && fromSquad.isNotEmpty) return fromSquad;
+  }
   final name = h.getName();
   if (name != null && name.isNotEmpty) return name;
-  final id = h.getId();
   if (id == null || id.isEmpty) return '—';
   if (id.length <= 8) return id;
   return '…${id.substring(id.length - 6)}';
