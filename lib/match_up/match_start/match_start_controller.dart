@@ -3,18 +3,21 @@ import 'package:get/get.dart';
 import '../../core/routes/route_query.dart';
 import '../../team/model/team_model.dart';
 
-/// Sports supported for unranked match creation (must match backend allowlist).
-const unrankedMatchSports = <TeamSportType>{
+/// Sports supported for scoreboard match start (must match backend allowlist).
+const matchStartSports = <TeamSportType>{
   TeamSportType.cricket,
   TeamSportType.football,
 };
 
-class UnrankedMatchStartController extends GetxController {
+class MatchStartController extends GetxController {
   late final TeamSportType sport;
+  late final bool isRanked;
 
-  bool get isSportSupported => unrankedMatchSports.contains(sport);
+  bool get isSportSupported => matchStartSports.contains(sport);
 
-  String get screenTitle => 'Unranked ${sport.label.toLowerCase()}';
+  String get modeLabel => isRanked ? 'Ranked' : 'Unranked';
+
+  String get screenTitle => '$modeLabel ${sport.label.toLowerCase()}';
 
   String get sportLabel => sport.label.toLowerCase();
 
@@ -22,6 +25,7 @@ class UnrankedMatchStartController extends GetxController {
   void onInit() {
     super.onInit();
     sport = _sportFromRoute();
+    isRanked = routeParam('mode') == 'ranked';
   }
 
   static TeamSportType sportFromRoute() {

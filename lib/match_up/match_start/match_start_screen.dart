@@ -21,27 +21,30 @@ import '../../team/team_service.dart';
 import '../../team/utils/team_ui.dart';
 import '../matchmaking_service.dart';
 import '../model/team_match_model.dart';
-import 'unranked_match_start_controller.dart';
+import 'match_start_controller.dart';
 
-class UnrankedMatchStartScreen extends HookWidget {
-  const UnrankedMatchStartScreen({super.key});
+class MatchStartScreen extends HookWidget {
+  const MatchStartScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<UnrankedMatchStartController>();
+    final controller = Get.find<MatchStartController>();
     final sport = controller.sport;
+    final ranked = controller.isRanked;
 
     if (!controller.isSportSupported) {
       return Scaffold(
         backgroundColor: const Color(AppColors.backgroundColor),
-        appBar: AppAppBar(title: const Text('Unranked match')),
-        body: const Center(
+        appBar: AppAppBar(title: Text(controller.screenTitle)),
+        body: Center(
           child: Padding(
-            padding: EdgeInsets.all(24),
+            padding: const EdgeInsets.all(24),
             child: Text(
-              'Unranked matches are not available for this sport yet.',
+              '${controller.modeLabel} matches are not available for this sport yet.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Color(AppColors.textSecondaryColor)),
+              style: const TextStyle(
+                color: Color(AppColors.textSecondaryColor),
+              ),
             ),
           ),
         ),
@@ -102,10 +105,11 @@ class UnrankedMatchStartScreen extends HookWidget {
       final fromId = selectedTeam.value?.id;
       if (fromId == null || fromId.isEmpty) return;
 
-      final picked = await showUnrankedOpponentPickerSheet(
+      final picked = await showOpponentPickerSheet(
         context: context,
         fromTeamId: fromId,
         sport: sport,
+        openForMatch: ranked,
       );
       if (picked != null) {
         selectedOpponent.value = picked;
@@ -125,20 +129,26 @@ class UnrankedMatchStartScreen extends HookWidget {
 
       creating.value = true;
       try {
-        final match = await MatchmakingService().createUnrankedMatch(
-          CreateUnrankedMatchRequest(fromTeamId: fromId, toTeamId: toId),
-        );
+        final match = ranked
+            ? await MatchmakingService().sendRequest(
+                SendMatchRequest(fromTeamId: fromId, toTeamId: toId),
+              )
+            : await MatchmakingService().createUnrankedMatch(
+                CreateUnrankedMatchRequest(fromTeamId: fromId, toTeamId: toId),
+              );
         final matchId = match?.id;
         if (matchId == null || matchId.isEmpty) {
           AppSnackbar.error(
-            title: 'Could not start match',
+            title: ranked
+                ? 'Could not send challenge'
+                : 'Could not start match',
             message: 'The server did not return a match.',
           );
           return;
         }
-        if (!opponentIsAlsoMine) {
+        if (ranked || !opponentIsAlsoMine) {
           AppSnackbar.success(
-            title: 'Request sent',
+            title: ranked ? 'Challenge sent' : 'Request sent',
             message: 'Waiting for the other team to accept.',
           );
         }
@@ -148,7 +158,9 @@ class UnrankedMatchStartScreen extends HookWidget {
         );
       } catch (e) {
         AppSnackbar.error(
-          title: opponentIsAlsoMine
+          title: ranked
+              ? 'Could not send challenge'
+              : opponentIsAlsoMine
               ? 'Could not start match'
               : 'Could not send request',
           message: e.toString(),
@@ -158,19 +170,24 @@ class UnrankedMatchStartScreen extends HookWidget {
       }
     }
 
-    final membershipsLoading = membershipsQuery.isLoading ||
+    final membershipsLoading =
+        membershipsQuery.isLoading ||
         (membershipsQuery.isFetching && membershipsQuery.data == null);
-    final canStart = selectedTeam.value?.id != null &&
+    final canStart =
+        selectedTeam.value?.id != null &&
         selectedOpponent.value?.id != null &&
         !creating.value;
 
     final myTeam = selectedTeam.value;
     final opponent = selectedOpponent.value;
-    final pickerTeams =
-        mySportTeams.where((t) => t.id != opponent?.id).toList();
+    final pickerTeams = mySportTeams
+        .where((t) => t.id != opponent?.id)
+        .toList();
     final opponentIsAlsoMine =
         opponent?.id != null && mySportTeams.any((t) => t.id == opponent!.id);
-    final primaryLabel = opponentIsAlsoMine ? 'Start' : 'Send request';
+    final primaryLabel = ranked
+        ? 'Send challenge'
+        : (opponentIsAlsoMine ? 'Start' : 'Send request');
     final sportLabel = controller.sportLabel;
     final screenTitle = controller.screenTitle;
 
@@ -186,141 +203,138 @@ class UnrankedMatchStartScreen extends HookWidget {
               ),
             )
           : mySportTeams.isEmpty
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          sport.icon,
-                          size: 56,
-                          color: Colors.grey.shade400,
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Join or create a $sportLabel team first. Only captains and owners can start an unranked match.',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Color(AppColors.textSecondaryColor),
-                            fontSize: 15,
-                            height: 1.4,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        FilledButton(
-                          onPressed: () =>
-                              Get.toNamed(AppConstants.routes.myTeams),
-                          child: const Text('My teams'),
-                        ),
-                      ],
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(sport.icon, size: 56, color: Colors.grey.shade400),
+                    const SizedBox(height: 12),
+                    Text(
+                      ranked
+                          ? 'Join or create a $sportLabel team first. Only captains and owners can send a ranked challenge.'
+                          : 'Join or create a $sportLabel team first. Only captains and owners can start an unranked match.',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Color(AppColors.textSecondaryColor),
+                        fontSize: 15,
+                        height: 1.4,
+                      ),
                     ),
-                  ),
-                )
-              : SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-                    child: Column(
-                      children: [
-                        const Spacer(),
-                        MatchPickVersusRow(
-                          left: MatchPickVersusTeam(
-                            name: myTeam?.name ?? 'Your team',
-                            logoUrl: myTeam?.logo ?? '',
-                            showEditBadge: pickerTeams.length > 1,
-                            wrapLogo: (logo) => MyTeamSelector(
-                              teams: pickerTeams,
-                              selectedTeam: myTeam,
-                              sheetTitle: 'Select your $sportLabel team',
-                              onTeamSelected: (team) =>
-                                  selectedTeam.value = team,
-                              buttonChild: logo,
-                            ),
-                          ),
-                          right: MatchPickVersusTeam(
-                            name: opponent?.name ?? 'Select opponent',
-                            logoUrl: opponent?.logo ?? '',
-                            placeholder: opponent == null,
-                            showEditBadge: true,
-                            onTap: pickOpponent,
-                          ),
-                        ),
-                        const Spacer(),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: canStart ? startMatch : null,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  const Color(AppColors.primaryColor),
-                              foregroundColor: Colors.white,
-                              disabledBackgroundColor: const Color(
-                                AppColors.dividerColor,
-                              ),
-                              disabledForegroundColor: const Color(
-                                AppColors.textSecondaryColor,
-                              ),
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              elevation: 0,
-                            ),
-                            child: creating.value
-                                ? const SizedBox(
-                                    width: 22,
-                                    height: 22,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2.5,
-                                      valueColor:
-                                          AlwaysStoppedAnimation<Color>(
-                                        Colors.white,
-                                      ),
-                                    ),
-                                  )
-                                : Text(
-                                    primaryLabel,
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                          ),
-                        ),
-                      ],
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: () => Get.toNamed(AppConstants.routes.myTeams),
+                      child: const Text('My teams'),
                     ),
-                  ),
+                  ],
                 ),
+              ),
+            )
+          : SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                child: Column(
+                  children: [
+                    const Spacer(),
+                    MatchPickVersusRow(
+                      left: MatchPickVersusTeam(
+                        name: myTeam?.name ?? 'Your team',
+                        logoUrl: myTeam?.logo ?? '',
+                        showEditBadge: pickerTeams.length > 1,
+                        wrapLogo: (logo) => MyTeamSelector(
+                          teams: pickerTeams,
+                          selectedTeam: myTeam,
+                          sheetTitle: 'Select your $sportLabel team',
+                          onTeamSelected: (team) => selectedTeam.value = team,
+                          buttonChild: logo,
+                        ),
+                      ),
+                      right: MatchPickVersusTeam(
+                        name: opponent?.name ?? 'Select opponent',
+                        logoUrl: opponent?.logo ?? '',
+                        placeholder: opponent == null,
+                        showEditBadge: true,
+                        onTap: pickOpponent,
+                      ),
+                    ),
+                    const Spacer(),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: canStart ? startMatch : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(AppColors.primaryColor),
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor: const Color(
+                            AppColors.dividerColor,
+                          ),
+                          disabledForegroundColor: const Color(
+                            AppColors.textSecondaryColor,
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: creating.value
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                            : Text(
+                                primaryLabel,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
     );
   }
 }
 
-Future<TeamModel?> showUnrankedOpponentPickerSheet({
+Future<TeamModel?> showOpponentPickerSheet({
   required BuildContext context,
   required String fromTeamId,
   required TeamSportType sport,
+  bool openForMatch = false,
 }) {
   return showModalBottomSheet<TeamModel>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
     backgroundColor: Colors.transparent,
-    builder: (ctx) => _UnrankedOpponentPickerSheet(
+    builder: (ctx) => _OpponentPickerSheet(
       fromTeamId: fromTeamId,
       sport: sport,
+      openForMatch: openForMatch,
     ),
   );
 }
 
-class _UnrankedOpponentPickerSheet extends HookWidget {
-  const _UnrankedOpponentPickerSheet({
+class _OpponentPickerSheet extends HookWidget {
+  const _OpponentPickerSheet({
     required this.fromTeamId,
     required this.sport,
+    required this.openForMatch,
   });
 
   final String fromTeamId;
   final TeamSportType sport;
+  final bool openForMatch;
 
   @override
   Widget build(BuildContext context) {
@@ -346,33 +360,38 @@ class _UnrankedOpponentPickerSheet extends HookWidget {
 
     final opponentsQuery =
         useInfiniteQuery<PaginatedResponse<TeamModel>, Object, int>(
-      QueryKeys.unrankedOpponentSearch(
-        fromTeamId: fromTeamId,
-        query: query,
-        sportType: sport.name,
-      ),
-      (ctx) async {
-        final result = await TeamService().findMany(
-          TeamFilterQuery(
-            status: TeamStatus.active,
-            sportType: sport,
-            search: query.isEmpty ? null : query,
-            page: ctx.pageParam,
-            limit: 20,
+          QueryKeys.unrankedOpponentSearch(
+            fromTeamId: fromTeamId,
+            query: query,
+            sportType: sport.name,
+            openForMatch: openForMatch,
           ),
+          (ctx) async {
+            final result = await TeamService().findMany(
+              TeamFilterQuery(
+                status: TeamStatus.active,
+                sportType: sport,
+                search: query.isEmpty ? null : query,
+                teamOpenForMatch: openForMatch ? true : null,
+                skipTeamsWithSentRequest: openForMatch ? true : null,
+                fromTeamId: openForMatch ? fromTeamId : null,
+                page: ctx.pageParam,
+                limit: 20,
+              ),
+            );
+            return result ?? EmptyPaginatedResponse<TeamModel>();
+          },
+          initialPageParam: 1,
+          retry: noRetry,
+          nextPageParamBuilder: (data) {
+            final last = data.pages.isNotEmpty ? data.pages.last : null;
+            if (last == null || !last.hasNextPage) return null;
+            return last.page + 1;
+          },
         );
-        return result ?? EmptyPaginatedResponse<TeamModel>();
-      },
-      initialPageParam: 1,
-      retry: noRetry,
-      nextPageParamBuilder: (data) {
-        final last = data.pages.isNotEmpty ? data.pages.last : null;
-        if (last == null || !last.hasNextPage) return null;
-        return last.page + 1;
-      },
-    );
 
-    final opponents = opponentsQuery.data?.pages
+    final opponents =
+        opponentsQuery.data?.pages
             .expand((p) => p.data)
             .where((t) => t.id != null && t.id != fromTeamId)
             .toList() ??
@@ -428,6 +447,7 @@ class _UnrankedOpponentPickerSheet extends HookWidget {
                 query: opponentsQuery,
                 items: opponents,
                 sportLabel: sportLabel,
+                openForMatch: openForMatch,
                 onPick: (team) => Navigator.pop(context, team),
               ),
             ),
@@ -443,12 +463,14 @@ class _OpponentList extends StatelessWidget {
     required this.query,
     required this.items,
     required this.sportLabel,
+    required this.openForMatch,
     required this.onPick,
   });
 
   final InfiniteQueryResult<PaginatedResponse<TeamModel>, Object, int> query;
   final List<TeamModel> items;
   final String sportLabel;
+  final bool openForMatch;
   final ValueChanged<TeamModel> onPick;
 
   @override
@@ -487,7 +509,9 @@ class _OpponentList extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Text(
-            'No $sportLabel teams found. Try another search.',
+            openForMatch
+                ? 'No open $sportLabel teams found. The other team must be open for matches.'
+                : 'No $sportLabel teams found. Try another search.',
             textAlign: TextAlign.center,
             style: const TextStyle(color: Color(AppColors.textSecondaryColor)),
           ),
@@ -545,8 +569,8 @@ class _OpponentList extends StatelessWidget {
                         Text(
                           [
                             teamSportLabel(team.sportType),
-                            if (team.location?.shortPlaceLabel
-                                case final place? when place.isNotEmpty)
+                            if (team.location?.shortPlaceLabel case final place?
+                                when place.isNotEmpty)
                               place,
                           ].join(' · '),
                           maxLines: 1,

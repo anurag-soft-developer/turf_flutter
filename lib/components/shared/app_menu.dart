@@ -58,11 +58,6 @@ class AppMenuScreen extends StatelessWidget {
         onTap: () => _navigateTo(AppConstants.routes.myInvitations),
       ),
       AppMenuItem(
-        title: 'Rank',
-        icon: Icons.emoji_events_rounded,
-        onTap: () => _navigateTo(AppConstants.routes.rank),
-      ),
-      AppMenuItem(
         title: 'Notifications',
         icon: Icons.notifications_rounded,
         onTap: () => _navigateTo(AppConstants.routes.notifications),

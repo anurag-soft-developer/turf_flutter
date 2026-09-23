@@ -77,12 +77,7 @@ class QueryKeys {
     required String tab,
     String? teamFilter,
     String? source,
-  }) => [
-    ...myMatchesPrefix,
-    tab,
-    teamFilter ?? 'all',
-    source ?? 'all',
-  ];
+  }) => [...myMatchesPrefix, tab, teamFilter ?? 'all', source ?? 'all'];
 
   static const matchesPrefix = ['matches'];
 
@@ -210,7 +205,14 @@ class QueryKeys {
     required String fromTeamId,
     required String query,
     required String sportType,
-  }) => [...unrankedOpponentSearchPrefix, fromTeamId, query, sportType];
+    bool openForMatch = false,
+  }) => [
+    ...unrankedOpponentSearchPrefix,
+    fromTeamId,
+    query,
+    sportType,
+    openForMatch,
+  ];
 
   static const explorePostPrefix = ['explorePost'];
 

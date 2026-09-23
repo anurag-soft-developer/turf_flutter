@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../components/shared/app_network_image.dart';
+import '../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
 import '../components/shared/custom_button.dart';
 import '../components/shared/user_avatar_app_bar_action.dart';
 import '../core/components/scroll/floating_sliver_app_bar.dart';
+import '../core/components/scroll/pinned_sliver_header.dart';
 import '../core/config/constants.dart';
 import '../team/model/team_model.dart';
 
@@ -22,12 +24,24 @@ class _ScoreboardSportOption {
   final bool enabled;
 }
 
-/// Bottom-tab hub for starting unranked scoreboard sessions by sport.
-class ScoreboardScreen extends StatelessWidget {
+/// Bottom-tab hub for starting ranked or unranked scoreboard sessions by sport.
+class ScoreboardScreen extends StatefulWidget {
   const ScoreboardScreen({super.key});
 
+  @override
+  State<ScoreboardScreen> createState() => _ScoreboardScreenState();
+}
+
+class _ScoreboardScreenState extends State<ScoreboardScreen>
+    with SingleTickerProviderStateMixin {
   static const _cardHeight = 200.0;
   static const _horizontalPadding = 20.0;
+  static const _modeTabs = [
+    AppTabItem(label: 'Unranked'),
+    AppTabItem(label: 'Ranked'),
+  ];
+
+  late final TabController _tabController;
 
   static const _sports = [
     _ScoreboardSportOption(
@@ -46,10 +60,46 @@ class ScoreboardScreen extends StatelessWidget {
     ),
   ];
 
-  static void _openUnrankedMatch(TeamSportType sport) {
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: _modeTabs.length, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  void _openMatch(TeamSportType sport, {required bool ranked}) {
     Get.toNamed(
       AppConstants.routes.matchUpUnranked,
-      parameters: {'sport': sport.name},
+      parameters: {'sport': sport.name, 'mode': ranked ? 'ranked' : 'unranked'},
+    );
+  }
+
+  Widget _modePage({required bool ranked}) {
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(
+        _horizontalPadding,
+        24,
+        _horizontalPadding,
+        24,
+      ),
+      itemCount: _sports.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final option = _sports[index];
+        return SizedBox(
+          height: _cardHeight,
+          child: _SportPosterCard(
+            option: option,
+            ranked: ranked,
+            onStart: () => _openMatch(option.sport, ranked: ranked),
+          ),
+        );
+      },
     );
   }
 
@@ -57,45 +107,81 @@ class ScoreboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
-      body: CustomScrollView(
-        slivers: [
-          const FloatingSliverAppBar(
-            leading: UserAvatarAppBarAction(),
-            title: Text('Scoreboard'),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(
-              _horizontalPadding,
-              24,
-              _horizontalPadding,
-              24,
+      body: NestedScrollView(
+        floatHeaderSlivers: true,
+        headerSliverBuilder: (context, innerBoxIsScrolled) {
+          return [
+            FloatingSliverAppBar(
+              leading: const UserAvatarAppBarAction(),
+              title: const Text('Scoreboard'),
+              actions: [
+                IconButton(
+                  tooltip: 'Rank',
+                  icon: const Icon(Icons.emoji_events_rounded),
+                  onPressed: () => Get.toNamed(AppConstants.routes.rank),
+                ),
+              ],
             ),
-            sliver: SliverList.separated(
-              itemCount: _sports.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
+            PinnedSliverHeader(
+              child: AppSegmentedTabs(
+                controller: _tabController,
+                items: _modeTabs,
+                fillWidth: true,
+                padding: const EdgeInsets.fromLTRB(
+                  _horizontalPadding,
+                  12,
+                  _horizontalPadding,
+                  4,
+                ),
+              ),
+            ),
+          ];
+        },
+        body: AppSegmentedTabView(
+          controller: _tabController,
+          children: [_modePage(ranked: false), _modePage(ranked: true)],
+        ),
+      ),
+    );
+  }
+}
 
-                final option = _sports[index];
-                return SizedBox(
-                  height: _cardHeight,
-                  child: _SportPosterCard(
-                    option: option,
-                    onStart: () => _openUnrankedMatch(option.sport),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
+class _ModeChip extends StatelessWidget {
+  const _ModeChip({required this.ranked});
+
+  final bool ranked;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
+      ),
+      child: Text(
+        ranked ? 'Ranked' : 'Unranked',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          height: 1.1,
+        ),
       ),
     );
   }
 }
 
 class _SportPosterCard extends StatelessWidget {
-  const _SportPosterCard({required this.option, required this.onStart});
+  const _SportPosterCard({
+    required this.option,
+    required this.ranked,
+    required this.onStart,
+  });
 
   final _ScoreboardSportOption option;
+  final bool ranked;
   final VoidCallback onStart;
 
   @override
@@ -156,14 +242,24 @@ class _SportPosterCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.18),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(sport.icon, size: 20, color: Colors.white),
+                    Row(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            sport.icon,
+                            size: 20,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const Spacer(),
+                        _ModeChip(ranked: ranked),
+                      ],
                     ),
                     const Spacer(),
                     Text(
