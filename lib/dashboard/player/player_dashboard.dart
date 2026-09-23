@@ -6,11 +6,13 @@ import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
 import '../../components/dashboard/battle_mode_card.dart';
+import '../../components/dashboard/dashboard_upcoming_bookings_section.dart';
 import '../../components/dashboard/dashboard_leaderboard_section.dart';
 import '../../components/dashboard/sports_section.dart';
 import '../../components/dashboard/team_action_cards.dart';
 import '../../components/turf/featured_section.dart';
 import '../../core/auth/auth_state_controller.dart';
+import '../../core/components/bottom_navigation_panel/navigation_controller.dart';
 import '../../core/components/scroll/floating_sliver_app_bar.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/location_model.dart';
@@ -255,17 +257,44 @@ class _PlayerDashboardFeed extends HookWidget {
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: BattleModeCard(nearbyTeamsCount: data.nearbyTeamsCount),
         ),
+        if (data.upcomingBookings.isNotEmpty) ...[
+          const SizedBox(height: 24),
+          DashboardUpcomingBookingsSection(bookings: data.upcomingBookings),
+        ],
         if (showTurfsSection) ...[
           const SizedBox(height: 28),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Text(
-              data.turfsTitle,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Color(AppColors.textColor),
-              ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    data.turfsTitle,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Color(AppColors.textColor),
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    if (Get.isRegistered<NavigationController>()) {
+                      Get.find<NavigationController>().goToTurfs();
+                    }
+                  },
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(AppColors.primaryColor),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text(
+                    'View more',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 12),

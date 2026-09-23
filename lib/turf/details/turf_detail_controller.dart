@@ -340,6 +340,7 @@ class TurfDetailController extends GetxController {
     final client = Get.find<QueryClient>();
     final futures = <Future<void>>[
       client.invalidateQueries(queryKey: const ['bookings']),
+      client.invalidateQueries(queryKey: QueryKeys.playerDashboardPrefix),
     ];
     final id = _turfId;
     if (id != null) {

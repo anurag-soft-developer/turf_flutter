@@ -48,6 +48,8 @@ class TaggedPostsGrid extends HookWidget {
       },
       initialPageParam: 1,
       retry: noRetry,
+      staleDuration: const StaleDuration(minutes: 5),
+      refetchOnMount: RefetchOnMount.never,
       nextPageParamBuilder: (data) {
         final last = data.pages.isNotEmpty ? data.pages.last : null;
         if (last == null || !last.hasNextPage) return null;

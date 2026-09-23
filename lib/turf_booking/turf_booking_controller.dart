@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
+import '../core/query/query_keys.dart';
 import '../core/utils/exception_handler.dart';
 import 'model/turf_booking_model.dart';
 import 'turf_booking_service.dart';
@@ -125,6 +126,10 @@ class TurfBookingController extends GetxController {
 
   Future<void> _invalidateBookings() async {
     if (!Get.isRegistered<QueryClient>()) return;
-    await Get.find<QueryClient>().invalidateQueries(queryKey: ['bookings']);
+    final client = Get.find<QueryClient>();
+    await Future.wait([
+      client.invalidateQueries(queryKey: const ['bookings']),
+      client.invalidateQueries(queryKey: QueryKeys.playerDashboardPrefix),
+    ]);
   }
 }

@@ -10,9 +10,8 @@ import 'util/announced_player_display_helpers.dart';
 import 'util/announced_player_roles_helpers.dart';
 import 'manage_announced_players_sheet.dart';
 
-/// Header row height: fits two lines of team title + vertical center with edit slot.
+/// Header row height: fits two lines of team title + compact edit affordance.
 const double _kSquadHeaderMinHeight = 44;
-const double _kSquadHeaderEditSlot = 40;
 
 /// Player tile row height in squad grids (avatar + name + role + optional lines).
 const double _kPlayerGridTileExtent = 168;
@@ -182,14 +181,12 @@ class _TeamSquadBlock extends StatelessWidget {
       children: [
         ConstrainedBox(
           constraints: const BoxConstraints(minHeight: _kSquadHeaderMinHeight),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+          child: Stack(
+            alignment: Alignment.center,
+            clipBehavior: Clip.none,
             children: [
-              SizedBox(
-                width: _kSquadHeaderEditSlot,
-                height: _kSquadHeaderEditSlot,
-              ),
-              Expanded(
+              Padding(
+                padding: EdgeInsets.fromLTRB(4, 2, showEdit ? 26 : 4, 2),
                 child: Text(
                   teamLabel,
                   textAlign: TextAlign.center,
@@ -203,29 +200,25 @@ class _TeamSquadBlock extends StatelessWidget {
                   ),
                 ),
               ),
-              SizedBox(
-                width: _kSquadHeaderEditSlot,
-                height: _kSquadHeaderEditSlot,
-                child: showEdit
-                    ? IconButton(
-                        onPressed: onEdit,
-                        icon: const Icon(Icons.edit_outlined, size: 22),
-                        tooltip: 'Manage squad',
-                        color: const Color(AppColors.primaryColor),
-                        style: IconButton.styleFrom(
-                          backgroundColor: const Color(
-                            AppColors.primaryColor,
-                          ).withValues(alpha: 0.08),
-                        ),
-                        padding: EdgeInsets.zero,
-                        visualDensity: VisualDensity.compact,
-                        constraints: const BoxConstraints.tightFor(
-                          width: _kSquadHeaderEditSlot,
-                          height: _kSquadHeaderEditSlot,
-                        ),
-                      )
-                    : null,
-              ),
+              if (showEdit)
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  child: IconButton(
+                    onPressed: onEdit,
+                    icon: const Icon(Icons.edit_outlined, size: 18),
+                    tooltip: 'Manage squad',
+                    style: IconButton.styleFrom(
+                      foregroundColor: const Color(AppColors.primaryColor),
+                      padding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      minimumSize: const Size(28, 28),
+                      fixedSize: const Size(28, 28),
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
