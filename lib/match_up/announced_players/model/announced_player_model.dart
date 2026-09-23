@@ -81,6 +81,38 @@ class AnnouncedPlayerModel {
 
   Map<String, dynamic> toJson() => _$AnnouncedPlayerModelToJson(this);
 
+  AnnouncedPlayerModel copyWith({
+    dynamic teamId,
+    String? name,
+    String? avatar,
+    String? email,
+    dynamic userId,
+    bool? isGuest,
+    String? guestId,
+    bool? isSubstitute,
+    bool? isSubstituted,
+    int? substituteCount,
+    AnnouncedPlayerRole? role,
+    bool? isCaption,
+    bool? isWiseCaption,
+  }) {
+    return AnnouncedPlayerModel(
+      teamId: teamId ?? this.teamId,
+      name: name ?? this.name,
+      avatar: avatar ?? this.avatar,
+      email: email ?? this.email,
+      userId: userId ?? this.userId,
+      isGuest: isGuest ?? this.isGuest,
+      guestId: guestId ?? this.guestId,
+      isSubstitute: isSubstitute ?? this.isSubstitute,
+      isSubstituted: isSubstituted ?? this.isSubstituted,
+      substituteCount: substituteCount ?? this.substituteCount,
+      role: role ?? this.role,
+      isCaption: isCaption ?? this.isCaption,
+      isWiseCaption: isWiseCaption ?? this.isWiseCaption,
+    );
+  }
+
   TeamRefFieldInstance get teamIdHelper => TeamRefFieldInstance(teamId);
 
   UserFieldInstance get userIdHelper => UserFieldInstance(userId);

@@ -111,7 +111,7 @@ class MatchChallengeDetailController extends GetxController
 
   bool get canUseScheduleControls => canEditSchedule && !isCancellingMatch.value;
 
-  bool get isCasual => match.value?.isCasual == true;
+  bool get isUnranked => match.value?.isUnranked == true;
 
   bool get isAbandonMatch => match.value?.status == TeamMatchStatus.ongoing;
 
@@ -369,12 +369,12 @@ class MatchChallengeDetailController extends GetxController
     await _invalidateMatchQueries(updated);
     AppSnackbar.success(
       title: action == MatchResponseAction.accept
-          ? (isCasual ? 'Request accepted' : 'Challenge accepted')
-          : (isCasual ? 'Request rejected' : 'Challenge rejected'),
+          ? (isUnranked ? 'Request accepted' : 'Challenge accepted')
+          : (isUnranked ? 'Request rejected' : 'Challenge rejected'),
       message: action == MatchResponseAction.accept
           ? 'You can continue scheduling now.'
-          : (isCasual
-              ? 'The casual match request was declined.'
+          : (isUnranked
+              ? 'The unranked match request was declined.'
               : 'The challenge was declined.'),
     );
   }

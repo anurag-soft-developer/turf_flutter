@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../components/my_matches/my_matches_sub_filters.dart';
 import '../../components/match_history/match_card.dart';
 import '../../components/match_history/match_history_placeholders.dart';
 import '../../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
@@ -35,14 +36,19 @@ class MyMatchesScreen extends StatelessWidget {
       tabs: _tabs,
       initialTabIndex: c.selectedTab.value.index,
       onTabChanged: c.switchTab,
-      buildPanes: (filterKey) => [
-        for (final tab in MyMatchesTab.values)
-          _MyMatchesPane(
-            key: ValueKey('${tab.name}|$filterKey'),
-            tab: tab,
-            teamFilter: filterKey,
-          ),
-      ],
+      belowTabs: const MyMatchesSubFilters(),
+      buildPanes: (filterKey) {
+        final type = c.typeFilter.value;
+        return [
+          for (final tab in MyMatchesTab.values)
+            _MyMatchesPane(
+              key: ValueKey('${tab.name}|$filterKey|${type.name}'),
+              tab: tab,
+              teamFilter: filterKey,
+              typeFilter: type,
+            ),
+        ];
+      },
     );
   }
 }
@@ -50,6 +56,7 @@ class MyMatchesScreen extends StatelessWidget {
 Future<PaginatedResponse<TeamMatchModel>> _fetchMatchesPage({
   required MyMatchesTab tab,
   required List<String> teamIds,
+  required MyMatchesTypeFilter typeFilter,
   required int page,
 }) async {
   if (teamIds.isEmpty) {
@@ -61,6 +68,7 @@ Future<PaginatedResponse<TeamMatchModel>> _fetchMatchesPage({
       teamIds: teamIds,
       type: NegotiationListType.all,
       statuses: tab.apiStatuses,
+      source: typeFilter.apiSource,
       page: page,
       limit: 20,
       sort: tab.sort,
@@ -74,10 +82,12 @@ class _MyMatchesPane extends StatelessWidget {
     super.key,
     required this.tab,
     required this.teamFilter,
+    required this.typeFilter,
   });
 
   final MyMatchesTab tab;
   final String teamFilter;
+  final MyMatchesTypeFilter typeFilter;
 
   @override
   Widget build(BuildContext context) {
@@ -108,9 +118,17 @@ class _MyMatchesPane extends StatelessWidget {
     };
 
     return MatchInfiniteQueryPane(
-      queryKey: QueryKeys.myMatches(tab: tab.name, teamFilter: teamFilter),
-      fetchPage: (page) =>
-          _fetchMatchesPage(tab: tab, teamIds: teamIds, page: page),
+      queryKey: QueryKeys.myMatches(
+        tab: tab.name,
+        teamFilter: teamFilter,
+        source: typeFilter.apiSource?.name,
+      ),
+      fetchPage: (page) => _fetchMatchesPage(
+        tab: tab,
+        teamIds: teamIds,
+        typeFilter: typeFilter,
+        page: page,
+      ),
       empty: empty,
       itemBuilder: (match, _, _) => MatchCard(
         match: match,

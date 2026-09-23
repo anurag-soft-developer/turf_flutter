@@ -9,6 +9,7 @@ import '../../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
 import '../../core/components/app_bar/app_bar_background.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/location_model.dart';
+import '../../core/utils/app_snackbar.dart';
 import '../../core/utils/map_launch_util.dart';
 import '../../explore/model/content_post_model.dart';
 import '../../explore/post_service.dart';
@@ -86,8 +87,8 @@ class MatchChallengeDetailScreen extends StatelessWidget {
       backgroundColor: const Color(AppColors.backgroundColor),
       appBar: AppAppBar(
         title: Obx(() {
-          final casual = c.match.value?.isCasual == true;
-          return Text(casual ? 'Casual match' : 'Challenge Details');
+          final unranked = c.match.value?.isUnranked == true;
+          return Text(unranked ? 'Unranked match' : 'Challenge Details');
         }),
         actions: [
           Obx(() {
@@ -405,24 +406,14 @@ class _MatchChallengeDetailBody extends StatelessWidget {
                           currentMatch.fromTeamHelper.getId() ?? '';
                       final toId = currentMatch.toTeamHelper.getId() ?? '';
                       final editable = controller.editableAnnounceTeamIds;
-                      final opponentId =
-                          myTeamId == fromId ? toId : fromId;
-                      final myReady =
-                          MatchAnnouncedPlayersSection.teamHasAnnouncedPlayers(
-                            currentMatch,
-                            myTeamId,
-                          );
-                      final opponentReady =
-                          MatchAnnouncedPlayersSection.teamHasAnnouncedPlayers(
-                            currentMatch,
-                            opponentId,
-                          );
-                      final canEditEdits =
+                      final ready = MatchAnnouncedPlayersSection
+                          .bothTeamsHaveAnnouncedPlayers(currentMatch);
+                      final canEdit =
                           MatchAnnouncedPlayersSection
                               .allowsAnnouncedPlayerEdits(currentMatch);
 
                       String? nextAnnounceTeamId;
-                      if (canEditEdits) {
+                      if (canEdit && !ongoing && !ready) {
                         if (editable.contains(fromId) &&
                             !MatchAnnouncedPlayersSection
                                 .teamHasAnnouncedPlayers(
@@ -439,68 +430,74 @@ class _MatchChallengeDetailBody extends StatelessWidget {
                           nextAnnounceTeamId = toId;
                         } else if (editable.contains(myTeamId) &&
                             myTeamId.isNotEmpty &&
-                            !myReady) {
+                            !MatchAnnouncedPlayersSection
+                                .teamHasAnnouncedPlayers(
+                              currentMatch,
+                              myTeamId,
+                            )) {
                           nextAnnounceTeamId = myTeamId;
                         }
                       }
 
-                      if (!ongoing && !(myReady && opponentReady)) {
-                        if (nextAnnounceTeamId != null) {
-                          return SizedBox(
+                      final showHint = !ongoing && !ready;
+                      final minPlayers = MatchAnnouncedPlayersSection
+                          .minAnnouncedPlayersPerTeam;
+
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (showHint)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Text(
+                                'Minimum $minPlayers players per team required to start',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(AppColors.textSecondaryColor),
+                                ),
+                              ),
+                            ),
+                          SizedBox(
                             width: double.infinity,
                             child: ElevatedButton.icon(
                               onPressed: controller.actionBusy
                                   ? null
-                                  : () => openManageAnnouncedPlayersSheet(
-                                        context: context,
-                                        match: currentMatch,
-                                        actorTeamId: nextAnnounceTeamId!,
-                                        onSaved:
-                                            controller.scheduleMatchUpdate,
-                                      ),
-                              icon: const Icon(Icons.groups_outlined),
-                              label: const Text('Announce players'),
+                                  : () {
+                                      if (ongoing || ready) {
+                                        controller.openScoreboard();
+                                        return;
+                                      }
+                                      final teamId = nextAnnounceTeamId;
+                                      if (teamId != null) {
+                                        openManageAnnouncedPlayersSheet(
+                                          context: context,
+                                          match: currentMatch,
+                                          actorTeamId: teamId,
+                                          onSaved:
+                                              controller.scheduleMatchUpdate,
+                                        );
+                                        return;
+                                      }
+                                      AppSnackbar.info(
+                                        title: 'Squad not ready',
+                                        message:
+                                            'Waiting for the other team to announce players.',
+                                      );
+                                    },
+                              icon: Icon(
+                                ongoing
+                                    ? Icons.scoreboard_outlined
+                                    : Icons.play_circle_outline,
+                              ),
+                              label: Text(
+                                ongoing ? 'Open scoreboard' : 'Start match',
+                              ),
                             ),
-                          );
-                        }
-
-                        return Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 14,
                           ),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Text(
-                            'Awaiting opponent squad',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Color(AppColors.textSecondaryColor),
-                            ),
-                          ),
-                        );
-                      }
-
-                      return SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: controller.actionBusy
-                              ? null
-                              : controller.openScoreboard,
-                          icon: Icon(
-                            ongoing
-                                ? Icons.scoreboard_outlined
-                                : Icons.play_circle_outline,
-                          ),
-                          label: Text(
-                            ongoing ? 'Open scoreboard' : 'Start scoring',
-                          ),
-                        ),
+                        ],
                       );
                     },
                   ),
@@ -535,7 +532,7 @@ class _MatchChallengeDetailBody extends StatelessWidget {
     const base = 16.0;
     if (!showScoreboardBar && !controller.canRespondToChallenge) return base;
     double overlay = 0;
-    if (showScoreboardBar) overlay += 76;
+    if (showScoreboardBar) overlay += 100;
     if (showScoreboardBar && controller.canRespondToChallenge) overlay += 12;
     if (controller.canRespondToChallenge) overlay += 56;
     return base + overlay;

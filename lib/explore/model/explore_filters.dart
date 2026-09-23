@@ -27,10 +27,13 @@ class ExploreFilters {
       };
 
   Map<String, dynamic> toQueryParameters() {
-    final params = <String, dynamic>{
-      'matchScope': matchScope,
-      'matchStatus': matchStatus,
-    };
+    final params = <String, dynamic>{};
+    if (matchFilters.type != MatchTypeFilter.all) {
+      params['matchScope'] = matchScope;
+    }
+    if (matchFilters.status != MatchStatusFilter.all) {
+      params['matchStatus'] = matchStatus;
+    }
 
     if (sportType != null) {
       params['sportType'] = sportType!.name;

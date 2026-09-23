@@ -3,6 +3,7 @@ import 'package:flutter_application_1/components/shared/app_network_image.dart';
 
 import '../../core/config/constants.dart';
 import '../../match_up/announced_players/model/announced_player_model.dart';
+import '../announced_players/util/announced_player_display_helpers.dart';
 
 /// Shared list row for announced-player pickers (avatar + name).
 class AnnouncedPlayerListTile extends StatelessWidget {
@@ -16,6 +17,8 @@ class AnnouncedPlayerListTile extends StatelessWidget {
   });
 
   /// Convenience from an [AnnouncedPlayerModel].
+  ///
+  /// When [subtitle] is omitted, defaults to [announcedPlayerPickerSubtitle].
   factory AnnouncedPlayerListTile.fromPlayer(
     AnnouncedPlayerModel player, {
     Key? key,
@@ -27,7 +30,7 @@ class AnnouncedPlayerListTile extends StatelessWidget {
       key: key,
       name: player.name,
       avatarUrl: player.avatar,
-      subtitle: subtitle,
+      subtitle: subtitle ?? announcedPlayerPickerSubtitle(player),
       enabled: enabled,
       onTap: onTap,
     );

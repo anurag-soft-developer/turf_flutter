@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/config/constants.dart';
 import 'team_logo.dart';
 
-/// One side of a pickable team-vs-team row (challenge sheet / casual start).
+/// One side of a pickable team-vs-team row (challenge sheet / unranked start).
 class MatchPickVersusTeam {
   const MatchPickVersusTeam({
     required this.name,

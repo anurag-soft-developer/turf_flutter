@@ -4,9 +4,10 @@ import 'package:get/get.dart';
 
 import '../match_up/team_logo.dart';
 import '../../core/config/constants.dart';
+import '../../match_up/announced_players/model/announced_player_model.dart';
 import '../../match_up/model/team_match_model.dart';
 import 'util/announced_player_roles_helpers.dart';
-import 'casual_guest_sheets.dart';
+import 'guest_sheets.dart';
 import 'manage_announced_players_controller.dart';
 
 /// Opens a modal sheet to toggle active roster members as announced players.
@@ -71,6 +72,40 @@ class _ManageAnnouncedPlayersSheetState
     super.dispose();
   }
 
+  Widget _rosterPlayerCard({
+    required ManageAnnouncedPlayersController c,
+    required bool locked,
+    required Set<String> selectedIds,
+    required Set<String> busyIds,
+    required String userId,
+    required String name,
+    required String? avatar,
+    required AnnouncedPlayerRole role,
+    bool highlight = false,
+  }) {
+    final selected = selectedIds.contains(userId);
+    final busy = busyIds.contains(userId);
+    final takenByOpponent = !selected && c.isAnnouncedForOpponent(userId);
+    return _PlayerCard(
+      name: name,
+      avatar: avatar,
+      roleLabel: takenByOpponent
+          ? 'Announced for opponent'
+          : announcedRoleLabelForSport(widget.match.sportType, role),
+      selected: selected,
+      highlight: highlight,
+      busy: busy,
+      dimmed: takenByOpponent,
+      showCheckbox: !takenByOpponent,
+      onTap: locked || busy || takenByOpponent
+          ? null
+          : () => c.toggleMember(userId),
+      trailing: selected
+          ? _MetaToggles(controller: c, participantId: userId)
+          : null,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final bottomPad = MediaQuery.paddingOf(context).bottom;
@@ -86,275 +121,189 @@ class _ManageAnnouncedPlayersSheetState
         maxChildSize: 0.92,
         builder: (context, scrollController) {
           return Obx(() {
-            final saving = c.saving.value;
             final loadingRoster = c.loadingRoster.value;
+            final locked = c.interactionsLocked;
             // Read selection here — ListView.builder itemBuilder runs too late for Obx.
             final selectedIds = c.selectedUserIds.toSet();
+            final busyIds = c.busyParticipantIds.toSet();
             final guestRows = c.visibleGuestRows;
             final orphans = c.orphans;
             final roster = c.roster.toList();
             final rosterError = c.rosterError.value;
 
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
-                  child: Row(
-                    children: [
-                      TeamLogo(url: c.teamLogo, size: 40),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          c.teamName,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
-                            color: Color(AppColors.textColor),
-                          ),
+            final body = <Widget>[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
+                child: Row(
+                  children: [
+                    TeamLogo(url: c.teamLogo, size: 40),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        c.teamName,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          color: Color(AppColors.textColor),
                         ),
                       ),
-                      if (c.isCasual)
-                        TextButton.icon(
-                          onPressed: saving
-                              ? null
-                              : () async {
-                                  final draft = await showAddGuestSheet(
-                                    context: context,
-                                    sport: widget.match.sportType,
-                                  );
-                                  if (draft == null) return;
-                                  c.addPendingGuest(draft);
-                                },
-                          icon: const Icon(
-                            Icons.person_add_alt_outlined,
-                            size: 18,
-                          ),
-                          label: const Text('Add'),
-                          style: TextButton.styleFrom(
-                            foregroundColor:
-                                const Color(AppColors.primaryColor),
-                            visualDensity: VisualDensity.compact,
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 8),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                if (c.isCasual && guestRows.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        for (final g in guestRows)
-                          _PlayerCard(
-                            name: g.name,
-                            avatar: g.avatar,
-                            roleLabel: announcedRoleLabelForSport(
-                              widget.match.sportType,
-                              g.role,
-                            ),
-                            selected: true,
-                            showCheckbox: false,
-                            onTap: null,
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                _CaptainViceToggles(
-                                  controller: c,
-                                  participantId: g.participantId,
-                                ),
-                                IconButton(
-                                  tooltip: 'Remove guest',
-                                  onPressed: saving
-                                      ? null
-                                      : () => c.removeGuestFromUi(
-                                            g.participantId,
-                                            pending: g.pending,
-                                          ),
-                                  icon: const Icon(Icons.close_rounded),
-                                  color: const Color(
-                                    AppColors.textSecondaryColor,
-                                  ),
-                                  visualDensity: VisualDensity.compact,
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(
-                                    minWidth: 36,
-                                    minHeight: 36,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                      ],
                     ),
-                  ),
-                const SizedBox(height: 8),
-                Expanded(
-                  child: loadingRoster
-                      ? const Center(
-                          child: CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Color(AppColors.primaryColor),
-                            ),
+                    if (c.syncing.value)
+                      const Padding(
+                        padding: EdgeInsets.only(right: 8),
+                        child: SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                    if (c.isUnranked)
+                      TextButton.icon(
+                        onPressed: locked
+                            ? null
+                            : () async {
+                                final draft = await showAddGuestSheet(
+                                  context: context,
+                                  sport: widget.match.sportType,
+                                );
+                                if (draft == null) return;
+                                await c.addGuest(draft);
+                              },
+                        icon: const Icon(
+                          Icons.person_add_alt_outlined,
+                          size: 18,
+                        ),
+                        label: const Text('Add'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: const Color(AppColors.primaryColor),
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (c.isUnranked && guestRows.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (final g in guestRows)
+                        _PlayerCard(
+                          name: g.name,
+                          avatar: g.avatar,
+                          roleLabel: announcedRoleLabelForSport(
+                            widget.match.sportType,
+                            g.role,
                           ),
-                        )
-                      : rosterError != null
-                          ? Center(
-                              child: Padding(
-                                padding: const EdgeInsets.all(24),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      rosterError,
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                        color: Color(
-                                          AppColors.textSecondaryColor,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    TextButton(
-                                      onPressed: c.loadRoster,
-                                      child: const Text('Retry'),
-                                    ),
-                                  ],
+                          selected: true,
+                          showCheckbox: false,
+                          busy: busyIds.contains(g.participantId),
+                          onTap: null,
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _MetaToggles(
+                                controller: c,
+                                participantId: g.participantId,
+                              ),
+                              IconButton(
+                                tooltip: 'Remove guest',
+                                onPressed: locked ||
+                                        busyIds.contains(g.participantId)
+                                    ? null
+                                    : () => c.removeGuest(g.participantId),
+                                icon: const Icon(Icons.close_rounded),
+                                color: const Color(
+                                  AppColors.textSecondaryColor,
+                                ),
+                                visualDensity: VisualDensity.compact,
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(
+                                  minWidth: 36,
+                                  minHeight: 36,
                                 ),
                               ),
-                            )
-                          : ListView.builder(
-                              controller: scrollController,
-                              padding:
-                                  const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                              itemCount: orphans.length + roster.length,
-                              itemBuilder: (context, i) {
-                                if (i < orphans.length) {
-                                  final o = orphans[i];
-                                  final uid = o.userIdHelper.getId();
-                                  if (uid == null) {
-                                    return const SizedBox.shrink();
-                                  }
-                                  final selected = selectedIds.contains(uid);
-                                  return _PlayerCard(
-                                    name: o.name,
-                                    avatar: o.avatar,
-                                    roleLabel: announcedRoleLabelForSport(
-                                      widget.match.sportType,
-                                      o.role,
-                                    ),
-                                    selected: selected,
-                                    highlight: true,
-                                    onTap: saving
-                                        ? null
-                                        : () => c.toggle(uid),
-                                    trailing: selected
-                                        ? _CaptainViceToggles(
-                                            controller: c,
-                                            participantId: uid,
-                                          )
-                                        : null,
-                                  );
-                                }
-                                final m = roster[i - orphans.length];
-                                final uid = m.userHelper.getId();
-                                if (uid == null) {
-                                  return const SizedBox.shrink();
-                                }
-                                final selected = selectedIds.contains(uid);
-                                return _PlayerCard(
-                                  name: m.userHelper.getDisplayName(),
-                                  avatar: m.userHelper.getAvatar(),
-                                  roleLabel: announcedRoleLabelForSport(
-                                    widget.match.sportType,
-                                    c.roleForUserId(uid),
-                                  ),
-                                  selected: selected,
-                                  onTap:
-                                      saving ? null : () => c.toggle(uid),
-                                  trailing: selected
-                                      ? _CaptainViceToggles(
-                                          controller: c,
-                                          participantId: uid,
-                                        )
-                                      : null,
-                                );
-                              },
-                            ),
-                ),
-                Padding(
-                  padding: EdgeInsets.fromLTRB(16, 8, 16, 12 + bottomPad),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: saving || loadingRoster
-                              ? null
-                              : () => Navigator.of(context).pop(),
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size.fromHeight(40),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 10,
-                            ),
-                            visualDensity: VisualDensity.compact,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                          child: const Text(
-                            'Cancel',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
+                            ],
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: saving || loadingRoster
-                              ? null
-                              : () => c.save(context),
-                          style: FilledButton.styleFrom(
-                            minimumSize: const Size.fromHeight(40),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 10,
-                            ),
-                            visualDensity: VisualDensity.compact,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                          child: saving
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const Text(
-                                  'Save',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                        ),
-                      ),
                     ],
                   ),
                 ),
-              ],
+              const SizedBox(height: 8),
+              if (loadingRoster)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 48),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Color(AppColors.primaryColor),
+                      ),
+                    ),
+                  ),
+                )
+              else if (rosterError != null)
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      Text(
+                        rosterError,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Color(AppColors.textSecondaryColor),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextButton(
+                        onPressed: c.loadRoster,
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Column(
+                    children: [
+                      for (final o in orphans)
+                        if (o.userIdHelper.getId() != null)
+                          _rosterPlayerCard(
+                            c: c,
+                            locked: locked,
+                            selectedIds: selectedIds,
+                            busyIds: busyIds,
+                            userId: o.userIdHelper.getId()!,
+                            name: o.name,
+                            avatar: o.avatar,
+                            role: o.role,
+                            highlight: true,
+                          ),
+                      for (final m in roster)
+                        if (m.userHelper.getId() != null)
+                          _rosterPlayerCard(
+                            c: c,
+                            locked: locked,
+                            selectedIds: selectedIds,
+                            busyIds: busyIds,
+                            userId: m.userHelper.getId()!,
+                            name: m.userHelper.getDisplayName(),
+                            avatar: m.userHelper.getAvatar(),
+                            role: c.roleForUserId(m.userHelper.getId()!),
+                          ),
+                    ],
+                  ),
+                ),
+            ];
+
+            return ListView(
+              controller: scrollController,
+              padding: EdgeInsets.only(bottom: 12 + bottomPad),
+              children: body,
             );
           });
         },
@@ -363,8 +312,8 @@ class _ManageAnnouncedPlayersSheetState
   }
 }
 
-class _CaptainViceToggles extends StatelessWidget {
-  const _CaptainViceToggles({
+class _MetaToggles extends StatelessWidget {
+  const _MetaToggles({
     required this.controller,
     required this.participantId,
   });
@@ -378,92 +327,98 @@ class _CaptainViceToggles extends StatelessWidget {
       final cap = controller.captainParticipantId.value == participantId;
       final vice =
           controller.viceCaptainParticipantId.value == participantId;
-      final disabled =
-          controller.saving.value || controller.loadingRoster.value;
+      final sub = controller.substituteParticipantIds.contains(participantId);
+      final disabled = controller.interactionsLocked ||
+          controller.isBusy(participantId);
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Tooltip(
-            message: cap ? 'Clear captain' : 'Captain',
-            child: Material(
-              color: cap
-                  ? const Color(AppColors.primaryColor).withValues(alpha: 0.18)
-                  : const Color(AppColors.backgroundColor),
-              borderRadius: BorderRadius.circular(8),
-              child: InkWell(
-                onTap: disabled
-                    ? null
-                    : () => controller.onCaptainTap(participantId),
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: cap
-                          ? const Color(AppColors.primaryColor)
-                          : const Color(AppColors.dividerColor),
-                    ),
-                  ),
-                  child: Text(
-                    'C',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 11,
-                      letterSpacing: 0.5,
-                      color: cap
-                          ? const Color(AppColors.primaryColor)
-                          : const Color(AppColors.textSecondaryColor),
-                    ),
-                  ),
-                ),
-              ),
-            ),
+          _MetaChip(
+            label: 'C',
+            tooltip: cap ? 'Clear captain' : 'Captain',
+            active: cap,
+            activeColor: const Color(AppColors.primaryColor),
+            disabled: disabled,
+            onTap: () => controller.setCaptain(participantId),
           ),
           const SizedBox(width: 6),
-          Tooltip(
-            message: vice ? 'Clear vice-captain' : 'Vice-captain',
-            child: Material(
-              color: vice
-                  ? const Color(AppColors.secondaryColor)
-                      .withValues(alpha: 0.14)
-                  : const Color(AppColors.backgroundColor),
-              borderRadius: BorderRadius.circular(8),
-              child: InkWell(
-                onTap: disabled
-                    ? null
-                    : () => controller.onViceCaptainTap(participantId),
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 7, vertical: 6),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: vice
-                          ? const Color(AppColors.secondaryColor)
-                          : const Color(AppColors.dividerColor),
-                    ),
-                  ),
-                  child: Text(
-                    'VC',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 11,
-                      letterSpacing: 0.2,
-                      color: vice
-                          ? const Color(AppColors.secondaryColor)
-                          : const Color(AppColors.textSecondaryColor),
-                    ),
-                  ),
-                ),
-              ),
-            ),
+          _MetaChip(
+            label: 'VC',
+            tooltip: vice ? 'Clear vice-captain' : 'Vice-captain',
+            active: vice,
+            activeColor: const Color(AppColors.secondaryColor),
+            disabled: disabled,
+            onTap: () => controller.setViceCaptain(participantId),
+          ),
+          const SizedBox(width: 6),
+          _MetaChip(
+            label: 'SUB',
+            tooltip: sub ? 'Clear substitute' : 'Substitute',
+            active: sub,
+            activeColor: const Color(AppColors.textSecondaryColor),
+            disabled: disabled,
+            onTap: () => controller.toggleSubstitute(participantId),
           ),
         ],
       );
     });
+  }
+}
+
+class _MetaChip extends StatelessWidget {
+  const _MetaChip({
+    required this.label,
+    required this.tooltip,
+    required this.active,
+    required this.activeColor,
+    required this.disabled,
+    required this.onTap,
+  });
+
+  final String label;
+  final String tooltip;
+  final bool active;
+  final Color activeColor;
+  final bool disabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: active
+            ? activeColor.withValues(alpha: 0.16)
+            : const Color(AppColors.backgroundColor),
+        borderRadius: BorderRadius.circular(8),
+        child: InkWell(
+          onTap: disabled ? null : onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 6),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: active
+                    ? activeColor
+                    : const Color(AppColors.dividerColor),
+              ),
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 11,
+                letterSpacing: 0.2,
+                color: active
+                    ? activeColor
+                    : const Color(AppColors.textSecondaryColor),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -477,6 +432,8 @@ class _PlayerCard extends StatelessWidget {
     this.trailing,
     this.highlight = false,
     this.showCheckbox = true,
+    this.busy = false,
+    this.dimmed = false,
   });
 
   final String name;
@@ -487,10 +444,12 @@ class _PlayerCard extends StatelessWidget {
   final Widget? trailing;
   final bool highlight;
   final bool showCheckbox;
+  final bool busy;
+  final bool dimmed;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    final card = Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
         color: highlight ? Colors.orange.shade50 : Colors.white,
@@ -548,6 +507,14 @@ class _PlayerCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (busy) ...[
+                  const SizedBox(width: 8),
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ],
                 if (trailing != null) ...[
                   const SizedBox(width: 8),
                   trailing!,
@@ -567,5 +534,7 @@ class _PlayerCard extends StatelessWidget {
         ),
       ),
     );
+    if (!dimmed) return card;
+    return Opacity(opacity: 0.45, child: card);
   }
 }

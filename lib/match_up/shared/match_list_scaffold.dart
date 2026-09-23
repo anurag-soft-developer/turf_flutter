@@ -26,6 +26,7 @@ class MatchListScaffold extends HookWidget {
     required this.initialTabIndex,
     required this.onTabChanged,
     required this.buildPanes,
+    this.belowTabs,
   });
 
   final String title;
@@ -36,6 +37,10 @@ class MatchListScaffold extends HookWidget {
   final int initialTabIndex;
   final ValueChanged<int> onTabChanged;
   final List<Widget> Function(String filterKey) buildPanes;
+
+  /// Compact filters under the segmented tabs. When set, the full-width team
+  /// selector above the tabs is hidden (the slot should include team picking).
+  final Widget? belowTabs;
 
   @override
   Widget build(BuildContext context) {
@@ -161,25 +166,27 @@ class MatchListScaffold extends HookWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: MyTeamSelector(
-                            teams: controller.myTeams,
-                            allowToSelectAll: true,
-                            allTeamsSelected: controller.filterAllTeams.value,
-                            selectedTeam:
-                                controller.selectedMembershipTeam.value,
-                            sheetTitle: teamSheetTitle,
-                            onTeamSelected: controller.selectTeamForFilter,
-                            onAllTeamsSelected: controller.selectAllTeamsFilter,
+                  if (belowTabs == null)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: MyTeamSelector(
+                              teams: controller.myTeams,
+                              allowToSelectAll: true,
+                              allTeamsSelected: controller.filterAllTeams.value,
+                              selectedTeam:
+                                  controller.selectedMembershipTeam.value,
+                              sheetTitle: teamSheetTitle,
+                              onTeamSelected: controller.selectTeamForFilter,
+                              onAllTeamsSelected:
+                                  controller.selectAllTeamsFilter,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
                   Container(
                     margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                     child: AppSegmentedTabs(
@@ -190,6 +197,7 @@ class MatchListScaffold extends HookWidget {
                       items: tabs,
                     ),
                   ),
+                  if (belowTabs != null) belowTabs!,
                 ],
               ),
             ),

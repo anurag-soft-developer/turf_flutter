@@ -16,6 +16,7 @@ class MatchListFiltersBar extends StatelessWidget {
   Future<void> _openTypeMenu(BuildContext context) async {
     final selected = await _showMenu<MatchTypeFilter>(
       context,
+      initialValue: filters.type,
       items: [
         _menuItem(MatchTypeFilter.all, 'All'),
         _menuItem(MatchTypeFilter.my, 'My'),
@@ -28,6 +29,7 @@ class MatchListFiltersBar extends StatelessWidget {
   Future<void> _openStatusMenu(BuildContext context) async {
     final selected = await _showMenu<MatchStatusFilter>(
       context,
+      initialValue: filters.status,
       items: [
         _menuItem(MatchStatusFilter.all, 'All'),
         _menuItem(MatchStatusFilter.live, 'Live'),
@@ -54,6 +56,7 @@ class MatchListFiltersBar extends StatelessWidget {
 
   Future<T?> _showMenu<T>(
     BuildContext context, {
+    required T initialValue,
     required List<PopupMenuEntry<T>> items,
   }) {
     final box = context.findRenderObject()! as RenderBox;
@@ -66,6 +69,7 @@ class MatchListFiltersBar extends StatelessWidget {
     );
     return showMenu<T>(
       context: context,
+      initialValue: initialValue,
       position: position,
       color: Colors.white,
       surfaceTintColor: Colors.transparent,

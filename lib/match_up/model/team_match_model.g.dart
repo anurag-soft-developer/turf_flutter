@@ -322,8 +322,8 @@ Map<String, dynamic> _$TeamMatchModelToJson(
 };
 
 const _$TeamMatchSourceEnumMap = {
-  TeamMatchSource.feed: 'feed',
-  TeamMatchSource.casual: 'casual',
+  TeamMatchSource.ranked: 'ranked',
+  TeamMatchSource.unranked: 'unranked',
 };
 
 const _$TeamSportTypeEnumMap = {

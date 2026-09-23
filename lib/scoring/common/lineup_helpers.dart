@@ -58,3 +58,26 @@ List<AnnouncedPlayerModel> activePlayersForTeam(
       })
       .toList();
 }
+
+/// Announced squad players for [teamId] who are not currently on the field.
+List<AnnouncedPlayerModel> benchPlayersForTeam(
+  TeamMatchModel match,
+  String teamId,
+) {
+  if (teamId.isEmpty) return const [];
+  final activeIds = activePlayersForTeam(match, teamId)
+      .map((p) => p.participantId)
+      .whereType<String>()
+      .where((id) => id.isNotEmpty)
+      .toSet();
+  return match.announcedPlayers
+      .where((p) {
+        final tid = p.teamIdHelper.getId() ?? '';
+        final pid = p.participantId;
+        return tid == teamId &&
+            pid != null &&
+            pid.isNotEmpty &&
+            !activeIds.contains(pid);
+      })
+      .toList();
+}

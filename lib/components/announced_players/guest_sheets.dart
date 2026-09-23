@@ -14,7 +14,7 @@ import '../../match_up/announced_players/model/announced_player_model.dart';
 import '../../team/model/team_model.dart';
 import 'util/announced_player_roles_helpers.dart';
 
-/// Draft guest collected in the UI; persisted only when the parent sheet saves.
+/// Draft guest collected in the UI; posted immediately via [ManageAnnouncedPlayersController.addGuest].
 class GuestDraft {
   const GuestDraft({
     required this.localId,

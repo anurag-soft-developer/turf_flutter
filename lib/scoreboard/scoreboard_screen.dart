@@ -22,7 +22,7 @@ class _ScoreboardSportOption {
   final bool enabled;
 }
 
-/// Bottom-tab hub for starting casual scoreboard sessions by sport.
+/// Bottom-tab hub for starting unranked scoreboard sessions by sport.
 class ScoreboardScreen extends StatelessWidget {
   const ScoreboardScreen({super.key});
 
@@ -46,9 +46,9 @@ class ScoreboardScreen extends StatelessWidget {
     ),
   ];
 
-  static void _openCasualMatch(TeamSportType sport) {
+  static void _openUnrankedMatch(TeamSportType sport) {
     Get.toNamed(
-      AppConstants.routes.matchUpCasual,
+      AppConstants.routes.matchUpUnranked,
       parameters: {'sport': sport.name},
     );
   }
@@ -80,7 +80,7 @@ class ScoreboardScreen extends StatelessWidget {
                   height: _cardHeight,
                   child: _SportPosterCard(
                     option: option,
-                    onStart: () => _openCasualMatch(option.sport),
+                    onStart: () => _openUnrankedMatch(option.sport),
                   ),
                 );
               },

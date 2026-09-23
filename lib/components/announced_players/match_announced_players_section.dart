@@ -6,6 +6,7 @@ import '../../core/config/constants.dart';
 import '../../match_up/announced_players/model/announced_player_model.dart';
 import '../../match_up/model/team_match_model.dart';
 import '../../team/model/team_model.dart';
+import 'util/announced_player_display_helpers.dart';
 import 'util/announced_player_roles_helpers.dart';
 import 'manage_announced_players_sheet.dart';
 
@@ -13,8 +14,8 @@ import 'manage_announced_players_sheet.dart';
 const double _kSquadHeaderMinHeight = 44;
 const double _kSquadHeaderEditSlot = 40;
 
-/// Player tile row height in squad grids (avatar + name + role).
-const double _kPlayerGridTileExtent = 156;
+/// Player tile row height in squad grids (avatar + name + role + optional lines).
+const double _kPlayerGridTileExtent = 168;
 /// Minimum squad-column width for two player tiles (tile ~104dp + spacing).
 const double _kTwoPlayerColumnsMinWidth = 230;
 
@@ -64,13 +65,17 @@ class MatchAnnouncedPlayersSection extends StatelessWidget {
     return !terminal.contains(m.status);
   }
 
-  /// Minimum squad size required before scoring can start.
+  /// Minimum playing (non-substitute) players per team before scoring can start.
+  /// Matches server [SCORING_MIN_ANNOUNCED_PLAYERS] (cricket and football min 5).
   static const int minAnnouncedPlayersPerTeam = 5;
 
+  /// Playing announced count for [teamId]. Substitutes do not count.
   static int announcedCountForTeam(TeamMatchModel m, String teamId) {
     if (teamId.isEmpty) return 0;
     return m.announcedPlayers
-        .where((p) => p.teamIdHelper.getId() == teamId)
+        .where(
+          (p) => p.teamIdHelper.getId() == teamId && !p.isSubstitute,
+        )
         .length;
   }
 
@@ -97,12 +102,10 @@ class MatchAnnouncedPlayersSection extends StatelessWidget {
     final fromPlayers = match.announcedPlayers
         .where((p) => p.teamIdHelper.getId() == fromId)
         .toList();
-    _sortAnnouncedPlayersForDisplay(fromPlayers);
 
     final toPlayers = match.announcedPlayers
         .where((p) => p.teamIdHelper.getId() == toId)
         .toList();
-    _sortAnnouncedPlayersForDisplay(toPlayers);
 
     final canEditBase = allowsAnnouncedPlayerEdits(match);
     final editable = editableTeamIds ??
@@ -169,6 +172,11 @@ class _TeamSquadBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final startingXi = players.where((p) => !p.isSubstitute).toList();
+    final substitutes = players.where((p) => p.isSubstitute).toList();
+    _sortAnnouncedPlayersForDisplay(startingXi);
+    _sortAnnouncedPlayersForDisplay(substitutes);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -222,47 +230,93 @@ class _TeamSquadBlock extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            if (players.isEmpty) {
-              return SizedBox(
-                height: 72,
-                child: Center(
-                  child: Text(
-                    'No players announced yet.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Color(AppColors.textSecondaryColor),
-                    ),
-                  ),
+        if (players.isEmpty)
+          const SizedBox(
+            height: 72,
+            child: Center(
+              child: Text(
+                'No players announced yet.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Color(AppColors.textSecondaryColor),
                 ),
-              );
-            }
-            final crossAxisCount =
-                constraints.maxWidth >= _kTwoPlayerColumnsMinWidth ? 2 : 1;
-            return GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: crossAxisCount,
-                mainAxisExtent: _kPlayerGridTileExtent,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
               ),
-              itemCount: players.length,
-              itemBuilder: (context, index) {
-                return Center(
-                  child: _AnnouncedPlayerChip(
-                    sport: sport,
-                    player: players[index],
-                  ),
-                );
-              },
+            ),
+          )
+        else ...[
+          if (startingXi.isNotEmpty) ...[
+            const _SquadSubheader(label: 'Starting XI'),
+            const SizedBox(height: 6),
+            _PlayerGrid(sport: sport, players: startingXi),
+          ],
+          if (substitutes.isNotEmpty) ...[
+            if (startingXi.isNotEmpty) const SizedBox(height: 12),
+            const _SquadSubheader(label: 'Substitutes'),
+            const SizedBox(height: 6),
+            _PlayerGrid(sport: sport, players: substitutes),
+          ],
+        ],
+      ],
+    );
+  }
+}
+
+class _SquadSubheader extends StatelessWidget {
+  const _SquadSubheader({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label,
+      textAlign: TextAlign.center,
+      style: const TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.3,
+        color: Color(AppColors.textSecondaryColor),
+      ),
+    );
+  }
+}
+
+class _PlayerGrid extends StatelessWidget {
+  const _PlayerGrid({
+    required this.sport,
+    required this.players,
+  });
+
+  final TeamSportType sport;
+  final List<AnnouncedPlayerModel> players;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final crossAxisCount =
+            constraints.maxWidth >= _kTwoPlayerColumnsMinWidth ? 2 : 1;
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            mainAxisExtent: _kPlayerGridTileExtent,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+          ),
+          itemCount: players.length,
+          itemBuilder: (context, index) {
+            return Center(
+              child: _AnnouncedPlayerChip(
+                sport: sport,
+                player: players[index],
+              ),
             );
           },
-        ),
-      ],
+        );
+      },
     );
   }
 }
@@ -290,6 +344,12 @@ class _AnnouncedPlayerChip extends StatelessWidget {
     final avatar = player.avatar;
     final userId = player.userIdHelper.getId();
     final canOpenProfile = userId != null && userId.isNotEmpty;
+    final badges = AnnouncedPlayerBadgeRow(
+      isCaptain: player.isCaption,
+      isViceCaptain: player.isWiseCaption,
+      isSubstitute: player.isSubstitute,
+      compact: true,
+    );
 
     return Material(
       color: Colors.transparent,
@@ -328,40 +388,11 @@ class _AnnouncedPlayerChip extends StatelessWidget {
                             )
                           : null,
                     ),
-                    if (player.isCaption || player.isWiseCaption)
+                    if (badges.hasAny)
                       Positioned(
                         top: -6,
                         right: -6,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (player.isCaption)
-                              Tooltip(
-                                message: 'Captain',
-                                child: _LeadershipChip(
-                                  label: 'C',
-                                  foreground:
-                                      const Color(AppColors.primaryColor),
-                                  background: Colors.white,
-                                  compact: true,
-                                ),
-                              ),
-                            if (player.isCaption && player.isWiseCaption)
-                              const SizedBox(height: 3),
-                            if (player.isWiseCaption)
-                              Tooltip(
-                                message: 'Vice-captain',
-                                child: _LeadershipChip(
-                                  label: 'VC',
-                                  foreground:
-                                      const Color(AppColors.secondaryColor),
-                                  background: Colors.white,
-                                  compact: true,
-                                ),
-                              ),
-                          ],
-                        ),
+                        child: badges,
                       ),
                   ],
                 ),
@@ -392,6 +423,16 @@ class _AnnouncedPlayerChip extends StatelessWidget {
                   color: Color(AppColors.textSecondaryColor),
                 ),
               ),
+              if (player.isSubstitute)
+                const Text(
+                  'Substitute',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: Color(AppColors.textSecondaryColor),
+                  ),
+                ),
               if (player.isGuest)
                 const Text(
                   'Guest',
@@ -404,53 +445,6 @@ class _AnnouncedPlayerChip extends StatelessWidget {
                 ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _LeadershipChip extends StatelessWidget {
-  const _LeadershipChip({
-    required this.label,
-    required this.foreground,
-    required this.background,
-    this.compact = false,
-  });
-
-  final String label;
-  final Color foreground;
-  final Color background;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    final padH = compact ? 5.0 : 8.0;
-    final padV = compact ? 2.0 : 3.0;
-    final fontSize = compact ? 9.0 : 10.0;
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: padH, vertical: padV),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: foreground.withValues(alpha: 0.4)),
-        boxShadow: compact
-            ? [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.12),
-                  blurRadius: 4,
-                  offset: const Offset(0, 1),
-                ),
-              ]
-            : null,
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: fontSize,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.2,
-          color: foreground,
         ),
       ),
     );

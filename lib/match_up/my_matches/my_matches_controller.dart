@@ -5,9 +5,13 @@ import '../shared/match_team_filter_controller.dart';
 
 enum MyMatchesTab { all, live, upcoming, others }
 
-/// Tab + team filter for the My Matches list. Fetching is owned by flutter_query.
+/// Ranked or unranked. [all] sends no source filter.
+enum MyMatchesTypeFilter { all, ranked, unranked }
+
+/// Tab + team + type filter for the My Matches list. Fetching is owned by flutter_query.
 class MyMatchesController extends MatchTeamFilterController {
   final Rx<MyMatchesTab> selectedTab = MyMatchesTab.all.obs;
+  final Rx<MyMatchesTypeFilter> typeFilter = MyMatchesTypeFilter.all.obs;
 
   @override
   void onInit() {
@@ -26,6 +30,28 @@ class MyMatchesController extends MatchTeamFilterController {
     if (selectedTab.value == tab) return;
     selectedTab.value = tab;
   }
+
+  void setTypeFilter(MyMatchesTypeFilter value) {
+    if (typeFilter.value == value) return;
+    typeFilter.value = value;
+  }
+}
+
+extension MyMatchesTypeFilterX on MyMatchesTypeFilter {
+  /// API `source` query. Null means both ranked and unranked.
+  TeamMatchSource? get apiSource => switch (this) {
+    MyMatchesTypeFilter.all => null,
+    MyMatchesTypeFilter.ranked => TeamMatchSource.ranked,
+    MyMatchesTypeFilter.unranked => TeamMatchSource.unranked,
+  };
+
+  String get menuLabel => switch (this) {
+    MyMatchesTypeFilter.all => 'All',
+    MyMatchesTypeFilter.ranked => 'Ranked',
+    MyMatchesTypeFilter.unranked => 'Unranked',
+  };
+
+  bool get hasSelection => this != MyMatchesTypeFilter.all;
 }
 
 extension MyMatchesTabX on MyMatchesTab {

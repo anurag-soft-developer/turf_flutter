@@ -73,10 +73,15 @@ class QueryKeys {
 
   static const myMatchesPrefix = ['myMatches'];
 
-  static List<Object?> myMatches({required String tab, String? teamFilter}) => [
+  static List<Object?> myMatches({
+    required String tab,
+    String? teamFilter,
+    String? source,
+  }) => [
     ...myMatchesPrefix,
     tab,
     teamFilter ?? 'all',
+    source ?? 'all',
   ];
 
   static const matchesPrefix = ['matches'];
@@ -199,13 +204,13 @@ class QueryKeys {
     matchId,
   ];
 
-  static const casualOpponentSearchPrefix = ['casualOpponentSearch'];
+  static const unrankedOpponentSearchPrefix = ['unrankedOpponentSearch'];
 
-  static List<Object?> casualOpponentSearch({
+  static List<Object?> unrankedOpponentSearch({
     required String fromTeamId,
     required String query,
     required String sportType,
-  }) => [...casualOpponentSearchPrefix, fromTeamId, query, sportType];
+  }) => [...unrankedOpponentSearchPrefix, fromTeamId, query, sportType];
 
   static const explorePostPrefix = ['explorePost'];
 

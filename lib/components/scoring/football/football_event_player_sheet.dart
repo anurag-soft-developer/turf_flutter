@@ -8,6 +8,8 @@ import '../../../scoring/football/model/football_scoring_models.dart';
 import '../../../scoring/football/util/football_scoring_helpers.dart';
 import '../announced_player_list_tile.dart';
 
+enum FootballPlayerRoster { active, bench }
+
 /// Bottom sheet to collect players/teams for a football scoring event.
 class FootballEventPlayerSheet {
   FootballEventPlayerSheet._();
@@ -167,7 +169,11 @@ class _FootballEventSheetBodyState extends State<_FootballEventSheetBody> {
                 label: 'Player off',
                 teamId: _teamId,
                 selectedUserId: _playerUserId,
-                onSelected: (id) => setState(() => _playerUserId = id),
+                onSelected: (id) => setState(() {
+                  _playerUserId = id;
+                  if (_secondPlayerUserId == id) _secondPlayerUserId = null;
+                }),
+                emptyHint: 'No active players',
               ),
               const SizedBox(height: 8),
               _playerSection(
@@ -175,7 +181,8 @@ class _FootballEventSheetBodyState extends State<_FootballEventSheetBody> {
                 teamId: _teamId,
                 selectedUserId: _secondPlayerUserId,
                 onSelected: (id) => setState(() => _secondPlayerUserId = id),
-                excludeUserId: _playerUserId,
+                roster: FootballPlayerRoster.bench,
+                emptyHint: 'No bench players',
               ),
             ],
             if (widget.kind == FootballEventKind.penaltyScored) ...[
@@ -251,6 +258,8 @@ class _FootballEventSheetBodyState extends State<_FootballEventSheetBody> {
     required ValueChanged<String> onSelected,
     bool optional = false,
     String? excludeUserId,
+    FootballPlayerRoster roster = FootballPlayerRoster.active,
+    String? emptyHint,
   }) {
     if (teamId == null || teamId.isEmpty) {
       return Text(
@@ -258,7 +267,9 @@ class _FootballEventSheetBodyState extends State<_FootballEventSheetBody> {
         style: const TextStyle(color: Color(AppColors.textSecondaryColor)),
       );
     }
-    var players = playingXiForTeam(widget.match, teamId);
+    var players = roster == FootballPlayerRoster.bench
+        ? benchForTeam(widget.match, teamId)
+        : playingXiForTeam(widget.match, teamId);
     if (excludeUserId != null && excludeUserId.isNotEmpty) {
       players = players
           .where((p) => p.participantId != excludeUserId)
@@ -296,7 +307,11 @@ class _FootballEventSheetBodyState extends State<_FootballEventSheetBody> {
           ),
           child: Text(
             selectedName ??
-                (optional ? 'Tap to select (optional)' : 'Tap to select'),
+                (players.isEmpty
+                    ? (emptyHint ?? 'No players')
+                    : (optional
+                          ? 'Tap to select (optional)'
+                          : 'Tap to select')),
             style: TextStyle(
               color: selectedName != null
                   ? const Color(AppColors.textColor)

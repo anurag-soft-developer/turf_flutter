@@ -23,7 +23,7 @@ const int kMatchmakingListRequestsMaxLimit = 50;
 // --- Enums (backend string values) ---
 
 /// Backend [TeamMatchSource].
-enum TeamMatchSource { feed, casual }
+enum TeamMatchSource { ranked, unranked }
 
 /// Backend [TeamMatchStatus].
 enum TeamMatchStatus {
@@ -492,7 +492,7 @@ class TeamMatchModel {
 
   TeamRefFieldInstance get winnerTeamHelper => TeamRefFieldInstance(winnerTeam);
 
-  bool get isCasual => source == TeamMatchSource.casual;
+  bool get isUnranked => source == TeamMatchSource.unranked;
 
   TurfBookingRefFieldInstance get turfBookingIdHelper =>
       TurfBookingRefFieldInstance(turfBookingId);
@@ -574,6 +574,9 @@ class ListNegotiationsFilterQuery {
   /// `mine` (default) or `all` — platform-wide listing.
   final NegotiationListScope scope;
 
+  /// `ranked` or `unranked`. Null lists both.
+  final TeamMatchSource? source;
+
   /// Case-insensitive filter on either team's name / shortName.
   final String? search;
 
@@ -589,6 +592,7 @@ class ListNegotiationsFilterQuery {
     this.status,
     this.statuses,
     this.scope = NegotiationListScope.mine,
+    this.source,
     this.search,
     this.sort,
     this.page = 1,
@@ -598,8 +602,9 @@ class ListNegotiationsFilterQuery {
   Map<String, dynamic> toQueryParameters() {
     final clampedLimit = limit.clamp(1, kMatchmakingListRequestsMaxLimit);
     final params = <String, dynamic>{
-      'type': type.name,
+      if (type != NegotiationListType.all) 'type': type.name,
       'scope': scope.name,
+      if (source != null) 'source': source!.name,
       'page': page.toString(),
       'limit': clampedLimit.toString(),
     };
@@ -681,11 +686,11 @@ String _$teamMatchStatusToApiString(TeamMatchStatus s) => switch (s) {
 
 // --- Request bodies ---
 
-class CreateCasualMatchRequest {
+class CreateUnrankedMatchRequest {
   final String fromTeamId;
   final String toTeamId;
 
-  const CreateCasualMatchRequest({
+  const CreateUnrankedMatchRequest({
     required this.fromTeamId,
     required this.toTeamId,
   });

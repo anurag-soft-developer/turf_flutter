@@ -12,8 +12,8 @@ import 'package:flutter_application_1/core/routes/route_query.dart';
 import 'package:flutter_application_1/explore/explore_screen.dart';
 import 'package:flutter_application_1/explore/search/explore_search_screen.dart';
 import 'package:flutter_application_1/explore/widgets/explore_post_viewer_screen.dart';
-import 'package:flutter_application_1/match_up/casual/casual_match_start_binding.dart';
-import 'package:flutter_application_1/match_up/casual/casual_match_start_screen.dart';
+import 'package:flutter_application_1/match_up/unranked/unranked_match_start_binding.dart';
+import 'package:flutter_application_1/match_up/unranked/unranked_match_start_screen.dart';
 import 'package:flutter_application_1/match_up/match_challenges/match_challenge_detail_screen.dart';
 import 'package:flutter_application_1/match_up/match_challenges/match_challenges_screen.dart';
 import 'package:flutter_application_1/match_up/my_matches/my_matches_screen.dart';
@@ -39,9 +39,9 @@ final List<GetPage<dynamic>> matchUpRoutes = [
     middlewares: [AuthGuard()],
   ),
   GetPage(
-    name: AppConstants.routes.matchUpCasual,
-    page: () => const CasualMatchStartScreen(),
-    binding: CasualMatchStartBinding(),
+    name: AppConstants.routes.matchUpUnranked,
+    page: () => const UnrankedMatchStartScreen(),
+    binding: UnrankedMatchStartBinding(),
     transition: Transition.cupertino,
     middlewares: [AuthGuard()],
   ),

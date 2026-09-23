@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
 import '../../../core/config/constants.dart';
-import '../../../core/models/user_field_instance.dart';
 import '../../../match_up/model/team_match_model.dart';
 import '../../../scoring/football/model/football_match_event_model.dart';
 import '../../../scoring/football/model/football_scoring_models.dart';
@@ -48,6 +47,7 @@ class FootballScorecard extends StatelessWidget {
         ),
       );
     } else {
+      final participantNames = footballParticipantNames(match);
       body = ListView(
         padding: const EdgeInsets.all(12),
         children: [
@@ -124,9 +124,10 @@ class FootballScorecard extends StatelessWidget {
             )
           else
             ...events.map((e) {
-              final primary = UserFieldInstance(
+              final primary = footballEventParticipantLabel(
                 e.primaryUserId,
-              ).getDisplayName();
+                participantNames: participantNames,
+              );
               return ListTile(
                 leading: Icon(
                   eventKindIcon(e.kind),
@@ -139,7 +140,7 @@ class FootballScorecard extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                subtitle: primary.isNotEmpty && primary != 'Unknown'
+                subtitle: primary.isNotEmpty
                     ? Text(
                         primary,
                         style: const TextStyle(

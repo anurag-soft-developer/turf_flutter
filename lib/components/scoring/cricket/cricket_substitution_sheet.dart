@@ -91,23 +91,8 @@ class _CricketSubstitutionSheetBodyState
   List<AnnouncedPlayerModel> _activeForTeam(String teamId) =>
       activePlayersForTeam(widget.match, teamId);
 
-  List<AnnouncedPlayerModel> _benchForTeam(String teamId) {
-    final activeIds = _activeForTeam(teamId)
-        .map((p) => p.participantId)
-        .whereType<String>()
-        .where((id) => id.isNotEmpty)
-        .toSet();
-    return widget.match.announcedPlayers
-        .where((p) {
-          final tid = p.teamIdHelper.getId() ?? '';
-          final pid = p.participantId;
-          return tid == teamId &&
-              pid != null &&
-              pid.isNotEmpty &&
-              !activeIds.contains(pid);
-        })
-        .toList();
-  }
+  List<AnnouncedPlayerModel> _benchForTeam(String teamId) =>
+      benchPlayersForTeam(widget.match, teamId);
 
   bool get _canSubmit =>
       _teamId != null &&

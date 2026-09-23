@@ -21,25 +21,25 @@ import '../../team/team_service.dart';
 import '../../team/utils/team_ui.dart';
 import '../matchmaking_service.dart';
 import '../model/team_match_model.dart';
-import 'casual_match_start_controller.dart';
+import 'unranked_match_start_controller.dart';
 
-class CasualMatchStartScreen extends HookWidget {
-  const CasualMatchStartScreen({super.key});
+class UnrankedMatchStartScreen extends HookWidget {
+  const UnrankedMatchStartScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<CasualMatchStartController>();
+    final controller = Get.find<UnrankedMatchStartController>();
     final sport = controller.sport;
 
     if (!controller.isSportSupported) {
       return Scaffold(
         backgroundColor: const Color(AppColors.backgroundColor),
-        appBar: AppAppBar(title: const Text('Casual match')),
+        appBar: AppAppBar(title: const Text('Unranked match')),
         body: const Center(
           child: Padding(
             padding: EdgeInsets.all(24),
             child: Text(
-              'Casual matches are not available for this sport yet.',
+              'Unranked matches are not available for this sport yet.',
               textAlign: TextAlign.center,
               style: TextStyle(color: Color(AppColors.textSecondaryColor)),
             ),
@@ -102,7 +102,7 @@ class CasualMatchStartScreen extends HookWidget {
       final fromId = selectedTeam.value?.id;
       if (fromId == null || fromId.isEmpty) return;
 
-      final picked = await showCasualOpponentPickerSheet(
+      final picked = await showUnrankedOpponentPickerSheet(
         context: context,
         fromTeamId: fromId,
         sport: sport,
@@ -125,8 +125,8 @@ class CasualMatchStartScreen extends HookWidget {
 
       creating.value = true;
       try {
-        final match = await MatchmakingService().createCasualMatch(
-          CreateCasualMatchRequest(fromTeamId: fromId, toTeamId: toId),
+        final match = await MatchmakingService().createUnrankedMatch(
+          CreateUnrankedMatchRequest(fromTeamId: fromId, toTeamId: toId),
         );
         final matchId = match?.id;
         if (matchId == null || matchId.isEmpty) {
@@ -199,7 +199,7 @@ class CasualMatchStartScreen extends HookWidget {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          'Join or create a $sportLabel team first. Only captains and owners can start a casual match.',
+                          'Join or create a $sportLabel team first. Only captains and owners can start an unranked match.',
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             color: Color(AppColors.textSecondaryColor),
@@ -296,7 +296,7 @@ class CasualMatchStartScreen extends HookWidget {
   }
 }
 
-Future<TeamModel?> showCasualOpponentPickerSheet({
+Future<TeamModel?> showUnrankedOpponentPickerSheet({
   required BuildContext context,
   required String fromTeamId,
   required TeamSportType sport,
@@ -306,15 +306,15 @@ Future<TeamModel?> showCasualOpponentPickerSheet({
     isScrollControlled: true,
     useSafeArea: true,
     backgroundColor: Colors.transparent,
-    builder: (ctx) => _CasualOpponentPickerSheet(
+    builder: (ctx) => _UnrankedOpponentPickerSheet(
       fromTeamId: fromTeamId,
       sport: sport,
     ),
   );
 }
 
-class _CasualOpponentPickerSheet extends HookWidget {
-  const _CasualOpponentPickerSheet({
+class _UnrankedOpponentPickerSheet extends HookWidget {
+  const _UnrankedOpponentPickerSheet({
     required this.fromTeamId,
     required this.sport,
   });
@@ -346,7 +346,7 @@ class _CasualOpponentPickerSheet extends HookWidget {
 
     final opponentsQuery =
         useInfiniteQuery<PaginatedResponse<TeamModel>, Object, int>(
-      QueryKeys.casualOpponentSearch(
+      QueryKeys.unrankedOpponentSearch(
         fromTeamId: fromTeamId,
         query: query,
         sportType: sport.name,

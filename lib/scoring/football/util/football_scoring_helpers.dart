@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/models/user_field_instance.dart';
 import '../../../match_up/announced_players/model/announced_player_model.dart';
 import '../../../match_up/model/team_match_model.dart';
 import '../../common/lineup_helpers.dart';
@@ -33,6 +34,21 @@ List<AnnouncedPlayerModel> playingXiForTeam(
       .toList();
 }
 
+/// Bench / off-field announced players for substitutions.
+List<AnnouncedPlayerModel> benchForTeam(TeamMatchModel match, String teamId) {
+  if (teamId.isEmpty) return const [];
+  if (match.footballState != null || match.cricketState != null) {
+    return benchPlayersForTeam(match, teamId);
+  }
+  return match.announcedPlayers
+      .where(
+        (p) =>
+            footballTeamIdsMatch(p.teamIdHelper.getId(), teamId) &&
+            p.isSubstitute,
+      )
+      .toList();
+}
+
 String eventKindLabel(FootballEventKind kind) {
   return switch (kind) {
     FootballEventKind.goal => 'Goal',
@@ -55,6 +71,31 @@ IconData eventKindIcon(FootballEventKind kind) {
     FootballEventKind.penaltyScored => Icons.flag,
     FootballEventKind.penaltyMissed => Icons.close,
   };
+}
+
+/// `participantId` → display name from announced squad (covers guests).
+Map<String, String> footballParticipantNames(TeamMatchModel? match) {
+  if (match == null) return const {};
+  return {
+    for (final p in match.announcedPlayers)
+      if ((p.participantId ?? '').isNotEmpty) p.participantId!: p.name,
+  };
+}
+
+/// Resolves event primary/secondary refs: squad name → populated user → empty.
+String footballEventParticipantLabel(
+  dynamic userRef, {
+  required Map<String, String> participantNames,
+}) {
+  final h = UserFieldInstance(userRef);
+  final id = h.getId();
+  if (id != null && id.isNotEmpty) {
+    final fromSquad = participantNames[id];
+    if (fromSquad != null && fromSquad.isNotEmpty) return fromSquad;
+  }
+  final name = h.getName();
+  if (name != null && name.isNotEmpty) return name;
+  return '';
 }
 
 /// Fallback per-half length when [FootballStateModel.matchMinute] is unset.

@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
@@ -10,7 +9,7 @@ import '../../match_up/model/team_match_model.dart';
 import '../../team/members/model/team_member_model.dart';
 import '../../team/members/team_member_service.dart';
 import 'util/announced_player_roles_helpers.dart';
-import 'casual_guest_sheets.dart';
+import 'guest_sheets.dart';
 
 class GuestRowVm {
   const GuestRowVm({
@@ -18,14 +17,12 @@ class GuestRowVm {
     required this.name,
     this.avatar,
     required this.role,
-    required this.pending,
   });
 
   final String participantId;
   final String name;
   final String? avatar;
   final AnnouncedPlayerRole role;
-  final bool pending;
 }
 
 class ManageAnnouncedPlayersController extends GetxController {
@@ -45,17 +42,22 @@ class ManageAnnouncedPlayersController extends GetxController {
   final RxSet<String> selectedUserIds = <String>{}.obs;
   final RxnString captainParticipantId = RxnString();
   final RxnString viceCaptainParticipantId = RxnString();
-  final RxBool saving = false.obs;
-  final RxSet<String> removedGuestIds = <String>{}.obs;
-  final RxList<GuestDraft> pendingGuests = <GuestDraft>[].obs;
+  final RxSet<String> substituteParticipantIds = <String>{}.obs;
+
+  /// Participants currently mid-mutation (row-level busy).
+  final RxSet<String> busyParticipantIds = <String>{}.obs;
+  final RxBool syncing = false.obs;
 
   final RxList<TeamMemberModel> roster = <TeamMemberModel>[].obs;
   final RxBool loadingRoster = true.obs;
   final RxnString rosterError = RxnString();
 
+  /// Bumped on each mutation start; open-sync ignores results if mutations ran.
+  int _mutationEpoch = 0;
+
   String? get matchId => currentMatch.value.id;
 
-  bool get isCasual => currentMatch.value.isCasual;
+  bool get isUnranked => currentMatch.value.isUnranked;
 
   List<AnnouncedPlayerModel> get announcedForTeam => currentMatch
       .value.announcedPlayers
@@ -68,15 +70,9 @@ class ManageAnnouncedPlayersController extends GetxController {
   List<AnnouncedPlayerModel> get serverGuests =>
       announcedForTeam.where((p) => p.isGuest).toList();
 
-  List<AnnouncedPlayerModel> get visibleServerGuests => serverGuests.where((g) {
-        final pid = g.participantId;
-        if (pid == null) return true;
-        return !removedGuestIds.contains(pid);
-      }).toList();
-
   List<GuestRowVm> get visibleGuestRows {
     final rows = <GuestRowVm>[];
-    for (final g in visibleServerGuests) {
+    for (final g in serverGuests) {
       final pid = g.participantId;
       if (pid == null) continue;
       rows.add(
@@ -85,18 +81,6 @@ class ManageAnnouncedPlayersController extends GetxController {
           name: g.name,
           avatar: g.avatar,
           role: g.role,
-          pending: false,
-        ),
-      );
-    }
-    for (final d in pendingGuests) {
-      rows.add(
-        GuestRowVm(
-          participantId: d.localId,
-          name: d.name,
-          avatar: d.avatar,
-          role: d.role,
-          pending: true,
         ),
       );
     }
@@ -138,36 +122,42 @@ class ManageAnnouncedPlayersController extends GetxController {
     return '';
   }
 
+  /// Block list interactions only while roster/squad sync is loading.
+  bool get interactionsLocked => loadingRoster.value || syncing.value;
+
   @override
   void onInit() {
     super.onInit();
-    selectedUserIds.addAll({
-      for (final p in rosterAnnounced)
-        if (p.userIdHelper.getId() != null) p.userIdHelper.getId()!,
-    });
-    _syncLeadershipFromServer();
-    loadRoster();
+    _mirrorSelectionFromMatch();
+    _syncMetaFromMatch();
+    Future.wait([loadRoster(), syncAnnouncedFromServer()]);
   }
 
-  void _syncLeadershipFromServer() {
+  void _mirrorSelectionFromMatch() {
+    selectedUserIds
+      ..clear()
+      ..addAll({
+        for (final p in rosterAnnounced)
+          if (p.userIdHelper.getId() != null) p.userIdHelper.getId()!,
+      });
+  }
+
+  void _syncMetaFromMatch() {
     String? serverCaptain;
     String? serverVice;
+    final subs = <String>{};
     for (final p in announcedForTeam) {
       final pid = p.participantId;
       if (pid == null) continue;
-      if (removedGuestIds.contains(pid)) continue;
       if (p.isCaption) serverCaptain = pid;
       if (p.isWiseCaption) serverVice = pid;
+      if (p.isSubstitute) subs.add(pid);
     }
-    final pendingIds = {for (final d in pendingGuests) d.localId};
-    if (captainParticipantId.value == null ||
-        !pendingIds.contains(captainParticipantId.value)) {
-      captainParticipantId.value = serverCaptain;
-    }
-    if (viceCaptainParticipantId.value == null ||
-        !pendingIds.contains(viceCaptainParticipantId.value)) {
-      viceCaptainParticipantId.value = serverVice;
-    }
+    captainParticipantId.value = serverCaptain;
+    viceCaptainParticipantId.value = serverVice;
+    substituteParticipantIds
+      ..clear()
+      ..addAll(subs);
   }
 
   Future<void> loadRoster() async {
@@ -195,6 +185,91 @@ class ManageAnnouncedPlayersController extends GetxController {
     }
   }
 
+  /// Authoritative team squad from GET; merges into [currentMatch] + [onSaved].
+  Future<void> syncAnnouncedFromServer({bool invalidateQuery = false}) async {
+    final mid = matchId;
+    if (mid == null || mid.isEmpty) return;
+    final epochAtStart = _mutationEpoch;
+    syncing.value = true;
+    try {
+      final latestSlice = await _announcedApi.listForTeam(
+        teamMatchId: mid,
+        actorTeamId: actorTeamId,
+      );
+      if (isClosed) return;
+      // A mutation started while this GET was in flight — keep local state.
+      if (_mutationEpoch != epochAtStart) return;
+      _mergeTeamSlice(latestSlice, invalidateQuery: invalidateQuery);
+    } catch (e) {
+      if (!isClosed) {
+        AppSnackbar.error(
+          title: 'Could not load squad',
+          message: e.toString(),
+        );
+      }
+    } finally {
+      if (!isClosed) syncing.value = false;
+    }
+  }
+
+  void _mergeTeamSlice(
+    List<AnnouncedPlayerModel> latestSlice, {
+    bool invalidateQuery = true,
+  }) {
+    final match = currentMatch.value;
+    final kept = match.announcedPlayers
+        .where((p) => p.teamIdHelper.getId() != actorTeamId)
+        .toList();
+    final merged = match.copyWith(
+      announcedPlayers: [...kept, ...latestSlice],
+    );
+    currentMatch.value = merged;
+    _mirrorSelectionFromMatch();
+    _syncMetaFromMatch();
+    onSaved(merged);
+    final mid = matchId;
+    if (invalidateQuery &&
+        mid != null &&
+        mid.isNotEmpty &&
+        Get.isRegistered<QueryClient>()) {
+      Get.find<QueryClient>().invalidateQueries(
+        queryKey: QueryKeys.matchChallengeDetail(mid),
+      );
+    }
+  }
+
+  /// Optimistic mutate with surgical [revert] on failure (no full-match restore).
+  Future<void> runMutation({
+    required Set<String> busyIds,
+    required void Function() optimistic,
+    required void Function() revert,
+    required Future<List<AnnouncedPlayerModel>> Function() call,
+  }) async {
+    if (isClosed) return;
+    if (busyIds.any(busyParticipantIds.contains)) return;
+
+    _mutationEpoch++;
+    busyParticipantIds.addAll(busyIds);
+    try {
+      optimistic();
+      final slice = await call();
+      if (isClosed) return;
+      _mergeTeamSlice(slice);
+    } catch (e) {
+      if (!isClosed) {
+        revert();
+        AppSnackbar.error(
+          title: 'Update failed',
+          message: e.toString(),
+        );
+      }
+    } finally {
+      if (!isClosed) {
+        busyParticipantIds.removeAll(busyIds);
+      }
+    }
+  }
+
   TeamMemberModel? findRosterMember(String userId) {
     for (final m in roster) {
       if (m.userHelper.getId() == userId) return m;
@@ -204,55 +279,19 @@ class ManageAnnouncedPlayersController extends GetxController {
 
   bool isSquadParticipant(String participantId) {
     if (selectedUserIds.contains(participantId)) return true;
-    if (pendingGuests.any((d) => d.localId == participantId)) return true;
-    return visibleServerGuests.any((g) => g.participantId == participantId);
+    return serverGuests.any((g) => g.participantId == participantId);
   }
 
-  void toggle(String userId) {
-    if (saving.value || loadingRoster.value) return;
-    if (selectedUserIds.contains(userId)) {
-      selectedUserIds.remove(userId);
-      if (captainParticipantId.value == userId) {
-        captainParticipantId.value = null;
-      }
-      if (viceCaptainParticipantId.value == userId) {
-        viceCaptainParticipantId.value = null;
-      }
-    } else {
-      selectedUserIds.add(userId);
-    }
-  }
+  bool isBusy(String participantId) =>
+      busyParticipantIds.contains(participantId);
 
-  void onCaptainTap(String participantId) {
-    if (!isSquadParticipant(participantId) ||
-        saving.value ||
-        loadingRoster.value) {
-      return;
+  /// True when [userId] is already on the opponent's announced squad.
+  bool isAnnouncedForOpponent(String userId) {
+    for (final p in currentMatch.value.announcedPlayers) {
+      if (p.teamIdHelper.getId() == actorTeamId) continue;
+      if (p.userIdHelper.getId() == userId) return true;
     }
-    if (captainParticipantId.value == participantId) {
-      captainParticipantId.value = null;
-    } else {
-      captainParticipantId.value = participantId;
-      if (viceCaptainParticipantId.value == participantId) {
-        viceCaptainParticipantId.value = null;
-      }
-    }
-  }
-
-  void onViceCaptainTap(String participantId) {
-    if (!isSquadParticipant(participantId) ||
-        saving.value ||
-        loadingRoster.value) {
-      return;
-    }
-    if (viceCaptainParticipantId.value == participantId) {
-      viceCaptainParticipantId.value = null;
-    } else {
-      viceCaptainParticipantId.value = participantId;
-      if (captainParticipantId.value == participantId) {
-        captainParticipantId.value = null;
-      }
-    }
+    return false;
   }
 
   AnnouncedPlayerRole roleForUserId(String userId) {
@@ -262,28 +301,68 @@ class ManageAnnouncedPlayersController extends GetxController {
     return defaultAnnouncedRoleForSport(currentMatch.value.sportType);
   }
 
-  void addPendingGuest(GuestDraft draft) {
-    pendingGuests.add(draft);
+  void _removeActorPlayerByUserId(String userId) {
+    selectedUserIds.remove(userId);
+    if (captainParticipantId.value == userId) {
+      captainParticipantId.value = null;
+    }
+    if (viceCaptainParticipantId.value == userId) {
+      viceCaptainParticipantId.value = null;
+    }
+    substituteParticipantIds.remove(userId);
+    final match = currentMatch.value;
+    currentMatch.value = match.copyWith(
+      announcedPlayers: match.announcedPlayers
+          .where(
+            (p) =>
+                !(p.teamIdHelper.getId() == actorTeamId &&
+                    p.userIdHelper.getId() == userId),
+          )
+          .toList(),
+    );
   }
 
-  void removeGuestFromUi(String participantId, {required bool pending}) {
+  void _removeActorPlayerByParticipantId(String participantId) {
     if (captainParticipantId.value == participantId) {
       captainParticipantId.value = null;
     }
     if (viceCaptainParticipantId.value == participantId) {
       viceCaptainParticipantId.value = null;
     }
-    if (pending) {
-      pendingGuests.removeWhere((d) => d.localId == participantId);
-    } else {
-      removedGuestIds.add(participantId);
-    }
+    substituteParticipantIds.remove(participantId);
+    final match = currentMatch.value;
+    currentMatch.value = match.copyWith(
+      announcedPlayers: match.announcedPlayers.where((p) {
+        if (p.teamIdHelper.getId() != actorTeamId) return true;
+        return p.participantId != participantId;
+      }).toList(),
+    );
   }
 
-  List<AnnouncedPlayerUpdatePayload> _buildLeadershipPatches(
+  void _applyMetaFlagsToMatch({
+    required String? captainId,
+    required String? viceCaptainId,
+    required Set<String> substituteIds,
+  }) {
+    final match = currentMatch.value;
+    final updated = match.announcedPlayers.map((p) {
+      if (p.teamIdHelper.getId() != actorTeamId) return p;
+      final pid = p.participantId;
+      if (pid == null) return p;
+      return p.copyWith(
+        isCaption: captainId == pid,
+        isWiseCaption: viceCaptainId == pid,
+        isSubstitute: substituteIds.contains(pid),
+      );
+    }).toList();
+    currentMatch.value = match.copyWith(announcedPlayers: updated);
+  }
+
+  List<AnnouncedPlayerUpdatePayload> _buildMetaPatches(
     List<AnnouncedPlayerModel> slice, {
     required String? captainId,
     required String? viceCaptainId,
+    required Set<String> substituteIds,
   }) {
     final updates = <AnnouncedPlayerUpdatePayload>[];
     for (final p in slice) {
@@ -292,13 +371,17 @@ class ManageAnnouncedPlayersController extends GetxController {
       final uid = p.userIdHelper.getId();
       final wantCaptain = captainId == pid;
       final wantVice = viceCaptainId == pid;
-      if (wantCaptain != p.isCaption || wantVice != p.isWiseCaption) {
+      final wantSub = substituteIds.contains(pid);
+      if (wantCaptain != p.isCaption ||
+          wantVice != p.isWiseCaption ||
+          wantSub != p.isSubstitute) {
         updates.add(
           AnnouncedPlayerUpdatePayload(
             userId: uid,
             guestId: uid == null ? p.guestId : null,
             isCaption: wantCaptain,
             isWiseCaption: wantVice,
+            isSubstitute: wantSub,
           ),
         );
       }
@@ -306,194 +389,316 @@ class ManageAnnouncedPlayersController extends GetxController {
     return updates;
   }
 
-  Future<void> save(BuildContext context) async {
+  Future<void> _patchMeta({
+    required Set<String> busyIds,
+    required String? captainId,
+    required String? viceCaptainId,
+    required Set<String> substituteIds,
+  }) async {
     final mid = matchId;
-    if (mid == null || mid.isEmpty) {
+    if (mid == null || mid.isEmpty) return;
+
+    final baseline = List<AnnouncedPlayerModel>.from(announcedForTeam);
+    final patches = _buildMetaPatches(
+      baseline,
+      captainId: captainId,
+      viceCaptainId: viceCaptainId,
+      substituteIds: substituteIds,
+    );
+    if (patches.isEmpty) return;
+
+    final prevCap = captainParticipantId.value;
+    final prevVice = viceCaptainParticipantId.value;
+    final prevSubs = substituteParticipantIds.toSet();
+
+    await runMutation(
+      busyIds: busyIds,
+      optimistic: () {
+        captainParticipantId.value = captainId;
+        viceCaptainParticipantId.value = viceCaptainId;
+        substituteParticipantIds
+          ..clear()
+          ..addAll(substituteIds);
+        _applyMetaFlagsToMatch(
+          captainId: captainId,
+          viceCaptainId: viceCaptainId,
+          substituteIds: substituteIds,
+        );
+      },
+      revert: () {
+        captainParticipantId.value = prevCap;
+        viceCaptainParticipantId.value = prevVice;
+        substituteParticipantIds
+          ..clear()
+          ..addAll(prevSubs);
+        _applyMetaFlagsToMatch(
+          captainId: prevCap,
+          viceCaptainId: prevVice,
+          substituteIds: prevSubs,
+        );
+      },
+      call: () => _announcedApi.updateAnnouncedPlayers(
+        teamMatchId: mid,
+        actorTeamId: actorTeamId,
+        updates: patches,
+      ),
+    );
+  }
+
+  Future<void> toggleMember(String userId) async {
+    if (interactionsLocked || isBusy(userId)) return;
+    final mid = matchId;
+    if (mid == null || mid.isEmpty) return;
+
+    if (selectedUserIds.contains(userId)) {
+      AnnouncedPlayerModel? removed;
+      for (final p in rosterAnnounced) {
+        if (p.userIdHelper.getId() == userId) {
+          removed = p;
+          break;
+        }
+      }
+      final prevCap = captainParticipantId.value;
+      final prevVice = viceCaptainParticipantId.value;
+      final wasSub = substituteParticipantIds.contains(userId);
+
+      await runMutation(
+        busyIds: {userId},
+        optimistic: () => _removeActorPlayerByUserId(userId),
+        revert: () {
+          if (removed == null) {
+            selectedUserIds.add(userId);
+            return;
+          }
+          selectedUserIds.add(userId);
+          captainParticipantId.value = prevCap;
+          viceCaptainParticipantId.value = prevVice;
+          if (wasSub) substituteParticipantIds.add(userId);
+          final match = currentMatch.value;
+          currentMatch.value = match.copyWith(
+            announcedPlayers: [...match.announcedPlayers, removed],
+          );
+        },
+        call: () => _announcedApi.removeAnnouncedPlayers(
+          teamMatchId: mid,
+          actorTeamId: actorTeamId,
+          userIds: [userId],
+        ),
+      );
+      return;
+    }
+
+    if (isAnnouncedForOpponent(userId)) {
       AppSnackbar.error(
-        title: 'Missing match',
-        message: 'Cannot save squad.',
+        title: 'Already announced',
+        message: 'This player is already announced for the opponent.',
       );
       return;
     }
 
-    final previousIds = {
-      for (final p in rosterAnnounced)
-        if (p.userIdHelper.getId() != null) p.userIdHelper.getId()!,
-    };
-    final selected = selectedUserIds.toSet();
-    final toRemove = previousIds.difference(selected).toList();
-    final toAddIds = selected.difference(previousIds).toList();
+    final member = findRosterMember(userId);
+    if (member == null) return;
+    final h = member.userHelper;
+    final role = defaultAnnouncedRoleForSport(currentMatch.value.sportType);
+    final isCap = captainParticipantId.value == userId;
+    final isVice = viceCaptainParticipantId.value == userId;
+    final isSub = substituteParticipantIds.contains(userId);
+    final payload = AnnouncedPlayerCreatePayload(
+      name: h.getDisplayName(),
+      avatar: h.getAvatar(),
+      email: h.getEmail(),
+      userId: userId,
+      role: role,
+      isCaption: isCap,
+      isWiseCaption: isVice,
+      isSubstitute: isSub,
+    );
+    final optimisticRow = AnnouncedPlayerModel(
+      teamId: actorTeamId,
+      name: h.getDisplayName(),
+      avatar: h.getAvatar(),
+      email: h.getEmail(),
+      userId: userId,
+      role: role,
+      isCaption: isCap,
+      isWiseCaption: isVice,
+      isSubstitute: isSub,
+    );
 
-    final guestsToRemove = <AnnouncedPlayerModel>[
-      for (final g in serverGuests)
-        if (g.participantId != null && removedGuestIds.contains(g.participantId))
-          g,
-    ];
-    final guestsToAdd = List<GuestDraft>.from(pendingGuests);
-    final guestChanged = guestsToRemove.isNotEmpty || guestsToAdd.isNotEmpty;
-    final rosterChanged = toRemove.isNotEmpty || toAddIds.isNotEmpty;
+    await runMutation(
+      busyIds: {userId},
+      optimistic: () {
+        selectedUserIds.add(userId);
+        final match = currentMatch.value;
+        currentMatch.value = match.copyWith(
+          announcedPlayers: [...match.announcedPlayers, optimisticRow],
+        );
+      },
+      revert: () => _removeActorPlayerByUserId(userId),
+      call: () => _announcedApi.addAnnouncedPlayers(
+        teamMatchId: mid,
+        actorTeamId: actorTeamId,
+        players: [payload],
+      ),
+    );
+  }
 
-    final capId = captainParticipantId.value;
-    final viceId = viceCaptainParticipantId.value;
-    final capEffective =
-        capId != null && isSquadParticipant(capId) ? capId : null;
-    final viceEffective =
-        viceId != null && isSquadParticipant(viceId) ? viceId : null;
-
-    final leadershipBaseline = [
-      for (final p in announcedForTeam)
-        if (p.participantId == null || !removedGuestIds.contains(p.participantId))
-          p,
-    ];
-    final mutationPending = rosterChanged || guestChanged;
-    final leadershipOnlyPatches = mutationPending
-        ? const <AnnouncedPlayerUpdatePayload>[]
-        : _buildLeadershipPatches(
-            leadershipBaseline,
-            captainId: capEffective,
-            viceCaptainId: viceEffective,
-          );
-
-    if (!mutationPending && leadershipOnlyPatches.isEmpty) {
-      if (context.mounted) Navigator.of(context).pop();
+  Future<void> setCaptain(String participantId) async {
+    if (!isSquadParticipant(participantId) ||
+        interactionsLocked ||
+        isBusy(participantId)) {
       return;
     }
-
-    saving.value = true;
-    try {
-      var latestSlice = announcedForTeam;
-
-      final removeUserIds = <String>[
-        ...toRemove,
-        for (final g in guestsToRemove)
-          if (g.userIdHelper.getId() != null) g.userIdHelper.getId()!,
-      ];
-      final removeGuestMongoIds = <String>[
-        for (final g in guestsToRemove)
-          if (g.userIdHelper.getId() == null && g.guestId != null) g.guestId!,
-      ];
-      if (removeUserIds.isNotEmpty || removeGuestMongoIds.isNotEmpty) {
-        latestSlice = await _announcedApi.removeAnnouncedPlayers(
-          teamMatchId: mid,
-          actorTeamId: actorTeamId,
-          userIds: removeUserIds,
-          guestIds: removeGuestMongoIds,
-        );
-        if (isClosed) return;
-      }
-
-      final addPayloads = <AnnouncedPlayerCreatePayload>[];
-      if (toAddIds.isNotEmpty) {
-        final role = defaultAnnouncedRoleForSport(currentMatch.value.sportType);
-        for (final uid in toAddIds) {
-          final m = findRosterMember(uid);
-          if (m == null) continue;
-          final h = m.userHelper;
-          final id = h.getId();
-          if (id == null) continue;
-          addPayloads.add(
-            AnnouncedPlayerCreatePayload(
-              name: h.getDisplayName(),
-              avatar: h.getAvatar(),
-              email: h.getEmail(),
-              userId: id,
-              role: role,
-              isCaption: uid == capEffective,
-              isWiseCaption: uid == viceEffective,
-            ),
-          );
-        }
-      }
-      for (final d in guestsToAdd) {
-        addPayloads.add(
-          d.toCreatePayload(
-            isCaption: d.localId == capEffective,
-            isWiseCaption: d.localId == viceEffective,
-          ),
-        );
-      }
-      if (addPayloads.isNotEmpty) {
-        latestSlice = await _announcedApi.addAnnouncedPlayers(
-          teamMatchId: mid,
-          actorTeamId: actorTeamId,
-          players: addPayloads,
-        );
-        if (isClosed) return;
-      }
-
-      var resolveCaptainId = capEffective;
-      var resolveViceId = viceEffective;
-      if (capEffective != null &&
-          guestsToAdd.any((d) => d.localId == capEffective)) {
-        final draft = guestsToAdd.firstWhere((d) => d.localId == capEffective);
-        for (final p in latestSlice) {
-          if (p.isGuest &&
-              p.name == draft.name &&
-              p.role == draft.role &&
-              p.participantId != null) {
-            resolveCaptainId = p.participantId;
-            break;
-          }
-        }
-      }
-      if (viceEffective != null &&
-          guestsToAdd.any((d) => d.localId == viceEffective)) {
-        final draft = guestsToAdd.firstWhere((d) => d.localId == viceEffective);
-        for (final p in latestSlice) {
-          if (p.isGuest &&
-              p.name == draft.name &&
-              p.role == draft.role &&
-              p.participantId != null) {
-            resolveViceId = p.participantId;
-            break;
-          }
-        }
-      }
-
-      final leadershipPatches = _buildLeadershipPatches(
-        latestSlice,
-        captainId: resolveCaptainId,
-        viceCaptainId: resolveViceId,
-      );
-      if (leadershipPatches.isNotEmpty) {
-        latestSlice = await _announcedApi.updateAnnouncedPlayers(
-          teamMatchId: mid,
-          actorTeamId: actorTeamId,
-          updates: leadershipPatches,
-        );
-        if (isClosed) return;
-      }
-
-      final match = currentMatch.value;
-      final kept = match.announcedPlayers
-          .where((p) => p.teamIdHelper.getId() != actorTeamId)
-          .toList();
-      final merged = match.copyWith(
-        announcedPlayers: [...kept, ...latestSlice],
-      );
-      currentMatch.value = merged;
-      onSaved(merged);
-      if (Get.isRegistered<QueryClient>()) {
-        await Get.find<QueryClient>().invalidateQueries(
-          queryKey: QueryKeys.matchChallengeDetail(mid),
-        );
-      }
-      if (context.mounted) {
-        Navigator.of(context).pop();
-        AppSnackbar.success(
-          title: 'Squad updated',
-          message: 'Announced players were saved.',
-        );
-      }
-    } catch (e) {
-      if (!isClosed) {
-        AppSnackbar.error(
-          title: 'Could not save',
-          message: e.toString(),
-        );
-      }
-    } finally {
-      if (!isClosed) saving.value = false;
+    final clearing = captainParticipantId.value == participantId;
+    final newCap = clearing ? null : participantId;
+    var newVice = viceCaptainParticipantId.value;
+    final newSubs = Set<String>.from(substituteParticipantIds);
+    if (newCap != null) {
+      if (newVice == participantId) newVice = null;
+      newSubs.remove(participantId);
     }
+    final busy = <String>{participantId};
+    final oldCap = captainParticipantId.value;
+    if (oldCap != null) busy.add(oldCap);
+    await _patchMeta(
+      busyIds: busy,
+      captainId: newCap,
+      viceCaptainId: newVice,
+      substituteIds: newSubs,
+    );
+  }
+
+  Future<void> setViceCaptain(String participantId) async {
+    if (!isSquadParticipant(participantId) ||
+        interactionsLocked ||
+        isBusy(participantId)) {
+      return;
+    }
+    final clearing = viceCaptainParticipantId.value == participantId;
+    final newVice = clearing ? null : participantId;
+    var newCap = captainParticipantId.value;
+    final newSubs = Set<String>.from(substituteParticipantIds);
+    if (newVice != null) {
+      if (newCap == participantId) newCap = null;
+      newSubs.remove(participantId);
+    }
+    final busy = <String>{participantId};
+    final oldVice = viceCaptainParticipantId.value;
+    if (oldVice != null) busy.add(oldVice);
+    await _patchMeta(
+      busyIds: busy,
+      captainId: newCap,
+      viceCaptainId: newVice,
+      substituteIds: newSubs,
+    );
+  }
+
+  Future<void> toggleSubstitute(String participantId) async {
+    if (!isSquadParticipant(participantId) ||
+        interactionsLocked ||
+        isBusy(participantId)) {
+      return;
+    }
+    final newSubs = Set<String>.from(substituteParticipantIds);
+    var newCap = captainParticipantId.value;
+    var newVice = viceCaptainParticipantId.value;
+    if (newSubs.contains(participantId)) {
+      newSubs.remove(participantId);
+    } else {
+      newSubs.add(participantId);
+      if (newCap == participantId) newCap = null;
+      if (newVice == participantId) newVice = null;
+    }
+    await _patchMeta(
+      busyIds: {participantId},
+      captainId: newCap,
+      viceCaptainId: newVice,
+      substituteIds: newSubs,
+    );
+  }
+
+  Future<void> addGuest(GuestDraft draft) async {
+    if (interactionsLocked) return;
+    final mid = matchId;
+    if (mid == null || mid.isEmpty) return;
+
+    final isCap = captainParticipantId.value == draft.localId;
+    final isVice = viceCaptainParticipantId.value == draft.localId;
+    final payload = draft.toCreatePayload(
+      isCaption: isCap,
+      isWiseCaption: isVice,
+    );
+    final optimisticRow = AnnouncedPlayerModel(
+      teamId: actorTeamId,
+      name: draft.name,
+      avatar: draft.avatar,
+      isGuest: true,
+      guestId: draft.localId,
+      role: draft.role,
+      isCaption: isCap,
+      isWiseCaption: isVice,
+      isSubstitute: draft.isSubstitute,
+    );
+
+    await runMutation(
+      busyIds: {draft.localId},
+      optimistic: () {
+        if (draft.isSubstitute) {
+          substituteParticipantIds.add(draft.localId);
+        }
+        final match = currentMatch.value;
+        currentMatch.value = match.copyWith(
+          announcedPlayers: [...match.announcedPlayers, optimisticRow],
+        );
+      },
+      revert: () => _removeActorPlayerByParticipantId(draft.localId),
+      call: () => _announcedApi.addAnnouncedPlayers(
+        teamMatchId: mid,
+        actorTeamId: actorTeamId,
+        players: [payload],
+      ),
+    );
+  }
+
+  Future<void> removeGuest(String participantId) async {
+    if (interactionsLocked || isBusy(participantId)) return;
+    final mid = matchId;
+    if (mid == null || mid.isEmpty) return;
+
+    AnnouncedPlayerModel? guest;
+    for (final g in serverGuests) {
+      if (g.participantId == participantId) {
+        guest = g;
+        break;
+      }
+    }
+    if (guest == null) return;
+
+    final uid = guest.userIdHelper.getId();
+    final guestMongoId = uid == null ? guest.guestId : null;
+    final removed = guest;
+    final prevCap = captainParticipantId.value;
+    final prevVice = viceCaptainParticipantId.value;
+    final wasSub = substituteParticipantIds.contains(participantId);
+
+    await runMutation(
+      busyIds: {participantId},
+      optimistic: () => _removeActorPlayerByParticipantId(participantId),
+      revert: () {
+        captainParticipantId.value = prevCap;
+        viceCaptainParticipantId.value = prevVice;
+        if (wasSub) substituteParticipantIds.add(participantId);
+        final match = currentMatch.value;
+        currentMatch.value = match.copyWith(
+          announcedPlayers: [...match.announcedPlayers, removed],
+        );
+      },
+      call: () => _announcedApi.removeAnnouncedPlayers(
+        teamMatchId: mid,
+        actorTeamId: actorTeamId,
+        userIds: uid != null ? [uid] : const [],
+        guestIds: guestMongoId != null ? [guestMongoId] : const [],
+      ),
+    );
   }
 }
