@@ -92,12 +92,6 @@ class ChatInboxController extends GetxController {
       final ok = await _service.hideThreads(toHide);
       if (!ok) {
         await ChatInboxCache.invalidate();
-        AppSnackbar.error(
-          title: 'Chat',
-          message: toHide.length == 1
-              ? 'Could not delete this conversation.'
-              : 'Could not delete some conversations.',
-        );
         return false;
       }
       if (toHide.length > 1) {

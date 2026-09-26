@@ -6,12 +6,14 @@ import 'package:geolocator/geolocator.dart';
 import 'dart:async';
 import 'dart:convert';
 import '../core/cache/app_image_cache.dart';
+import '../telemetry/util/app_log.dart';
 import '../core/utils/app_snackbar.dart';
 import '../core/models/location_model.dart';
 import '../core/services/search/search_history_store.dart';
 
 class SettingsController extends GetxController {
   final RxBool _notificationsEnabled = true.obs;
+  final RxBool _analyticsConsent = false.obs;
   final Rxn<LocationModel> _selectedCityLocation = Rxn<LocationModel>();
   final RxBool _isDetectingCityLocation = false.obs;
 
@@ -28,6 +30,7 @@ class SettingsController extends GetxController {
   final TextEditingController cityController = TextEditingController();
 
   bool get notificationsEnabled => _notificationsEnabled.value;
+  bool get analyticsConsent => _analyticsConsent.value;
   Rxn<LocationModel> get selectedCityLocation => _selectedCityLocation;
   RxBool get isDetectingCityLocation => _isDetectingCityLocation;
 
@@ -80,6 +83,7 @@ class SettingsController extends GetxController {
       final prefs = await SharedPreferences.getInstance();
 
       _notificationsEnabled.value = prefs.getBool(_notificationsKey) ?? true;
+      _analyticsConsent.value = prefs.getBool(AppLog.consentKey) ?? false;
 
       final raw = prefs.getString(_cityLocationKey);
       if (raw != null && raw.isNotEmpty) {
@@ -222,9 +226,11 @@ class SettingsController extends GetxController {
               : null;
           zip = p.postalCode?.trim().isNotEmpty == true ? p.postalCode : null;
           country = p.country?.trim().isNotEmpty == true ? p.country : null;
-          final parts = <String?>[city, state, country]
-              .where((e) => e?.trim().isNotEmpty == true)
-              .toList();
+          final parts = <String?>[
+            city,
+            state,
+            country,
+          ].where((e) => e?.trim().isNotEmpty == true).toList();
           if (parts.isNotEmpty) label = parts.join(', ');
         }
       } catch (_) {}
@@ -249,6 +255,11 @@ class SettingsController extends GetxController {
   void onClose() {
     cityController.dispose();
     super.onClose();
+  }
+
+  Future<void> setAnalyticsConsent(bool enabled) async {
+    _analyticsConsent.value = enabled;
+    await AppLog.instance.setConsent(enabled);
   }
 
   Future<void> toggleNotifications() async {

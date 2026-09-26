@@ -1,22 +1,42 @@
+import 'dart:async';
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/binding/initial_binding.dart';
 import 'package:flutter_application_1/notification/push_notification_service.dart';
+import 'package:flutter_application_1/telemetry/util/app_log.dart';
+import 'package:flutter_application_1/telemetry/telemetry_consent_dialog.dart';
 import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 import 'core/config/env_config.dart';
 import 'core/routes/app_routes.dart';
 import 'core/config/constants.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+void main() {
+  runZonedGuarded(
+    () async {
+      WidgetsFlutterBinding.ensureInitialized();
+      FlutterError.onError = (details) {
+        FlutterError.presentError(details);
+        AppLog.instance.recordError(details.exception, details.stack);
+      };
+      PlatformDispatcher.instance.onError = (error, stack) {
+        AppLog.instance.recordError(error, stack);
+        return true;
+      };
 
-  await EnvConfig.initialize();
-  await PushNotificationService.initializeFirebase();
+      await EnvConfig.initialize();
+      await PushNotificationService.initializeFirebase();
 
-  final queryClient = QueryClient();
-  InitialBinding(queryClient: queryClient).dependencies();
+      final queryClient = QueryClient();
+      InitialBinding(queryClient: queryClient).dependencies();
 
-  runApp(MyApp(queryClient: queryClient));
+      runApp(MyApp(queryClient: queryClient));
+    },
+    (error, stack) {
+      AppLog.instance.recordError(error, stack);
+    },
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -39,8 +59,23 @@ class MyApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         defaultTransition: Transition.cupertino,
         transitionDuration: const Duration(milliseconds: 300),
+        routingCallback: _onRouting,
+        builder: (context, child) {
+          return TelemetryConsentDialog(
+            child: child ?? const SizedBox.shrink(),
+          );
+        },
       ),
     );
+  }
+
+  void _onRouting(Routing? routing) {
+    if (routing == null ||
+        routing.isDialog == true ||
+        routing.isBottomSheet == true) {
+      return;
+    }
+    AppLog.instance.onRoute(routing.current);
   }
 
   ThemeData get _lightTheme {

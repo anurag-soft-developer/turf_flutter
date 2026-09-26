@@ -395,10 +395,7 @@ class CricketScoringController extends GetxController {
       request: request,
     );
     isCreatingCricketSession.value = false;
-    if (match == null) {
-      errorMessage.value = 'Could not start cricket session.';
-      return false;
-    }
+    if (match == null) return false;
     cricketMatch.value = match;
     await fetchCricketOvers(sessionId, resetBallHistory: true);
     _syncQueryCache();
@@ -438,10 +435,7 @@ class CricketScoringController extends GetxController {
       final match = await _apiService.completeCricketMatch(
         teamMatchId: sessionId,
       );
-      if (match == null) {
-        errorMessage.value = 'Could not complete match.';
-        return false;
-      }
+      if (match == null) return false;
       cricketMatch.value = match;
       _resetCricketBallHistory();
       _syncQueryCache(includeOvers: false);
@@ -466,10 +460,7 @@ class CricketScoringController extends GetxController {
     isChangingCricketInning.value = true;
     try {
       final match = await _apiService.changeCricketInning(teamMatchId: sessionId);
-      if (match == null) {
-        errorMessage.value = 'Could not change innings.';
-        return false;
-      }
+      if (match == null) return false;
       cricketMatch.value = match;
       _resetCricketBallHistory();
       _syncQueryCache(includeOvers: false);
@@ -499,10 +490,7 @@ class CricketScoringController extends GetxController {
         teamMatchId: sessionId,
         request: request,
       );
-      if (response == null) {
-        errorMessage.value = 'Could not send ball event.';
-        return null;
-      }
+      if (response == null) return null;
       _ballRequestHistory.add(request);
       _redoBallRequests.clear();
       _syncRedoAvailability();
@@ -541,10 +529,7 @@ class CricketScoringController extends GetxController {
         playerOffParticipantId: playerOffParticipantId,
         playerOnParticipantId: playerOnParticipantId,
       );
-      if (response == null) {
-        errorMessage.value = 'Could not record substitution.';
-        return null;
-      }
+      if (response == null) return null;
       _redoBallRequests.clear();
       _syncRedoAvailability();
       upsertCricketOver(response);
@@ -579,10 +564,7 @@ class CricketScoringController extends GetxController {
       final ok = await _apiService.undoLastCricketScoringEntry(
         teamMatchId: sessionId,
       );
-      if (!ok) {
-        errorMessage.value = 'Could not undo the last scoring entry.';
-        return false;
-      }
+      if (!ok) return false;
       if (_ballRequestHistory.isNotEmpty) {
         _redoBallRequests.add(_ballRequestHistory.removeLast());
         _syncRedoAvailability();

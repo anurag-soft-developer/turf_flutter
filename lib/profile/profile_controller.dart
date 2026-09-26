@@ -184,10 +184,6 @@ class ProfileController extends GetxController {
 
       if (result == null) {
         await DeferredMediaUpload.rollback(uploaded);
-        AppSnackbar.error(
-          title: 'Failed',
-          message: 'Could not update profile. Try again.',
-        );
         return null;
       }
 

@@ -144,24 +144,24 @@ class LoginScreen extends StatelessWidget {
                         const SizedBox(height: 24),
 
                         // Google Sign In Button
-                        CustomButton(
-                          text: 'Continue with Google',
-                          onPressed: authStateController.signInWithGoogle,
-                          isOutlined: true,
-                          icon: Container(
-                            width: 20,
-                            height: 20,
-                            decoration: BoxDecoration(
-                              image: DecorationImage(
-                                image: AppNetworkImage.provider(
-                                  'https://developers.google.com/identity/images/g-logo.png',
-                                ),
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 40),
+                        // CustomButton(
+                        //   text: 'Continue with Google',
+                        //   onPressed: authStateController.signInWithGoogle,
+                        //   isOutlined: true,
+                        //   icon: Container(
+                        //     width: 20,
+                        //     height: 20,
+                        //     decoration: BoxDecoration(
+                        //       image: DecorationImage(
+                        //         image: AppNetworkImage.provider(
+                        //           'https://developers.google.com/identity/images/g-logo.png',
+                        //         ),
+                        //         fit: BoxFit.cover,
+                        //       ),
+                        //     ),
+                        //   ),
+                        // ),
+                        // const SizedBox(height: 40),
 
                         // Sign Up Link
                         Center(

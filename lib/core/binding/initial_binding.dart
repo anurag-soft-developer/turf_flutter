@@ -4,6 +4,7 @@ import 'package:flutter_application_1/notification/notification_socket_service.d
 import 'package:flutter_application_1/notification/push_notification_service.dart';
 import 'package:flutter_application_1/scoring/shared/scoring_socket_service.dart';
 import 'package:flutter_application_1/settings/settings_controller.dart';
+import 'package:flutter_application_1/telemetry/util/app_log.dart';
 import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
@@ -32,16 +33,10 @@ class InitialBinding extends Bindings {
       );
     }
     if (!Get.isRegistered<ScoringSocketService>()) {
-      Get.put<ScoringSocketService>(
-        ScoringSocketService(),
-        permanent: true,
-      );
+      Get.put<ScoringSocketService>(ScoringSocketService(), permanent: true);
     }
     if (!Get.isRegistered<ChatSocketService>()) {
-      Get.put<ChatSocketService>(
-        ChatSocketService(),
-        permanent: true,
-      );
+      Get.put<ChatSocketService>(ChatSocketService(), permanent: true);
     }
     if (!Get.isRegistered<NotificationSessionController>()) {
       Get.put<NotificationSessionController>(
@@ -55,5 +50,6 @@ class InitialBinding extends Bindings {
     if (!Get.isRegistered<SettingsController>()) {
       Get.put<SettingsController>(SettingsController(), permanent: true);
     }
+    AppLog.instance.start();
   }
 }

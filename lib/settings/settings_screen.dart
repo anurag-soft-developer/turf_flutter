@@ -118,7 +118,43 @@ class SettingsScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Column(
-                          children: _buildSectionItems(section.items),
+                          children: [
+                            ..._buildSectionItems(section.items),
+                            if (section.title == 'Privacy & Security') ...[
+                              const Divider(
+                                height: 1,
+                                color: Color(AppColors.dividerColor),
+                              ),
+                              Obx(
+                                () => SwitchListTile(
+                                  secondary: const Icon(
+                                    Icons.insights_outlined,
+                                    color: Color(AppColors.primaryColor),
+                                  ),
+                                  title: const Text(
+                                    'Usage and error reports',
+                                    style: TextStyle(
+                                      color: Color(AppColors.textColor),
+                                    ),
+                                  ),
+                                  subtitle: const Text(
+                                    'Screens visited, time on screen, and errors, sent about once an hour',
+                                    style: TextStyle(
+                                      color: Color(
+                                        AppColors.textSecondaryColor,
+                                      ),
+                                    ),
+                                  ),
+                                  value: settingsController.analyticsConsent,
+                                  onChanged: (enabled) {
+                                    settingsController.setAnalyticsConsent(
+                                      enabled,
+                                    );
+                                  },
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ),
                       const SizedBox(height: 32),
@@ -283,7 +319,10 @@ class _AccountInformationSection extends StatelessWidget {
             children: [
               for (int i = 0; i < items.length; i++) ...[
                 if (i > 0)
-                  const Divider(height: 1, color: Color(AppColors.dividerColor)),
+                  const Divider(
+                    height: 1,
+                    color: Color(AppColors.dividerColor),
+                  ),
                 _ReadOnlyInfoTile(
                   item: items[i],
                   onCopy: items[i].copyValue == null

@@ -239,10 +239,6 @@ class CreatePostController extends GetxController {
 
       if (created == null) {
         await DeferredMediaUpload.rollback(uploaded);
-        AppSnackbar.error(
-          title: 'Failed',
-          message: 'Could not publish post. Try again.',
-        );
         return;
       }
 

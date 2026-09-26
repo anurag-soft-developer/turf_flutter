@@ -320,10 +320,7 @@ class FootballScoringController extends GetxController {
       request: request,
     );
     isCreatingFootballSession.value = false;
-    if (match == null) {
-      errorMessage.value = 'Could not start football session.';
-      return false;
-    }
+    if (match == null) return false;
     footballMatch.value = match;
     await fetchFootballEvents(sessionId, resetEventHistory: true);
     _syncQueryCache();
@@ -356,10 +353,7 @@ class FootballScoringController extends GetxController {
         teamMatchId: sessionId,
         request: request,
       );
-      if (match == null) {
-        errorMessage.value = 'Could not change innings.';
-        return false;
-      }
+      if (match == null) return false;
       footballMatch.value = match;
       _syncQueryCache(includeEvents: false);
       return true;
@@ -431,10 +425,7 @@ class FootballScoringController extends GetxController {
       final match = await _apiService.completeFootballMatch(
         teamMatchId: sessionId,
       );
-      if (match == null) {
-        errorMessage.value = 'Could not complete match.';
-        return false;
-      }
+      if (match == null) return false;
       footballMatch.value = match;
       _resetEventHistory();
       _syncQueryCache(includeEvents: false);
@@ -465,10 +456,7 @@ class FootballScoringController extends GetxController {
         teamMatchId: sessionId,
         request: request,
       );
-      if (response == null) {
-        errorMessage.value = 'Could not send event.';
-        return null;
-      }
+      if (response == null) return null;
       _eventRequestHistory.add(request);
       _redoEventRequests.clear();
       _syncRedoAvailability();
@@ -502,10 +490,7 @@ class FootballScoringController extends GetxController {
     isSendingUpdate.value = true;
     try {
       final ok = await _apiService.undoLastFootballEvent(teamMatchId: sessionId);
-      if (!ok) {
-        errorMessage.value = 'Could not undo the last event.';
-        return false;
-      }
+      if (!ok) return false;
       if (_eventRequestHistory.isNotEmpty) {
         _redoEventRequests.add(_eventRequestHistory.removeLast());
         _syncRedoAvailability();

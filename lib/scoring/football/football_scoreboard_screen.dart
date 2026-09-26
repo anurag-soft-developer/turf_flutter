@@ -43,6 +43,13 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
 
   bool _eventFlowInProgress = false;
 
+  /// API failures already toast from [ApiService]. Snackbar only for local checks.
+  void _showLocalError(String title) {
+    final message = _controller.errorMessage.value;
+    if (message == null || message.isEmpty) return;
+    AppSnackbar.error(title: title, message: message);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -98,12 +105,7 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
         AppendFootballEventRequest(payload: payload),
       );
       if (!mounted) return;
-      if (event == null) {
-        AppSnackbar.error(
-          title: 'Update failed',
-          message: _controller.errorMessage.value ?? 'Could not record event.',
-        );
-      }
+      if (event == null) _showLocalError('Update failed');
     } finally {
       _eventFlowInProgress = false;
     }
@@ -124,30 +126,20 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
     );
     if (!mounted) return;
     if (_controller.footballMatch.value?.footballState == null) {
-      AppSnackbar.error(
-        title: 'Could not start',
-        message:
-            _controller.errorMessage.value ?? 'Could not start football session.',
-      );
+      _showLocalError('Could not start');
     }
   }
 
   Future<void> _undo() async {
     final ok = await _controller.undoLastFootballEvent();
     if (!mounted || ok) return;
-    AppSnackbar.error(
-      title: 'Undo failed',
-      message: _controller.errorMessage.value ?? 'Could not undo event.',
-    );
+    _showLocalError('Undo failed');
   }
 
   Future<void> _redo() async {
     final ok = await _controller.redoLastFootballEvent();
     if (!mounted || ok) return;
-    AppSnackbar.error(
-      title: 'Redo failed',
-      message: _controller.errorMessage.value ?? 'Could not redo event.',
-    );
+    _showLocalError('Redo failed');
   }
 
   Future<void> _changeInning() async {
@@ -168,10 +160,7 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
       ChangeFootballInningRequest(period: nextPeriod),
     );
     if (!mounted || ok) return;
-    AppSnackbar.error(
-      title: 'Could not change innings',
-      message: _controller.errorMessage.value ?? 'Could not start next innings.',
-    );
+    _showLocalError('Could not change innings');
   }
 
   Future<void> _completeMatch() async {
@@ -198,10 +187,7 @@ class _FootballScoreboardScreenState extends State<FootballScoreboardScreen> {
 
     final ok = await _controller.completeFootballMatch();
     if (!mounted || ok) return;
-    AppSnackbar.error(
-      title: 'Could not end match',
-      message: _controller.errorMessage.value ?? 'Could not complete match.',
-    );
+    _showLocalError('Could not end match');
   }
 
   Future<void> _onPeriodFooterAction(FootballStateModel fs) async {

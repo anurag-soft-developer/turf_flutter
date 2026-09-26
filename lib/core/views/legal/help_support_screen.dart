@@ -127,10 +127,7 @@ class HelpSupportScreen extends HookWidget {
             message: messageController.text.trim(),
           ),
         );
-        if (created == null) {
-          ExceptionHandler.showErrorToast('Could not send message');
-          return;
-        }
+        if (created == null) return;
 
         subjectController.clear();
         messageController.clear();

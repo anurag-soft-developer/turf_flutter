@@ -111,13 +111,7 @@ class _ContentPostCardState extends State<ContentPostCard> {
     try {
       final ok = await PostService().delete(id);
       if (!mounted) return;
-      if (!ok) {
-        AppSnackbar.error(
-          title: 'Failed',
-          message: 'Could not delete post. Try again.',
-        );
-        return;
-      }
+      if (!ok) return;
 
       await invalidatePostQueries(
         userId: post.postedByHelper.getId(),

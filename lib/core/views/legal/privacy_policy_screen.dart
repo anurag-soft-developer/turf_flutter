@@ -7,7 +7,7 @@ import '../../config/constants.dart';
 class PrivacyPolicyScreen extends StatelessWidget {
   const PrivacyPolicyScreen({super.key});
 
-  static const String _lastUpdated = 'April 2026';
+  static const String _lastUpdated = 'September 2026';
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +30,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
             _section(
               title: '1. Information we collect',
               body:
-                  'We collect information you provide (such as name, email, and phone), booking and team activity necessary to operate the service, and technical data such as device type and app diagnostics to improve reliability and security.',
+                  'We collect information you provide (such as name, email, and phone) and booking and team activity necessary to operate the service. If you allow it, we also collect screen usage, time on screen, and error reports. Those logs are sent about once an hour and can be turned off in Settings.',
             ),
             _section(
               title: '2. How we use information',

@@ -23,6 +23,7 @@ class ApiConstants {
   static const posts = PostEndpoints();
   static const chat = ChatEndpoints();
   static const support = SupportEndpoints();
+  static const telemetry = TelemetryEndpoints();
 
   // Headers
   static const Map<String, String> defaultHeaders = {
@@ -252,6 +253,7 @@ class ScoringEndpoints {
       '/scoring/cricket/matches/$teamMatchId';
   String cricketCreateSession(String teamMatchId) =>
       '/scoring/cricket/matches/$teamMatchId/session';
+
   /// Append one delivery (`POST`).
   String cricketSessionBalls(String teamMatchId) =>
       '/scoring/cricket/matches/$teamMatchId/balls';
@@ -350,6 +352,12 @@ class ChatEndpoints {
   String get read => '/chat/read';
   String get hide => '/chat/hide';
   String get readCursors => '/chat/read-cursors';
+}
+
+class TelemetryEndpoints {
+  const TelemetryEndpoints();
+
+  String get batch => '/telemetry/batch';
 }
 
 class SupportEndpoints {

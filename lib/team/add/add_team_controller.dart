@@ -542,10 +542,6 @@ class AddTeamController extends GetxController {
         );
         if (updated == null) {
           await DeferredMediaUpload.rollback(uploaded);
-          AppSnackbar.error(
-            title: 'Failed',
-            message: 'Could not update team. Try again.',
-          );
           return;
         }
         await flushPendingRemoteImageDeletions(_pendingRemoteImageDeletes);
@@ -582,10 +578,6 @@ class AddTeamController extends GetxController {
         );
         if (created == null) {
           await DeferredMediaUpload.rollback(uploaded);
-          AppSnackbar.error(
-            title: 'Failed',
-            message: 'Could not create team. Try again.',
-          );
           return;
         }
         _tempStore.clear();

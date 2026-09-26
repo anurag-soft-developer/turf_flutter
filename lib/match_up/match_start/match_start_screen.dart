@@ -137,15 +137,7 @@ class MatchStartScreen extends HookWidget {
                 CreateUnrankedMatchRequest(fromTeamId: fromId, toTeamId: toId),
               );
         final matchId = match?.id;
-        if (matchId == null || matchId.isEmpty) {
-          AppSnackbar.error(
-            title: ranked
-                ? 'Could not send challenge'
-                : 'Could not start match',
-            message: 'The server did not return a match.',
-          );
-          return;
-        }
+        if (matchId == null || matchId.isEmpty) return;
         if (ranked || !opponentIsAlsoMine) {
           AppSnackbar.success(
             title: ranked ? 'Challenge sent' : 'Request sent',

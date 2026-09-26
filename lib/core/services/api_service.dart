@@ -107,6 +107,9 @@ class ApiService {
     );
   }
 
+  /// Used by the telemetry uploader, which posts from a background isolate.
+  Future<bool> refreshAccessToken() => _refreshTokenWithLock();
+
   Future<bool> _refreshTokenWithLock() async {
     if (_isRefreshing) {
       final completer = _refreshCompleter;

@@ -107,10 +107,6 @@ class NotificationsController extends GetxController {
         (c) => c.unreadNotificationCount.value = previousUnread,
       );
       await _invalidate();
-      AppSnackbar.error(
-        title: 'Notifications',
-        message: 'Could not mark all as read.',
-      );
     }
   }
 
@@ -156,10 +152,6 @@ class NotificationsController extends GetxController {
           (c) => c.unreadNotificationCount.value = previousUnread,
         );
         await _invalidate();
-        AppSnackbar.error(
-          title: 'Notifications',
-          message: 'Could not delete notifications.',
-        );
       }
     } finally {
       _inFlightIds.removeAll(toDelete);

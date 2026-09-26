@@ -37,6 +37,13 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
   /// Context of the open scoring keypad sheet (if any).
   BuildContext? _controlsSheetContext;
 
+  /// API failures already toast from [ApiService]. Snackbar only for local checks.
+  void _showLocalError(String title) {
+    final message = _scoringController.errorMessage.value;
+    if (message == null || message.isEmpty) return;
+    AppSnackbar.error(title: title, message: message);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -101,11 +108,7 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
     );
     if (!mounted) return;
     if (over == null) {
-      AppSnackbar.error(
-        title: 'Update failed',
-        message:
-            _scoringController.errorMessage.value ?? 'Could not send event.',
-      );
+      _showLocalError('Update failed');
       return;
     }
     _closeControlsSheetIfNeeded();
@@ -114,19 +117,13 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
   Future<void> _undoLastBall() async {
     final ok = await _scoringController.undoLastCricketBall();
     if (!mounted || ok) return;
-    AppSnackbar.error(
-      title: 'Undo failed',
-      message: _scoringController.errorMessage.value ?? 'Could not undo ball.',
-    );
+    _showLocalError('Undo failed');
   }
 
   Future<void> _redoLastBall() async {
     final ok = await _scoringController.redoLastCricketBall();
     if (!mounted || ok) return;
-    AppSnackbar.error(
-      title: 'Redo failed',
-      message: _scoringController.errorMessage.value ?? 'Could not redo ball.',
-    );
+    _showLocalError('Redo failed');
   }
 
   Future<void> _showSubstitution() async {
@@ -164,12 +161,7 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
     );
     if (!mounted) return;
     if (over == null) {
-      AppSnackbar.error(
-        title: 'Substitution failed',
-        message:
-            _scoringController.errorMessage.value ??
-            'Could not record substitution.',
-      );
+      _showLocalError('Substitution failed');
       return;
     }
 
@@ -204,21 +196,13 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
   Future<void> _startNextInning() async {
     final ok = await _scoringController.changeCricketInning();
     if (!mounted || ok) return;
-    AppSnackbar.error(
-      title: 'Could not start next innings',
-      message:
-          _scoringController.errorMessage.value ?? 'Could not change innings.',
-    );
+    _showLocalError('Could not start next innings');
   }
 
   Future<void> _completeMatch() async {
     final ok = await _scoringController.completeCricketMatch();
     if (!mounted || ok) return;
-    AppSnackbar.error(
-      title: 'Could not end match',
-      message:
-          _scoringController.errorMessage.value ?? 'Could not complete match.',
-    );
+    _showLocalError('Could not end match');
   }
 
   Future<void> _onInningsCompletedAction(CricketStateModel cs) async {
@@ -571,14 +555,7 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
       UpdateCricketStateRequest(bowlerUserId: id),
     );
     if (!mounted) return;
-    if (!ok) {
-      AppSnackbar.error(
-        title: 'Could not set bowler',
-        message:
-            _scoringController.errorMessage.value ??
-            'Could not start the next over.',
-      );
-    }
+    if (!ok) _showLocalError('Could not set bowler');
   }
 
   Future<int?> _pickRunsGrid({

@@ -200,13 +200,6 @@ class ManageAnnouncedPlayersController extends GetxController {
       // A mutation started while this GET was in flight — keep local state.
       if (_mutationEpoch != epochAtStart) return;
       _mergeTeamSlice(latestSlice, invalidateQuery: invalidateQuery);
-    } catch (e) {
-      if (!isClosed) {
-        AppSnackbar.error(
-          title: 'Could not load squad',
-          message: e.toString(),
-        );
-      }
     } finally {
       if (!isClosed) syncing.value = false;
     }
@@ -255,14 +248,8 @@ class ManageAnnouncedPlayersController extends GetxController {
       final slice = await call();
       if (isClosed) return;
       _mergeTeamSlice(slice);
-    } catch (e) {
-      if (!isClosed) {
-        revert();
-        AppSnackbar.error(
-          title: 'Update failed',
-          message: e.toString(),
-        );
-      }
+    } catch (_) {
+      if (!isClosed) revert();
     } finally {
       if (!isClosed) {
         busyParticipantIds.removeAll(busyIds);
