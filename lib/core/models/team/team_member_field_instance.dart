@@ -14,6 +14,8 @@ class TeamMemberFieldInstance {
   final String name;
   @JsonKey(defaultValue: '')
   final String logo;
+  @JsonKey(defaultValue: <String>[])
+  final List<String> ownerIds;
   final LocationModel? location;
   final TeamSportType sportType;
 
@@ -21,6 +23,7 @@ class TeamMemberFieldInstance {
     this.id,
     required this.name,
     this.logo = '',
+    this.ownerIds = const [],
     this.location,
     required this.sportType,
   });

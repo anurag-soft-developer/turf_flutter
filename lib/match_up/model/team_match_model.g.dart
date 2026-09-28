@@ -6,6 +6,22 @@ part of 'team_match_model.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
+GuestJoinSettingsModel _$GuestJoinSettingsModelFromJson(
+  Map<String, dynamic> json,
+) => GuestJoinSettingsModel(
+  fromTeamOpen: json['fromTeamOpen'] as bool? ?? false,
+  toTeamOpen: json['toTeamOpen'] as bool? ?? false,
+  maxPerTeam: (json['maxPerTeam'] as num?)?.toInt() ?? 0,
+);
+
+Map<String, dynamic> _$GuestJoinSettingsModelToJson(
+  GuestJoinSettingsModel instance,
+) => <String, dynamic>{
+  'fromTeamOpen': instance.fromTeamOpen,
+  'toTeamOpen': instance.toTeamOpen,
+  'maxPerTeam': instance.maxPerTeam,
+};
+
 TeamMatchTimeSlot _$TeamMatchTimeSlotFromJson(Map<String, dynamic> json) =>
     TeamMatchTimeSlot(
       startTime: DateTime.parse(json['startTime'] as String),
@@ -273,6 +289,11 @@ TeamMatchModel _$TeamMatchModelFromJson(
           ?.map((e) => AnnouncedPlayerModel.fromJson(e as Map<String, dynamic>))
           .toList() ??
       [],
+  guestJoin: json['guestJoin'] == null
+      ? null
+      : GuestJoinSettingsModel.fromJson(
+          json['guestJoin'] as Map<String, dynamic>,
+        ),
   cricketState: json['cricketState'] == null
       ? null
       : CricketStateModel.fromJson(
@@ -315,6 +336,7 @@ Map<String, dynamic> _$TeamMatchModelToJson(
   'expiresAt': instance.expiresAt?.toIso8601String(),
   'closedAt': instance.closedAt?.toIso8601String(),
   'announcedPlayers': instance.announcedPlayers.map((e) => e.toJson()).toList(),
+  'guestJoin': instance.guestJoin?.toJson(),
   'cricketState': instance.cricketState?.toJson(),
   'footballState': instance.footballState?.toJson(),
   'createdAt': instance.createdAt?.toIso8601String(),

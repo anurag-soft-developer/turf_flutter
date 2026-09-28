@@ -239,6 +239,11 @@ class MatchmakingEndpoints {
   /// `GET ?actorTeamId=` / `POST` `PATCH` `DELETE` — same path; mutations send body.
   String announcedPlayers(String matchId) =>
       '/matchmaking/$matchId/announced-players';
+
+  String guestJoin(String matchId) => '/matchmaking/$matchId/guest-join';
+
+  String guestJoinSettings(String matchId) =>
+      '/matchmaking/$matchId/guest-join/settings';
 }
 
 /// `POST/GET /scoring/*` — JWT required.

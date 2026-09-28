@@ -15,6 +15,10 @@ enum AnnouncedPlayerRole {
   allrounder,
   @JsonValue('wicket_keeper')
   wicketKeeper,
+  forward,
+  defender,
+  midfielder,
+  goalkeeper,
 }
 
 /// Backend embedded `announcedPlayers[]` item ([AnnouncedPlayer]).
@@ -136,6 +140,14 @@ String _announcedPlayerRoleApiValue(AnnouncedPlayerRole role) {
       return 'allrounder';
     case AnnouncedPlayerRole.wicketKeeper:
       return 'wicket_keeper';
+    case AnnouncedPlayerRole.forward:
+      return 'forward';
+    case AnnouncedPlayerRole.defender:
+      return 'defender';
+    case AnnouncedPlayerRole.midfielder:
+      return 'midfielder';
+    case AnnouncedPlayerRole.goalkeeper:
+      return 'goalkeeper';
   }
 }
 

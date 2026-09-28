@@ -47,4 +47,8 @@ const _$AnnouncedPlayerRoleEnumMap = {
   AnnouncedPlayerRole.bowler: 'bowler',
   AnnouncedPlayerRole.allrounder: 'allrounder',
   AnnouncedPlayerRole.wicketKeeper: 'wicket_keeper',
+  AnnouncedPlayerRole.forward: 'forward',
+  AnnouncedPlayerRole.defender: 'defender',
+  AnnouncedPlayerRole.midfielder: 'midfielder',
+  AnnouncedPlayerRole.goalkeeper: 'goalkeeper',
 };

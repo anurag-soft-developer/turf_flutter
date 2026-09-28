@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
 import '../../components/announced_players/manage_announced_players_sheet.dart';
@@ -9,11 +10,13 @@ import '../../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
 import '../../core/components/app_bar/app_bar_background.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/location_model.dart';
+import '../../core/query/query_keys.dart';
 import '../../core/utils/app_snackbar.dart';
 import '../../core/utils/map_launch_util.dart';
 import '../../explore/model/content_post_model.dart';
 import '../../explore/post_service.dart';
 import '../../explore/widgets/tagged_posts_grid.dart';
+import '../../match_up/guest_join/guest_join_service.dart';
 import '../model/team_match_model.dart';
 import 'match_challenge_detail_controller.dart';
 import 'match_challenge_versus_header.dart';
@@ -24,10 +27,7 @@ Future<T?>? openMatchChallengeDetail<T>({
   bool? isIncoming,
 }) {
   final id = (matchId ?? match?.id)?.trim();
-  assert(
-    id != null && id.isNotEmpty,
-    'Provide match or matchId',
-  );
+  assert(id != null && id.isNotEmpty, 'Provide match or matchId');
   if (id == null || id.isEmpty) return null;
 
   return Get.toNamed<T>(
@@ -38,6 +38,69 @@ Future<T?>? openMatchChallengeDetail<T>({
     },
     preventDuplicates: false,
   );
+}
+
+PopupMenuItem<String> _guestJoinMenuItem({
+  required String value,
+  required String teamName,
+  required bool isOpen,
+}) {
+  return PopupMenuItem<String>(
+    value: value,
+    child: Row(
+      children: [
+        Icon(
+          isOpen ? Icons.group_off_outlined : Icons.group_add_outlined,
+          size: 20,
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            '${isOpen ? 'Close' : 'Allow'} guest joining · $teamName',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+Future<void> _toggleGuestJoin(
+  MatchChallengeDetailController controller, {
+  required String teamId,
+  required String teamName,
+  required bool open,
+}) async {
+  if (controller.isUpdatingGuestJoin.value) return;
+  controller.isUpdatingGuestJoin.value = true;
+  try {
+    final status = await GuestJoinService().updateSettings(
+      matchId: controller.matchId,
+      actorTeamId: teamId,
+      open: !open,
+    );
+    if (status == null) {
+      throw StateError('Guest-join settings were not returned.');
+    }
+    await controller.loadMatchQuiet();
+    if (Get.isRegistered<QueryClient>()) {
+      await Get.find<QueryClient>().invalidateQueries(
+        queryKey: QueryKeys.explorePrefix,
+      );
+    }
+    AppSnackbar.success(
+      title: 'Guest joining updated',
+      message: '${open ? 'Closed' : 'Opened'} for $teamName.',
+    );
+  } catch (error) {
+    AppSnackbar.error(
+      title: 'Could not update guest joining',
+      message: '$error',
+    );
+  } finally {
+    controller.isUpdatingGuestJoin.value = false;
+  }
 }
 
 class MatchChallengeDetailScreen extends StatelessWidget {
@@ -92,15 +155,34 @@ class MatchChallengeDetailScreen extends StatelessWidget {
         }),
         actions: [
           Obx(() {
-            if (!c.canCancelOrAbandonMatch) {
+            final match = c.match.value;
+            if (match == null) return const SizedBox.shrink();
+
+            final fromTeamId = match.fromTeamHelper.getId() ?? '';
+            final toTeamId = match.toTeamHelper.getId() ?? '';
+            final guestSettingsEditable =
+                match.isUnranked &&
+                match.cricketState == null &&
+                match.footballState == null &&
+                MatchAnnouncedPlayersSection.allowsAnnouncedPlayerEdits(match);
+            final canManageFrom =
+                guestSettingsEditable && c.canManageGuestJoin(fromTeamId);
+            final canManageTo =
+                guestSettingsEditable && c.canManageGuestJoin(toTeamId);
+            c.myMatchTeamIds.value;
+            final canCancel = c.canCancelOrAbandonMatch;
+            if (!canCancel && !canManageFrom && !canManageTo) {
               return const SizedBox.shrink();
             }
             final abandon = c.isAbandonMatch;
             final busy = c.actionBusy;
+            final guestJoin = match.guestJoin;
             return PopupMenuButton<String>(
-              tooltip: 'More',
+              tooltip: 'Match actions',
               enabled: !busy,
-              icon: busy && c.isCancellingMatch.value
+              icon:
+                  busy &&
+                      (c.isCancellingMatch.value || c.isUpdatingGuestJoin.value)
                   ? const SizedBox(
                       width: 20,
                       height: 20,
@@ -108,24 +190,52 @@ class MatchChallengeDetailScreen extends StatelessWidget {
                     )
                   : const Icon(Icons.more_vert),
               onSelected: (value) async {
-                if (value != 'cancel_or_abandon') return;
-                final reason = await showCancelOrAbandonMatchDialog(
-                  context,
-                  abandon: abandon,
-                );
-                if (reason == null) return;
-                await c.cancelOrAbandonMatch(
-                  reason: reason.isEmpty ? null : reason,
-                );
+                if (value == 'guest_join_from') {
+                  await _toggleGuestJoin(
+                    c,
+                    teamId: fromTeamId,
+                    teamName: match.fromTeamHelper.getDisplayName(),
+                    open: guestJoin?.fromTeamOpen ?? false,
+                  );
+                } else if (value == 'guest_join_to') {
+                  await _toggleGuestJoin(
+                    c,
+                    teamId: toTeamId,
+                    teamName: match.toTeamHelper.getDisplayName(),
+                    open: guestJoin?.toTeamOpen ?? false,
+                  );
+                } else if (value == 'cancel_or_abandon') {
+                  final reason = await showCancelOrAbandonMatchDialog(
+                    context,
+                    abandon: abandon,
+                  );
+                  if (reason == null) return;
+                  await c.cancelOrAbandonMatch(
+                    reason: reason.isEmpty ? null : reason,
+                  );
+                }
               },
               itemBuilder: (context) => [
-                PopupMenuItem<String>(
-                  value: 'cancel_or_abandon',
-                  child: Text(
-                    abandon ? 'Abandon' : 'Cancel',
-                    style: TextStyle(color: Colors.red.shade700),
+                if (canManageFrom)
+                  _guestJoinMenuItem(
+                    value: 'guest_join_from',
+                    teamName: match.fromTeamHelper.getDisplayName(),
+                    isOpen: guestJoin?.fromTeamOpen ?? false,
                   ),
-                ),
+                if (canManageTo)
+                  _guestJoinMenuItem(
+                    value: 'guest_join_to',
+                    teamName: match.toTeamHelper.getDisplayName(),
+                    isOpen: guestJoin?.toTeamOpen ?? false,
+                  ),
+                if (canCancel)
+                  PopupMenuItem<String>(
+                    value: 'cancel_or_abandon',
+                    child: Text(
+                      abandon ? 'Abandon' : 'Cancel',
+                      style: TextStyle(color: Colors.red.shade700),
+                    ),
+                  ),
               ],
             );
           }),
@@ -180,10 +290,7 @@ class MatchChallengeDetailScreen extends StatelessWidget {
         c.isIncoming.value;
         c.myMatchTeamIds.value;
 
-        return _MatchChallengeDetailBody(
-          controller: c,
-          match: currentMatch,
-        );
+        return _MatchChallengeDetailBody(controller: c, match: currentMatch);
       }),
     );
   }
@@ -230,8 +337,7 @@ class _MatchChallengeDetailBody extends StatelessWidget {
         : 'Not set';
     final turfLocation = acceptedTurf?.turfIdHelper.getLocation();
     final turfAddress = turfLocation?.address.trim();
-    final hasTurfLocation =
-        turfAddress != null && turfAddress.isNotEmpty;
+    final hasTurfLocation = turfAddress != null && turfAddress.isNotEmpty;
 
     final showScoreboardBar =
         (controller.isCricketMatch || controller.isFootballMatch) &&
@@ -305,8 +411,9 @@ class _MatchChallengeDetailBody extends StatelessWidget {
                                             controller.isCancellingMatch.value,
                                         onEditPressed: () =>
                                             controller.setTimeSlot(context),
-                                        editTooltip:
-                                            hasSlot ? 'Edit time' : 'Set time',
+                                        editTooltip: hasSlot
+                                            ? 'Edit time'
+                                            : 'Set time',
                                         editIcon: hasSlot
                                             ? Icons.edit_outlined
                                             : Icons.event_available_outlined,
@@ -330,8 +437,9 @@ class _MatchChallengeDetailBody extends StatelessWidget {
                                             controller.isCancellingMatch.value,
                                         onEditPressed: () =>
                                             controller.setTurf(context),
-                                        editTooltip:
-                                            hasTurf ? 'Edit turf' : 'Set turf',
+                                        editTooltip: hasTurf
+                                            ? 'Edit turf'
+                                            : 'Set turf',
                                         editIcon: hasTurf
                                             ? Icons.edit_outlined
                                             : Icons.add_location_alt_outlined,
@@ -362,9 +470,7 @@ class _MatchChallengeDetailBody extends StatelessWidget {
                             ),
                           )
                         else
-                          const SliverToBoxAdapter(
-                            child: SizedBox.shrink(),
-                          ),
+                          const SliverToBoxAdapter(child: SizedBox.shrink()),
                       ],
                     ),
                     MatchScorecardTab(
@@ -397,110 +503,106 @@ class _MatchChallengeDetailBody extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (showScoreboardBar) ...[
-                  Obx(
-                    () {
-                      final ongoing =
-                          currentMatch.status == TeamMatchStatus.ongoing;
-                      final myTeamId = controller.myTeamId;
-                      final fromId =
-                          currentMatch.fromTeamHelper.getId() ?? '';
-                      final toId = currentMatch.toTeamHelper.getId() ?? '';
-                      final editable = controller.editableAnnounceTeamIds;
-                      final ready = MatchAnnouncedPlayersSection
-                          .bothTeamsHaveAnnouncedPlayers(currentMatch);
-                      final canEdit =
-                          MatchAnnouncedPlayersSection
-                              .allowsAnnouncedPlayerEdits(currentMatch);
+                  Obx(() {
+                    final ongoing =
+                        currentMatch.status == TeamMatchStatus.ongoing;
+                    final myTeamId = controller.myTeamId;
+                    final fromId = currentMatch.fromTeamHelper.getId() ?? '';
+                    final toId = currentMatch.toTeamHelper.getId() ?? '';
+                    final editable = controller.editableAnnounceTeamIds;
+                    final ready =
+                        MatchAnnouncedPlayersSection.bothTeamsHaveAnnouncedPlayers(
+                          currentMatch,
+                        );
+                    final canEdit =
+                        MatchAnnouncedPlayersSection.allowsAnnouncedPlayerEdits(
+                          currentMatch,
+                        );
 
-                      String? nextAnnounceTeamId;
-                      if (canEdit && !ongoing && !ready) {
-                        if (editable.contains(fromId) &&
-                            !MatchAnnouncedPlayersSection
-                                .teamHasAnnouncedPlayers(
-                              currentMatch,
-                              fromId,
-                            )) {
-                          nextAnnounceTeamId = fromId;
-                        } else if (editable.contains(toId) &&
-                            !MatchAnnouncedPlayersSection
-                                .teamHasAnnouncedPlayers(
-                              currentMatch,
-                              toId,
-                            )) {
-                          nextAnnounceTeamId = toId;
-                        } else if (editable.contains(myTeamId) &&
-                            myTeamId.isNotEmpty &&
-                            !MatchAnnouncedPlayersSection
-                                .teamHasAnnouncedPlayers(
-                              currentMatch,
-                              myTeamId,
-                            )) {
-                          nextAnnounceTeamId = myTeamId;
-                        }
+                    String? nextAnnounceTeamId;
+                    if (canEdit && !ongoing && !ready) {
+                      if (editable.contains(fromId) &&
+                          !MatchAnnouncedPlayersSection.teamHasAnnouncedPlayers(
+                            currentMatch,
+                            fromId,
+                          )) {
+                        nextAnnounceTeamId = fromId;
+                      } else if (editable.contains(toId) &&
+                          !MatchAnnouncedPlayersSection.teamHasAnnouncedPlayers(
+                            currentMatch,
+                            toId,
+                          )) {
+                        nextAnnounceTeamId = toId;
+                      } else if (editable.contains(myTeamId) &&
+                          myTeamId.isNotEmpty &&
+                          !MatchAnnouncedPlayersSection.teamHasAnnouncedPlayers(
+                            currentMatch,
+                            myTeamId,
+                          )) {
+                        nextAnnounceTeamId = myTeamId;
                       }
+                    }
 
-                      final showHint = !ongoing && !ready;
-                      final minPlayers = MatchAnnouncedPlayersSection
-                          .minAnnouncedPlayersPerTeam;
+                    final showHint = !ongoing && !ready;
+                    final minPlayers =
+                        MatchAnnouncedPlayersSection.minAnnouncedPlayersPerTeam;
 
-                      return Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          if (showHint)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: Text(
-                                'Minimum $minPlayers players per team required to start',
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(AppColors.textSecondaryColor),
-                                ),
-                              ),
-                            ),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: controller.actionBusy
-                                  ? null
-                                  : () {
-                                      if (ongoing || ready) {
-                                        controller.openScoreboard();
-                                        return;
-                                      }
-                                      final teamId = nextAnnounceTeamId;
-                                      if (teamId != null) {
-                                        openManageAnnouncedPlayersSheet(
-                                          context: context,
-                                          match: currentMatch,
-                                          actorTeamId: teamId,
-                                          onSaved:
-                                              controller.scheduleMatchUpdate,
-                                        );
-                                        return;
-                                      }
-                                      AppSnackbar.info(
-                                        title: 'Squad not ready',
-                                        message:
-                                            'Waiting for the other team to announce players.',
-                                      );
-                                    },
-                              icon: Icon(
-                                ongoing
-                                    ? Icons.scoreboard_outlined
-                                    : Icons.play_circle_outline,
-                              ),
-                              label: Text(
-                                ongoing ? 'Open scoreboard' : 'Start match',
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (showHint)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Text(
+                              'Minimum $minPlayers players per team required to start',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Color(AppColors.textSecondaryColor),
                               ),
                             ),
                           ),
-                        ],
-                      );
-                    },
-                  ),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: controller.actionBusy
+                                ? null
+                                : () {
+                                    if (ongoing || ready) {
+                                      controller.openScoreboard();
+                                      return;
+                                    }
+                                    final teamId = nextAnnounceTeamId;
+                                    if (teamId != null) {
+                                      openManageAnnouncedPlayersSheet(
+                                        context: context,
+                                        match: currentMatch,
+                                        actorTeamId: teamId,
+                                        onSaved: controller.scheduleMatchUpdate,
+                                      );
+                                      return;
+                                    }
+                                    AppSnackbar.info(
+                                      title: 'Squad not ready',
+                                      message:
+                                          'Waiting for the other team to announce players.',
+                                    );
+                                  },
+                            icon: Icon(
+                              ongoing
+                                  ? Icons.scoreboard_outlined
+                                  : Icons.play_circle_outline,
+                            ),
+                            label: Text(
+                              ongoing ? 'Open scoreboard' : 'Start match',
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }),
                 ],
                 if (showScoreboardBar && controller.canRespondToChallenge)
                   const SizedBox(height: 12),

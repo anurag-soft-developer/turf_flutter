@@ -5,6 +5,7 @@ import '../../components/match_history/match_card.dart';
 import '../../components/match_up/team_logo.dart';
 import '../../components/match_up/team_stats_row.dart';
 import '../../components/player/follow/user_list_tile.dart';
+import '../../core/auth/auth_state_controller.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/user_field_instance.dart';
 import '../../engagement/engagement_entity.dart';
@@ -14,7 +15,9 @@ import '../../match_up/challenge/challenge_team_sheet.dart';
 import '../../match_up/match_challenges/match_challenge_detail_screen.dart';
 import '../../match_up/model/team_match_model.dart';
 import '../../team/model/team_model.dart';
+import '../../team/members/model/team_member_model.dart';
 import '../model/explore_item.dart';
+import 'explore_match_guest_join_actions.dart';
 import 'content_post_card.dart';
 
 class ExploreItemTile extends StatelessWidget {
@@ -28,28 +31,28 @@ class ExploreItemTile extends StatelessWidget {
       ExploreMatchItem(:final match) => _ExploreMatchTile(match: match),
       ExploreTeamItem(:final team) => _ExploreTeamTile(team: team),
       ExplorePlayerItem(:final player) => Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Material(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            child: UserListTile(
-              helper: UserFieldInstance(player),
-              onOpen: () {
-                final id = player.id;
-                if (id != null && id.isNotEmpty) {
-                  EngagementService().trackView(
-                    entityType: EngagementEntityType.player,
-                    entityId: id,
-                  );
-                }
-              },
-            ),
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Material(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          child: UserListTile(
+            helper: UserFieldInstance(player),
+            onOpen: () {
+              final id = player.id;
+              if (id != null && id.isNotEmpty) {
+                EngagementService().trackView(
+                  entityType: EngagementEntityType.player,
+                  entityId: id,
+                );
+              }
+            },
           ),
         ),
+      ),
       ExplorePostItem(:final post) => Padding(
-          padding: const EdgeInsets.only(bottom: 20),
-          child: ContentPostCard(post: post),
-        ),
+        padding: const EdgeInsets.only(bottom: 20),
+        child: ContentPostCard(post: post),
+      ),
     };
   }
 }
@@ -61,6 +64,48 @@ class _ExploreMatchTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (Get.isRegistered<ChallengeController>()) {
+      return Obx(() {
+        final controller = Get.find<ChallengeController>();
+        controller.myMemberships.length;
+        return _buildCard(
+          context,
+          showGuestActions: _hasGuestActions(controller.myMemberships),
+        );
+      });
+    }
+    return _buildCard(context, showGuestActions: _hasGuestActions(null));
+  }
+
+  bool _hasGuestActions(List<TeamMemberModel>? memberships) {
+    if (!match.isUnranked) return false;
+    final userId = Get.isRegistered<AuthStateController>()
+        ? Get.find<AuthStateController>().user?.id
+        : null;
+    if (userId == null || userId.isEmpty) return false;
+
+    final fromId = match.fromTeamHelper.getId() ?? '';
+    final toId = match.toTeamHelper.getId() ?? '';
+    final joined = match.announcedPlayers.any(
+      (player) => player.isGuest && player.userIdHelper.getId() == userId,
+    );
+    final settings = match.guestJoin;
+    final anySideOpen =
+        settings?.fromTeamOpen == true || settings?.toTeamOpen == true;
+    final activeMemberships =
+        memberships
+            ?.where(
+              (membership) => membership.status == TeamMemberStatus.active,
+            )
+            .toList() ??
+        const <TeamMemberModel>[];
+    final isMember = activeMemberships.any(
+      (membership) => membership.teamId == fromId || membership.teamId == toId,
+    );
+    return joined || (anySideOpen && !isMember);
+  }
+
+  Widget _buildCard(BuildContext context, {required bool showGuestActions}) {
     final isHistory =
         match.status == TeamMatchStatus.completed ||
         match.status == TeamMatchStatus.draw;
@@ -69,6 +114,12 @@ class _ExploreMatchTile extends StatelessWidget {
       match: match,
       selectedTeamId: null,
       isHistory: isHistory,
+      footer: showGuestActions
+          ? ExploreMatchGuestJoinActions(
+              key: ValueKey('guest-join-${match.id}'),
+              match: match,
+            )
+          : null,
       onTap: () async {
         final id = match.id;
         if (id != null && id.isNotEmpty) {
@@ -121,11 +172,7 @@ class _ExploreTeamTile extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  TeamLogo(
-                    url: team.logo,
-                    size: 48,
-                    teamId: team.id,
-                  ),
+                  TeamLogo(url: team.logo, size: 48, teamId: team.id),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -250,16 +297,16 @@ class _ExploreTeamStatsAndChallenge extends StatelessWidget {
             isReceived: isReceived,
             onTap: isReceived
                 ? () => Get.toNamed(
-                      AppConstants.routes.matchUpChallenges,
-                      arguments: {'tab': 'received'},
-                    )
+                    AppConstants.routes.matchUpChallenges,
+                    arguments: {'tab': 'received'},
+                  )
                 : isSent
-                    ? null
-                    : () => onChallengePressed(
-                          context: context,
-                          controller: controller,
-                          opponent: team,
-                        ),
+                ? null
+                : () => onChallengePressed(
+                    context: context,
+                    controller: controller,
+                    opponent: team,
+                  ),
           ),
         ],
       );

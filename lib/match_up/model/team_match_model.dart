@@ -62,6 +62,27 @@ enum MatchResultOutcome { ongoing, completed, draw }
 
 // --- Nested document shapes ---
 
+@JsonSerializable()
+class GuestJoinSettingsModel {
+  @JsonKey(defaultValue: false)
+  final bool fromTeamOpen;
+  @JsonKey(defaultValue: false)
+  final bool toTeamOpen;
+  @JsonKey(defaultValue: 0)
+  final int maxPerTeam;
+
+  const GuestJoinSettingsModel({
+    this.fromTeamOpen = false,
+    this.toTeamOpen = false,
+    this.maxPerTeam = 0,
+  });
+
+  factory GuestJoinSettingsModel.fromJson(Map<String, dynamic> json) =>
+      _$GuestJoinSettingsModelFromJson(json);
+
+  Map<String, dynamic> toJson() => _$GuestJoinSettingsModelToJson(this);
+}
+
 /// Slot range on a [TeamMatchModel] proposal.
 @JsonSerializable()
 class TeamMatchTimeSlot {
@@ -395,6 +416,7 @@ class TeamMatchModel {
 
   @JsonKey(defaultValue: <AnnouncedPlayerModel>[])
   final List<AnnouncedPlayerModel> announcedPlayers;
+  final GuestJoinSettingsModel? guestJoin;
 
   final CricketStateModel? cricketState;
   final FootballStateModel? footballState;
@@ -421,6 +443,7 @@ class TeamMatchModel {
     this.expiresAt,
     this.closedAt,
     this.announcedPlayers = const [],
+    this.guestJoin,
     this.cricketState,
     this.footballState,
     this.createdAt,
@@ -452,6 +475,7 @@ class TeamMatchModel {
     DateTime? expiresAt,
     DateTime? closedAt,
     List<AnnouncedPlayerModel>? announcedPlayers,
+    GuestJoinSettingsModel? guestJoin,
     CricketStateModel? cricketState,
     FootballStateModel? footballState,
     DateTime? createdAt,
@@ -479,6 +503,7 @@ class TeamMatchModel {
       expiresAt: expiresAt ?? this.expiresAt,
       closedAt: closedAt ?? this.closedAt,
       announcedPlayers: announcedPlayers ?? this.announcedPlayers,
+      guestJoin: guestJoin ?? this.guestJoin,
       cricketState: cricketState ?? this.cricketState,
       footballState: footballState ?? this.footballState,
       createdAt: createdAt ?? this.createdAt,

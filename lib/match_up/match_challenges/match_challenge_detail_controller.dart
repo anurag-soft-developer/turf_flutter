@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 
 import '../../components/challenges/praposals/propose_time_slot_sheet.dart';
 import '../../components/challenges/praposals/propose_turf_sheet.dart';
+import '../../core/auth/auth_state_controller.dart';
 import '../../core/config/constants.dart';
 import '../../core/query/query_keys.dart';
 import '../../core/routes/route_query.dart';
@@ -48,10 +49,12 @@ class MatchChallengeDetailController extends GetxController
   final RxBool isRejectingChallenge = false.obs;
   final RxBool isAcceptingChallenge = false.obs;
   final RxBool isCancellingMatch = false.obs;
+  final RxBool isUpdatingGuestJoin = false.obs;
 
   StreamSubscription<ScoringUpdatePayload>? _scoringSub;
   String? _joinedLiveMatchId;
   Set<String> _myTeamIds = {};
+  List<TeamMemberModel> _myMemberships = [];
 
   String? get resolvedMatchId {
     final fromMatch = match.value?.id;
@@ -66,7 +69,28 @@ class MatchChallengeDetailController extends GetxController
       isUpdatingTurf.value ||
       isRejectingChallenge.value ||
       isAcceptingChallenge.value ||
-      isCancellingMatch.value;
+      isCancellingMatch.value ||
+      isUpdatingGuestJoin.value;
+
+  bool canManageGuestJoin(String teamId) {
+    final current = match.value;
+    if (current == null || teamId.isEmpty) return false;
+    final userId = Get.isRegistered<AuthStateController>()
+        ? Get.find<AuthStateController>().user?.id
+        : null;
+    if (userId == null || userId.isEmpty) return false;
+    final side = teamId == current.fromTeamHelper.getId()
+        ? current.fromTeamHelper.getSubsetModel()
+        : current.toTeamHelper.getSubsetModel();
+    if (side?.ownerIds.contains(userId) == true) return true;
+    return _myMemberships.any(
+      (membership) =>
+          membership.status == TeamMemberStatus.active &&
+          membership.teamId == teamId &&
+          (membership.leadershipRole == LeadershipRole.captain ||
+              membership.leadershipRole == LeadershipRole.viceCaptain),
+    );
+  }
 
   bool get canEditSchedule {
     final m = match.value;
@@ -109,7 +133,24 @@ class MatchChallengeDetailController extends GetxController
         status == TeamMatchStatus.scheduleFinalized;
   }
 
-  bool get canUseScheduleControls => canEditSchedule && !isCancellingMatch.value;
+  bool get canUseScheduleControls {
+    final current = match.value;
+    final userId = Get.isRegistered<AuthStateController>()
+        ? Get.find<AuthStateController>().user?.id
+        : null;
+    if (current == null || userId == null || userId.isEmpty) return false;
+
+    final isOwner =
+        current.fromTeamHelper.getSubsetModel()?.ownerIds.contains(userId) ==
+            true ||
+        current.toTeamHelper.getSubsetModel()?.ownerIds.contains(userId) ==
+            true;
+    final isActiveMember = myMatchTeamIds.value.isNotEmpty;
+
+    return canEditSchedule &&
+        !isCancellingMatch.value &&
+        (isOwner || isActiveMember);
+  }
 
   bool get isUnranked => match.value?.isUnranked == true;
 
@@ -121,16 +162,14 @@ class MatchChallengeDetailController extends GetxController
       TeamMatchStatus.accepted ||
       TeamMatchStatus.negotiating ||
       TeamMatchStatus.scheduleFinalized ||
-      TeamMatchStatus.ongoing =>
-        myTeamId.isNotEmpty,
+      TeamMatchStatus.ongoing => myTeamId.isNotEmpty,
       _ => false,
     };
   }
 
-  ScoringSocketService? get _socket =>
-      Get.isRegistered<ScoringSocketService>()
-          ? Get.find<ScoringSocketService>()
-          : null;
+  ScoringSocketService? get _socket => Get.isRegistered<ScoringSocketService>()
+      ? Get.find<ScoringSocketService>()
+      : null;
 
   @override
   void onInit() {
@@ -200,11 +239,11 @@ class MatchChallengeDetailController extends GetxController
       );
       if (isClosed) return;
       final ids = <String>{};
-      for (final m in res?.data ?? const <TeamMemberModel>[]) {
+      final memberships = res?.data ?? const <TeamMemberModel>[];
+      _myMemberships = memberships;
+      for (final m in memberships) {
         final t = m.team;
-        if (t is TeamMemberFieldInstance &&
-            t.id != null &&
-            t.id!.isNotEmpty) {
+        if (t is TeamMemberFieldInstance && t.id != null && t.id!.isNotEmpty) {
           ids.add(t.id!);
         }
       }
@@ -293,17 +332,9 @@ class MatchChallengeDetailController extends GetxController
 
     final client = Get.find<QueryClient>();
     if (payload.sport == ScoringSport.cricket) {
-      applyCricketScoringUpdateToCache(
-        client,
-        payload,
-        expectedMatchId: id,
-      );
+      applyCricketScoringUpdateToCache(client, payload, expectedMatchId: id);
     } else if (payload.sport == ScoringSport.football) {
-      applyFootballScoringUpdateToCache(
-        client,
-        payload,
-        expectedMatchId: id,
-      );
+      applyFootballScoringUpdateToCache(client, payload, expectedMatchId: id);
     }
     final updated = client.getQueryData<TeamMatchModel>(
       QueryKeys.matchChallengeDetail(id),
@@ -374,8 +405,8 @@ class MatchChallengeDetailController extends GetxController
       message: action == MatchResponseAction.accept
           ? 'You can continue scheduling now.'
           : (isUnranked
-              ? 'The unranked match request was declined.'
-              : 'The challenge was declined.'),
+                ? 'The unranked match request was declined.'
+                : 'The challenge was declined.'),
     );
   }
 
@@ -389,10 +420,7 @@ class MatchChallengeDetailController extends GetxController
     isCancellingMatch.value = true;
     final updated = await _matchmakingService.cancel(
       id,
-      CancelNegotiationRequest(
-        actorTeamId: myTeamId,
-        reason: reason,
-      ),
+      CancelNegotiationRequest(actorTeamId: myTeamId, reason: reason),
     );
     isCancellingMatch.value = false;
 
@@ -452,9 +480,8 @@ class MatchChallengeDetailController extends GetxController
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
-      builder: (_) => ProposeTurfSheet(
-        sportTypes: [match.value!.sportType.name],
-      ),
+      builder: (_) =>
+          ProposeTurfSheet(sportTypes: [match.value!.sportType.name]),
     );
     if (selectedTurfId == null || selectedTurfId.isEmpty) return;
 

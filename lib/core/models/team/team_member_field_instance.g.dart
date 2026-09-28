@@ -12,6 +12,9 @@ TeamMemberFieldInstance _$TeamMemberFieldInstanceFromJson(
   id: json['_id'] as String?,
   name: json['name'] as String,
   logo: json['logo'] as String? ?? '',
+  ownerIds:
+      (json['ownerIds'] as List<dynamic>?)?.map((e) => e as String).toList() ??
+      [],
   location: json['location'] == null
       ? null
       : LocationModel.fromJson(json['location'] as Map<String, dynamic>),
@@ -24,6 +27,7 @@ Map<String, dynamic> _$TeamMemberFieldInstanceToJson(
   '_id': instance.id,
   'name': instance.name,
   'logo': instance.logo,
+  'ownerIds': instance.ownerIds,
   'location': instance.location?.toJson(),
   'sportType': _$TeamSportTypeEnumMap[instance.sportType]!,
 };
