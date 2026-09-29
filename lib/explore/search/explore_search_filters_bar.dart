@@ -71,18 +71,6 @@ class _TeamFiltersBar extends StatelessWidget {
             ),
             const SizedBox(width: 6),
             _SubFilterChip(
-              label: 'Open for match',
-              selected: filters.teamOpenForMatch == true,
-              onTap: () {
-                if (filters.teamOpenForMatch == true) {
-                  onChanged(filters.copyWith(clearTeamOpenForMatch: true));
-                } else {
-                  onChanged(filters.copyWith(teamOpenForMatch: true));
-                }
-              },
-            ),
-            const SizedBox(width: 6),
-            _SubFilterChip(
               label: 'Recruiting',
               selected: filters.lookingForMembers == true,
               onTap: () {

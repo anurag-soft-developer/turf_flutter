@@ -5,6 +5,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
+import '../../components/match_up/match_optional_field_tile.dart';
 import '../../components/match_up/match_pick_versus_row.dart';
 import '../../components/match_up/my_team_selector.dart';
 import '../../components/match_up/team_logo.dart';
@@ -19,6 +20,7 @@ import '../../team/members/model/team_member_model.dart';
 import '../../team/model/team_model.dart';
 import '../../team/team_service.dart';
 import '../../team/utils/team_ui.dart';
+import '../../turf/model/turf_model.dart';
 import '../matchmaking_service.dart';
 import '../model/team_match_model.dart';
 import 'match_start_controller.dart';
@@ -53,6 +55,10 @@ class MatchStartScreen extends HookWidget {
 
     final selectedTeam = useState<TeamMemberFieldInstance?>(null);
     final selectedOpponent = useState<TeamModel?>(null);
+    final selectedSlot = useState<ProposeScheduleTimeSlot?>(null);
+    final selectedTurf = useState<TurfModel?>(null);
+    final selectedLocation = useState<LocationModel?>(null);
+    final allowNearbyPlayers = useState(false);
     final creating = useState(false);
 
     final membershipsQuery = useQuery<List<TeamMemberModel>, Object>(
@@ -109,7 +115,7 @@ class MatchStartScreen extends HookWidget {
         context: context,
         fromTeamId: fromId,
         sport: sport,
-        openForMatch: ranked,
+        skipTeamsWithSentRequest: ranked,
       );
       if (picked != null) {
         selectedOpponent.value = picked;
@@ -126,16 +132,34 @@ class MatchStartScreen extends HookWidget {
       if (creating.value) return;
 
       final opponentIsAlsoMine = mySportTeams.any((t) => t.id == toId);
+      final slot = selectedSlot.value;
+      final rawTurfId = selectedTurf.value?.id;
+      final turfId =
+          (rawTurfId != null && rawTurfId.isNotEmpty) ? rawTurfId : null;
+      final venueLocation = selectedLocation.value;
 
       creating.value = true;
       try {
-        final match = ranked
-            ? await MatchmakingService().sendRequest(
-                SendMatchRequest(fromTeamId: fromId, toTeamId: toId),
-              )
-            : await MatchmakingService().createUnrankedMatch(
-                CreateUnrankedMatchRequest(fromTeamId: fromId, toTeamId: toId),
-              );
+        final match = await MatchmakingService().createMatch(
+          CreateMatchRequest(
+            source: ranked
+                ? TeamMatchSource.ranked
+                : TeamMatchSource.unranked,
+            fromTeamId: fromId,
+            toTeamId: toId,
+            slot: slot == null
+                ? null
+                : TeamMatchTimeSlot(
+                    startTime: slot.startTime,
+                    endTime: slot.endTime,
+                  ),
+            turfId: turfId,
+            venueLocation: venueLocation,
+            allowNearbyPlayers: !ranked && allowNearbyPlayers.value
+                ? true
+                : null,
+          ),
+        );
         final matchId = match?.id;
         if (matchId == null || matchId.isEmpty) return;
         if (ranked || !opponentIsAlsoMine) {
@@ -228,29 +252,52 @@ class MatchStartScreen extends HookWidget {
                 padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
                 child: Column(
                   children: [
-                    const Spacer(),
-                    MatchPickVersusRow(
-                      left: MatchPickVersusTeam(
-                        name: myTeam?.name ?? 'Your team',
-                        logoUrl: myTeam?.logo ?? '',
-                        showEditBadge: pickerTeams.length > 1,
-                        wrapLogo: (logo) => MyTeamSelector(
-                          teams: pickerTeams,
-                          selectedTeam: myTeam,
-                          sheetTitle: 'Select your $sportLabel team',
-                          onTeamSelected: (team) => selectedTeam.value = team,
-                          buttonChild: logo,
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          children: [
+                            const SizedBox(height: 24),
+                            MatchPickVersusRow(
+                              left: MatchPickVersusTeam(
+                                name: myTeam?.name ?? 'Your team',
+                                logoUrl: myTeam?.logo ?? '',
+                                showEditBadge: pickerTeams.length > 1,
+                                wrapLogo: (logo) => MyTeamSelector(
+                                  teams: pickerTeams,
+                                  selectedTeam: myTeam,
+                                  sheetTitle: 'Select your $sportLabel team',
+                                  onTeamSelected: (team) =>
+                                      selectedTeam.value = team,
+                                  buttonChild: logo,
+                                ),
+                              ),
+                              right: MatchPickVersusTeam(
+                                name: opponent?.name ?? 'Select opponent',
+                                logoUrl: opponent?.logo ?? '',
+                                placeholder: opponent == null,
+                                showEditBadge: true,
+                                onTap: pickOpponent,
+                              ),
+                            ),
+                            const SizedBox(height: 32),
+                            MatchCreateVenueFields(
+                              sportTypeNames: [sport.name],
+                              slot: selectedSlot.value,
+                              turf: selectedTurf.value,
+                              location: selectedLocation.value,
+                              onSlotChanged: (v) => selectedSlot.value = v,
+                              onTurfChanged: (v) => selectedTurf.value = v,
+                              onLocationChanged: (v) =>
+                                  selectedLocation.value = v,
+                              showNearbyPlayers: !ranked,
+                              allowNearbyPlayers: allowNearbyPlayers.value,
+                              onAllowNearbyPlayersChanged: (v) =>
+                                  allowNearbyPlayers.value = v,
+                            ),
+                          ],
                         ),
                       ),
-                      right: MatchPickVersusTeam(
-                        name: opponent?.name ?? 'Select opponent',
-                        logoUrl: opponent?.logo ?? '',
-                        placeholder: opponent == null,
-                        showEditBadge: true,
-                        onTap: pickOpponent,
-                      ),
                     ),
-                    const Spacer(),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -302,7 +349,7 @@ Future<TeamModel?> showOpponentPickerSheet({
   required BuildContext context,
   required String fromTeamId,
   required TeamSportType sport,
-  bool openForMatch = false,
+  bool skipTeamsWithSentRequest = false,
 }) {
   return showModalBottomSheet<TeamModel>(
     context: context,
@@ -312,7 +359,7 @@ Future<TeamModel?> showOpponentPickerSheet({
     builder: (ctx) => _OpponentPickerSheet(
       fromTeamId: fromTeamId,
       sport: sport,
-      openForMatch: openForMatch,
+      skipTeamsWithSentRequest: skipTeamsWithSentRequest,
     ),
   );
 }
@@ -321,12 +368,12 @@ class _OpponentPickerSheet extends HookWidget {
   const _OpponentPickerSheet({
     required this.fromTeamId,
     required this.sport,
-    required this.openForMatch,
+    required this.skipTeamsWithSentRequest,
   });
 
   final String fromTeamId;
   final TeamSportType sport;
-  final bool openForMatch;
+  final bool skipTeamsWithSentRequest;
 
   @override
   Widget build(BuildContext context) {
@@ -356,7 +403,7 @@ class _OpponentPickerSheet extends HookWidget {
             fromTeamId: fromTeamId,
             query: query,
             sportType: sport.name,
-            openForMatch: openForMatch,
+            skipTeamsWithSentRequest: skipTeamsWithSentRequest,
           ),
           (ctx) async {
             final result = await TeamService().findMany(
@@ -364,9 +411,9 @@ class _OpponentPickerSheet extends HookWidget {
                 status: TeamStatus.active,
                 sportType: sport,
                 search: query.isEmpty ? null : query,
-                teamOpenForMatch: openForMatch ? true : null,
-                skipTeamsWithSentRequest: openForMatch ? true : null,
-                fromTeamId: openForMatch ? fromTeamId : null,
+                skipTeamsWithSentRequest:
+                    skipTeamsWithSentRequest ? true : null,
+                fromTeamId: skipTeamsWithSentRequest ? fromTeamId : null,
                 page: ctx.pageParam,
                 limit: 20,
               ),
@@ -439,7 +486,6 @@ class _OpponentPickerSheet extends HookWidget {
                 query: opponentsQuery,
                 items: opponents,
                 sportLabel: sportLabel,
-                openForMatch: openForMatch,
                 onPick: (team) => Navigator.pop(context, team),
               ),
             ),
@@ -455,14 +501,12 @@ class _OpponentList extends StatelessWidget {
     required this.query,
     required this.items,
     required this.sportLabel,
-    required this.openForMatch,
     required this.onPick,
   });
 
   final InfiniteQueryResult<PaginatedResponse<TeamModel>, Object, int> query;
   final List<TeamModel> items;
   final String sportLabel;
-  final bool openForMatch;
   final ValueChanged<TeamModel> onPick;
 
   @override
@@ -501,9 +545,7 @@ class _OpponentList extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Text(
-            openForMatch
-                ? 'No open $sportLabel teams found. The other team must be open for matches.'
-                : 'No $sportLabel teams found. Try another search.',
+            'No $sportLabel teams found. Try another search.',
             textAlign: TextAlign.center,
             style: const TextStyle(color: Color(AppColors.textSecondaryColor)),
           ),

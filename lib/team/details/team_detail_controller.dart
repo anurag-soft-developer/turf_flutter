@@ -212,7 +212,6 @@ class TeamDetailController extends GetxController
     TeamVisibility? visibility,
     TeamJoinMode? joinMode,
     bool? lookingForMembers,
-    bool? teamOpenForMatch,
     int? maxPendingJoinRequests,
   }) async {
     final id = _teamId;
@@ -249,7 +248,6 @@ class TeamDetailController extends GetxController
         visibility: visibilityPatch,
         joinMode: joinModePatch,
         lookingForMembers: lookingForMembers,
-        teamOpenForMatch: teamOpenForMatch,
         maxPendingJoinRequests: maxPendingJoinRequests,
       ),
     );

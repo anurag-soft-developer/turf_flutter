@@ -135,7 +135,6 @@ class _MyMatchesPane extends StatelessWidget {
         selectedTeamId: c.selectedTeamIdOrNull,
         isHistory: tab.isHistoryFor(match),
         personalizeForTeam: true,
-        showMyMatchesMeta: true,
         onTap: () async {
           await openMatchChallengeDetail(
             match: match,

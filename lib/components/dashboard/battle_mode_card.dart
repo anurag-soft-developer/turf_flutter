@@ -104,7 +104,6 @@ class BattleModeCard extends StatelessWidget {
                     child: ElevatedButton(
                       onPressed: () => Get.find<NavigationController>().goToExplore(
                         category: ExploreCategory.team,
-                        teamOpenForMatch: true,
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,

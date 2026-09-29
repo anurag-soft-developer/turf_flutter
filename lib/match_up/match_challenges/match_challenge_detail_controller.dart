@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 
 import '../../components/challenges/praposals/propose_time_slot_sheet.dart';
 import '../../components/challenges/praposals/propose_turf_sheet.dart';
+import '../../components/challenges/praposals/simple_location_sheet.dart';
 import '../../core/auth/auth_state_controller.dart';
 import '../../core/config/constants.dart';
 import '../../core/query/query_keys.dart';
@@ -17,8 +18,10 @@ import '../../scoring/shared/scoring_shared_models.dart';
 import '../../scoring/shared/scoring_socket_service.dart';
 import '../../team/members/model/team_member_model.dart';
 import '../../team/team_service.dart';
+import '../../turf/model/turf_model.dart';
 import '../matchmaking_service.dart';
 import '../model/team_match_model.dart';
+import '../challenge/challenge_controller.dart';
 import 'match_incoming_resolver.dart';
 
 /// Tab + mutation state for challenge detail.
@@ -46,6 +49,7 @@ class MatchChallengeDetailController extends GetxController
 
   final RxBool isUpdatingSlot = false.obs;
   final RxBool isUpdatingTurf = false.obs;
+  final RxBool isUpdatingLocation = false.obs;
   final RxBool isRejectingChallenge = false.obs;
   final RxBool isAcceptingChallenge = false.obs;
   final RxBool isCancellingMatch = false.obs;
@@ -67,6 +71,7 @@ class MatchChallengeDetailController extends GetxController
   bool get actionBusy =>
       isUpdatingSlot.value ||
       isUpdatingTurf.value ||
+      isUpdatingLocation.value ||
       isRejectingChallenge.value ||
       isAcceptingChallenge.value ||
       isCancellingMatch.value ||
@@ -156,9 +161,18 @@ class MatchChallengeDetailController extends GetxController
 
   bool get isAbandonMatch => match.value?.status == TeamMatchStatus.ongoing;
 
+  /// Pending challenge the current user sent — revoke (hard delete), not cancel.
+  bool get canRevokeMatch {
+    final m = match.value;
+    if (m == null || m.status != TeamMatchStatus.requested) return false;
+    final fromId = m.fromTeamHelper.getId();
+    return fromId != null &&
+        fromId.isNotEmpty &&
+        myMatchTeamIds.value.contains(fromId);
+  }
+
   bool get canCancelOrAbandonMatch {
     return switch (match.value?.status) {
-      TeamMatchStatus.requested ||
       TeamMatchStatus.accepted ||
       TeamMatchStatus.negotiating ||
       TeamMatchStatus.scheduleFinalized ||
@@ -436,6 +450,55 @@ class MatchChallengeDetailController extends GetxController
     );
   }
 
+  /// Sender withdraws a still-pending challenge (hard-deletes the request).
+  Future<bool> revokeMatch() async {
+    if (actionBusy) return false;
+    if (!canRevokeMatch) return false;
+    final current = match.value;
+    final id = current?.id;
+    final fromTeamId = current?.fromTeamHelper.getId();
+    final toTeamId = current?.toTeamHelper.getId();
+    if (id == null ||
+        id.isEmpty ||
+        fromTeamId == null ||
+        fromTeamId.isEmpty) {
+      return false;
+    }
+
+    isCancellingMatch.value = true;
+    final ok = await _matchmakingService.revoke(
+      id,
+      RevokeMatchRequest(actorTeamId: fromTeamId),
+    );
+    isCancellingMatch.value = false;
+
+    if (!ok) return false;
+
+    if (Get.isRegistered<ChallengeController>() &&
+        toTeamId != null &&
+        toTeamId.isNotEmpty) {
+      Get.find<ChallengeController>().clearChallengedPair(fromTeamId, toTeamId);
+    }
+
+    if (Get.isRegistered<QueryClient>()) {
+      final client = Get.find<QueryClient>();
+      await Future.wait([
+        client.invalidateQueries(queryKey: const ['matchChallenges']),
+        client.invalidateQueries(queryKey: QueryKeys.activeOpponentIds),
+        client.invalidateQueries(queryKey: QueryKeys.matchChallengeDetail(id)),
+      ]);
+    }
+    if (Get.isRegistered<ChallengeController>()) {
+      unawaited(Get.find<ChallengeController>().loadActiveOpponentIds());
+    }
+
+    AppSnackbar.success(
+      title: 'Challenge revoked',
+      message: 'The match request was withdrawn.',
+    );
+    return true;
+  }
+
   Future<void> setTimeSlot(BuildContext context) async {
     if (actionBusy) return;
     final id = match.value?.id;
@@ -476,13 +539,14 @@ class MatchChallengeDetailController extends GetxController
     final id = match.value?.id;
     if (id == null || id.isEmpty || myTeamId.isEmpty) return;
 
-    final selectedTurfId = await showModalBottomSheet<String>(
+    final selectedTurf = await showModalBottomSheet<TurfModel>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
       builder: (_) =>
           ProposeTurfSheet(sportTypes: [match.value!.sportType.name]),
     );
+    final selectedTurfId = selectedTurf?.id;
     if (selectedTurfId == null || selectedTurfId.isEmpty) return;
 
     isUpdatingTurf.value = true;
@@ -502,6 +566,41 @@ class MatchChallengeDetailController extends GetxController
     AppSnackbar.success(
       title: 'Turf updated',
       message: 'The venue has been saved.',
+    );
+  }
+
+  Future<void> setLocation(BuildContext context) async {
+    if (actionBusy) return;
+    final id = match.value?.id;
+    if (id == null || id.isEmpty || myTeamId.isEmpty) return;
+
+    final picked = await showModalBottomSheet<LocationModel>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      builder: (_) => SimpleLocationSheet(
+        initialAddress: match.value?.venueLocation?.address,
+      ),
+    );
+    if (picked == null) return;
+
+    isUpdatingLocation.value = true;
+    final updated = await _matchmakingService.updateRequest(
+      id,
+      UpdateTeamMatchRequest(
+        venueLocation: picked,
+        selfAcceptTeamId: myTeamId,
+      ),
+    );
+    isUpdatingLocation.value = false;
+
+    if (updated == null) return;
+
+    match.value = updated;
+    await _invalidateMatchQueries(updated);
+    AppSnackbar.success(
+      title: 'Location updated',
+      message: 'The match location has been saved.',
     );
   }
 

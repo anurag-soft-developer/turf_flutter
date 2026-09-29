@@ -20,6 +20,7 @@ import '../../match_up/guest_join/guest_join_service.dart';
 import '../model/team_match_model.dart';
 import 'match_challenge_detail_controller.dart';
 import 'match_challenge_versus_header.dart';
+import 'match_challenges_controller.dart';
 
 Future<T?>? openMatchChallengeDetail<T>({
   TeamMatchModel? match,
@@ -52,6 +53,7 @@ PopupMenuItem<String> _guestJoinMenuItem({
         Icon(
           isOpen ? Icons.group_off_outlined : Icons.group_add_outlined,
           size: 20,
+          color: const Color(AppColors.textColor),
         ),
         const SizedBox(width: 10),
         Expanded(
@@ -59,6 +61,7 @@ PopupMenuItem<String> _guestJoinMenuItem({
             '${isOpen ? 'Close' : 'Allow'} guest joining · $teamName',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Color(AppColors.textColor)),
           ),
         ),
       ],
@@ -170,8 +173,9 @@ class MatchChallengeDetailScreen extends StatelessWidget {
             final canManageTo =
                 guestSettingsEditable && c.canManageGuestJoin(toTeamId);
             c.myMatchTeamIds.value;
+            final canRevoke = c.canRevokeMatch;
             final canCancel = c.canCancelOrAbandonMatch;
-            if (!canCancel && !canManageFrom && !canManageTo) {
+            if (!canRevoke && !canCancel && !canManageFrom && !canManageTo) {
               return const SizedBox.shrink();
             }
             final abandon = c.isAbandonMatch;
@@ -204,6 +208,22 @@ class MatchChallengeDetailScreen extends StatelessWidget {
                     teamName: match.toTeamHelper.getDisplayName(),
                     open: guestJoin?.toTeamOpen ?? false,
                   );
+                } else if (value == 'revoke') {
+                  final ok = await c.revokeMatch();
+                  if (!ok || !context.mounted) return;
+                  // Schedule after this frame so Challenges rebuild isn't
+                  // interleaved with reactive tab updates mid-build.
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (Get.isRegistered<MatchChallengesController>()) {
+                      Get.find<MatchChallengesController>().selectedTab.value =
+                          MatchChallengesTab.sent;
+                    }
+                    Get.offNamedUntil(
+                      AppConstants.routes.matchUpChallenges,
+                      (route) => route.isFirst,
+                      arguments: {'tab': 'sent'},
+                    );
+                  });
                 } else if (value == 'cancel_or_abandon') {
                   final reason = await showCancelOrAbandonMatchDialog(
                     context,
@@ -228,12 +248,42 @@ class MatchChallengeDetailScreen extends StatelessWidget {
                     teamName: match.toTeamHelper.getDisplayName(),
                     isOpen: guestJoin?.toTeamOpen ?? false,
                   ),
+                if (canRevoke)
+                  PopupMenuItem<String>(
+                    value: 'revoke',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.undo_outlined,
+                          size: 20,
+                          color: Colors.red.shade700,
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          'Revoke',
+                          style: TextStyle(color: Colors.red.shade700),
+                        ),
+                      ],
+                    ),
+                  ),
                 if (canCancel)
                   PopupMenuItem<String>(
                     value: 'cancel_or_abandon',
-                    child: Text(
-                      abandon ? 'Abandon' : 'Cancel',
-                      style: TextStyle(color: Colors.red.shade700),
+                    child: Row(
+                      children: [
+                        Icon(
+                          abandon
+                              ? Icons.dangerous_outlined
+                              : Icons.cancel_outlined,
+                          size: 20,
+                          color: Colors.red.shade700,
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          abandon ? 'Abandon' : 'Cancel',
+                          style: TextStyle(color: Colors.red.shade700),
+                        ),
+                      ],
                     ),
                   ),
               ],
@@ -327,17 +377,17 @@ class _MatchChallengeDetailBody extends StatelessWidget {
         ? null
         : acceptedTurfCandidates.first;
 
-    final hasSlot = acceptedSlot != null;
-    final hasTurf = acceptedTurf != null;
+    final venueLocation = currentMatch.venueLocation;
+    final venueAddress = venueLocation?.address.trim();
+    final hasVenueLocation =
+        venueAddress != null && venueAddress.isNotEmpty;
     final timeSummary = acceptedSlot != null
         ? '${_fmt(acceptedSlot.slot.startTime)} – ${_fmt(acceptedSlot.slot.endTime)}'
         : 'Not set';
     final turfSummary = acceptedTurf != null
         ? acceptedTurf.turfIdHelper.getDisplayName()
         : 'Not set';
-    final turfLocation = acceptedTurf?.turfIdHelper.getLocation();
-    final turfAddress = turfLocation?.address.trim();
-    final hasTurfLocation = turfAddress != null && turfAddress.isNotEmpty;
+    final locationSummary = hasVenueLocation ? venueAddress : 'Not set';
 
     final showScoreboardBar =
         (controller.isCricketMatch || controller.isFootballMatch) &&
@@ -408,15 +458,13 @@ class _MatchChallengeDetailBody extends StatelessWidget {
                                             controller.isUpdatingSlot.value,
                                         otherFieldBusy:
                                             controller.isUpdatingTurf.value ||
+                                            controller
+                                                .isUpdatingLocation
+                                                .value ||
                                             controller.isCancellingMatch.value,
                                         onEditPressed: () =>
                                             controller.setTimeSlot(context),
-                                        editTooltip: hasSlot
-                                            ? 'Edit time'
-                                            : 'Set time',
-                                        editIcon: hasSlot
-                                            ? Icons.edit_outlined
-                                            : Icons.event_available_outlined,
+                                        editTooltip: 'Edit time',
                                       ),
                                     ),
                                     const SizedBox(height: 12),
@@ -425,24 +473,43 @@ class _MatchChallengeDetailBody extends StatelessWidget {
                                         icon: Icons.grass,
                                         label: 'Turf',
                                         value: turfSummary,
-                                        location: hasTurfLocation
-                                            ? turfLocation
-                                            : null,
                                         canEdit:
                                             controller.canUseScheduleControls,
                                         isLoading:
                                             controller.isUpdatingTurf.value,
                                         otherFieldBusy:
                                             controller.isUpdatingSlot.value ||
+                                            controller
+                                                .isUpdatingLocation
+                                                .value ||
                                             controller.isCancellingMatch.value,
                                         onEditPressed: () =>
                                             controller.setTurf(context),
-                                        editTooltip: hasTurf
-                                            ? 'Edit turf'
-                                            : 'Set turf',
-                                        editIcon: hasTurf
-                                            ? Icons.edit_outlined
-                                            : Icons.add_location_alt_outlined,
+                                        editTooltip: 'Edit turf',
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Obx(
+                                      () => _ScheduleLine(
+                                        icon: Icons.location_on_outlined,
+                                        label: 'Location',
+                                        value: locationSummary,
+                                        location: hasVenueLocation
+                                            ? venueLocation
+                                            : null,
+                                        showLocationUnderValue: false,
+                                        canEdit:
+                                            controller.canUseScheduleControls,
+                                        isLoading: controller
+                                            .isUpdatingLocation
+                                            .value,
+                                        otherFieldBusy:
+                                            controller.isUpdatingSlot.value ||
+                                            controller.isUpdatingTurf.value ||
+                                            controller.isCancellingMatch.value,
+                                        onEditPressed: () =>
+                                            controller.setLocation(context),
+                                        editTooltip: 'Edit location',
                                       ),
                                     ),
                                   ],
@@ -651,6 +718,7 @@ class _ScheduleLine extends StatelessWidget {
     required this.otherFieldBusy,
     required this.onEditPressed,
     this.location,
+    this.showLocationUnderValue = true,
     this.editTooltip,
     this.editIcon = Icons.edit_outlined,
   });
@@ -659,6 +727,7 @@ class _ScheduleLine extends StatelessWidget {
   final String label;
   final String value;
   final LocationModel? location;
+  final bool showLocationUnderValue;
   final bool canEdit;
   final bool isLoading;
   final bool otherFieldBusy;
@@ -670,6 +739,8 @@ class _ScheduleLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final isUnset = value == 'Not set';
     final canTap = canEdit && !isLoading && !otherFieldBusy;
+    final showMapsLink =
+        location != null && showLocationUnderValue && !isUnset;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -688,16 +759,19 @@ class _ScheduleLine extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 2),
-              Text(
-                value,
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: isUnset
-                      ? const Color(AppColors.textSecondaryColor)
-                      : const Color(AppColors.textColor),
+              if (location != null && !showLocationUnderValue && !isUnset)
+                _CompactTurfLocation(location: location!)
+              else
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: isUnset
+                        ? const Color(AppColors.textSecondaryColor)
+                        : const Color(AppColors.textColor),
+                  ),
                 ),
-              ),
-              if (location != null) ...[
+              if (showMapsLink) ...[
                 const SizedBox(height: 4),
                 _CompactTurfLocation(location: location!),
               ],

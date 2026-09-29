@@ -398,7 +398,7 @@ class TeamMatchModel {
   @JsonKey(name: 'selectedTurfProposalId', fromJson: mongoIdFromJsonNullable)
   final String? selectedTurfProposalId;
 
-  /// Copied from the selected turf when a venue is locked in.
+  /// Explicit venue — set by client; never derived from turf on the server.
   final LocationModel? venueLocation;
 
   /// Lean id or populated team subset when backend populates `winnerTeam`.
@@ -711,42 +711,36 @@ String _$teamMatchStatusToApiString(TeamMatchStatus s) => switch (s) {
 
 // --- Request bodies ---
 
-class CreateUnrankedMatchRequest {
+@JsonSerializable(includeIfNull: false, explicitToJson: true)
+class CreateMatchRequest {
+  final TeamMatchSource source;
   final String fromTeamId;
-  final String toTeamId;
-
-  const CreateUnrankedMatchRequest({
-    required this.fromTeamId,
-    required this.toTeamId,
-  });
-
-  Map<String, dynamic> toJson() => <String, dynamic>{
-    'fromTeamId': fromTeamId,
-    'toTeamId': toTeamId,
-  };
-}
-
-@JsonSerializable(includeIfNull: false)
-class SendMatchRequest {
-  @JsonKey(name: 'fromTeamId')
-  final String fromTeamId;
-  @JsonKey(name: 'toTeamId')
   final String toTeamId;
   final String? notes;
-  @JsonKey(name: 'expiresInMinutes', defaultValue: 120)
   final int? expiresInMinutes;
+  final TeamMatchTimeSlot? slot;
+  final String? turfId;
+  final LocationModel? venueLocation;
 
-  SendMatchRequest({
+  /// Unranked only — opens guest-join for nearby players.
+  final bool? allowNearbyPlayers;
+
+  const CreateMatchRequest({
+    required this.source,
     required this.fromTeamId,
     required this.toTeamId,
     this.notes,
     this.expiresInMinutes,
+    this.slot,
+    this.turfId,
+    this.venueLocation,
+    this.allowNearbyPlayers,
   });
 
-  factory SendMatchRequest.fromJson(Map<String, dynamic> json) =>
-      _$SendMatchRequestFromJson(json);
+  factory CreateMatchRequest.fromJson(Map<String, dynamic> json) =>
+      _$CreateMatchRequestFromJson(json);
 
-  Map<String, dynamic> toJson() => _$SendMatchRequestToJson(this);
+  Map<String, dynamic> toJson() => _$CreateMatchRequestToJson(this);
 }
 
 @JsonSerializable()
@@ -893,6 +887,15 @@ class CancelNegotiationRequest {
   Map<String, dynamic> toJson() => _$CancelNegotiationRequestToJson(this);
 }
 
+/// Body for `POST /matchmaking/requests/:id/revoke`.
+class RevokeMatchRequest {
+  final String actorTeamId;
+
+  const RevokeMatchRequest({required this.actorTeamId});
+
+  Map<String, dynamic> toJson() => {'actorTeamId': actorTeamId};
+}
+
 /// Body for `PATCH /matchmaking/requests/:id` ([UpdateTeamMatchDto] / `UpdateTeamMatchSchema`).
 @JsonSerializable(includeIfNull: false, explicitToJson: true)
 class UpdateTeamMatchRequest {
@@ -904,6 +907,9 @@ class UpdateTeamMatchRequest {
 
   /// Turf id for a new accepted proposal; server creates `selectedTurfProposalId`.
   final String? turfId;
+
+  /// Explicit venue only — never copied from turf on the server.
+  final LocationModel? venueLocation;
   final String? selfAcceptTeamId;
 
   const UpdateTeamMatchRequest({
@@ -911,6 +917,7 @@ class UpdateTeamMatchRequest {
     this.notes,
     this.slot,
     this.turfId,
+    this.venueLocation,
     this.selfAcceptTeamId,
   });
 

@@ -205,13 +205,13 @@ class QueryKeys {
     required String fromTeamId,
     required String query,
     required String sportType,
-    bool openForMatch = false,
+    bool skipTeamsWithSentRequest = false,
   }) => [
     ...unrankedOpponentSearchPrefix,
     fromTeamId,
     query,
     sportType,
-    openForMatch,
+    skipTeamsWithSentRequest,
   ];
 
   static const explorePostPrefix = ['explorePost'];

@@ -21,7 +21,6 @@ class MatchCard extends StatelessWidget {
     /// Public Matches: keep false so the winner team name is shown instead.
     this.personalizeForTeam = false,
     this.challengeInboxKind,
-    this.showMyMatchesMeta = false,
     this.onTap,
     this.footer,
   });
@@ -31,7 +30,6 @@ class MatchCard extends StatelessWidget {
   final bool isHistory;
   final bool personalizeForTeam;
   final MatchChallengeInboxKind? challengeInboxKind;
-  final bool showMyMatchesMeta;
   final VoidCallback? onTap;
   final Widget? footer;
 
@@ -60,16 +58,15 @@ class MatchCard extends StatelessWidget {
     final fromScore = scoreForTeam(match, fromId);
     final toScore = scoreForTeam(match, toId);
     final metaLine = _buildMetaLine(selectedSlot);
-    final showSlotDetail =
-        selectedSlot != null &&
-        !showMyMatchesMeta &&
-        challengeInboxKind == null;
+    final venueLabel = _venueLabel(match.venueLocation);
+    final showScheduleDetails = selectedSlot != null || venueLabel != null;
 
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (metaLine != null) ...[metaLine, const SizedBox(height: 10)],
+        metaLine,
+        const SizedBox(height: 10),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -141,21 +138,17 @@ class MatchCard extends StatelessWidget {
             ),
           ],
         ),
-        if (showSlotDetail) ...[
-          const SizedBox(height: 10),
-          Text(
-            _formatSlot(selectedSlot),
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: Color(AppColors.textSecondaryColor),
-            ),
+        if (showScheduleDetails) ...[
+          const SizedBox(height: 12),
+          _MatchScheduleDetails(
+            slotLabel: selectedSlot == null ? null : _formatSlot(selectedSlot),
+            locationLabel: venueLabel,
           ),
         ],
         if (hasSide && isHistory && winnerId != null) ...[
           const SizedBox(height: 8),
           Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 hasSide && winnerId == selectedTeamId
@@ -167,13 +160,14 @@ class MatchCard extends StatelessWidget {
                     : const Color(AppColors.primaryColor),
               ),
               const SizedBox(width: 6),
-              Expanded(
+              Flexible(
                 child: Text(
                   hasSide
                       ? (winnerId == selectedTeamId
                             ? 'Your team won!'
                             : 'Opponent won')
                       : '${winner.getDisplayName()} won',
+                  textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -191,6 +185,7 @@ class MatchCard extends StatelessWidget {
         if (isHistory && match.status == TeamMatchStatus.draw) ...[
           const SizedBox(height: 8),
           const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 Icons.handshake_outlined,
@@ -200,6 +195,7 @@ class MatchCard extends StatelessWidget {
               SizedBox(width: 6),
               Text(
                 'Match ended in a draw',
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -255,33 +251,47 @@ class MatchCard extends StatelessWidget {
   }
 
   TeamMatchTimeSlot? _getSelectedSlot() {
-    if (match.selectedSlotProposalId == null) return null;
+    if (match.selectedSlotProposalId != null) {
+      for (final s in match.proposedSlots) {
+        if (s.proposalId == match.selectedSlotProposalId) {
+          return s.slot;
+        }
+      }
+    }
     for (final s in match.proposedSlots) {
-      if (s.proposalId == match.selectedSlotProposalId) {
+      if (s.status == MatchProposalStatus.accepted) {
         return s.slot;
       }
     }
     return null;
   }
 
-  Widget? _buildMetaLine(TeamMatchTimeSlot? selectedSlot) {
+  String? _venueLabel(LocationModel? location) {
+    if (location == null) return null;
+    final short = location.shortPlaceLabel?.trim();
+    if (short != null && short.isNotEmpty) return short;
+    final address = location.address.trim();
+    return address.isEmpty ? null : address;
+  }
+
+  Widget _buildMetaLine(TeamMatchTimeSlot? selectedSlot) {
     final sport = match.sportType.label;
     String? trailing;
 
     if (challengeInboxKind != null) {
       final when = timeAgoFrom(match.createdAt);
-      if (when == null) return null;
-      final verb = challengeInboxKind == MatchChallengeInboxKind.received
-          ? 'Received'
-          : 'Sent';
-      trailing = '$verb $when';
-    } else if (showMyMatchesMeta) {
-      trailing = _myMatchesMetaTrailing(selectedSlot);
+      if (when != null) {
+        final verb = challengeInboxKind == MatchChallengeInboxKind.received
+            ? 'Received'
+            : 'Sent';
+        trailing = '$verb $when';
+      }
     } else {
-      return null;
+      trailing = _myMatchesMetaTrailing(selectedSlot);
     }
 
     return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Icon(
           match.sportType.icon,
@@ -289,11 +299,12 @@ class MatchCard extends StatelessWidget {
           color: const Color(AppColors.primaryColor),
         ),
         const SizedBox(width: 6),
-        Expanded(
+        Flexible(
           child: Text(
             trailing == null ? sport : '$sport · $trailing',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
             style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
@@ -508,6 +519,72 @@ class _TeamColumn extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
         ],
+      ],
+    );
+  }
+}
+
+class _MatchScheduleDetails extends StatelessWidget {
+  const _MatchScheduleDetails({this.slotLabel, this.locationLabel});
+
+  final String? slotLabel;
+  final String? locationLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(AppColors.backgroundColor),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        children: [
+          if (slotLabel != null)
+            _ScheduleDetailRow(
+              icon: Icons.schedule,
+              text: slotLabel!,
+            ),
+          if (slotLabel != null && locationLabel != null)
+            const SizedBox(height: 6),
+          if (locationLabel != null)
+            _ScheduleDetailRow(
+              icon: Icons.location_on_outlined,
+              text: locationLabel!,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ScheduleDetailRow extends StatelessWidget {
+  const _ScheduleDetailRow({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icon, size: 14, color: const Color(AppColors.textSecondaryColor)),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: Color(AppColors.textSecondaryColor),
+            ),
+          ),
+        ),
       ],
     );
   }

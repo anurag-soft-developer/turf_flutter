@@ -28,7 +28,7 @@ class TeamService {
     return TeamModel.fromJson(response);
   }
 
-  /// Query params match backend `TeamFilterDto` (e.g. `lookingForMembers` / `teamOpenForMatch`
+  /// Query params match backend `TeamFilterDto` (e.g. `lookingForMembers`
   /// as `'true'`/`'false'`, `limit` clamped to 50, nested `location[nearbyLat]` keys via [TeamFilterQuery]).
   Future<PaginatedResponse<TeamModel>?> findMany(TeamFilterQuery query) async {
     final response = await _apiService.get<Map<String, dynamic>>(

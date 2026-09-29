@@ -207,7 +207,8 @@ class MatchmakingEndpoints {
   /// Pre-match challenge inbox (`?type=incoming|outgoing`).
   String get inbox => '/matchmaking/inbox';
 
-  String get unranked => '/matchmaking/unranked';
+  /// `POST /matchmaking` — create ranked or unranked match.
+  String get create => '/matchmaking';
 
   /// Active challenge opponent ids, keyed by our team (sent + received).
   String get activeOpponentIds => '/matchmaking/active-opponent-ids';
@@ -232,6 +233,9 @@ class MatchmakingEndpoints {
       '/matchmaking/requests/$id/finalize-schedule';
 
   String requestCancel(String id) => '/matchmaking/requests/$id/cancel';
+
+  /// Sender hard-deletes a still-`requested` challenge.
+  String requestRevoke(String id) => '/matchmaking/requests/$id/revoke';
 
   String requestMatchResult(String id) =>
       '/matchmaking/requests/$id/match-result';

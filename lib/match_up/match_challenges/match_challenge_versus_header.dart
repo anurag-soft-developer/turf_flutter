@@ -147,26 +147,28 @@ class MatchChallengeTeamColumn extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           _AvatarWithResultBadge(logoUrl: logoUrl, resultLabel: resultLabel),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             teamName,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
             style: const TextStyle(
+              fontSize: 13,
               fontWeight: FontWeight.w700,
               color: Color(AppColors.textColor),
+              height: 1.2,
             ),
           ),
           if (score != null) ...[
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             Text.rich(
               TextSpan(
                 children: [
                   TextSpan(
                     text: score!.main,
                     style: const TextStyle(
-                      fontSize: 18,
+                      fontSize: 16,
                       fontWeight: FontWeight.w800,
                       color: Color(AppColors.primaryColor),
                       height: 1.1,
@@ -177,7 +179,7 @@ class MatchChallengeTeamColumn extends StatelessWidget {
                     TextSpan(
                       text: ' ${score!.overs}',
                       style: const TextStyle(
-                        fontSize: 13,
+                        fontSize: 12,
                         fontWeight: FontWeight.w500,
                         color: Color(AppColors.textSecondaryColor),
                         height: 1.1,
@@ -202,7 +204,7 @@ class _AvatarWithResultBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const double radius = 40;
+    const double radius = 32;
     return SizedBox(
       width: radius * 2 + 4,
       height: radius * 2 + 4,
@@ -325,19 +327,19 @@ class MatchChallengeVersusHeader extends StatelessWidget {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.only(top: 28),
+          padding: const EdgeInsets.only(top: 20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               if (isLive) ...[
                 const MatchStatusChip(status: TeamMatchStatus.ongoing),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
               ],
               Container(
-                margin: const EdgeInsets.symmetric(horizontal: 8),
+                margin: const EdgeInsets.symmetric(horizontal: 6),
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
+                  horizontal: 8,
+                  vertical: 4,
                 ),
                 decoration: BoxDecoration(
                   color: const Color(
@@ -348,6 +350,7 @@ class MatchChallengeVersusHeader extends StatelessWidget {
                 child: const Text(
                   'VS',
                   style: TextStyle(
+                    fontSize: 12,
                     color: Color(AppColors.primaryColor),
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.3,

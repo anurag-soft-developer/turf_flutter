@@ -104,10 +104,5 @@ class ExploreController extends GetxController
     if (pending.category != null) {
       selectCategory(pending.category!);
     }
-    if (pending.teamOpenForMatch != null) {
-      filters.value = filters.value.copyWith(
-        teamOpenForMatch: pending.teamOpenForMatch,
-      );
-    }
   }
 }

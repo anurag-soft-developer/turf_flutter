@@ -130,8 +130,17 @@ class ProposeTurfSheet extends HookWidget {
                   child: ElevatedButton(
                     onPressed: selectedTurfId.value == null || isLoading
                         ? null
-                        : () => Navigator.of(context)
-                            .pop(selectedTurfId.value),
+                        : () {
+                            final id = selectedTurfId.value;
+                            TurfModel? turf;
+                            for (final t in turfs) {
+                              if (t.id == id) {
+                                turf = t;
+                                break;
+                              }
+                            }
+                            Navigator.of(context).pop(turf);
+                          },
                     child: const Text('Confirm'),
                   ),
                 ),

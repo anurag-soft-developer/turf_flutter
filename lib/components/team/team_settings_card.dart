@@ -45,17 +45,6 @@ class TeamSettingsCard extends StatelessWidget {
                 visibility: v ? TeamVisibility.public : TeamVisibility.private,
               ),
             ),
-            const Divider(height: 1, indent: 16, endIndent: 16),
-            _settingsSwitchTile(
-              icon: Icons.sports_kabaddi_outlined,
-              title: 'Open for match',
-              subtitle:
-                  'Appear as available in match finder and similar lists.',
-              value: team.teamOpenForMatch,
-              busy: busy,
-              onChanged: (v) =>
-                  controller.updateTeamSettings(teamOpenForMatch: v),
-            ),
           ],
         ),
       );

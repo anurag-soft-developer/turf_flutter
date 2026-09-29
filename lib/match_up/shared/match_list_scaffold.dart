@@ -63,9 +63,14 @@ class MatchListScaffold extends HookWidget {
 
     useEffect(() {
       final data = membershipsQuery.data;
-      if (data != null) {
-        controller.syncMemberships(data);
-      }
+      if (data == null) return null;
+      // Defer GetX writes — syncing during build marks the child Obx dirty
+      // and throws "setState() or markNeedsBuild() called during build".
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!controller.isClosed) {
+          controller.syncMemberships(data);
+        }
+      });
       return null;
     }, [membershipsQuery.data]);
 

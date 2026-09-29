@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:get/get.dart';
 
+import '../../components/match_up/match_optional_field_tile.dart';
 import '../../components/match_up/match_pick_versus_row.dart';
 import '../../components/match_up/my_team_selector.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/team/team_member_field_instance.dart';
 import '../../team/model/team_model.dart';
+import '../../turf/model/turf_model.dart';
+import '../model/team_match_model.dart';
 import 'challenge_controller.dart';
 
 void onChallengePressed({
@@ -73,132 +77,188 @@ void showChallengeTeamSheet({
 
   showModalBottomSheet<void>(
     context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
     backgroundColor: Colors.transparent,
     builder: (_) => ChallengeTeamSheet(
       controller: controller,
       teamsForSport: teamsForSport,
       opponent: opponent,
-      onConfirm: () {
-        Navigator.pop(context);
-        controller.sendChallenge(opponent);
-      },
     ),
   );
 }
 
-class ChallengeTeamSheet extends StatelessWidget {
+class ChallengeTeamSheet extends HookWidget {
   const ChallengeTeamSheet({
     super.key,
     required this.controller,
     required this.teamsForSport,
     required this.opponent,
-    required this.onConfirm,
   });
 
   final ChallengeController controller;
   final List<TeamMemberFieldInstance> teamsForSport;
   final TeamModel opponent;
-  final VoidCallback onConfirm;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(2),
+    final selectedSlot = useState<ProposeScheduleTimeSlot?>(null);
+    final selectedTurf = useState<TurfModel?>(null);
+    final selectedLocation = useState<LocationModel?>(null);
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    final maxHeight = MediaQuery.sizeOf(context).height * 0.9;
+
+    Future<void> confirm() async {
+      Navigator.pop(context);
+      final rawTurfId = selectedTurf.value?.id;
+      await controller.sendChallenge(
+        opponent,
+        slot: selectedSlot.value,
+        turfId: (rawTurfId != null && rawTurfId.isNotEmpty) ? rawTurfId : null,
+        venueLocation: selectedLocation.value,
+      );
+    }
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: Container(
+        constraints: BoxConstraints(maxHeight: maxHeight),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-          ),
-          const SizedBox(height: 24),
-          Obx(() {
-            final selected = controller.selectedTeam.value;
-            final pickerTeams =
-                teamsForSport.where((t) => t.id != opponent.id).toList();
-            return MatchPickVersusRow(
-              left: MatchPickVersusTeam(
-                name: selected?.name ?? 'Your Team',
-                logoUrl: selected?.logo ?? '',
-                showEditBadge: pickerTeams.length > 1,
-                wrapLogo: (logo) => MyTeamSelector(
-                  teams: pickerTeams,
-                  selectedTeam: selected,
-                  onTeamSelected: controller.selectTeam,
-                  buttonChild: logo,
-                ),
-              ),
-              right: MatchPickVersusTeam(
-                name: opponent.name,
-                logoUrl: opponent.logo,
-              ),
-            );
-          }),
-          const SizedBox(height: 32),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    side: const BorderSide(
-                      color: Color(AppColors.dividerColor),
-                    ),
-                  ),
-                  child: const Text(
-                    'Cancel',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Color(AppColors.textSecondaryColor),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                flex: 2,
-                child: ElevatedButton(
-                  onPressed: onConfirm,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(AppColors.primaryColor),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.sports_mma, size: 18),
-                      SizedBox(width: 8),
-                      Text(
-                        'Send Challenge',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
+            const SizedBox(height: 24),
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    Obx(() {
+                      final selected = controller.selectedTeam.value;
+                      final pickerTeams = teamsForSport
+                          .where((t) => t.id != opponent.id)
+                          .toList();
+                      return MatchPickVersusRow(
+                        left: MatchPickVersusTeam(
+                          name: selected?.name ?? 'Your Team',
+                          logoUrl: selected?.logo ?? '',
+                          showEditBadge: pickerTeams.length > 1,
+                          wrapLogo: (logo) => MyTeamSelector(
+                            teams: pickerTeams,
+                            selectedTeam: selected,
+                            onTeamSelected: controller.selectTeam,
+                            buttonChild: logo,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                        right: MatchPickVersusTeam(
+                          name: opponent.name,
+                          logoUrl: opponent.logo,
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 32),
+                    MatchCreateVenueFields(
+                      sportTypeNames: [opponent.sportType.name],
+                      slot: selectedSlot.value,
+                      turf: selectedTurf.value,
+                      location: selectedLocation.value,
+                      onSlotChanged: (v) => selectedSlot.value = v,
+                      onTurfChanged: (v) => selectedTurf.value = v,
+                      onLocationChanged: (v) => selectedLocation.value = v,
+                    ),
+                    const SizedBox(height: 24),
+                  ],
                 ),
               ),
-            ],
-          ),
-        ],
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      side: const BorderSide(
+                        color: Color(AppColors.dividerColor),
+                      ),
+                    ),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Color(AppColors.textSecondaryColor),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
+                  child: Obx(() {
+                    final busy = controller.isSendingRequest.value;
+                    return ElevatedButton(
+                      onPressed: busy ? null : confirm,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(AppColors.primaryColor),
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: const Color(
+                          AppColors.dividerColor,
+                        ),
+                        disabledForegroundColor: const Color(
+                          AppColors.textSecondaryColor,
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: busy
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
+                              ),
+                            )
+                          : const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.sports_mma, size: 18),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Send Challenge',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                    );
+                  }),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

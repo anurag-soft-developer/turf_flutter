@@ -3,17 +3,13 @@ import 'package:get/get.dart';
 import '../../core/routes/route_query.dart';
 import '../../team/model/team_model.dart';
 
-/// Sports supported for scoreboard match start (must match backend allowlist).
-const matchStartSports = <TeamSportType>{
-  TeamSportType.cricket,
-  TeamSportType.football,
-};
-
 class MatchStartController extends GetxController {
   late final TeamSportType sport;
   late final bool isRanked;
 
-  bool get isSportSupported => matchStartSports.contains(sport);
+  /// Ranked is cricket/football only; unranked allows any sport.
+  bool get isSportSupported =>
+      !isRanked || rankingTeamSportTypes.contains(sport);
 
   String get modeLabel => isRanked ? 'Ranked' : 'Unranked';
 

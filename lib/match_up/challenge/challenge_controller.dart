@@ -133,9 +133,9 @@ class ChallengeController extends GetxController {
     selectedTeam.value = team;
   }
 
-  /// Open-for-match opponent that is not the user's own team.
+  /// Opponent that is not the user's own team (ranked sports only).
   bool isChallengeableTarget(TeamModel team) {
-    if (team.teamOpenForMatch != true) return false;
+    if (!rankingTeamSportTypes.contains(team.sportType)) return false;
     final opponentId = team.id;
     if (opponentId == null || opponentId.isEmpty) return false;
     if (_isOwnActiveTeam(opponentId)) return false;
@@ -221,6 +221,47 @@ class ChallengeController extends GetxController {
     );
   }
 
+  /// Clears a sent pair after revoke so Explore shows Challenge again.
+  void clearChallengedPair(String fromTeamId, String opponentTeamId) {
+    final existing = challengedOpponentsByFromTeam[fromTeamId];
+    if (existing == null || !existing.contains(opponentTeamId)) return;
+    final next = {...existing}..remove(opponentTeamId);
+    if (next.isEmpty) {
+      challengedOpponentsByFromTeam.remove(fromTeamId);
+    } else {
+      challengedOpponentsByFromTeam[fromTeamId] = next;
+    }
+    challengedOpponentsByFromTeam.refresh();
+
+    if (!Get.isRegistered<QueryClient>()) return;
+    Get.find<QueryClient>().setQueryData<ActiveOpponentIds, Object>(
+      QueryKeys.activeOpponentIds,
+      (previous) {
+        final sent = <String, Set<String>>{
+          for (final e
+              in (previous?.sentByTeamId ?? challengedOpponentsByFromTeam)
+                  .entries)
+            e.key: {...e.value},
+        };
+        final fromSet = {...(sent[fromTeamId] ?? {})}..remove(opponentTeamId);
+        if (fromSet.isEmpty) {
+          sent.remove(fromTeamId);
+        } else {
+          sent[fromTeamId] = fromSet;
+        }
+        return ActiveOpponentIds(
+          sentByTeamId: sent,
+          receivedByTeamId: {
+            for (final e
+                in (previous?.receivedByTeamId ?? receivedOpponentsByOurTeam)
+                    .entries)
+              e.key: {...e.value},
+          },
+        );
+      },
+    );
+  }
+
   void _ensureSelectedTeam() {
     final selected = selectedTeam.value;
     if (selected == null) return;
@@ -253,14 +294,31 @@ class ChallengeController extends GetxController {
     );
   }
 
-  Future<void> sendChallenge(TeamModel opponent) async {
+  Future<void> sendChallenge(
+    TeamModel opponent, {
+    ProposeScheduleTimeSlot? slot,
+    String? turfId,
+    LocationModel? venueLocation,
+  }) async {
     final myTeam = selectedTeam.value;
     if (myTeam?.id == null || opponent.id == null) return;
 
     isSendingRequest.value = true;
     try {
-      final match = await _matchmakingService.sendRequest(
-        SendMatchRequest(fromTeamId: myTeam!.id!, toTeamId: opponent.id!),
+      final match = await _matchmakingService.createMatch(
+        CreateMatchRequest(
+          source: TeamMatchSource.ranked,
+          fromTeamId: myTeam!.id!,
+          toTeamId: opponent.id!,
+          slot: slot == null
+              ? null
+              : TeamMatchTimeSlot(
+                  startTime: slot.startTime,
+                  endTime: slot.endTime,
+                ),
+          turfId: turfId,
+          venueLocation: venueLocation,
+        ),
       );
       if (match != null) {
         _markTeamChallenged(myTeam.id!, opponent.id!);

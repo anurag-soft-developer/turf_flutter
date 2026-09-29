@@ -389,20 +389,36 @@ const _$TeamMatchStatusEnumMap = {
   TeamMatchStatus.abandoned: 'abandoned',
 };
 
-SendMatchRequest _$SendMatchRequestFromJson(Map<String, dynamic> json) =>
-    SendMatchRequest(
+CreateMatchRequest _$CreateMatchRequestFromJson(Map<String, dynamic> json) =>
+    CreateMatchRequest(
+      source: $enumDecode(_$TeamMatchSourceEnumMap, json['source']),
       fromTeamId: json['fromTeamId'] as String,
       toTeamId: json['toTeamId'] as String,
       notes: json['notes'] as String?,
-      expiresInMinutes: (json['expiresInMinutes'] as num?)?.toInt() ?? 120,
+      expiresInMinutes: (json['expiresInMinutes'] as num?)?.toInt(),
+      slot: json['slot'] == null
+          ? null
+          : TeamMatchTimeSlot.fromJson(json['slot'] as Map<String, dynamic>),
+      turfId: json['turfId'] as String?,
+      venueLocation: json['venueLocation'] == null
+          ? null
+          : LocationModel.fromJson(
+              json['venueLocation'] as Map<String, dynamic>,
+            ),
+      allowNearbyPlayers: json['allowNearbyPlayers'] as bool?,
     );
 
-Map<String, dynamic> _$SendMatchRequestToJson(SendMatchRequest instance) =>
+Map<String, dynamic> _$CreateMatchRequestToJson(CreateMatchRequest instance) =>
     <String, dynamic>{
+      'source': _$TeamMatchSourceEnumMap[instance.source]!,
       'fromTeamId': instance.fromTeamId,
       'toTeamId': instance.toTeamId,
       'notes': ?instance.notes,
       'expiresInMinutes': ?instance.expiresInMinutes,
+      'slot': ?instance.slot?.toJson(),
+      'turfId': ?instance.turfId,
+      'venueLocation': ?instance.venueLocation?.toJson(),
+      'allowNearbyPlayers': ?instance.allowNearbyPlayers,
     };
 
 SetTeamOpenForMatchRequest _$SetTeamOpenForMatchRequestFromJson(
@@ -550,6 +566,9 @@ UpdateTeamMatchRequest _$UpdateTeamMatchRequestFromJson(
       ? null
       : TeamMatchTimeSlot.fromJson(json['slot'] as Map<String, dynamic>),
   turfId: json['turfId'] as String?,
+  venueLocation: json['venueLocation'] == null
+      ? null
+      : LocationModel.fromJson(json['venueLocation'] as Map<String, dynamic>),
   selfAcceptTeamId: json['selfAcceptTeamId'] as String?,
 );
 
@@ -560,6 +579,7 @@ Map<String, dynamic> _$UpdateTeamMatchRequestToJson(
   'notes': ?instance.notes,
   'slot': ?instance.slot?.toJson(),
   'turfId': ?instance.turfId,
+  'venueLocation': ?instance.venueLocation?.toJson(),
   'selfAcceptTeamId': ?instance.selfAcceptTeamId,
 };
 

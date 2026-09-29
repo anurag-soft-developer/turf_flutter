@@ -269,9 +269,6 @@ class TeamFilterQuery {
   /// Serialized as `'true'` / `'false'` (Zod enum).
   final bool? lookingForMembers;
 
-  /// Serialized as `'true'` / `'false'` (Zod enum).
-  final bool? teamOpenForMatch;
-
   /// When true, backend excludes opponents already challenged by [fromTeamId].
   final bool? skipTeamsWithSentRequest;
 
@@ -292,7 +289,6 @@ class TeamFilterQuery {
     this.sportType,
     this.genderCategory,
     this.lookingForMembers,
-    this.teamOpenForMatch,
     this.skipTeamsWithSentRequest,
     this.fromTeamId,
     this.search,
@@ -317,9 +313,6 @@ class TeamFilterQuery {
     }
     if (lookingForMembers != null) {
       params['lookingForMembers'] = lookingForMembers! ? 'true' : 'false';
-    }
-    if (teamOpenForMatch != null) {
-      params['teamOpenForMatch'] = teamOpenForMatch! ? 'true' : 'false';
     }
     if (skipTeamsWithSentRequest == true && fromTeamId != null) {
       params['skipTeamsWithSentRequest'] = 'true';
@@ -428,8 +421,6 @@ class UpdateTeamRequest {
   final TeamPreferredTimeSlot? preferredTimeSlot;
   @JsonKey(name: 'lookingForMembers')
   final bool? lookingForMembers;
-  @JsonKey(name: 'teamOpenForMatch')
-  final bool? teamOpenForMatch;
   @JsonKey(name: 'pinnedNotices')
   final List<String>? pinnedNotices;
   final TeamVisibility? visibility;
@@ -452,7 +443,6 @@ class UpdateTeamRequest {
     this.preferredPlayDays,
     this.preferredTimeSlot,
     this.lookingForMembers,
-    this.teamOpenForMatch,
     this.pinnedNotices,
     this.visibility,
     this.joinMode,
@@ -511,8 +501,6 @@ class TeamModel {
   final TeamPreferredTimeSlot? preferredTimeSlot;
   @JsonKey(name: 'lookingForMembers', defaultValue: false)
   final bool lookingForMembers;
-  @JsonKey(name: 'teamOpenForMatch', defaultValue: false)
-  final bool teamOpenForMatch;
   @JsonKey(name: 'pinnedNotices', defaultValue: <String>[])
   final List<String> pinnedNotices;
   @JsonKey(fromJson: _intFromJson, defaultValue: 0)
@@ -566,7 +554,6 @@ class TeamModel {
     this.preferredPlayDays = const [],
     this.preferredTimeSlot,
     this.lookingForMembers = false,
-    this.teamOpenForMatch = false,
     this.pinnedNotices = const [],
     this.matchesPlayed = 0,
     this.wins = 0,

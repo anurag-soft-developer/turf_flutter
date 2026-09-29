@@ -6,10 +6,9 @@ import '../../config/constants.dart';
 import 'nav_tabs.dart';
 
 class PendingExploreNav {
-  const PendingExploreNav({this.category, this.teamOpenForMatch});
+  const PendingExploreNav({this.category});
 
   final ExploreCategory? category;
-  final bool? teamOpenForMatch;
 }
 
 class NavigationController extends GetxController {
@@ -58,16 +57,13 @@ class NavigationController extends GetxController {
     changeTab(turfsIndex);
   }
 
-  /// Switches to the Explore tab and optionally applies category / team filters.
-  void goToExplore({ExploreCategory? category, bool? teamOpenForMatch}) {
+  /// Switches to the Explore tab and optionally applies a category filter.
+  void goToExplore({ExploreCategory? category}) {
     final exploreIndex = navTabIndex('Explore');
     if (exploreIndex < 0) return;
 
-    if (category != null || teamOpenForMatch != null) {
-      pendingExplore.value = PendingExploreNav(
-        category: category,
-        teamOpenForMatch: teamOpenForMatch,
-      );
+    if (category != null) {
+      pendingExplore.value = PendingExploreNav(category: category);
     }
     changeTab(exploreIndex);
   }

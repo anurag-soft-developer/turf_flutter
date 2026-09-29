@@ -11,22 +11,10 @@ class MatchmakingService {
 
   final ApiService _apiService = ApiService();
 
-  /// `POST /matchmaking/requests`
-  Future<TeamMatchModel?> sendRequest(SendMatchRequest body) async {
+  /// `POST /matchmaking`
+  Future<TeamMatchModel?> createMatch(CreateMatchRequest body) async {
     final response = await _apiService.post<Map<String, dynamic>>(
-      ApiConstants.matchmaking.requests,
-      data: body.toJson(),
-    );
-    if (response == null) return null;
-    return TeamMatchModel.fromJson(response);
-  }
-
-  /// `POST /matchmaking/unranked`
-  Future<TeamMatchModel?> createUnrankedMatch(
-    CreateUnrankedMatchRequest body,
-  ) async {
-    final response = await _apiService.post<Map<String, dynamic>>(
-      ApiConstants.matchmaking.unranked,
+      ApiConstants.matchmaking.create,
       data: body.toJson(),
     );
     if (response == null) return null;
@@ -173,6 +161,15 @@ class MatchmakingService {
     );
     if (response == null) return null;
     return TeamMatchModel.fromJson(response);
+  }
+
+  /// `POST /matchmaking/requests/:id/revoke` — hard-delete while still requested.
+  Future<bool> revoke(String matchId, RevokeMatchRequest body) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiConstants.matchmaking.requestRevoke(matchId),
+      data: body.toJson(),
+    );
+    return response != null && response['deleted'] == true;
   }
 
   /// `POST /matchmaking/requests/:id/match-result`
