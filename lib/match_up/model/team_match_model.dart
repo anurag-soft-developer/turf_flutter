@@ -224,6 +224,10 @@ enum MatchFootballPeriod {
 @JsonSerializable(explicitToJson: true)
 class CricketStateModel {
   final int maxOvers;
+
+  /// Opening overs with a restricted field. Null on older matches (use the default).
+  final int? powerplayOvers;
+
   final int currentInnings;
 
   /// Lean id or populated team subset ([TeamMemberFieldInstance]).
@@ -267,6 +271,7 @@ class CricketStateModel {
 
   const CricketStateModel({
     required this.maxOvers,
+    this.powerplayOvers,
     required this.currentInnings,
     required this.battingTeamId,
     required this.bowlingTeamId,
@@ -295,6 +300,28 @@ class CricketStateModel {
       UserFieldInstance(nonStrikerUserId);
 
   UserFieldInstance get bowlerUserHelper => UserFieldInstance(bowlerUserId);
+
+  /// Stored value, or 6 for a T20-length game and 10 otherwise.
+  int get powerplayOversOrDefault {
+    final stored = powerplayOvers;
+    if (stored == null) return defaultPowerplayOvers(maxOvers);
+    if (stored < 0) return 0;
+    if (stored > maxOvers) return maxOvers;
+    return stored;
+  }
+
+  /// True while the innings has not yet used up the powerplay legal balls.
+  bool isInPowerplay(int legalBalls) {
+    final overs = powerplayOversOrDefault;
+    return overs > 0 && legalBalls < overs * 6;
+  }
+}
+
+/// T20-style opening powerplay, else the 50-over opening block.
+int defaultPowerplayOvers(int maxOvers) {
+  if (maxOvers <= 0) return 0;
+  if (maxOvers <= 20) return maxOvers < 6 ? maxOvers : 6;
+  return maxOvers < 10 ? maxOvers : 10;
 }
 
 /// Backend embedded `inningsSummaries[]` item ([FootballInningsSummary]).

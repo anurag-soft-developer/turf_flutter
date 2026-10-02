@@ -127,19 +127,56 @@ class CricketMatchStatsPanel extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            Text(
-              '$oversStr / ${cs.maxOvers} ov  ·  RR $rr  ·  '
-              'Inn ${cs.currentInnings}/${cs.inningsSummaries.length}',
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: Color(AppColors.textSecondaryColor),
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '$oversStr / ${cs.maxOvers} ov  ·  RR $rr  ·  '
+                    'Inn ${cs.currentInnings}/${cs.inningsSummaries.length}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Color(AppColors.textSecondaryColor),
+                    ),
+                  ),
+                ),
+                if (cs.isInPowerplay(legalBalls)) ...[
+                  const SizedBox(width: 8),
+                  const _PowerplayChip(),
+                ],
+              ],
             ),
           ],
         ),
       );
     });
+  }
+}
+
+class _PowerplayChip extends StatelessWidget {
+  const _PowerplayChip();
+
+  static const Color _amber = Color(0xFFB45309);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEF3C7),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _amber.withValues(alpha: 0.35)),
+      ),
+      child: const Text(
+        'Powerplay',
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: _amber,
+          letterSpacing: 0.2,
+        ),
+      ),
+    );
   }
 }
 

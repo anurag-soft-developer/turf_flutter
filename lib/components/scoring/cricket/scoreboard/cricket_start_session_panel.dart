@@ -14,6 +14,9 @@ class CricketStartSessionPanel extends StatelessWidget {
     required this.onBattingTeamIdChanged,
     required this.maxOversController,
     required this.onMaxOversChanged,
+    required this.powerplayOversController,
+    required this.onPowerplayOversChanged,
+    required this.powerplayMax,
     required this.minOvers,
     required this.maxOversLimit,
     required this.isStarting,
@@ -27,6 +30,9 @@ class CricketStartSessionPanel extends StatelessWidget {
   final ValueChanged<String> onBattingTeamIdChanged;
   final TextEditingController maxOversController;
   final VoidCallback onMaxOversChanged;
+  final TextEditingController powerplayOversController;
+  final VoidCallback onPowerplayOversChanged;
+  final int powerplayMax;
   final int minOvers;
   final int maxOversLimit;
   final bool isStarting;
@@ -112,6 +118,35 @@ class CricketStartSessionPanel extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     '$minOvers–$maxOversLimit',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade500,
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  const Text(
+                    'Powerplay overs',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Color(AppColors.textColor),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _OversStepper(
+                    controller: powerplayOversController,
+                    minOvers: 0,
+                    maxOversLimit: powerplayMax,
+                    primary: primary,
+                    onChanged: onPowerplayOversChanged,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    powerplayMax > 0
+                        ? 'Opening overs with a restricted field. 0 turns it off.'
+                        : 'Set innings overs first.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 12,

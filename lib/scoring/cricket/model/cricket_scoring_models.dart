@@ -43,6 +43,7 @@ class CreateCricketSessionRequest {
   final String battingTeamId;
   final String bowlingTeamId;
   final int maxOvers;
+  final int? powerplayOvers;
   final String? strikerUserId;
   final String? nonStrikerUserId;
   final String? bowlerUserId;
@@ -51,6 +52,7 @@ class CreateCricketSessionRequest {
     required this.battingTeamId,
     required this.bowlingTeamId,
     this.maxOvers = 20,
+    this.powerplayOvers,
     this.strikerUserId,
     this.nonStrikerUserId,
     this.bowlerUserId,
@@ -60,6 +62,7 @@ class CreateCricketSessionRequest {
     'battingTeamId': battingTeamId,
     'bowlingTeamId': bowlingTeamId,
     'maxOvers': maxOvers,
+    if (powerplayOvers != null) 'powerplayOvers': powerplayOvers,
     if (strikerUserId != null && strikerUserId!.isNotEmpty)
       'strikerUserId': strikerUserId,
     if (nonStrikerUserId != null && nonStrikerUserId!.isNotEmpty)

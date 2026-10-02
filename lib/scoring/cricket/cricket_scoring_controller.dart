@@ -47,7 +47,14 @@ class CricketScoringController extends GetxController {
   /// Bumps when overs text changes so Obx can recompute [canSubmitStart].
   final RxInt maxOversRevision = 0.obs;
 
+  /// Bumps when the powerplay field changes so Obx can recompute [canSubmitStart].
+  final RxInt powerplayOversRevision = 0.obs;
+
   late final TextEditingController maxOversController;
+  late final TextEditingController powerplayOversController;
+
+  /// True after the scorer edits powerplay overs themselves.
+  bool _powerplayManuallySet = false;
 
   final List<AppendCricketBallRequest> _ballRequestHistory =
       <AppendCricketBallRequest>[];
@@ -91,12 +98,25 @@ class CricketScoringController extends GetxController {
     return n;
   }
 
+  int? get parsedPowerplayOvers {
+    powerplayOversRevision.value;
+    final max = parsedMaxOvers;
+    if (max == null) return null;
+    final t = powerplayOversController.text.trim();
+    if (t.isEmpty) return null;
+    final n = int.tryParse(t);
+    if (n == null) return null;
+    if (n < 0 || n > max) return null;
+    return n;
+  }
+
   bool get canSubmitStart =>
       battingTeamId.value.isNotEmpty &&
       fromTeamId.isNotEmpty &&
       toTeamId.isNotEmpty &&
       bowlingTeamIdResolved.isNotEmpty &&
-      parsedMaxOvers != null;
+      parsedMaxOvers != null &&
+      parsedPowerplayOvers != null;
 
   ScoringSocketService? get _socket =>
       Get.isRegistered<ScoringSocketService>()
@@ -112,6 +132,7 @@ class CricketScoringController extends GetxController {
   void onInit() {
     super.onInit();
     maxOversController = TextEditingController(text: '20');
+    powerplayOversController = TextEditingController(text: '6');
   }
 
   /// Bind scoreboard to a match id; resets start-session UI when the id changes.
@@ -121,6 +142,9 @@ class CricketScoringController extends GetxController {
       battingTeamId.value = '';
       maxOversController.text = '20';
       maxOversRevision.value = 0;
+      _powerplayManuallySet = false;
+      powerplayOversController.text = '6';
+      powerplayOversRevision.value = 0;
       cricketMatch.value = null;
       cricketOvers.clear();
       errorMessage.value = null;
@@ -135,6 +159,22 @@ class CricketScoringController extends GetxController {
 
   void onMaxOversChanged() {
     maxOversRevision.value++;
+    final max = parsedMaxOvers;
+    if (max == null) return;
+    if (!_powerplayManuallySet) {
+      powerplayOversController.text = '${defaultPowerplayOvers(max)}';
+    } else {
+      final current = int.tryParse(powerplayOversController.text.trim());
+      if (current != null && current > max) {
+        powerplayOversController.text = '$max';
+      }
+    }
+    powerplayOversRevision.value++;
+  }
+
+  void onPowerplayOversChanged() {
+    _powerplayManuallySet = true;
+    powerplayOversRevision.value++;
   }
 
   String teamLabelForId(String teamId) {
@@ -605,6 +645,7 @@ class CricketScoringController extends GetxController {
   @override
   void onClose() {
     maxOversController.dispose();
+    powerplayOversController.dispose();
     unawaited(leaveLiveSession());
     super.onClose();
   }

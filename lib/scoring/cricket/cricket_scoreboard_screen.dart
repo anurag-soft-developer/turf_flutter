@@ -1021,12 +1021,21 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
       );
       return;
     }
+    final powerplay = _scoringController.parsedPowerplayOvers;
+    if (powerplay == null) {
+      AppSnackbar.info(
+        title: 'Powerplay',
+        message: 'Enter powerplay overs between 0 and $overs.',
+      );
+      return;
+    }
 
     await _scoringController.createCricketSession(
       CreateCricketSessionRequest(
         battingTeamId: _scoringController.battingTeamId.value,
         bowlingTeamId: _scoringController.bowlingTeamIdResolved,
         maxOvers: overs,
+        powerplayOvers: powerplay,
       ),
     );
   }
@@ -1270,6 +1279,9 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
             final canStart = _scoringController.canSubmitStart;
             final isStarting =
                 _scoringController.isCreatingCricketSession.value;
+            final powerplayMax =
+                _scoringController.parsedMaxOvers ??
+                CricketScoringController.maxOversLimit;
 
             return CricketStartSessionPanel(
               match: startMatch,
@@ -1277,6 +1289,11 @@ class _CricketScoreBoardScreenState extends State<CricketScoreBoardScreen> {
               onBattingTeamIdChanged: _scoringController.setBattingTeamId,
               maxOversController: _scoringController.maxOversController,
               onMaxOversChanged: _scoringController.onMaxOversChanged,
+              powerplayOversController:
+                  _scoringController.powerplayOversController,
+              onPowerplayOversChanged:
+                  _scoringController.onPowerplayOversChanged,
+              powerplayMax: powerplayMax,
               minOvers: CricketScoringController.minOvers,
               maxOversLimit: CricketScoringController.maxOversLimit,
               isStarting: isStarting,

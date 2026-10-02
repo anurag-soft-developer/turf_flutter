@@ -130,6 +130,7 @@ CricketStateModel _$CricketStateModelFromJson(
   Map<String, dynamic> json,
 ) => CricketStateModel(
   maxOvers: (json['maxOvers'] as num).toInt(),
+  powerplayOvers: (json['powerplayOvers'] as num?)?.toInt(),
   currentInnings: (json['currentInnings'] as num).toInt(),
   battingTeamId: const TeamRefConverter().fromJson(json['battingTeamId']),
   bowlingTeamId: const TeamRefConverter().fromJson(json['bowlingTeamId']),
@@ -156,6 +157,7 @@ Map<String, dynamic> _$CricketStateModelToJson(
   CricketStateModel instance,
 ) => <String, dynamic>{
   'maxOvers': instance.maxOvers,
+  'powerplayOvers': instance.powerplayOvers,
   'currentInnings': instance.currentInnings,
   'battingTeamId': const TeamRefConverter().toJson(instance.battingTeamId),
   'bowlingTeamId': const TeamRefConverter().toJson(instance.bowlingTeamId),

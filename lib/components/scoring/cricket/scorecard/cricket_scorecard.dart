@@ -150,6 +150,12 @@ class _CricketScorecardState extends State<CricketScorecard>
   }
 }
 
+String _powerplaySuffix(TeamMatchModel match, int legalBalls) {
+  final cs = match.cricketState;
+  if (cs == null || !cs.isInPowerplay(legalBalls)) return '';
+  return ' · Powerplay';
+}
+
 class _TeamScorecardView extends StatelessWidget {
   const _TeamScorecardView({
     required this.match,
@@ -229,7 +235,8 @@ class _TeamScorecardView extends StatelessWidget {
         _SummaryRow(
           label: 'Total runs',
           value:
-              '${scorecard.runs} (${scorecard.wickets} wkts, ${scorecard.totalOversLabel} ov)',
+              '${scorecard.runs} (${scorecard.wickets} wkts, ${scorecard.totalOversLabel} ov'
+              '${_powerplaySuffix(match, scorecard.legalBalls)})',
         ),
         if (scorecard.yetToBatUserIds.isNotEmpty) ...[
           const _SectionTitle('Yet to bat'),

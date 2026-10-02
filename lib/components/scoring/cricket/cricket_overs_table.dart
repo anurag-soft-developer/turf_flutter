@@ -31,6 +31,9 @@ class CricketOversTable extends StatelessWidget {
           controller.cricketOvers.where((o) => o.innings == innings).toList();
       final currentOver = _currentOver(inningsOvers, innings);
       final tableOvers = _oversForTable(inningsOvers, currentOver);
+      final powerplayOvers =
+          controller.cricketMatch.value?.cricketState?.powerplayOversOrDefault ??
+          0;
       final participantNames = <String, String>{
         for (final p
             in controller.cricketMatch.value?.announcedPlayers ??
@@ -73,6 +76,17 @@ class CricketOversTable extends StatelessWidget {
                 ],
               ),
             ),
+            if (powerplayOvers > 0 && inningsOvers.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+                child: Text(
+                  'Amber rows are the powerplay (overs 1–$powerplayOvers).',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFFB45309),
+                  ),
+                ),
+              ),
             if (inningsOvers.isEmpty && !loading)
               Padding(
                 padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
@@ -135,11 +149,15 @@ class CricketOversTable extends StatelessWidget {
                             _overTableRow(
                               currentOver,
                               isCurrent: true,
+                              inPowerplay: currentOver.overAfter < powerplayOvers,
                               participantNames: participantNames,
                             ),
                           ...tableOvers.map(
                             (o) => _overTableRow(
                               o,
+                              inPowerplay:
+                                  powerplayOvers > 0 &&
+                                  o.overAfter < powerplayOvers,
                               participantNames: participantNames,
                             ),
                           ),
@@ -160,10 +178,13 @@ class CricketOversTable extends StatelessWidget {
 TableRow _overTableRow(
   CricketOverEvent over, {
   bool isCurrent = false,
+  bool inPowerplay = false,
   required Map<String, String> participantNames,
 }) {
   return TableRow(
-    decoration: isCurrent
+    decoration: inPowerplay
+        ? const BoxDecoration(color: Color(0xFFFEF3C7))
+        : isCurrent
         ? BoxDecoration(
             color: const Color(AppColors.primaryColor).withValues(alpha: 0.08),
           )
