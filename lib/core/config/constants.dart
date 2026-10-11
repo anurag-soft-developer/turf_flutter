@@ -79,6 +79,14 @@ class Routes {
   final String matchChallengeMessages = '/match-up/challenge-messages';
   final String cricketScoreBoard = '/match-up/cricket-scoreboard';
   final String footballScoreBoard = '/match-up/football-scoreboard';
+  final String tournaments = '/tournaments';
+  final String createTournament = '/tournaments/create';
+  String tournamentDetail([String id = ':id']) => '/tournaments/$id';
+  String editTournament([String id = ':id']) => '/tournaments/$id/edit';
+  String tournamentTeamEntries([String id = ':id']) =>
+      '/tournaments/$id/team-entries';
+  String tournamentOrganizers([String id = ':id']) =>
+      '/tournaments/$id/organizers';
   final String matchHistory = '/match-history';
   final String chatInbox = '/chat';
   final String chatInboxSearch = '/chat/search';

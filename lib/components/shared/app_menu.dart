@@ -43,6 +43,11 @@ class AppMenuScreen extends StatelessWidget {
         onTap: () => _navigateTo(AppConstants.routes.myMatches),
       ),
       AppMenuItem(
+        title: 'Tournaments',
+        icon: Icons.emoji_events_rounded,
+        onTap: () => _navigateTo(AppConstants.routes.tournaments),
+      ),
+      AppMenuItem(
         title: 'My Teams',
         icon: Icons.groups_rounded,
         onTap: () => _navigateTo(AppConstants.routes.myTeams),

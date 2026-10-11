@@ -447,6 +447,8 @@ class TeamMatchModel {
 
   final CricketStateModel? cricketState;
   final FootballStateModel? footballState;
+  @JsonKey(name: 'tournamentId', fromJson: mongoIdFromJsonNullable)
+  final String? tournamentId;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -473,6 +475,7 @@ class TeamMatchModel {
     this.guestJoin,
     this.cricketState,
     this.footballState,
+    this.tournamentId,
     this.createdAt,
     this.updatedAt,
   });
@@ -505,6 +508,7 @@ class TeamMatchModel {
     GuestJoinSettingsModel? guestJoin,
     CricketStateModel? cricketState,
     FootballStateModel? footballState,
+    String? tournamentId,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -533,6 +537,7 @@ class TeamMatchModel {
       guestJoin: guestJoin ?? this.guestJoin,
       cricketState: cricketState ?? this.cricketState,
       footballState: footballState ?? this.footballState,
+      tournamentId: tournamentId ?? this.tournamentId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -550,12 +555,9 @@ class TeamMatchModel {
       TurfBookingRefFieldInstance(turfBookingId);
 
   String get versusLabel {
-    final from = fromTeamHelper.getDisplayName();
-    final to = toTeamHelper.getDisplayName();
-    if (from.isNotEmpty && to.isNotEmpty) return '$from vs $to';
-    if (from.isNotEmpty) return from;
-    if (to.isNotEmpty) return to;
-    return 'Match';
+    final from = fromTeamHelper.bracketLabel;
+    final to = toTeamHelper.bracketLabel;
+    return '$from vs $to';
   }
 
   ProposedTurfModel? get selectedTurfProposal {
@@ -632,6 +634,9 @@ class ListNegotiationsFilterQuery {
   /// Case-insensitive filter on either team's name / shortName.
   final String? search;
 
+  /// Backend `sportType` filter (e.g. cricket, football).
+  final TeamSportType? sportType;
+
   /// Same format as turf search: `createdAt:desc`, optional multi: `a:asc,b:desc`.
   final String? sort;
   final int page;
@@ -646,6 +651,7 @@ class ListNegotiationsFilterQuery {
     this.scope = NegotiationListScope.mine,
     this.source,
     this.search,
+    this.sportType,
     this.sort,
     this.page = 1,
     this.limit = 10,
@@ -678,6 +684,9 @@ class ListNegotiationsFilterQuery {
     final searchParam = search?.trim();
     if (searchParam != null && searchParam.isNotEmpty) {
       params['search'] = searchParam;
+    }
+    if (sportType != null) {
+      params['sportType'] = sportType!.name;
     }
     final sortParam = sort;
     if (sortParam != null && sortParam.isNotEmpty) {
@@ -903,10 +912,10 @@ class FinalizeScheduleRequest {
 @JsonSerializable(includeIfNull: false)
 class CancelNegotiationRequest {
   @JsonKey(name: 'actorTeamId')
-  final String actorTeamId;
+  final String? actorTeamId;
   final String? reason;
 
-  CancelNegotiationRequest({required this.actorTeamId, this.reason});
+  CancelNegotiationRequest({this.actorTeamId, this.reason});
 
   factory CancelNegotiationRequest.fromJson(Map<String, dynamic> json) =>
       _$CancelNegotiationRequestFromJson(json);
@@ -957,13 +966,13 @@ class UpdateTeamMatchRequest {
 @JsonSerializable(includeIfNull: false)
 class RecordMatchResultRequest {
   @JsonKey(name: 'actorTeamId')
-  final String actorTeamId;
+  final String? actorTeamId;
   final MatchResultOutcome outcome;
   @JsonKey(name: 'winnerTeam')
   final String? winnerTeam;
 
   RecordMatchResultRequest({
-    required this.actorTeamId,
+    this.actorTeamId,
     required this.outcome,
     this.winnerTeam,
   });

@@ -1,5 +1,7 @@
 import 'package:get/get.dart';
 
+import '../../core/routes/route_query.dart';
+import '../../team/model/team_model.dart';
 import '../model/team_match_model.dart';
 import '../shared/match_team_filter_controller.dart';
 
@@ -12,11 +14,18 @@ enum MyMatchesTypeFilter { all, ranked, unranked }
 class MyMatchesController extends MatchTeamFilterController {
   final Rx<MyMatchesTab> selectedTab = MyMatchesTab.all.obs;
   final Rx<MyMatchesTypeFilter> typeFilter = MyMatchesTypeFilter.all.obs;
+  final Rxn<TeamSportType> sportFilter = Rxn<TeamSportType>();
 
   @override
   void onInit() {
     super.onInit();
     applyTabFromArguments();
+    applySportFromRoute();
+  }
+
+  void applySportFromRoute() {
+    final sport = optionalTeamSportFromRoute();
+    if (sport != null) sportFilter.value = sport;
   }
 
   void applyTabFromArguments() {
@@ -34,6 +43,11 @@ class MyMatchesController extends MatchTeamFilterController {
   void setTypeFilter(MyMatchesTypeFilter value) {
     if (typeFilter.value == value) return;
     typeFilter.value = value;
+  }
+
+  void setSportFilter(TeamSportType? value) {
+    if (sportFilter.value == value) return;
+    sportFilter.value = value;
   }
 }
 

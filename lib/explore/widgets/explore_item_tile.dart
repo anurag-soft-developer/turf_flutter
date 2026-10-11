@@ -112,7 +112,6 @@ class _ExploreMatchTile extends StatelessWidget {
 
     return MatchCard(
       match: match,
-      selectedTeamId: null,
       isHistory: isHistory,
       footer: showGuestActions
           ? ExploreMatchGuestJoinActions(

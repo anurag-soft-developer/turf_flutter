@@ -133,9 +133,7 @@ class _ReceivedChallengeCard extends StatelessWidget {
 
     return MatchCard(
       match: match,
-      selectedTeamId: controller.selectedTeamIdOrNull,
       isHistory: false,
-      personalizeForTeam: true,
       challengeInboxKind: MatchChallengeInboxKind.received,
       onTap: () async {
         await openMatchChallengeDetail(match: match, isIncoming: true);
@@ -170,9 +168,7 @@ class _SentChallengeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return MatchCard(
       match: match,
-      selectedTeamId: controller.selectedTeamIdOrNull,
       isHistory: false,
-      personalizeForTeam: true,
       challengeInboxKind: MatchChallengeInboxKind.sent,
       onTap: () async {
         await openMatchChallengeDetail(match: match, isIncoming: false);

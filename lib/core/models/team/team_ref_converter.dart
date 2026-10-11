@@ -10,8 +10,15 @@ class TeamRefConverter implements JsonConverter<dynamic, dynamic> {
   dynamic fromJson(dynamic json) {
     if (json == null) return null;
     if (json is String) return json;
-    if (json is Map<String, dynamic>) {
-      return TeamMemberFieldInstance.fromJson(json);
+    if (json is Map) {
+      final map = Map<String, dynamic>.from(json);
+      final sportType = map['sportType'];
+      final name = map['name']?.toString();
+      if (sportType != null && name != null && name.isNotEmpty) {
+        return TeamMemberFieldInstance.fromJson(map);
+      }
+      final id = map['_id'] ?? map['id'];
+      if (id != null) return id.toString();
     }
     throw FormatException('Invalid type for team ref: ${json.runtimeType}');
   }

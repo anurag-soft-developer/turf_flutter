@@ -4,18 +4,18 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
-import '../../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
-import '../../core/components/scroll/floating_sliver_app_bar.dart';
-import '../../core/components/scroll/pinned_sliver_header.dart';
-import '../../core/config/constants.dart';
-import '../../core/models/paginated_response.dart';
-import '../../core/query/query_keys.dart';
-import '../../core/query/query_retry.dart';
-import '../team_service.dart';
-import 'model/team_invite_model.dart';
+import '../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
+import '../core/components/scroll/floating_sliver_app_bar.dart';
+import '../core/components/scroll/pinned_sliver_header.dart';
+import '../core/config/constants.dart';
+import '../core/models/paginated_response.dart';
+import '../core/query/query_keys.dart';
+import '../core/query/query_retry.dart';
+import 'invitation_service.dart';
+import 'model/invitation_model.dart';
 import 'my_invitations_controller.dart';
 
-enum InvitationStatusTab { pending, accepted, rejected }
+enum InvitationStatusTab { pending, accepted, declined }
 
 class MyInvitationsScreen extends HookWidget {
   const MyInvitationsScreen({super.key});
@@ -59,21 +59,33 @@ class MyInvitationsScreen extends HookWidget {
           return [
             const FloatingSliverAppBar(title: Text('Invitations')),
             PinnedSliverHeader(
-              child: AppSegmentedTabs(
-                controller: tabController,
-                fillWidth: true,
-                onTap: (index) {
-                  selectedTab.value = _tabs[index];
-                  tabController.animateTo(index);
-                },
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                items: const [
-                  AppTabItem(
-                    label: 'Pending',
-                    icon: Icons.hourglass_top_outlined,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AppSegmentedTabs(
+                    controller: tabController,
+                    fillWidth: true,
+                    onTap: (index) {
+                      selectedTab.value = _tabs[index];
+                      tabController.animateTo(index);
+                    },
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                    items: const [
+                      AppTabItem(
+                        label: 'Pending',
+                        icon: Icons.hourglass_top_outlined,
+                      ),
+                      AppTabItem(
+                        label: 'Joined',
+                        icon: Icons.check_circle_outline,
+                      ),
+                      AppTabItem(
+                        label: 'Declined',
+                        icon: Icons.cancel_outlined,
+                      ),
+                    ],
                   ),
-                  AppTabItem(label: 'Joined', icon: Icons.check_circle_outline),
-                  AppTabItem(label: 'Declined', icon: Icons.cancel_outlined),
+                  const InvitationKindFilter(),
                 ],
               ),
             ),
@@ -91,32 +103,158 @@ class MyInvitationsScreen extends HookWidget {
   }
 }
 
-class _InvitationTabList extends HookWidget {
+class InvitationKindFilter extends StatelessWidget {
+  const InvitationKindFilter({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = Get.find<MyInvitationsController>();
+    return Obx(() {
+      final selected = controller.kindFilter.value;
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+        child: Row(
+          children: [
+            _KindChip(
+              label: 'All',
+              selected: selected == null,
+              onTap: () => controller.setKindFilter(null),
+            ),
+            const SizedBox(width: 8),
+            _KindChip(
+              label: 'Team',
+              selected: selected == InvitationKind.teamInvite,
+              onTap: () => controller.setKindFilter(InvitationKind.teamInvite),
+            ),
+            const SizedBox(width: 8),
+            _KindChip(
+              label: 'Tournament',
+              selected: selected == InvitationKind.tournamentInvite,
+              onTap: () =>
+                  controller.setKindFilter(InvitationKind.tournamentInvite),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+}
+
+class _KindChip extends StatelessWidget {
+  const _KindChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = const Color(AppColors.primaryColor);
+    return Material(
+      color: selected ? const Color(0xFFE0E7FF) : Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: selected ? primary : const Color(AppColors.textSecondaryColor),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _InvitationScrollMessage extends StatelessWidget {
+  const _InvitationScrollMessage({
+    required this.onRefresh,
+    required this.child,
+  });
+
+  final Future<void> Function() onRefresh;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      color: const Color(AppColors.primaryColor),
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          SizedBox(
+            height: MediaQuery.sizeOf(context).height * 0.45,
+            child: Center(child: child),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InvitationTabList extends StatelessWidget {
   const _InvitationTabList({super.key, required this.tab});
 
   final InvitationStatusTab tab;
 
-  TeamInviteStatus get _status => switch (tab) {
-        InvitationStatusTab.pending => TeamInviteStatus.pending,
-        InvitationStatusTab.accepted => TeamInviteStatus.accepted,
-        InvitationStatusTab.rejected => TeamInviteStatus.rejected,
+  InvitationStatus get _status => switch (tab) {
+        InvitationStatusTab.pending => InvitationStatus.pending,
+        InvitationStatusTab.accepted => InvitationStatus.accepted,
+        InvitationStatusTab.declined => InvitationStatus.declined,
       };
 
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<MyInvitationsController>();
-    final query =
-        useInfiniteQuery<PaginatedResponse<TeamInviteModel>, Object, int>(
-      QueryKeys.myInvitations(tab.name),
+    return Obx(
+      () => _InvitationQuery(
+        key: ValueKey('${tab.name}-${controller.kindFilter.value?.name ?? 'all'}'),
+        tab: tab,
+        status: _status,
+        kind: controller.kindFilter.value,
+        controller: controller,
+      ),
+    );
+  }
+}
+
+class _InvitationQuery extends HookWidget {
+  const _InvitationQuery({
+    super.key,
+    required this.tab,
+    required this.status,
+    required this.kind,
+    required this.controller,
+  });
+
+  final InvitationStatusTab tab;
+  final InvitationStatus status;
+  final InvitationKind? kind;
+  final MyInvitationsController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final query = useInfiniteQuery<PaginatedResponse<InvitationModel>, Object, int>(
+      QueryKeys.myInvitations(tab.name, kind: kind?.name),
       (ctx) async {
-        final result = await TeamService().inviteService.listMine(
-          TeamInviteFilterQuery(
-            status: _status,
-            page: ctx.pageParam,
-            limit: 20,
-          ),
+        final result = await InvitationService().listMine(
+          status: status,
+          kind: kind,
+          page: ctx.pageParam,
+          limit: 20,
         );
-        return result ?? EmptyPaginatedResponse<TeamInviteModel>();
+        return result ?? EmptyPaginatedResponse<InvitationModel>();
       },
       initialPageParam: 1,
       retry: noRetry,
@@ -127,9 +265,8 @@ class _InvitationTabList extends HookWidget {
       },
     );
 
-    final items =
-        query.data?.pages.expand((p) => p.data).toList() ??
-        const <TeamInviteModel>[];
+    final items = query.data?.pages.expand((p) => p.data).toList() ??
+        const <InvitationModel>[];
 
     if (query.isLoading || (query.isFetching && items.isEmpty)) {
       return const Center(
@@ -142,7 +279,8 @@ class _InvitationTabList extends HookWidget {
     }
 
     if (query.isError && items.isEmpty) {
-      return Center(
+      return _InvitationScrollMessage(
+        onRefresh: query.refetch,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -161,20 +299,18 @@ class _InvitationTabList extends HookWidget {
     }
 
     if (items.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(
-            switch (tab) {
-              InvitationStatusTab.pending => 'No pending invitations.',
-              InvitationStatusTab.accepted => 'No accepted invitations.',
-              InvitationStatusTab.rejected => 'No declined invitations.',
-            },
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Color(AppColors.textSecondaryColor),
-              fontSize: 15,
-            ),
+      return _InvitationScrollMessage(
+        onRefresh: query.refetch,
+        child: Text(
+          switch (tab) {
+            InvitationStatusTab.pending => 'No pending invitations.',
+            InvitationStatusTab.accepted => 'No accepted invitations.',
+            InvitationStatusTab.declined => 'No declined invitations.',
+          },
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Color(AppColors.textSecondaryColor),
+            fontSize: 15,
           ),
         ),
       );
@@ -230,14 +366,13 @@ class _InvitationRow extends StatelessWidget {
     required this.controller,
   });
 
-  final TeamInviteModel invite;
+  final InvitationModel invite;
   final bool showActions;
   final MyInvitationsController controller;
 
   @override
   Widget build(BuildContext context) {
     final logo = invite.teamLogo;
-    final inviter = invite.invitedByHelper.getDisplayName();
 
     return Card(
       elevation: 0,
@@ -250,18 +385,12 @@ class _InvitationRow extends StatelessWidget {
           children: [
             ListTile(
               contentPadding: EdgeInsets.zero,
-              onTap: invite.teamId == null || invite.teamId!.isEmpty
-                  ? null
-                  : () => Get.toNamed(
-                        AppConstants.routes.teamProfile,
-                        arguments: {'teamId': invite.teamId},
-                      ),
+              onTap: _open,
               leading: Container(
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: const Color(AppColors.primaryColor)
-                      .withValues(alpha: 0.1),
+                  color: const Color(AppColors.primaryColor).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 clipBehavior: Clip.antiAlias,
@@ -269,20 +398,19 @@ class _InvitationRow extends StatelessWidget {
                     ? AppNetworkImage(
                         logo,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
-                            _initials(invite.teamName),
+                        errorBuilder: (_, __, ___) => _initials(invite.teamName),
                       )
                     : _initials(invite.teamName),
               ),
               title: Text(
-                invite.teamName,
+                invite.title,
                 style: const TextStyle(
                   fontWeight: FontWeight.w700,
                   color: Color(AppColors.textColor),
                 ),
               ),
               subtitle: Text(
-                'Invited by $inviter',
+                invite.subtitle,
                 style: const TextStyle(
                   fontSize: 13,
                   color: Color(AppColors.textSecondaryColor),
@@ -297,16 +425,14 @@ class _InvitationRow extends StatelessWidget {
                   children: [
                     Expanded(
                       child: OutlinedButton(
-                        onPressed:
-                            busy ? null : () => controller.reject(invite),
+                        onPressed: busy ? null : () => controller.decline(invite),
                         child: const Text('Decline'),
                       ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: FilledButton(
-                        onPressed:
-                            busy ? null : () => controller.accept(invite),
+                        onPressed: busy ? null : () => controller.accept(invite),
                         style: FilledButton.styleFrom(
                           backgroundColor: const Color(AppColors.primaryColor),
                         ),
@@ -329,6 +455,21 @@ class _InvitationRow extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  void _open() {
+    if (invite.isTournament) {
+      final id = invite.tournamentId;
+      if (id == null || id.isEmpty) return;
+      Get.toNamed(AppConstants.routes.tournamentDetail(id));
+      return;
+    }
+    final teamId = invite.teamId;
+    if (teamId == null || teamId.isEmpty) return;
+    Get.toNamed(
+      AppConstants.routes.teamProfile,
+      arguments: {'teamId': teamId},
     );
   }
 

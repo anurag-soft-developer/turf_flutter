@@ -32,6 +32,16 @@ class MatchTeamFilterController extends GetxController {
     return selectedMembershipTeam.value?.id;
   }
 
+  /// Team ids for My Matches: one selected team, or null to omit (all-teams + snapshot history).
+  List<String>? teamIdsForMyMatchesList() {
+    if (!filterAllTeams.value) {
+      final tid = selectedMembershipTeam.value?.id;
+      if (tid == null || tid.isEmpty) return <String>[];
+      return <String>[tid];
+    }
+    return null;
+  }
+
   /// Team ids for list endpoints: one selected team or all distinct [myTeams] ids.
   List<String> activeTeamIdsForList() {
     if (!filterAllTeams.value) {

@@ -5,7 +5,8 @@ import '../../core/query/query_keys.dart';
 import '../../core/utils/app_snackbar.dart';
 import '../members/model/team_member_model.dart';
 import '../team_service.dart';
-import 'model/team_invite_model.dart';
+import 'team_invite_service.dart';
+import '../../invitations/model/invitation_model.dart';
 
 /// Owner-only: sent invites for a team.
 class TeamInvitesController extends GetxController {
@@ -93,10 +94,10 @@ class TeamInvitesController extends GetxController {
     sentInviteTargets.addAll(keys.where((k) => k.isNotEmpty));
   }
 
-  Future<void> revoke(TeamInviteModel invite) async {
+  Future<void> revoke(InvitationModel invite) async {
     if (_teamId == null) return;
     final id = invite.id;
-    if (id == null || id.isEmpty) {
+    if (id.isEmpty) {
       AppSnackbar.error(
         title: 'Cannot revoke',
         message: 'Missing invite id.',
@@ -106,7 +107,7 @@ class TeamInvitesController extends GetxController {
     actionInviteId.value = id;
     final ok = await _teamService.inviteService.revoke(_teamId!, id);
     if (ok) {
-      final inviteeId = invite.inviteeHelper.getId();
+      final inviteeId = invite.inviteeId;
       if (inviteeId != null && inviteeId.isNotEmpty) {
         sentInviteTargets.remove(inviteeId);
       }

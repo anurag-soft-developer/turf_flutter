@@ -6,6 +6,7 @@ import '../core/auth/auth_state_controller.dart';
 import '../core/components/app_bar/app_bar_background.dart';
 import 'settings_controller.dart';
 import '../core/config/constants.dart';
+import '../core/config/env_config.dart';
 import '../core/utils/app_snackbar.dart';
 
 class SettingItem {
@@ -120,7 +121,8 @@ class SettingsScreen extends StatelessWidget {
                         child: Column(
                           children: [
                             ..._buildSectionItems(section.items),
-                            if (section.title == 'Privacy & Security') ...[
+                            if (section.title == 'Privacy & Security' &&
+                                EnvConfig.telemetryEnabled) ...[
                               const Divider(
                                 height: 1,
                                 color: Color(AppColors.dividerColor),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
+import '../../../shared/numeric_stepper_field.dart';
 import '../../../match_up/team_logo.dart';
 import '../../../../core/config/constants.dart';
 import '../../../../match_up/model/team_match_model.dart';
@@ -108,11 +108,11 @@ class CricketStartSessionPanel extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _OversStepper(
+                  NumericStepperField(
                     controller: maxOversController,
-                    minOvers: minOvers,
-                    maxOversLimit: maxOversLimit,
-                    primary: primary,
+                    min: minOvers,
+                    max: maxOversLimit,
+                    primaryColor: primary,
                     onChanged: onMaxOversChanged,
                   ),
                   const SizedBox(height: 6),
@@ -135,11 +135,11 @@ class CricketStartSessionPanel extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _OversStepper(
+                  NumericStepperField(
                     controller: powerplayOversController,
-                    minOvers: 0,
-                    maxOversLimit: powerplayMax,
-                    primary: primary,
+                    min: 0,
+                    max: powerplayMax,
+                    primaryColor: primary,
                     onChanged: onPowerplayOversChanged,
                   ),
                   const SizedBox(height: 6),
@@ -211,119 +211,6 @@ class CricketStartSessionPanel extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _OversStepper extends StatelessWidget {
-  const _OversStepper({
-    required this.controller,
-    required this.minOvers,
-    required this.maxOversLimit,
-    required this.primary,
-    required this.onChanged,
-  });
-
-  final TextEditingController controller;
-  final int minOvers;
-  final int maxOversLimit;
-  final Color primary;
-  final VoidCallback onChanged;
-
-  int get _current {
-    final n = int.tryParse(controller.text.trim());
-    return n ?? minOvers;
-  }
-
-  void _set(int value) {
-    final clamped = value.clamp(minOvers, maxOversLimit);
-    controller.text = '$clamped';
-    controller.selection = TextSelection.collapsed(
-      offset: controller.text.length,
-    );
-    onChanged();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final value = _current;
-    final canDec = value > minOvers;
-    final canInc = value < maxOversLimit;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _StepButton(
-            icon: Icons.remove_rounded,
-            enabled: canDec,
-            onTap: () => _set(value - 1),
-          ),
-          SizedBox(
-            width: 56,
-            child: TextField(
-              controller: controller,
-              textAlign: TextAlign.center,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              onChanged: (_) => onChanged(),
-              style: const TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                color: Color(AppColors.textColor),
-              ),
-              decoration: const InputDecoration(
-                isDense: true,
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(vertical: 10),
-              ),
-            ),
-          ),
-          _StepButton(
-            icon: Icons.add_rounded,
-            enabled: canInc,
-            onTap: () => _set(value + 1),
-            color: primary,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StepButton extends StatelessWidget {
-  const _StepButton({
-    required this.icon,
-    required this.enabled,
-    required this.onTap,
-    this.color,
-  });
-
-  final IconData icon;
-  final bool enabled;
-  final VoidCallback onTap;
-  final Color? color;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: enabled ? onTap : null,
-      borderRadius: BorderRadius.circular(10),
-      child: SizedBox(
-        width: 40,
-        height: 44,
-        child: Icon(
-          icon,
-          size: 20,
-          color: enabled
-              ? (color ?? const Color(AppColors.textSecondaryColor))
-              : Colors.grey.shade300,
-        ),
-      ),
     );
   }
 }

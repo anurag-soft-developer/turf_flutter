@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/components/shared/app_network_image.dart';
+import 'package:flutter_application_1/team/model/team_model.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
@@ -18,11 +19,13 @@ class MyTeamsMembershipsBody extends HookWidget {
   const MyTeamsMembershipsBody({
     super.key,
     this.search = '',
+    this.sportType,
     this.bottomPadding = 96,
     this.leadingSlivers = const <Widget>[],
   });
 
   final String search;
+  final TeamSportType? sportType;
   final double bottomPadding;
 
   /// When set (e.g. [FloatingSliverAppBar]), uses a single [CustomScrollView].
@@ -32,12 +35,16 @@ class MyTeamsMembershipsBody extends HookWidget {
   Widget build(BuildContext context) {
     final query =
         useInfiniteQuery<PaginatedResponse<TeamMemberModel>, Object, int>(
-      QueryKeys.myMembershipsActive(search: search),
+      QueryKeys.myMembershipsActive(
+        search: search,
+        sportType: sportType?.name,
+      ),
       (ctx) async {
         final result = await TeamService().memberService.myMemberships(
           MyTeamMembershipsFilterQuery(
             status: TeamMemberStatus.active,
             search: search.isEmpty ? null : search,
+            sportType: sportType,
             page: ctx.pageParam,
             limit: 20,
           ),
@@ -136,7 +143,10 @@ class MyTeamsMembershipsBody extends HookWidget {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
-          _EmptyState(hasSearch: search.isNotEmpty),
+          _EmptyState(
+            hasSearch: search.isNotEmpty,
+            sportLabel: sportType?.label,
+          ),
         ],
       );
     }
@@ -212,7 +222,10 @@ class MyTeamsMembershipsBody extends HookWidget {
     if (memberships.isEmpty) {
       return [
         SliverToBoxAdapter(
-          child: _EmptyState(hasSearch: search.isNotEmpty),
+          child: _EmptyState(
+            hasSearch: search.isNotEmpty,
+            sportLabel: sportType?.label,
+          ),
         ),
       ];
     }
@@ -370,25 +383,26 @@ class _TeamCard extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.hasSearch});
+  const _EmptyState({required this.hasSearch, this.sportLabel});
 
   final bool hasSearch;
+  final String? sportLabel;
 
   @override
   Widget build(BuildContext context) {
-    if (hasSearch) {
-      return const Padding(
-        padding: EdgeInsets.all(24),
+    if (hasSearch || sportLabel != null) {
+      return Padding(
+        padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            SizedBox(height: 80),
-            Icon(
+            const SizedBox(height: 80),
+            const Icon(
               Icons.search_off_rounded,
               size: 52,
               color: Color(AppColors.textSecondaryColor),
             ),
-            SizedBox(height: 20),
-            Text(
+            const SizedBox(height: 20),
+            const Text(
               'No teams found',
               textAlign: TextAlign.center,
               style: TextStyle(
@@ -397,11 +411,13 @@ class _EmptyState extends StatelessWidget {
                 color: Color(AppColors.textColor),
               ),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text(
-              'Try a different team name.',
+              sportLabel != null && !hasSearch
+                  ? 'You have no $sportLabel teams.'
+                  : 'Try a different team name.',
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 14,
                 color: Color(AppColors.textSecondaryColor),
               ),

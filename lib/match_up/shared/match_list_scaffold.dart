@@ -27,6 +27,7 @@ class MatchListScaffold extends HookWidget {
     required this.onTabChanged,
     required this.buildPanes,
     this.belowTabs,
+    this.allowEmptyMemberships = false,
   });
 
   final String title;
@@ -41,6 +42,9 @@ class MatchListScaffold extends HookWidget {
   /// Compact filters under the segmented tabs. When set, the full-width team
   /// selector above the tabs is hidden (the slot should include team picking).
   final Widget? belowTabs;
+
+  /// When true, the list still renders if the user has no active team memberships.
+  final bool allowEmptyMemberships;
 
   @override
   Widget build(BuildContext context) {
@@ -147,7 +151,7 @@ class MatchListScaffold extends HookWidget {
     }
 
     return Obx(() {
-      if (controller.myTeams.isEmpty) {
+      if (controller.myTeams.isEmpty && !allowEmptyMemberships) {
         return CustomScrollView(
           slivers: [
             FloatingSliverAppBar(title: Text(title)),

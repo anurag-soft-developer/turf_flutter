@@ -24,6 +24,7 @@ class ApiConstants {
   static const chat = ChatEndpoints();
   static const support = SupportEndpoints();
   static const telemetry = TelemetryEndpoints();
+  static const tournaments = TournamentEndpoints();
 
   // Headers
   static const Map<String, String> defaultHeaders = {
@@ -155,18 +156,18 @@ class TeamMembershipSelfEndpoints {
 class TeamInviteEndpoints {
   const TeamInviteEndpoints();
 
-  String create(String teamId) => '/teams/$teamId/invites';
+  String create(String teamId) => '/teams/$teamId/invitations';
 
-  String listForTeam(String teamId) => '/teams/$teamId/invites';
+  String listForTeam(String teamId) => '/teams/$teamId/invitations';
 
-  String revoke(String teamId, String inviteId) =>
-      '/teams/$teamId/invites/$inviteId/revoke';
+  String revoke(String teamId, String invitationId) =>
+      '/teams/$teamId/invitations/$invitationId/revoke';
 
-  String get myInvites => '/team-invites/me';
+  String get myInvites => '/invitations/me';
 
-  String accept(String inviteId) => '/team-invites/$inviteId/accept';
+  String accept(String invitationId) => '/invitations/$invitationId/accept';
 
-  String reject(String inviteId) => '/team-invites/$inviteId/reject';
+  String decline(String invitationId) => '/invitations/$invitationId/decline';
 }
 
 /// `GET/PATCH/DELETE /notifications/*` — JWT required.
@@ -367,6 +368,36 @@ class TelemetryEndpoints {
   const TelemetryEndpoints();
 
   String get batch => '/telemetry/batch';
+}
+
+class TournamentEndpoints {
+  const TournamentEndpoints();
+
+  String get base => '/tournaments';
+  String get open => '/tournaments/open';
+  String get mine => '/tournaments/mine';
+  String get actingTeams => '/tournaments/acting-teams';
+  String byId(String id) => '/tournaments/$id';
+  String organizers(String id) => '/tournaments/$id/organizers';
+  String organizer(String id, String userId) =>
+      '/tournaments/$id/organizers/$userId';
+  String publish(String id) => '/tournaments/$id/publish';
+  String cancel(String id) => '/tournaments/$id/cancel';
+  String invitations(String id) => '/tournaments/$id/invitations';
+  String invitationAction(String id, String invitationId, String action) =>
+      '/tournaments/$id/invitations/$invitationId/$action';
+  String lockRoster(String id) => '/tournaments/$id/lock-roster';
+  String removeEntry(String id, String invitationId) =>
+      '/tournaments/$id/entries/$invitationId/remove';
+  String draw(String id) => '/tournaments/$id/draw';
+  String qualifiers(String id) => '/tournaments/$id/qualifiers';
+  String bracketWinner(String id, String matchId) =>
+      '/tournaments/$id/fixtures/$matchId/bracket-winner';
+  String fixtureTeams(String id, String matchId) =>
+      '/tournaments/$id/fixtures/$matchId/teams';
+  String entries(String id) => invitations(id);
+  String fixtures(String id) => '/tournaments/$id/fixtures';
+  String table(String id) => '/tournaments/$id/table';
 }
 
 class SupportEndpoints {

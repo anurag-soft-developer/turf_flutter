@@ -16,7 +16,7 @@ class TeamService {
   /// Team roster / membership API (`/teams/:id/members`, `/team-members/me`).
   final TeamMemberService memberService = TeamMemberService();
 
-  /// Team invites API (`/teams/:id/invites`, `/team-invites/me`).
+  /// Team invitations API (`/teams/:id/invitations`, `/invitations/me`).
   final TeamInviteService inviteService = TeamInviteService();
 
   Future<TeamModel?> create(CreateTeamRequest request) async {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
+import '../../shared/numeric_stepper_field.dart';
 import '../../../core/config/constants.dart';
 
 /// Pre-session UI: set match length, then start football scoring.
@@ -56,12 +56,12 @@ class FootballStartSessionPanel extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _MinutesStepper(
+                  NumericStepperField(
                     controller: matchMinuteController,
-                    minMinutes: minMinutes,
-                    maxMinutes: maxMinutes,
+                    min: minMinutes,
+                    max: maxMinutes,
                     step: 5,
-                    primary: primary,
+                    primaryColor: primary,
                     onChanged: onMinuteChanged,
                   ),
                   const SizedBox(height: 6),
@@ -131,121 +131,6 @@ class FootballStartSessionPanel extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _MinutesStepper extends StatelessWidget {
-  const _MinutesStepper({
-    required this.controller,
-    required this.minMinutes,
-    required this.maxMinutes,
-    required this.step,
-    required this.primary,
-    required this.onChanged,
-  });
-
-  final TextEditingController controller;
-  final int minMinutes;
-  final int maxMinutes;
-  final int step;
-  final Color primary;
-  final VoidCallback onChanged;
-
-  int get _current {
-    final n = int.tryParse(controller.text.trim());
-    return n ?? minMinutes;
-  }
-
-  void _set(int value) {
-    final clamped = value.clamp(minMinutes, maxMinutes);
-    controller.text = '$clamped';
-    controller.selection = TextSelection.collapsed(
-      offset: controller.text.length,
-    );
-    onChanged();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final value = _current;
-    final canDec = value > minMinutes;
-    final canInc = value < maxMinutes;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _StepButton(
-            icon: Icons.remove_rounded,
-            enabled: canDec,
-            onTap: () => _set(value - step),
-          ),
-          SizedBox(
-            width: 56,
-            child: TextField(
-              controller: controller,
-              textAlign: TextAlign.center,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              onChanged: (_) => onChanged(),
-              style: const TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                color: Color(AppColors.textColor),
-              ),
-              decoration: const InputDecoration(
-                isDense: true,
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(vertical: 10),
-              ),
-            ),
-          ),
-          _StepButton(
-            icon: Icons.add_rounded,
-            enabled: canInc,
-            onTap: () => _set(value + step),
-            color: primary,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StepButton extends StatelessWidget {
-  const _StepButton({
-    required this.icon,
-    required this.enabled,
-    required this.onTap,
-    this.color,
-  });
-
-  final IconData icon;
-  final bool enabled;
-  final VoidCallback onTap;
-  final Color? color;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: enabled ? onTap : null,
-      borderRadius: BorderRadius.circular(10),
-      child: SizedBox(
-        width: 40,
-        height: 44,
-        child: Icon(
-          icon,
-          size: 20,
-          color: enabled
-              ? (color ?? const Color(AppColors.textSecondaryColor))
-              : Colors.grey.shade300,
-        ),
-      ),
     );
   }
 }

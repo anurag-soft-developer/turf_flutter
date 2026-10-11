@@ -30,6 +30,13 @@ class TeamRefFieldInstance {
     return id != null ? 'Team $id' : 'Unknown team';
   }
 
+  /// Knockout slots with no team yet read as TBD.
+  String get bracketLabel {
+    final id = getId();
+    if (id == null || id.isEmpty) return 'TBD';
+    return getDisplayName();
+  }
+
   bool get isPopulated => _team is TeamMemberFieldInstance;
 
   bool get isIdOnly => _team is String;

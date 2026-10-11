@@ -173,9 +173,15 @@ class MatchChallengeDetailScreen extends StatelessWidget {
             final canManageTo =
                 guestSettingsEditable && c.canManageGuestJoin(toTeamId);
             c.myMatchTeamIds.value;
+            c.isTournamentOrganizer.value;
             final canRevoke = c.canRevokeMatch;
             final canCancel = c.canCancelOrAbandonMatch;
-            if (!canRevoke && !canCancel && !canManageFrom && !canManageTo) {
+            final canRecordResult = c.canRecordMatchResult;
+            if (!canRevoke &&
+                !canCancel &&
+                !canRecordResult &&
+                !canManageFrom &&
+                !canManageTo) {
               return const SizedBox.shrink();
             }
             final abandon = c.isAbandonMatch;
@@ -186,7 +192,9 @@ class MatchChallengeDetailScreen extends StatelessWidget {
               enabled: !busy,
               icon:
                   busy &&
-                      (c.isCancellingMatch.value || c.isUpdatingGuestJoin.value)
+                      (c.isCancellingMatch.value ||
+                          c.isRecordingMatchResult.value ||
+                          c.isUpdatingGuestJoin.value)
                   ? const SizedBox(
                       width: 20,
                       height: 20,
@@ -224,6 +232,21 @@ class MatchChallengeDetailScreen extends StatelessWidget {
                       arguments: {'tab': 'sent'},
                     );
                   });
+                } else if (value == 'mark_winner') {
+                  final winnerTeamId = await showMarkMatchWinnerDialog(
+                    context,
+                    match: match,
+                    scoringActive: c.hasLiveScoringSession,
+                  );
+                  if (winnerTeamId == null) return;
+                  await c.recordMatchWinner(winnerTeamId);
+                } else if (value == 'mark_draw') {
+                  final confirmed = await showMarkMatchDrawDialog(
+                    context,
+                    scoringActive: c.hasLiveScoringSession,
+                  );
+                  if (confirmed != true) return;
+                  await c.recordMatchDraw();
                 } else if (value == 'cancel_or_abandon') {
                   final reason = await showCancelOrAbandonMatchDialog(
                     context,
@@ -248,6 +271,42 @@ class MatchChallengeDetailScreen extends StatelessWidget {
                     teamName: match.toTeamHelper.getDisplayName(),
                     isOpen: guestJoin?.toTeamOpen ?? false,
                   ),
+                if (canRecordResult) ...[
+                  PopupMenuItem<String>(
+                    value: 'mark_winner',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.emoji_events_outlined,
+                          size: 20,
+                          color: const Color(AppColors.primaryColor),
+                        ),
+                        const SizedBox(width: 10),
+                        const Text(
+                          'Mark winner…',
+                          style: TextStyle(color: Color(AppColors.textColor)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem<String>(
+                    value: 'mark_draw',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.handshake_outlined,
+                          size: 20,
+                          color: const Color(AppColors.primaryColor),
+                        ),
+                        const SizedBox(width: 10),
+                        const Text(
+                          'Mark draw',
+                          style: TextStyle(color: Color(AppColors.textColor)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 if (canRevoke)
                   PopupMenuItem<String>(
                     value: 'revoke',
@@ -906,6 +965,101 @@ String _fmt(DateTime d) {
   final local = d.toLocal();
   return '${local.day.toString().padLeft(2, '0')}/${local.month.toString().padLeft(2, '0')} '
       '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+}
+
+/// Returns winner team id when confirmed, or `null` when dismissed.
+Future<String?> showMarkMatchWinnerDialog(
+  BuildContext context, {
+  required TeamMatchModel match,
+  required bool scoringActive,
+}) {
+  final fromId = match.fromTeamHelper.getId();
+  final toId = match.toTeamHelper.getId();
+  if (fromId == null ||
+      fromId.isEmpty ||
+      toId == null ||
+      toId.isEmpty) {
+    return Future.value(null);
+  }
+
+  return showDialog<String>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Mark winner'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (scoringActive)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 12),
+              child: Text(
+                'A scoreboard session is active. Recording a result here will close the match without using the scoreboard.',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Color(AppColors.textSecondaryColor),
+                ),
+              ),
+            ),
+          const Text(
+            'Which team won?',
+            style: TextStyle(
+              fontSize: 14,
+              color: Color(AppColors.textSecondaryColor),
+            ),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton(
+            onPressed: () => Navigator.pop(ctx, fromId),
+            child: Text(match.fromTeamHelper.getDisplayName()),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton(
+            onPressed: () => Navigator.pop(ctx, toId),
+            child: Text(match.toTeamHelper.getDisplayName()),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('Cancel'),
+        ),
+      ],
+    ),
+  );
+}
+
+/// Returns `true` when confirmed.
+Future<bool?> showMarkMatchDrawDialog(
+  BuildContext context, {
+  required bool scoringActive,
+}) {
+  return showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Mark draw?'),
+      content: Text(
+        scoringActive
+            ? 'A scoreboard session is active. This will close the match as a draw without using the scoreboard.'
+            : 'Both teams will be shown as drawing this match.',
+        style: const TextStyle(
+          fontSize: 14,
+          color: Color(AppColors.textSecondaryColor),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('Back'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          child: const Text('Mark draw'),
+        ),
+      ],
+    ),
+  );
 }
 
 /// Returns trimmed reason text when confirmed, or `null` when dismissed.

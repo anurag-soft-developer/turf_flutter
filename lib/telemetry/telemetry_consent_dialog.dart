@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/core/config/env_config.dart';
 import 'package:flutter_application_1/settings/settings_controller.dart';
 import 'package:flutter_application_1/telemetry/util/app_log.dart';
 import 'package:get/get.dart';
@@ -22,7 +23,9 @@ class _TelemetryConsentDialogState extends State<TelemetryConsentDialog>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      AppLog.instance.onRoute(Get.currentRoute);
+      if (EnvConfig.telemetryEnabled) {
+        AppLog.instance.onRoute(Get.currentRoute);
+      }
       _promptIfNeeded();
     });
   }
@@ -35,6 +38,7 @@ class _TelemetryConsentDialogState extends State<TelemetryConsentDialog>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!EnvConfig.telemetryEnabled) return;
     if (state == AppLifecycleState.paused) {
       AppLog.instance.onPause();
     } else if (state == AppLifecycleState.resumed) {

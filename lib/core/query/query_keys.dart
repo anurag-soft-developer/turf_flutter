@@ -55,10 +55,14 @@ class QueryKeys {
   static const myMemberships = ['myMemberships'];
 
   /// Paginated active memberships (My Teams). Shares prefix with [myMemberships].
-  static List<Object?> myMembershipsActive({String? search}) => [
+  static List<Object?> myMembershipsActive({
+    String? search,
+    String? sportType,
+  }) => [
     ...myMemberships,
     'active',
     search ?? '',
+    sportType ?? '',
   ];
 
   /// Active sent/received challenges for Explore Challenge/Sent/Received buttons.
@@ -77,7 +81,15 @@ class QueryKeys {
     required String tab,
     String? teamFilter,
     String? source,
-  }) => [...myMatchesPrefix, tab, teamFilter ?? 'all', source ?? 'all'];
+    String? sportType,
+  }) =>
+      [
+        ...myMatchesPrefix,
+        tab,
+        teamFilter ?? 'all',
+        source ?? 'all',
+        sportType ?? 'all',
+      ];
 
   static const matchesPrefix = ['matches'];
 
@@ -146,9 +158,10 @@ class QueryKeys {
 
   static const myInvitationsPrefix = ['myInvitations'];
 
-  static List<Object> myInvitations(String status) => [
+  static List<Object> myInvitations(String status, {String? kind}) => [
     ...myInvitationsPrefix,
     status,
+    kind ?? 'all',
   ];
 
   static const teamInvitesPrefix = ['teamInvites'];
@@ -329,6 +342,29 @@ class QueryKeys {
     ...chatReadCursorsPrefix,
     scope,
     scopeId,
+  ];
+
+  static const tournamentsMinePrefix = ['tournamentsMine'];
+
+  static List<Object?> tournamentsMine({
+    required String tab,
+    String? sportType,
+  }) => [
+    ...tournamentsMinePrefix,
+    'mine',
+    tab,
+    sportType ?? 'all',
+  ];
+
+  static const tournamentInviteTeamsPrefix = ['tournamentInviteTeams'];
+
+  static List<Object?> tournamentInviteTeams({
+    required String sportType,
+    String? search,
+  }) => [
+    ...tournamentInviteTeamsPrefix,
+    sportType,
+    search ?? '',
   ];
 
   static const supportQueriesPreview = ['supportQueries', 'preview'];

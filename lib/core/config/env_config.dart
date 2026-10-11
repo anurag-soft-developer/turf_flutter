@@ -14,6 +14,13 @@ class EnvConfig {
       dotenv.env['REALTIME_SOCKET_PATH'] ?? '/socket.io';
   static String get razorpayKeyId => dotenv.env['RAZORPAY_KEY_ID'] ?? '';
 
+  /// When false or unset, client telemetry (queue, upload, consent) is off.
+  /// Errors are still printed to the console.
+  static bool get telemetryEnabled {
+    final value = dotenv.env['TELEMETRY_ENABLED']?.trim().toLowerCase();
+    return value == 'true' || value == '1';
+  }
+
   static Future<void> initialize() async {
     try {
       await dotenv.load(fileName: '.env');

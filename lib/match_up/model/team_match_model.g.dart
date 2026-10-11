@@ -306,6 +306,7 @@ TeamMatchModel _$TeamMatchModelFromJson(
       : FootballStateModel.fromJson(
           json['footballState'] as Map<String, dynamic>,
         ),
+  tournamentId: mongoIdFromJsonNullable(json['tournamentId']),
   createdAt: json['createdAt'] == null
       ? null
       : DateTime.parse(json['createdAt'] as String),
@@ -341,6 +342,7 @@ Map<String, dynamic> _$TeamMatchModelToJson(
   'guestJoin': instance.guestJoin?.toJson(),
   'cricketState': instance.cricketState?.toJson(),
   'footballState': instance.footballState?.toJson(),
+  'tournamentId': instance.tournamentId,
   'createdAt': instance.createdAt?.toIso8601String(),
   'updatedAt': instance.updatedAt?.toIso8601String(),
 };
@@ -548,14 +550,14 @@ Map<String, dynamic> _$FinalizeScheduleRequestToJson(
 CancelNegotiationRequest _$CancelNegotiationRequestFromJson(
   Map<String, dynamic> json,
 ) => CancelNegotiationRequest(
-  actorTeamId: json['actorTeamId'] as String,
+  actorTeamId: json['actorTeamId'] as String?,
   reason: json['reason'] as String?,
 );
 
 Map<String, dynamic> _$CancelNegotiationRequestToJson(
   CancelNegotiationRequest instance,
 ) => <String, dynamic>{
-  'actorTeamId': instance.actorTeamId,
+  'actorTeamId': ?instance.actorTeamId,
   'reason': ?instance.reason,
 };
 
@@ -588,7 +590,7 @@ Map<String, dynamic> _$UpdateTeamMatchRequestToJson(
 RecordMatchResultRequest _$RecordMatchResultRequestFromJson(
   Map<String, dynamic> json,
 ) => RecordMatchResultRequest(
-  actorTeamId: json['actorTeamId'] as String,
+  actorTeamId: json['actorTeamId'] as String?,
   outcome: $enumDecode(_$MatchResultOutcomeEnumMap, json['outcome']),
   winnerTeam: json['winnerTeam'] as String?,
 );
@@ -596,7 +598,7 @@ RecordMatchResultRequest _$RecordMatchResultRequestFromJson(
 Map<String, dynamic> _$RecordMatchResultRequestToJson(
   RecordMatchResultRequest instance,
 ) => <String, dynamic>{
-  'actorTeamId': instance.actorTeamId,
+  'actorTeamId': ?instance.actorTeamId,
   'outcome': _$MatchResultOutcomeEnumMap[instance.outcome]!,
   'winnerTeam': ?instance.winnerTeam,
 };

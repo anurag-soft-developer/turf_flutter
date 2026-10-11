@@ -2,7 +2,6 @@ import 'package:get/get.dart';
 
 import '../team/add/add_team_controller.dart';
 import '../team/details/team_detail_controller.dart';
-import '../team/invites/my_invitations_controller.dart';
 import '../team/invites/team_invites_controller.dart';
 import '../team/management/team_join_requests_controller.dart';
 import '../team/management/team_roster_manage_controller.dart';
@@ -32,13 +31,6 @@ class TeamOpeningsBinding extends Bindings {
 class MyJoinRequestsBinding extends Bindings {
   @override
   void dependencies() {}
-}
-
-class MyInvitationsBinding extends Bindings {
-  @override
-  void dependencies() {
-    Get.lazyPut<MyInvitationsController>(() => MyInvitationsController());
-  }
 }
 
 class TeamJoinRequestsBinding extends Bindings {

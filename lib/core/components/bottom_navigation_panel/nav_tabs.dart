@@ -40,18 +40,11 @@ Future<void> _invalidate(List queryKey) async {
 
 final List<NavTab> kNavTabs = [
   NavTab(
-    icon: Icons.explore_outlined,
-    activeIcon: Icons.explore,
-    label: 'Explore',
-    screenBuilder: () => const ExploreScreen(),
-    loadController: () => ExploreBinding().dependencies(),
-    onRetap: () async {
-      await _invalidate(QueryKeys.explorePrefix);
-      await _invalidate(QueryKeys.activeOpponentIds);
-      if (Get.isRegistered<ChallengeController>()) {
-        await Get.find<ChallengeController>().loadActiveOpponentIds();
-      }
-    },
+    icon: Icons.chat_bubble_outline,
+    activeIcon: Icons.chat_bubble,
+    label: 'Messages',
+    screenBuilder: () => const ChatInboxScreen(),
+    onRetap: () => _invalidate(QueryKeys.chatInbox),
   ),
   NavTab(
     icon: Icons.grass_outlined,
@@ -80,11 +73,18 @@ final List<NavTab> kNavTabs = [
     },
   ),
   NavTab(
-    icon: Icons.chat_bubble_outline,
-    activeIcon: Icons.chat_bubble,
-    label: 'Messages',
-    screenBuilder: () => const ChatInboxScreen(),
-    onRetap: () => _invalidate(QueryKeys.chatInbox),
+    icon: Icons.explore_outlined,
+    activeIcon: Icons.explore,
+    label: 'Explore',
+    screenBuilder: () => const ExploreScreen(),
+    loadController: () => ExploreBinding().dependencies(),
+    onRetap: () async {
+      await _invalidate(QueryKeys.explorePrefix);
+      await _invalidate(QueryKeys.activeOpponentIds);
+      if (Get.isRegistered<ChallengeController>()) {
+        await Get.find<ChallengeController>().loadActiveOpponentIds();
+      }
+    },
   ),
   NavTab(
     icon: Icons.scoreboard_outlined,

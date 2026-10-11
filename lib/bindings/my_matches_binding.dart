@@ -9,7 +9,9 @@ class MyMatchesBinding extends Bindings {
     ScoringBinding().dependencies();
     Get.lazyPut<MyMatchesController>(() => MyMatchesController());
     if (Get.isRegistered<MyMatchesController>()) {
-      Get.find<MyMatchesController>().applyTabFromArguments();
+      final c = Get.find<MyMatchesController>();
+      c.applyTabFromArguments();
+      c.applySportFromRoute();
     }
   }
 }

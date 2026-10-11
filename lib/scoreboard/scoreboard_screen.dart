@@ -24,7 +24,7 @@ class _ScoreboardSportOption {
   final bool enabled;
 }
 
-/// Bottom-tab hub for starting ranked or unranked scoreboard sessions by sport.
+/// Bottom-tab hub for a friendly match or a hosted tournament, by sport.
 class ScoreboardScreen extends StatefulWidget {
   const ScoreboardScreen({super.key});
 
@@ -36,12 +36,13 @@ class _ScoreboardScreenState extends State<ScoreboardScreen>
     with SingleTickerProviderStateMixin {
   static const _cardHeight = 200.0;
   static const _horizontalPadding = 20.0;
-  static const _modeTabs = [
-    AppTabItem(label: 'Unranked'),
-    AppTabItem(label: 'Ranked'),
+  static const _hubTabs = [
+    AppTabItem(label: 'Friendly match'),
+    AppTabItem(label: 'Tournaments'),
   ];
 
   late final TabController _tabController;
+  bool _ranked = false;
 
   static const _sports = [
     _ScoreboardSportOption(
@@ -63,7 +64,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _modeTabs.length, vsync: this);
+    _tabController = TabController(length: _hubTabs.length, vsync: this);
   }
 
   @override
@@ -79,11 +80,75 @@ class _ScoreboardScreenState extends State<ScoreboardScreen>
     );
   }
 
-  Widget _modePage({required bool ranked}) {
+  void _hostTournament(TeamSportType sport) {
+    if (sport != TeamSportType.cricket) return;
+    Get.toNamed(AppConstants.routes.createTournament);
+  }
+
+  void _openMatchesForSport(TeamSportType sport) {
+    Get.toNamed(
+      AppConstants.routes.myMatches,
+      parameters: {'sport': sport.name},
+    );
+  }
+
+  void _openTournamentsForSport(TeamSportType sport) {
+    Get.toNamed(
+      AppConstants.routes.tournaments,
+      parameters: {'sport': sport.name},
+    );
+  }
+
+  Widget _friendlyPage() {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(
+        _horizontalPadding,
+        16,
+        _horizontalPadding,
+        24,
+      ),
+      children: [
+        Align(
+          alignment: Alignment.center,
+          child: SegmentedButton<bool>(
+            style: const ButtonStyle(
+              visualDensity: VisualDensity.compact,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            segments: const [
+              ButtonSegment(value: false, label: Text('Unranked')),
+              ButtonSegment(value: true, label: Text('Ranked')),
+            ],
+            selected: {_ranked},
+            onSelectionChanged: (value) {
+              setState(() => _ranked = value.first);
+            },
+          ),
+        ),
+        const SizedBox(height: 16),
+        for (var index = 0; index < _sports.length; index++) ...[
+          if (index > 0) const SizedBox(height: 12),
+          SizedBox(
+            height: _cardHeight,
+            child: _SportPosterCard(
+              option: _sports[index],
+              startIcon: Icons.play_arrow_rounded,
+              onStart: _sports[index].enabled
+                  ? () => _openMatch(_sports[index].sport, ranked: _ranked)
+                  : null,
+              onMine: () => _openMatchesForSport(_sports[index].sport),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _tournamentsPage() {
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(
         _horizontalPadding,
-        24,
+        16,
         _horizontalPadding,
         24,
       ),
@@ -91,12 +156,15 @@ class _ScoreboardScreenState extends State<ScoreboardScreen>
       separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final option = _sports[index];
+        final cricket = option.sport == TeamSportType.cricket;
         return SizedBox(
           height: _cardHeight,
           child: _SportPosterCard(
             option: option,
-            ranked: ranked,
-            onStart: () => _openMatch(option.sport, ranked: ranked),
+            subtitle: cricket ? option.tagline : 'Coming soon',
+            startIcon: Icons.emoji_events_rounded,
+            onStart: cricket ? () => _hostTournament(option.sport) : null,
+            onMine: () => _openTournamentsForSport(option.sport),
           ),
         );
       },
@@ -125,7 +193,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen>
             PinnedSliverHeader(
               child: AppSegmentedTabs(
                 controller: _tabController,
-                items: _modeTabs,
+                items: _hubTabs,
                 fillWidth: true,
                 padding: const EdgeInsets.fromLTRB(
                   _horizontalPadding,
@@ -139,34 +207,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen>
         },
         body: AppSegmentedTabView(
           controller: _tabController,
-          children: [_modePage(ranked: false), _modePage(ranked: true)],
-        ),
-      ),
-    );
-  }
-}
-
-class _ModeChip extends StatelessWidget {
-  const _ModeChip({required this.ranked});
-
-  final bool ranked;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.18),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
-      ),
-      child: Text(
-        ranked ? 'Ranked' : 'Unranked',
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          height: 1.1,
+          children: [_friendlyPage(), _tournamentsPage()],
         ),
       ),
     );
@@ -176,18 +217,21 @@ class _ModeChip extends StatelessWidget {
 class _SportPosterCard extends StatelessWidget {
   const _SportPosterCard({
     required this.option,
-    required this.ranked,
+    required this.startIcon,
     required this.onStart,
+    required this.onMine,
+    this.subtitle,
   });
 
   final _ScoreboardSportOption option;
-  final bool ranked;
-  final VoidCallback onStart;
+  final String? subtitle;
+  final IconData startIcon;
+  final VoidCallback? onStart;
+  final VoidCallback onMine;
 
   @override
   Widget build(BuildContext context) {
     final sport = option.sport;
-    final enabled = option.enabled;
     final radius = BorderRadius.circular(20);
     final dpr = MediaQuery.devicePixelRatioOf(context);
     final cacheWidth = (MediaQuery.sizeOf(context).width * dpr).round().clamp(
@@ -195,7 +239,7 @@ class _SportPosterCard extends StatelessWidget {
       1400,
     );
 
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: radius,
         boxShadow: [
@@ -208,94 +252,120 @@ class _SportPosterCard extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: radius,
-        child: Opacity(
-          opacity: enabled ? 1 : 0.55,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: sport.config.gradient,
-                  ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: sport.config.gradient,
                 ),
               ),
-              AppNetworkImage(
-                option.imageUrl,
-                fit: BoxFit.cover,
-                memCacheWidth: cacheWidth,
-                placeholder: const SizedBox.shrink(),
-              ),
-              const DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Color(0x26000000), Color(0xC7000000)],
-                  ),
+            ),
+            AppNetworkImage(
+              option.imageUrl,
+              fit: BoxFit.cover,
+              memCacheWidth: cacheWidth,
+              placeholder: const SizedBox.shrink(),
+            ),
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0x26000000), Color(0xC7000000)],
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.18),
-                            borderRadius: BorderRadius.circular(10),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(sport.icon, size: 20, color: Colors.white),
+                  ),
+                  const Spacer(),
+                  Text(
+                    sport.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                      height: 1.1,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle ?? option.tagline,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white.withValues(alpha: 0.86),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: CustomButton(
+                          text: 'Start',
+                          height: 44,
+                          onPressed: onStart,
+                          icon: Icon(startIcon, size: 22),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: onMine,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor: Colors.white.withValues(
+                              alpha: 0.12,
+                            ),
+                            side: const BorderSide(color: Colors.white),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            minimumSize: const Size(0, 44),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
-                          child: Icon(
-                            sport.icon,
-                            size: 20,
-                            color: Colors.white,
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.view_list_rounded, size: 20),
+                              SizedBox(width: 8),
+                              Text(
+                                'Mine',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        const Spacer(),
-                        _ModeChip(ranked: ranked),
-                      ],
-                    ),
-                    const Spacer(),
-                    Text(
-                      sport.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                        height: 1.1,
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      option.tagline,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white.withValues(alpha: 0.86),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    CustomButton(
-                      text: 'Start scoring',
-                      height: 44,
-                      onPressed: enabled ? onStart : null,
-                      icon: const Icon(Icons.play_arrow_rounded, size: 22),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

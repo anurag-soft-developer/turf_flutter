@@ -36,8 +36,9 @@ class ApiService {
             options.headers['Authorization'] = 'Bearer $token';
           }
 
-          // Remove null values from request data
-          if (options.data != null) {
+          // Remove null values from request data. A caller can keep them
+          // when null is meaningful, such as clearing a fixture side.
+          if (options.data != null && options.extra['preserveNulls'] != true) {
             options.data = _removeNullValues(options.data);
           }
 

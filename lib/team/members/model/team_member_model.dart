@@ -4,6 +4,7 @@ import '../../../core/models/team/team_member_field_instance.dart';
 import '../../../core/models/team/team_ref_converter.dart';
 import '../../../core/models/user_field_converters.dart';
 import '../../../core/models/user_field_instance.dart';
+import '../../model/team_model.dart' show TeamSportType;
 
 export '../../../core/models/location_model.dart';
 export '../../../core/models/team/team_member_field_instance.dart';
@@ -67,6 +68,7 @@ class MyTeamMembershipsFilterQuery {
 
   /// Case-insensitive filter on team name / shortName.
   final String? search;
+  final TeamSportType? sportType;
   final int page;
   final int limit;
 
@@ -74,6 +76,7 @@ class MyTeamMembershipsFilterQuery {
     this.status,
     this.history = false,
     this.search,
+    this.sportType,
     this.page = 1,
     this.limit = 20,
   });
@@ -89,6 +92,7 @@ class MyTeamMembershipsFilterQuery {
     if (trimmedSearch != null && trimmedSearch.isNotEmpty) {
       params['search'] = trimmedSearch;
     }
+    if (sportType != null) params['sportType'] = sportType!.name;
     return params;
   }
 }

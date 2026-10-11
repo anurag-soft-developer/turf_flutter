@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../match_up/my_matches/my_matches_controller.dart';
+import '../../rankings/widgets/rank_sport_filter.dart';
+import '../../team/model/team_model.dart';
 import '../match_up/my_team_selector.dart';
 import '../../core/config/constants.dart';
 
@@ -16,6 +18,7 @@ class MyMatchesSubFilters extends StatelessWidget {
       final allTeams = c.filterAllTeams.value;
       final teamName = c.selectedMembershipTeam.value?.name;
       final type = c.typeFilter.value;
+      final sport = c.sportFilter.value;
 
       return Padding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
@@ -51,6 +54,25 @@ class MyMatchesSubFilters extends StatelessWidget {
                   onClear: type.hasSelection
                       ? () => c.setTypeFilter(MyMatchesTypeFilter.all)
                       : null,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Builder(
+                builder: (fieldContext) => _FilterChip(
+                  fieldLabel: 'Sport',
+                  icon: Icons.sports_outlined,
+                  label: sport?.label ?? 'All',
+                  hasSelection: sport != null,
+                  onTap: () => SportFilterPicker.showSheet(
+                    context: fieldContext,
+                    value: sport,
+                    sports: rankingTeamSportTypes,
+                    sheetTitle: 'Filter by sport',
+                    includeAll: true,
+                    onChanged: c.setSportFilter,
+                  ),
+                  onClear:
+                      sport != null ? () => c.setSportFilter(null) : null,
                 ),
               ),
             ],

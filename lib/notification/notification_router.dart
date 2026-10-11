@@ -54,6 +54,17 @@ class NotificationRouter {
   }
 
   static Future<void> _openMatchmaking(AppNotification notification) async {
+    final kind = notification.kind;
+    if (kind != null && kind.startsWith('tournament_')) {
+      final id =
+          notification.idFromData('tournamentId') ?? notification.sourceId;
+      if (id == null || id.isEmpty) {
+        return _fallback(notification.module, kind);
+      }
+      await Get.toNamed(AppConstants.routes.tournamentDetail(id));
+      return;
+    }
+
     final id = notification.matchId;
     if (id == null || id.isEmpty) {
       return _fallback(notification.module, notification.kind);

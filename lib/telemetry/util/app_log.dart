@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 import 'package:flutter_application_1/core/config/api_constants.dart';
+import 'package:flutter_application_1/core/config/env_config.dart';
 import 'package:flutter_application_1/core/services/api_service.dart';
 import 'package:flutter_application_1/core/services/auth_storage_service.dart';
 import 'package:flutter_application_1/telemetry/util/log_queue.dart';
@@ -21,9 +22,17 @@ const _payloadLimit = 4096;
 const _maxDurationMs = 7 * 24 * 60 * 60 * 1000;
 const _flushAge = Duration(hours: 1);
 const _telemetryLog = '\x1B[36m[telemetry]';
+const _errorLog = '\x1B[31m[error]';
 
 void _telemetryDebug(String message) {
   debugPrint('$_telemetryLog $message\x1B[0m');
+}
+
+void _printErrorToConsole(Object error, StackTrace? stack) {
+  debugPrint('$_errorLog ${error.runtimeType}: $error\x1B[0m');
+  if (stack != null) {
+    debugPrint(stack.toString());
+  }
 }
 
 class _PendingError {
@@ -50,6 +59,7 @@ class AppLog {
 
   Future<void>? _starting;
   bool _started = false;
+  bool _telemetryEnabled = false;
   bool _flushing = false;
   bool _consent = false;
   int _sendingFailures = 0;
@@ -65,7 +75,10 @@ class AppLog {
   String? _lastErrorKey;
   DateTime? _lastErrorAt;
 
-  bool get shouldPromptConsent => _started && !consentAnswered;
+  bool get shouldPromptConsent =>
+      _telemetryEnabled && _started && !consentAnswered;
+
+  bool get isTelemetryEnabled => _telemetryEnabled;
 
   Future<void> start() {
     return _starting ??= _start();
@@ -81,6 +94,9 @@ class AppLog {
     }
     _lastErrorKey = key;
     _lastErrorAt = now;
+    _printErrorToConsole(error, stack);
+    final collect = _started ? _telemetryEnabled : EnvConfig.telemetryEnabled;
+    if (!collect) return;
     if (!_started) {
       if (_pendingErrors.length < 50) {
         _pendingErrors.add(_PendingError(error, stack));
@@ -91,6 +107,7 @@ class AppLog {
   }
 
   void onRoute(String? route) {
+    if (!_telemetryEnabled) return;
     if (route == null || route.isEmpty) return;
     if (!_started) {
       _pendingRoute = route;
@@ -100,7 +117,7 @@ class AppLog {
   }
 
   void onPause() {
-    if (!_started) return;
+    if (!_telemetryEnabled || !_started) return;
     final closed = _screens.take();
     if (closed == null) return;
     _resumeRoute = closed.route;
@@ -114,7 +131,7 @@ class AppLog {
   }
 
   void onResume() {
-    if (!_started) return;
+    if (!_telemetryEnabled || !_started) return;
     final route = _resumeRoute;
     if (route != null && route.isNotEmpty) {
       _screens.open(route, DateTime.now().toUtc());
@@ -124,6 +141,7 @@ class AppLog {
 
   Future<void> setConsent(bool enabled) async {
     await start();
+    if (!_telemetryEnabled) return;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(consentKey, enabled);
     _consent = enabled;
@@ -140,7 +158,7 @@ class AppLog {
   }
 
   Future<void> flush({required bool includeLive}) async {
-    if (!_started || !_consent || _flushing) {
+    if (!_telemetryEnabled || !_started || !_consent || _flushing) {
       _telemetryDebug(
         'flush skipped '
         'started=$_started consent=$_consent flushing=$_flushing',
@@ -171,6 +189,15 @@ class AppLog {
   }
 
   Future<void> _start() async {
+    _telemetryEnabled = EnvConfig.telemetryEnabled;
+    if (!_telemetryEnabled) {
+      _started = true;
+      consentAnswered = true;
+      _consent = false;
+      _telemetryDebug('disabled via TELEMETRY_ENABLED');
+      return;
+    }
+
     final prefs = await SharedPreferences.getInstance();
     consentAnswered = prefs.containsKey(consentKey);
     _consent = prefs.getBool(consentKey) ?? false;
@@ -209,6 +236,7 @@ class AppLog {
   }
 
   void _advanceRoute(String route, DateTime at) {
+    if (!_telemetryEnabled) return;
     final current = _screens.route;
     if (current == route) return;
     final closed = _screens.take();
@@ -270,6 +298,7 @@ class AppLog {
     int? durationMs,
     required Map<String, dynamic> payload,
   }) async {
+    if (!_telemetryEnabled) return;
     if (!_started) {
       _telemetryDebug('write skipped, logger not started');
       return;

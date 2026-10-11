@@ -18,6 +18,7 @@ import 'rank_routes.dart';
 import 'profile_routes.dart';
 import 'settings_routes.dart';
 import 'team_routes.dart';
+import 'tournament_routes.dart';
 import 'turf_routes.dart';
 
 class AppRoutes {
@@ -60,6 +61,7 @@ class AppRoutes {
     ...teamRoutes,
     ...aboutHelpLegalRoutes,
     ...matchUpRoutes,
+    ...tournamentRoutes,
     ...chatRoutes,
   ];
 }

@@ -13,9 +13,10 @@ import '../../core/query/query_keys.dart';
 import '../../core/query/query_retry.dart';
 import '../model/team_model.dart';
 import '../team_service.dart';
-import 'model/team_invite_model.dart';
+import 'team_invite_service.dart';
 import 'team_invite_sheet.dart';
 import 'team_invites_controller.dart';
+import '../../invitations/model/invitation_model.dart';
 
 class TeamInvitesScreen extends HookWidget {
   const TeamInvitesScreen({super.key});
@@ -38,14 +39,14 @@ class TeamInvitesScreen extends HookWidget {
       retry: noRetry,
     );
 
-    final invitesQuery = useQuery<PaginatedResponse<TeamInviteModel>, Object>(
+    final invitesQuery = useQuery<PaginatedResponse<InvitationModel>, Object>(
       QueryKeys.teamInvites(teamId ?? ''),
       (_) async {
         final page = await teamService.inviteService.listForTeam(
           teamId!,
           const TeamInviteFilterQuery(limit: 100),
         );
-        return page ?? EmptyPaginatedResponse<TeamInviteModel>();
+        return page ?? EmptyPaginatedResponse<InvitationModel>();
       },
       enabled: hasTeamId,
       retry: noRetry,
@@ -72,8 +73,8 @@ class TeamInvitesScreen extends HookWidget {
                 final pending = invitesQuery.data?.data ?? const [];
                 final targets = <String>{};
                 for (final invite in pending) {
-                  if (invite.status != TeamInviteStatus.pending) continue;
-                  final userId = invite.inviteeHelper.getId();
+                  if (invite.status != InvitationStatus.pending) continue;
+                  final userId = invite.inviteeId;
                   if (userId != null && userId.isNotEmpty) {
                     targets.add(userId);
                   }
@@ -125,7 +126,7 @@ class TeamInvitesScreen extends HookWidget {
     required bool hasTeamId,
     required bool accessDenied,
     required QueryResult<TeamModel, Object> teamQuery,
-    required QueryResult<PaginatedResponse<TeamInviteModel>, Object>
+    required QueryResult<PaginatedResponse<InvitationModel>, Object>
         invitesQuery,
   }) {
     if (!hasTeamId || accessDenied) {
@@ -189,14 +190,15 @@ class TeamInvitesScreen extends HookWidget {
       ];
     }
 
-    final items = List<TeamInviteModel>.from(invitesQuery.data?.data ?? [])
+    final items = List<InvitationModel>.from(invitesQuery.data?.data ?? [])
       ..sort((a, b) {
-        int rank(TeamInviteStatus s) => switch (s) {
-              TeamInviteStatus.pending => 0,
-              TeamInviteStatus.accepted => 1,
-              TeamInviteStatus.rejected => 2,
-              TeamInviteStatus.revoked => 3,
-              TeamInviteStatus.expired => 4,
+        int rank(InvitationStatus s) => switch (s) {
+              InvitationStatus.pending => 0,
+              InvitationStatus.accepted => 1,
+              InvitationStatus.declined => 2,
+              InvitationStatus.revoked => 3,
+              InvitationStatus.withdrawn => 4,
+              InvitationStatus.expired => 5,
             };
         final cmp = rank(a.status).compareTo(rank(b.status));
         if (cmp != 0) return cmp;
@@ -244,7 +246,7 @@ class TeamInvitesScreen extends HookWidget {
 class _InviteRow extends StatelessWidget {
   const _InviteRow({required this.invite, required this.controller});
 
-  final TeamInviteModel invite;
+  final InvitationModel invite;
   final TeamInvitesController controller;
 
   @override
@@ -253,7 +255,7 @@ class _InviteRow extends StatelessWidget {
     final created = invite.createdAt != null
         ? dateFmt.format(invite.createdAt!.toLocal())
         : null;
-    final invitee = invite.inviteeHelper;
+    final invitee = invite.invitee;
     final showUser = invitee.isPopulated;
 
     return Card(
@@ -314,7 +316,7 @@ class _InviteRow extends StatelessWidget {
                 ],
               ),
             ),
-            if (invite.status == TeamInviteStatus.pending)
+            if (invite.status == InvitationStatus.pending)
               Obx(() {
                 final busy = controller.actionInviteId.value == invite.id;
                 return TextButton(
@@ -334,11 +336,12 @@ class _InviteRow extends StatelessWidget {
     );
   }
 
-  String _statusLabel(TeamInviteStatus s) => switch (s) {
-        TeamInviteStatus.pending => 'Pending',
-        TeamInviteStatus.accepted => 'Accepted',
-        TeamInviteStatus.rejected => 'Rejected',
-        TeamInviteStatus.expired => 'Expired',
-        TeamInviteStatus.revoked => 'Revoked',
+  String _statusLabel(InvitationStatus s) => switch (s) {
+        InvitationStatus.pending => 'Pending',
+        InvitationStatus.accepted => 'Accepted',
+        InvitationStatus.declined => 'Declined',
+        InvitationStatus.expired => 'Expired',
+        InvitationStatus.revoked => 'Revoked',
+        InvitationStatus.withdrawn => 'Withdrawn',
       };
 }

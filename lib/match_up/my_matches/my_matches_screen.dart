@@ -9,6 +9,7 @@ import '../../core/models/paginated_response.dart';
 import '../../core/query/query_keys.dart';
 import '../match_challenges/match_challenge_detail_screen.dart';
 import '../matchmaking_service.dart';
+import '../../team/model/team_model.dart';
 import '../model/team_match_model.dart';
 import '../shared/match_infinite_query_pane.dart';
 import '../shared/match_list_scaffold.dart';
@@ -32,6 +33,7 @@ class MyMatchesScreen extends StatelessWidget {
       title: 'Matches',
       teamSheetTitle: 'Show matches for',
       emptyTeamsMessage: 'Join or create a team to see your matches.',
+      allowEmptyMemberships: true,
       controller: c,
       tabs: _tabs,
       initialTabIndex: c.selectedTab.value.index,
@@ -39,13 +41,17 @@ class MyMatchesScreen extends StatelessWidget {
       belowTabs: const MyMatchesSubFilters(),
       buildPanes: (filterKey) {
         final type = c.typeFilter.value;
+        final sport = c.sportFilter.value;
         return [
           for (final tab in MyMatchesTab.values)
             _MyMatchesPane(
-              key: ValueKey('${tab.name}|$filterKey|${type.name}'),
+              key: ValueKey(
+                '${tab.name}|$filterKey|${type.name}|${sport?.name ?? 'all'}',
+              ),
               tab: tab,
               teamFilter: filterKey,
               typeFilter: type,
+              sportFilter: sport,
             ),
         ];
       },
@@ -55,11 +61,12 @@ class MyMatchesScreen extends StatelessWidget {
 
 Future<PaginatedResponse<TeamMatchModel>> _fetchMatchesPage({
   required MyMatchesTab tab,
-  required List<String> teamIds,
+  required List<String>? teamIds,
   required MyMatchesTypeFilter typeFilter,
+  required TeamSportType? sportFilter,
   required int page,
 }) async {
-  if (teamIds.isEmpty) {
+  if (teamIds != null && teamIds.isEmpty) {
     return EmptyPaginatedResponse<TeamMatchModel>();
   }
 
@@ -69,6 +76,7 @@ Future<PaginatedResponse<TeamMatchModel>> _fetchMatchesPage({
       type: NegotiationListType.all,
       statuses: tab.apiStatuses,
       source: typeFilter.apiSource,
+      sportType: sportFilter,
       page: page,
       limit: 20,
       sort: tab.sort,
@@ -83,16 +91,18 @@ class _MyMatchesPane extends StatelessWidget {
     required this.tab,
     required this.teamFilter,
     required this.typeFilter,
+    required this.sportFilter,
   });
 
   final MyMatchesTab tab;
   final String teamFilter;
   final MyMatchesTypeFilter typeFilter;
+  final TeamSportType? sportFilter;
 
   @override
   Widget build(BuildContext context) {
     final c = Get.find<MyMatchesController>();
-    final teamIds = c.activeTeamIdsForList();
+    final teamIds = c.teamIdsForMyMatchesList();
     final empty = switch (tab) {
       MyMatchesTab.all => const MatchHistoryEmptyPlaceholder(
         icon: Icons.sports_score_outlined,
@@ -122,19 +132,19 @@ class _MyMatchesPane extends StatelessWidget {
         tab: tab.name,
         teamFilter: teamFilter,
         source: typeFilter.apiSource?.name,
+        sportType: sportFilter?.name,
       ),
       fetchPage: (page) => _fetchMatchesPage(
         tab: tab,
         teamIds: teamIds,
         typeFilter: typeFilter,
+        sportFilter: sportFilter,
         page: page,
       ),
       empty: empty,
       itemBuilder: (match, _, _) => MatchCard(
         match: match,
-        selectedTeamId: c.selectedTeamIdOrNull,
         isHistory: tab.isHistoryFor(match),
-        personalizeForTeam: true,
         onTap: () async {
           await openMatchChallengeDetail(
             match: match,

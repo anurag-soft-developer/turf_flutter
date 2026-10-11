@@ -18,6 +18,7 @@ import '../../scoring/shared/scoring_shared_models.dart';
 import '../../scoring/shared/scoring_socket_service.dart';
 import '../../team/members/model/team_member_model.dart';
 import '../../team/team_service.dart';
+import '../../tournament/tournament_service.dart';
 import '../../turf/model/turf_model.dart';
 import '../matchmaking_service.dart';
 import '../model/team_match_model.dart';
@@ -53,7 +54,11 @@ class MatchChallengeDetailController extends GetxController
   final RxBool isRejectingChallenge = false.obs;
   final RxBool isAcceptingChallenge = false.obs;
   final RxBool isCancellingMatch = false.obs;
+  final RxBool isRecordingMatchResult = false.obs;
   final RxBool isUpdatingGuestJoin = false.obs;
+
+  /// True when this fixture belongs to a tournament and the viewer is an organizer.
+  final RxBool isTournamentOrganizer = false.obs;
 
   StreamSubscription<ScoringUpdatePayload>? _scoringSub;
   String? _joinedLiveMatchId;
@@ -75,6 +80,7 @@ class MatchChallengeDetailController extends GetxController
       isRejectingChallenge.value ||
       isAcceptingChallenge.value ||
       isCancellingMatch.value ||
+      isRecordingMatchResult.value ||
       isUpdatingGuestJoin.value;
 
   bool canManageGuestJoin(String teamId) {
@@ -171,14 +177,47 @@ class MatchChallengeDetailController extends GetxController
         myMatchTeamIds.value.contains(fromId);
   }
 
+  bool get _isTournamentFixture {
+    final id = match.value?.tournamentId;
+    return id != null && id.isNotEmpty;
+  }
+
   bool get canCancelOrAbandonMatch {
-    return switch (match.value?.status) {
+    final allowed = switch (match.value?.status) {
       TeamMatchStatus.accepted ||
       TeamMatchStatus.negotiating ||
       TeamMatchStatus.scheduleFinalized ||
-      TeamMatchStatus.ongoing => myTeamId.isNotEmpty,
+      TeamMatchStatus.ongoing => true,
       _ => false,
     };
+    if (!allowed) return false;
+    if (_isTournamentFixture) return isTournamentOrganizer.value;
+    return _actorTeamId.isNotEmpty;
+  }
+
+  bool get canRecordMatchResult {
+    final allowed = switch (match.value?.status) {
+      TeamMatchStatus.scheduleFinalized || TeamMatchStatus.ongoing => true,
+      _ => false,
+    };
+    if (!allowed) return false;
+    if (_isTournamentFixture) return isTournamentOrganizer.value;
+    return _actorTeamId.isNotEmpty;
+  }
+
+  bool get hasLiveScoringSession {
+    final current = match.value;
+    if (current == null) return false;
+    return current.cricketState != null || current.footballState != null;
+  }
+
+  /// Team id used for matchmaking mutations (cancel, result, schedule).
+  String get _actorTeamId {
+    final onMatch = myMatchTeamIds.value;
+    if (onMatch.isEmpty) return '';
+    if (myTeamId.isNotEmpty && onMatch.contains(myTeamId)) return myTeamId;
+    if (onMatch.length == 1) return onMatch.first;
+    return myTeamId;
   }
 
   ScoringSocketService? get _socket => Get.isRegistered<ScoringSocketService>()
@@ -217,6 +256,8 @@ class MatchChallengeDetailController extends GetxController
     isBootstrapping.value = true;
     loadError.value = null;
     await Future.wait([_fetchMatch(), _fetchMemberships()]);
+    if (isClosed) return;
+    await _loadTournamentOrganizer();
     if (isClosed) return;
     _applyMembershipContext();
     isBootstrapping.value = false;
@@ -265,6 +306,20 @@ class MatchChallengeDetailController extends GetxController
     } catch (_) {
       // Membership failure should not block match view; keep prior ids.
     }
+  }
+
+  Future<void> _loadTournamentOrganizer() async {
+    final id = match.value?.tournamentId;
+    if (id == null || id.isEmpty) {
+      isTournamentOrganizer.value = false;
+      return;
+    }
+    final tournament = await TournamentService().getOne(id);
+    if (isClosed) return;
+    final userId = Get.isRegistered<AuthStateController>()
+        ? Get.find<AuthStateController>().user?.id
+        : null;
+    isTournamentOrganizer.value = tournament?.isOrganizer(userId) ?? false;
   }
 
   void _applyMembershipContext() {
@@ -428,13 +483,18 @@ class MatchChallengeDetailController extends GetxController
     if (actionBusy) return;
     if (!canCancelOrAbandonMatch) return;
     final id = match.value?.id;
-    if (id == null || id.isEmpty || myTeamId.isEmpty) return;
+    final actorTeamId = _actorTeamId;
+    if (id == null || id.isEmpty) return;
+    if (!_isTournamentFixture && actorTeamId.isEmpty) return;
 
     final abandon = isAbandonMatch;
     isCancellingMatch.value = true;
     final updated = await _matchmakingService.cancel(
       id,
-      CancelNegotiationRequest(actorTeamId: myTeamId, reason: reason),
+      CancelNegotiationRequest(
+        actorTeamId: actorTeamId.isEmpty ? null : actorTeamId,
+        reason: reason,
+      ),
     );
     isCancellingMatch.value = false;
 
@@ -447,6 +507,71 @@ class MatchChallengeDetailController extends GetxController
       message: abandon
           ? 'This match has been abandoned.'
           : 'This match has been cancelled.',
+    );
+  }
+
+  Future<void> recordMatchDraw() async {
+    if (actionBusy) return;
+    if (!canRecordMatchResult) return;
+    final id = match.value?.id;
+    final actorTeamId = _actorTeamId;
+    if (id == null || id.isEmpty) return;
+    if (!_isTournamentFixture && actorTeamId.isEmpty) return;
+
+    isRecordingMatchResult.value = true;
+    final updated = await _matchmakingService.recordMatchResult(
+      id,
+      RecordMatchResultRequest(
+        actorTeamId: actorTeamId.isEmpty ? null : actorTeamId,
+        outcome: MatchResultOutcome.draw,
+      ),
+    );
+    isRecordingMatchResult.value = false;
+
+    if (updated == null) {
+     
+      return;
+    }
+
+    match.value = updated;
+    await _invalidateMatchQueries(updated);
+    AppSnackbar.success(
+      title: 'Match drawn',
+      message: 'This match was marked as a draw.',
+    );
+  }
+
+  Future<void> recordMatchWinner(String winnerTeamId) async {
+    if (actionBusy) return;
+    if (!canRecordMatchResult) return;
+    final id = match.value?.id;
+    final actorTeamId = _actorTeamId;
+    if (id == null || id.isEmpty || winnerTeamId.isEmpty) return;
+    if (!_isTournamentFixture && actorTeamId.isEmpty) return;
+
+    isRecordingMatchResult.value = true;
+    final updated = await _matchmakingService.recordMatchResult(
+      id,
+      RecordMatchResultRequest(
+        actorTeamId: actorTeamId.isEmpty ? null : actorTeamId,
+        outcome: MatchResultOutcome.completed,
+        winnerTeam: winnerTeamId,
+      ),
+    );
+    isRecordingMatchResult.value = false;
+
+    if (updated == null) {
+      return;
+    }
+
+    match.value = updated;
+    await _invalidateMatchQueries(updated);
+    final winnerName = winnerTeamId == updated.fromTeamHelper.getId()
+        ? updated.fromTeamHelper.getDisplayName()
+        : updated.toTeamHelper.getDisplayName();
+    AppSnackbar.success(
+      title: 'Winner recorded',
+      message: '$winnerName won this match.',
     );
   }
 

@@ -8,6 +8,7 @@ class MatchPickVersusTeam {
   const MatchPickVersusTeam({
     required this.name,
     this.logoUrl = '',
+    this.caption,
     this.showEditBadge = false,
     this.placeholder = false,
     this.onTap,
@@ -16,6 +17,7 @@ class MatchPickVersusTeam {
 
   final String name;
   final String logoUrl;
+  final String? caption;
 
   /// Pencil badge on the logo (editable side).
   final bool showEditBadge;
@@ -101,6 +103,18 @@ class _SideColumn extends StatelessWidget {
                 : const Color(AppColors.textColor),
           ),
         ),
+        if (team.caption != null) ...[
+          const SizedBox(height: 2),
+          Text(
+            team.caption!,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Color(AppColors.textSecondaryColor),
+            ),
+          ),
+        ],
       ],
     );
 
