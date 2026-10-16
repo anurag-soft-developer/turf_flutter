@@ -55,7 +55,7 @@ class AppMenuScreen extends StatelessWidget {
       AppMenuItem(
         title: 'Openings',
         icon: Icons.group_add_rounded,
-        onTap: () => _navigateTo(AppConstants.routes.teamOpenings),
+        onTap: () => _navigateTo(AppConstants.routes.openings),
       ),
       AppMenuItem(
         title: 'Invitations',

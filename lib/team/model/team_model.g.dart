@@ -127,7 +127,6 @@ CreateTeamRequest _$CreateTeamRequestFromJson(Map<String, dynamic> json) =>
         _$TeamGenderCategoryEnumMap,
         json['genderCategory'],
       ),
-      maxPendingJoinRequests: (json['maxPendingJoinRequests'] as num).toInt(),
       logo: json['logo'] as String?,
       coverImages: (json['coverImages'] as List<dynamic>?)
           ?.map((e) => e as String)
@@ -140,13 +139,11 @@ CreateTeamRequest _$CreateTeamRequestFromJson(Map<String, dynamic> json) =>
         _$TeamPreferredTimeSlotEnumMap,
         json['preferredTimeSlot'],
       ),
-      lookingForMembers: json['lookingForMembers'] as bool?,
       pinnedNotices: (json['pinnedNotices'] as List<dynamic>?)
           ?.map((e) => e as String)
           .toList(),
       sportType: $enumDecode(_$TeamSportTypeEnumMap, json['sportType']),
       visibility: $enumDecode(_$TeamVisibilityEnumMap, json['visibility']),
-      joinMode: $enumDecode(_$TeamJoinModeEnumMap, json['joinMode']),
       location: json['location'] == null
           ? null
           : LocationModel.fromJson(json['location'] as Map<String, dynamic>),
@@ -161,7 +158,6 @@ Map<String, dynamic> _$CreateTeamRequestToJson(CreateTeamRequest instance) =>
       'socialLinks': ?instance.socialLinks?.toJson(),
       'foundedYear': ?instance.foundedYear,
       'genderCategory': ?_$TeamGenderCategoryEnumMap[instance.genderCategory],
-      'maxPendingJoinRequests': instance.maxPendingJoinRequests,
       'logo': ?instance.logo,
       'coverImages': ?instance.coverImages,
       'tags': ?instance.tags,
@@ -170,11 +166,9 @@ Map<String, dynamic> _$CreateTeamRequestToJson(CreateTeamRequest instance) =>
           .toList(),
       'preferredTimeSlot':
           ?_$TeamPreferredTimeSlotEnumMap[instance.preferredTimeSlot],
-      'lookingForMembers': ?instance.lookingForMembers,
       'pinnedNotices': ?instance.pinnedNotices,
       'sportType': _$TeamSportTypeEnumMap[instance.sportType]!,
       'visibility': _$TeamVisibilityEnumMap[instance.visibility]!,
-      'joinMode': _$TeamJoinModeEnumMap[instance.joinMode]!,
       'location': ?instance.location?.toJson(),
     };
 
@@ -232,11 +226,6 @@ const _$TeamVisibilityEnumMap = {
   TeamVisibility.private: 'private',
 };
 
-const _$TeamJoinModeEnumMap = {
-  TeamJoinMode.open: 'open',
-  TeamJoinMode.approval: 'approval',
-};
-
 UpdateTeamRequest _$UpdateTeamRequestFromJson(
   Map<String, dynamic> json,
 ) => UpdateTeamRequest(
@@ -252,7 +241,6 @@ UpdateTeamRequest _$UpdateTeamRequestFromJson(
     _$TeamGenderCategoryEnumMap,
     json['genderCategory'],
   ),
-  maxPendingJoinRequests: (json['maxPendingJoinRequests'] as num?)?.toInt(),
   logo: json['logo'] as String?,
   coverImages: (json['coverImages'] as List<dynamic>?)
       ?.map((e) => e as String)
@@ -265,12 +253,10 @@ UpdateTeamRequest _$UpdateTeamRequestFromJson(
     _$TeamPreferredTimeSlotEnumMap,
     json['preferredTimeSlot'],
   ),
-  lookingForMembers: json['lookingForMembers'] as bool?,
   pinnedNotices: (json['pinnedNotices'] as List<dynamic>?)
       ?.map((e) => e as String)
       .toList(),
   visibility: $enumDecodeNullable(_$TeamVisibilityEnumMap, json['visibility']),
-  joinMode: $enumDecodeNullable(_$TeamJoinModeEnumMap, json['joinMode']),
   status: $enumDecodeNullable(_$TeamStatusEnumMap, json['status']),
   location: json['location'] == null
       ? null
@@ -286,7 +272,6 @@ Map<String, dynamic> _$UpdateTeamRequestToJson(UpdateTeamRequest instance) =>
       'socialLinks': ?instance.socialLinks?.toJson(),
       'foundedYear': ?instance.foundedYear,
       'genderCategory': ?_$TeamGenderCategoryEnumMap[instance.genderCategory],
-      'maxPendingJoinRequests': ?instance.maxPendingJoinRequests,
       'logo': ?instance.logo,
       'coverImages': ?instance.coverImages,
       'tags': ?instance.tags,
@@ -295,10 +280,8 @@ Map<String, dynamic> _$UpdateTeamRequestToJson(UpdateTeamRequest instance) =>
           .toList(),
       'preferredTimeSlot':
           ?_$TeamPreferredTimeSlotEnumMap[instance.preferredTimeSlot],
-      'lookingForMembers': ?instance.lookingForMembers,
       'pinnedNotices': ?instance.pinnedNotices,
       'visibility': ?_$TeamVisibilityEnumMap[instance.visibility],
-      'joinMode': ?_$TeamJoinModeEnumMap[instance.joinMode],
       'status': ?_$TeamStatusEnumMap[instance.status],
       'location': ?instance.location?.toJson(),
     };
@@ -326,7 +309,6 @@ TeamModel _$TeamModelFromJson(Map<String, dynamic> json) => TeamModel(
       ? null
       : LocationModel.fromJson(json['location'] as Map<String, dynamic>),
   visibility: $enumDecode(_$TeamVisibilityEnumMap, json['visibility']),
-  joinMode: $enumDecode(_$TeamJoinModeEnumMap, json['joinMode']),
   createdBy: const UserConverter().fromJson(json['createdBy']),
   ownerIds: json['ownerIds'] == null ? [] : _ownerIdsFromJson(json['ownerIds']),
   logo: json['logo'] as String? ?? '',
@@ -335,7 +317,6 @@ TeamModel _$TeamModelFromJson(Map<String, dynamic> json) => TeamModel(
           ?.map((e) => e as String)
           .toList() ??
       [],
-  maxPendingJoinRequests: _intFromJson(json['maxPendingJoinRequests']),
   status: $enumDecode(_$TeamStatusEnumMap, json['status']),
   disabledAt: json['disabledAt'] as String?,
   tags:
@@ -349,7 +330,6 @@ TeamModel _$TeamModelFromJson(Map<String, dynamic> json) => TeamModel(
     _$TeamPreferredTimeSlotEnumMap,
     json['preferredTimeSlot'],
   ),
-  lookingForMembers: json['lookingForMembers'] as bool? ?? false,
   pinnedNotices:
       (json['pinnedNotices'] as List<dynamic>?)
           ?.map((e) => e as String)
@@ -390,19 +370,16 @@ Map<String, dynamic> _$TeamModelToJson(TeamModel instance) => <String, dynamic>{
   'genderCategory': _$TeamGenderCategoryEnumMap[instance.genderCategory],
   'location': instance.location?.toJson(),
   'visibility': _$TeamVisibilityEnumMap[instance.visibility]!,
-  'joinMode': _$TeamJoinModeEnumMap[instance.joinMode]!,
   'createdBy': const UserConverter().toJson(instance.createdBy),
   'ownerIds': instance.ownerIds,
   'logo': instance.logo,
   'coverImages': instance.coverImages,
-  'maxPendingJoinRequests': instance.maxPendingJoinRequests,
   'status': _$TeamStatusEnumMap[instance.status]!,
   'disabledAt': instance.disabledAt,
   'tags': instance.tags,
   'preferredPlayDays': instance.preferredPlayDays,
   'preferredTimeSlot':
       _$TeamPreferredTimeSlotEnumMap[instance.preferredTimeSlot],
-  'lookingForMembers': instance.lookingForMembers,
   'pinnedNotices': instance.pinnedNotices,
   'matchesPlayed': instance.matchesPlayed,
   'wins': instance.wins,

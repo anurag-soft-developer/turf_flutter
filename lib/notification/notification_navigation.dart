@@ -8,6 +8,7 @@ extension AppNotificationNavigation on AppNotification {
   /// Prefer data fields when sourceId is a different entity (e.g. teams).
   String? get bookingId => sourceId ?? idFromData('bookingId');
   String? get matchId => sourceId ?? idFromData('matchId');
+  String? get openingId => idFromData('openingId');
   String? get teamId => idFromData('teamId');
   String? get turfId => sourceId ?? idFromData('turfId');
   String? get queryId => sourceId ?? idFromData('queryId');

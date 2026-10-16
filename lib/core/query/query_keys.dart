@@ -123,11 +123,12 @@ class QueryKeys {
   static List<Object?> bookings({required String tab, String? paymentStatus}) =>
       [...bookingsPrefix, tab, paymentStatus ?? ''];
 
-  static const teamOpeningsPrefix = ['teamOpenings'];
+  static const openingsPrefix = ['openings'];
 
-  static List<Object> teamOpenings(String sport) => [
-    ...teamOpeningsPrefix,
-    sport,
+  static List<Object> openings({String? sport, String? type}) => [
+    ...openingsPrefix,
+    sport ?? 'all',
+    type ?? 'all',
   ];
 
   static const turfDetailPrefix = ['turfDetail'];
@@ -148,11 +149,21 @@ class QueryKeys {
 
   static const profile = ['profile'];
 
-  static const myJoinRequestsPrefix = ['myJoinRequests'];
+  static const myEnrollmentsPrefix = ['myEnrollments'];
 
-  /// Pending / accepted / rejected join-request tabs.
-  static List<Object> myJoinRequests(String status) => [
-    ...myJoinRequestsPrefix,
+  /// Pending / accepted / rejected enrollments submitted by the signed-in user.
+  static List<Object> myEnrollments(String status) => [
+    ...myEnrollmentsPrefix,
+    status,
+  ];
+
+  static List<Object> openingEnrollmentsPrefix(String openingId) => [
+    'openingEnrollments',
+    openingId,
+  ];
+
+  static List<Object> openingEnrollments(String openingId, String status) => [
+    ...openingEnrollmentsPrefix(openingId),
     status,
   ];
 

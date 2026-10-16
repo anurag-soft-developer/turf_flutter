@@ -81,6 +81,14 @@ class NotificationRouter {
 
     switch (kind) {
       case 'team_join_request':
+        final openingId = notification.openingId;
+        if (openingId != null && openingId.isNotEmpty) {
+          await Get.toNamed(
+            AppConstants.routes.teamJoinRequests,
+            arguments: {'openingId': openingId, 'teamId': teamId},
+          );
+          return;
+        }
         if (teamId == null || teamId.isEmpty) {
           return _fallback(notification.module, kind);
         }

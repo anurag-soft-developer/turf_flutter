@@ -41,9 +41,6 @@ enum TeamSportType {
 /// Backend [TeamVisibility].
 enum TeamVisibility { public, private }
 
-/// Backend [TeamJoinMode]. Private teams cannot use [open] (server validates).
-enum TeamJoinMode { open, approval }
-
 /// Backend [TeamStatus].
 enum TeamStatus { active, inactive, archived }
 
@@ -266,9 +263,6 @@ class TeamFilterQuery {
   final TeamSportType? sportType;
   final TeamGenderCategory? genderCategory;
 
-  /// Serialized as `'true'` / `'false'` (Zod enum).
-  final bool? lookingForMembers;
-
   /// When true, backend excludes opponents already challenged by [fromTeamId].
   final bool? skipTeamsWithSentRequest;
 
@@ -288,7 +282,6 @@ class TeamFilterQuery {
     this.status,
     this.sportType,
     this.genderCategory,
-    this.lookingForMembers,
     this.skipTeamsWithSentRequest,
     this.fromTeamId,
     this.search,
@@ -310,9 +303,6 @@ class TeamFilterQuery {
     if (sportType != null) params['sportType'] = sportType!.name;
     if (genderCategory != null) {
       params['genderCategory'] = genderCategory!.name;
-    }
-    if (lookingForMembers != null) {
-      params['lookingForMembers'] = lookingForMembers! ? 'true' : 'false';
     }
     if (skipTeamsWithSentRequest == true && fromTeamId != null) {
       params['skipTeamsWithSentRequest'] = 'true';
@@ -349,8 +339,6 @@ class CreateTeamRequest {
   final int? foundedYear;
   @JsonKey(name: 'genderCategory')
   final TeamGenderCategory? genderCategory;
-  @JsonKey(name: 'maxPendingJoinRequests')
-  final int maxPendingJoinRequests;
   final String? logo;
   final List<String>? coverImages;
   final List<String>? tags;
@@ -358,13 +346,10 @@ class CreateTeamRequest {
   final List<TeamDayOfWeek>? preferredPlayDays;
   @JsonKey(name: 'preferredTimeSlot')
   final TeamPreferredTimeSlot? preferredTimeSlot;
-  @JsonKey(name: 'lookingForMembers')
-  final bool? lookingForMembers;
   @JsonKey(name: 'pinnedNotices')
   final List<String>? pinnedNotices;
   final TeamSportType sportType;
   final TeamVisibility visibility;
-  final TeamJoinMode joinMode;
   final LocationModel? location;
 
   CreateTeamRequest({
@@ -375,17 +360,14 @@ class CreateTeamRequest {
     this.socialLinks,
     this.foundedYear,
     this.genderCategory,
-    required this.maxPendingJoinRequests,
     this.logo,
     this.coverImages,
     this.tags,
     this.preferredPlayDays,
     this.preferredTimeSlot,
-    this.lookingForMembers,
     this.pinnedNotices,
     required this.sportType,
     required this.visibility,
-    required this.joinMode,
     this.location,
   });
 
@@ -410,8 +392,6 @@ class UpdateTeamRequest {
   final int? foundedYear;
   @JsonKey(name: 'genderCategory')
   final TeamGenderCategory? genderCategory;
-  @JsonKey(name: 'maxPendingJoinRequests')
-  final int? maxPendingJoinRequests;
   final String? logo;
   final List<String>? coverImages;
   final List<String>? tags;
@@ -419,12 +399,9 @@ class UpdateTeamRequest {
   final List<TeamDayOfWeek>? preferredPlayDays;
   @JsonKey(name: 'preferredTimeSlot')
   final TeamPreferredTimeSlot? preferredTimeSlot;
-  @JsonKey(name: 'lookingForMembers')
-  final bool? lookingForMembers;
   @JsonKey(name: 'pinnedNotices')
   final List<String>? pinnedNotices;
   final TeamVisibility? visibility;
-  final TeamJoinMode? joinMode;
   final TeamStatus? status;
   final LocationModel? location;
 
@@ -436,16 +413,13 @@ class UpdateTeamRequest {
     this.socialLinks,
     this.foundedYear,
     this.genderCategory,
-    this.maxPendingJoinRequests,
     this.logo,
     this.coverImages,
     this.tags,
     this.preferredPlayDays,
     this.preferredTimeSlot,
-    this.lookingForMembers,
     this.pinnedNotices,
     this.visibility,
-    this.joinMode,
     this.status,
     this.location,
   });
@@ -474,7 +448,6 @@ class TeamModel {
   final TeamGenderCategory? genderCategory;
   final LocationModel? location;
   final TeamVisibility visibility;
-  final TeamJoinMode joinMode;
   @JsonKey(name: 'createdBy')
   @UserConverter()
   final dynamic createdBy;
@@ -488,8 +461,6 @@ class TeamModel {
   final String logo;
   @JsonKey(defaultValue: <String>[])
   final List<String> coverImages;
-  @JsonKey(name: 'maxPendingJoinRequests', fromJson: _intFromJson)
-  final int maxPendingJoinRequests;
   final TeamStatus status;
   @JsonKey(name: 'disabledAt')
   final String? disabledAt;
@@ -499,8 +470,6 @@ class TeamModel {
   final List<String> preferredPlayDays;
   @JsonKey(name: 'preferredTimeSlot')
   final TeamPreferredTimeSlot? preferredTimeSlot;
-  @JsonKey(name: 'lookingForMembers', defaultValue: false)
-  final bool lookingForMembers;
   @JsonKey(name: 'pinnedNotices', defaultValue: <String>[])
   final List<String> pinnedNotices;
   @JsonKey(fromJson: _intFromJson, defaultValue: 0)
@@ -542,18 +511,15 @@ class TeamModel {
     this.genderCategory,
     this.location,
     required this.visibility,
-    required this.joinMode,
     this.createdBy,
     this.ownerIds = const [],
     this.logo = '',
     this.coverImages = const [],
-    required this.maxPendingJoinRequests,
     required this.status,
     this.disabledAt,
     this.tags = const [],
     this.preferredPlayDays = const [],
     this.preferredTimeSlot,
-    this.lookingForMembers = false,
     this.pinnedNotices = const [],
     this.matchesPlayed = 0,
     this.wins = 0,

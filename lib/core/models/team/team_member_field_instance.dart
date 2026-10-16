@@ -6,6 +6,11 @@ import '../location_model.dart';
 
 part 'team_member_field_instance.g.dart';
 
+List<String> _ownerIdsFromJson(dynamic json) {
+  if (json is! List) return const [];
+  return json.map((item) => item.toString()).toList();
+}
+
 /// Populated `team` subset from backend [teamPopulateSelectFields].
 @JsonSerializable(explicitToJson: true)
 class TeamMemberFieldInstance {
@@ -14,7 +19,7 @@ class TeamMemberFieldInstance {
   final String name;
   @JsonKey(defaultValue: '')
   final String logo;
-  @JsonKey(defaultValue: <String>[])
+  @JsonKey(fromJson: _ownerIdsFromJson, defaultValue: <String>[])
   final List<String> ownerIds;
   final LocationModel? location;
   final TeamSportType sportType;

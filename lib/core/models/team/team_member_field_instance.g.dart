@@ -12,9 +12,9 @@ TeamMemberFieldInstance _$TeamMemberFieldInstanceFromJson(
   id: json['_id'] as String?,
   name: json['name'] as String,
   logo: json['logo'] as String? ?? '',
-  ownerIds:
-      (json['ownerIds'] as List<dynamic>?)?.map((e) => e as String).toList() ??
-      [],
+  ownerIds: json['ownerIds'] == null
+      ? <String>[]
+      : _ownerIdsFromJson(json['ownerIds']),
   location: json['location'] == null
       ? null
       : LocationModel.fromJson(json['location'] as Map<String, dynamic>),

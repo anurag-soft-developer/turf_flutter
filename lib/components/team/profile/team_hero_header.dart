@@ -139,20 +139,6 @@ class _TeamHeroHeaderState extends State<TeamHeroHeader> {
                                   ),
                                 ),
                               ),
-                            if (widget.team.lookingForMembers) ...[
-                              const SizedBox(height: 8),
-                              const Wrap(
-                                spacing: 6,
-                                runSpacing: 6,
-                                children: [
-                                  _ChipBadge(
-                                    icon: Icons.person_add_alt_1,
-                                    label: 'Looking for players',
-                                    color: Color(AppColors.successColor),
-                                  ),
-                                ],
-                              ),
-                            ],
                           ],
                         ),
                       ),
@@ -277,45 +263,6 @@ class _TeamHeroHeaderState extends State<TeamHeroHeader> {
                 color: Color(AppColors.primaryColor),
               )
             : null,
-      ),
-    );
-  }
-}
-
-class _ChipBadge extends StatelessWidget {
-  const _ChipBadge({required this.icon, required this.label, this.color});
-
-  final IconData icon;
-  final String label;
-  final Color? color;
-
-  @override
-  Widget build(BuildContext context) {
-    final bgColor = color ?? Colors.white.withValues(alpha: 0.2);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: bgColor.withValues(alpha: 0.25),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.3),
-          width: 0.5,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 13, color: Colors.white),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
       ),
     );
   }

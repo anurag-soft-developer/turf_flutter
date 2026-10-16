@@ -66,7 +66,7 @@ class MyInvitationsController extends GetxController {
     final client = Get.find<QueryClient>();
     final futures = <Future>[
       client.invalidateQueries(queryKey: QueryKeys.myInvitationsPrefix),
-      client.invalidateQueries(queryKey: const ['myJoinRequests']),
+      client.invalidateQueries(queryKey: QueryKeys.myEnrollmentsPrefix),
     ];
     final teamId = invite.teamId;
     if (teamId != null && teamId.isNotEmpty) {

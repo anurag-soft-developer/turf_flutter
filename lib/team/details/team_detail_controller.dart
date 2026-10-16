@@ -9,6 +9,9 @@ import '../../core/utils/app_snackbar.dart';
 import '../../core/utils/exception_handler.dart';
 import '../members/model/team_member_model.dart';
 import '../model/team_model.dart';
+import '../../openings/model/enrollment_model.dart';
+import '../../openings/model/opening_model.dart';
+import '../../openings/opening_service.dart';
 import '../team_service.dart';
 
 /// Unified controller for both "My Team" and "Team Profile" screens.
@@ -22,6 +25,7 @@ class TeamDetailController extends GetxController
   TeamDetailController({this.isMyTeamMode = false});
 
   final TeamService _teamService = TeamService();
+  final OpeningService _openingService = OpeningService();
 
   late final TabController tabController;
 
@@ -37,6 +41,9 @@ class TeamDetailController extends GetxController
   final RxBool isActionLoading = false.obs;
   final RxBool isUpdatingTeamSettings = false.obs;
   final RxBool isJoining = false.obs;
+  final Rxn<OpeningModel> teamOpening = Rxn<OpeningModel>();
+
+  bool get hasOpenOpening => teamOpening.value?.status == OpeningStatus.open;
 
   String? _teamId;
 
@@ -58,7 +65,10 @@ class TeamDetailController extends GetxController
   bool get canLeave => isMember || isSuspended;
 
   bool get hasPendingRequest =>
-      myMembership.value?.status == TeamMemberStatus.pending;
+      teamOpening.value?.myStatus == EnrollmentStatus.pending;
+
+  bool get hasAcceptedEnrollment =>
+      teamOpening.value?.myStatus == EnrollmentStatus.accepted;
 
   @override
   void onInit() {
@@ -106,6 +116,7 @@ class TeamDetailController extends GetxController
         if (id == null || id.isEmpty) {
           hasNoTeam.value = true;
           team.value = null;
+          teamOpening.value = null;
           members.clear();
           myMembership.value = null;
           return;
@@ -149,6 +160,7 @@ class TeamDetailController extends GetxController
         hasError.value = true;
         errorMessage.value = 'Team not found';
         team.value = null;
+        teamOpening.value = null;
         members.clear();
         myMembership.value = null;
         return;
@@ -161,6 +173,10 @@ class TeamDetailController extends GetxController
         teamId: id,
         roster: roster,
         mine: mine,
+      );
+      teamOpening.value = await _openingService.findByTarget(
+        type: OpeningType.team,
+        targetId: id,
       );
     } catch (e) {
       hasError.value = true;
@@ -208,48 +224,16 @@ class TeamDetailController extends GetxController
 
   // ── Owner actions ─────────────────────────────────────────────────────────
 
-  Future<void> updateTeamSettings({
-    TeamVisibility? visibility,
-    TeamJoinMode? joinMode,
-    bool? lookingForMembers,
-    int? maxPendingJoinRequests,
-  }) async {
+  Future<void> updateTeamSettings({TeamVisibility? visibility}) async {
     final id = _teamId;
     final t = team.value;
     if (id == null || !isMyTeamMode || !isOwner || t == null) return;
-
-    final affectsVisibilityOrJoin = visibility != null || joinMode != null;
-    if (affectsVisibilityOrJoin) {
-      final nextVisibility = visibility ?? t.visibility;
-      final nextJoinMode = joinMode ?? t.joinMode;
-      if (nextVisibility == TeamVisibility.private &&
-          nextJoinMode == TeamJoinMode.open) {
-        AppSnackbar.warning(
-          title: 'Join mode',
-          message:
-              'Private teams cannot use open join. Make the team public or use approval.',
-        );
-        return;
-      }
-    }
+    if (visibility == null) return;
 
     isUpdatingTeamSettings.value = true;
-    TeamJoinMode? joinModePatch = joinMode;
-    TeamVisibility? visibilityPatch = visibility;
-    if (visibility == TeamVisibility.private &&
-        t.joinMode == TeamJoinMode.open &&
-        joinMode == null) {
-      joinModePatch = TeamJoinMode.approval;
-    }
-
     final updated = await _teamService.update(
       id,
-      UpdateTeamRequest(
-        visibility: visibilityPatch,
-        joinMode: joinModePatch,
-        lookingForMembers: lookingForMembers,
-        maxPendingJoinRequests: maxPendingJoinRequests,
-      ),
+      UpdateTeamRequest(visibility: visibility),
     );
     if (updated != null) {
       team.value = updated;
@@ -307,10 +291,7 @@ class TeamDetailController extends GetxController
     final res = await _teamService.memberService.leave(id);
     if (res != null && res.success) {
       AppSnackbar.success(title: 'Left team', message: res.message);
-      await _invalidateSharedQueries(
-        teamId: id,
-        includeJoinRequests: true,
-      );
+      await _invalidateSharedQueries(teamId: id, includeJoinRequests: true);
       myMembership.value = null;
       if (isMyTeamMode) {
         team.value = null;
@@ -328,22 +309,25 @@ class TeamDetailController extends GetxController
 
   Future<void> sendJoinRequest() async {
     final id = _teamId;
+    final openingId = teamOpening.value?.id;
     if (id == null ||
+        openingId == null ||
         isMyTeamMode ||
         isMember ||
         isSuspended ||
-        hasPendingRequest) {
+        hasPendingRequest ||
+        hasAcceptedEnrollment) {
       return;
     }
     isJoining.value = true;
-    final result = await _teamService.memberService.join(id);
+    final result = await _openingService.enroll(openingId);
     if (result != null) {
-      myMembership.value = result;
+      final joined = result.status == EnrollmentStatus.accepted;
       AppSnackbar.success(
-        title: 'Request sent',
-        message: result.status == TeamMemberStatus.active
+        title: joined ? 'Enrolled' : 'Request sent',
+        message: joined
             ? 'You have joined the team.'
-            : 'Your join request was submitted.',
+            : 'Your enrollment is waiting for review.',
       );
       await _afterMutation(includeJoinRequests: true);
     }
@@ -351,15 +335,14 @@ class TeamDetailController extends GetxController
   }
 
   Future<void> withdrawJoinRequest() async {
-    final id = _teamId;
-    if (id == null || isMyTeamMode || !hasPendingRequest) return;
+    final openingId = teamOpening.value?.id;
+    if (openingId == null || isMyTeamMode || !hasPendingRequest) return;
     isJoining.value = true;
-    final ok = await _teamService.memberService.withdrawJoinRequest(id);
+    final ok = await _openingService.withdraw(openingId);
     if (ok) {
-      myMembership.value = null;
       AppSnackbar.success(
         title: 'Request withdrawn',
-        message: 'Your join request was withdrawn.',
+        message: 'Your enrollment was withdrawn.',
       );
       await _afterMutation(includeJoinRequests: true);
     }
@@ -382,16 +365,12 @@ class TeamDetailController extends GetxController
     ];
     final id = teamId ?? _teamId;
     if (id != null && id.isNotEmpty) {
-      futures.add(
-        client.invalidateQueries(queryKey: QueryKeys.teamDetail(id)),
-      );
-      futures.add(
-        client.invalidateQueries(queryKey: ['teamRoster', id]),
-      );
+      futures.add(client.invalidateQueries(queryKey: QueryKeys.teamDetail(id)));
+      futures.add(client.invalidateQueries(queryKey: ['teamRoster', id]));
     }
     if (includeJoinRequests) {
       futures.add(
-        client.invalidateQueries(queryKey: const ['myJoinRequests']),
+        client.invalidateQueries(queryKey: QueryKeys.myEnrollmentsPrefix),
       );
     }
     await Future.wait(futures);

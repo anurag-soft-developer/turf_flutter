@@ -5,14 +5,12 @@ class ExploreFilters {
   const ExploreFilters({
     this.matchFilters = MatchListFilters.all,
     this.sportType,
-    this.lookingForMembers,
   });
 
   static const all = ExploreFilters();
 
   final MatchListFilters matchFilters;
   final TeamSportType? sportType;
-  final bool? lookingForMembers;
 
   String get matchScope =>
       matchFilters.type == MatchTypeFilter.my ? 'mine' : 'all';
@@ -36,9 +34,6 @@ class ExploreFilters {
     if (sportType != null) {
       params['sportType'] = sportType!.name;
     }
-    if (lookingForMembers != null) {
-      params['lookingForMembers'] = lookingForMembers! ? 'true' : 'false';
-    }
 
     return params;
   }
@@ -47,22 +42,16 @@ class ExploreFilters {
         matchScope,
         matchStatus,
         sportType?.name ?? '',
-        lookingForMembers?.toString() ?? '',
       ];
 
   ExploreFilters copyWith({
     MatchListFilters? matchFilters,
     TeamSportType? sportType,
-    bool? lookingForMembers,
     bool clearSportType = false,
-    bool clearLookingForMembers = false,
   }) {
     return ExploreFilters(
       matchFilters: matchFilters ?? this.matchFilters,
       sportType: clearSportType ? null : sportType ?? this.sportType,
-      lookingForMembers: clearLookingForMembers
-          ? null
-          : lookingForMembers ?? this.lookingForMembers,
     );
   }
 }

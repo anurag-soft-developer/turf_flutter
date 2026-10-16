@@ -51,7 +51,8 @@ class Routes {
   final String myTeams = '/my-teams';
   final String myTeamsSearch = '/my-teams/search';
   final String myTeam = '/my-team';
-  final String teamOpenings = '/team-openings';
+  final String openings = '/openings';
+  final String myOpenings = '/my-openings';
   final String myJoinRequests = '/my-join-requests';
   final String myInvitations = '/my-invitations';
   final String rank = '/rank';

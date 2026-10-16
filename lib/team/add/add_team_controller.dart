@@ -40,7 +40,6 @@ class AddTeamController extends GetxController {
   final taglineController = TextEditingController();
   final descriptionController = TextEditingController();
   final foundedYearController = TextEditingController();
-  final maxPendingController = TextEditingController(text: '10');
 
   final instagramController = TextEditingController();
   final twitterController = TextEditingController();
@@ -57,13 +56,11 @@ class AddTeamController extends GetxController {
 
   final Rx<TeamSportType> sportType = TeamSportType.football.obs;
   final Rx<TeamVisibility> visibility = TeamVisibility.public.obs;
-  final Rx<TeamJoinMode> joinMode = TeamJoinMode.approval.obs;
   final Rxn<TeamGenderCategory> genderCategory = Rxn<TeamGenderCategory>();
   final Rxn<TeamPreferredTimeSlot> preferredTimeSlot =
       Rxn<TeamPreferredTimeSlot>();
 
   final RxSet<TeamDayOfWeek> preferredPlayDays = <TeamDayOfWeek>{}.obs;
-  final RxBool lookingForMembers = false.obs;
   final RxList<String> tags = <String>[].obs;
   final RxList<String> pinnedNotices = <String>[].obs;
 
@@ -122,14 +119,11 @@ class AddTeamController extends GetxController {
     if (t.foundedYear != null) {
       foundedYearController.text = t.foundedYear.toString();
     }
-    maxPendingController.text = '${t.maxPendingJoinRequests}';
 
     sportType.value = t.sportType;
     visibility.value = t.visibility;
-    joinMode.value = t.joinMode;
     genderCategory.value = t.genderCategory;
     preferredTimeSlot.value = t.preferredTimeSlot;
-    lookingForMembers.value = t.lookingForMembers;
 
     for (final dayStr in t.preferredPlayDays) {
       final match = TeamDayOfWeek.values.where((d) => d.name == dayStr);
@@ -175,7 +169,6 @@ class AddTeamController extends GetxController {
     taglineController.dispose();
     descriptionController.dispose();
     foundedYearController.dispose();
-    maxPendingController.dispose();
     instagramController.dispose();
     twitterController.dispose();
     facebookController.dispose();
@@ -468,25 +461,6 @@ class AddTeamController extends GetxController {
   Future<void> submit() async {
     if (!(formKey.currentState?.validate() ?? false)) return;
 
-    final maxPending = int.tryParse(maxPendingController.text.trim());
-    if (maxPending == null || maxPending < 0 || maxPending > 1000) {
-      AppSnackbar.error(
-        title: 'Invalid pending requests',
-        message: 'Enter a number from 0 to 1000.',
-      );
-      return;
-    }
-
-    if (visibility.value == TeamVisibility.private &&
-        joinMode.value == TeamJoinMode.open) {
-      AppSnackbar.warning(
-        title: 'Join mode',
-        message:
-            'Private teams cannot use open join. Switch to approval or make the team public.',
-      );
-      return;
-    }
-
     isSubmitting.value = true;
     submitMessage.value = 'Uploading photos…';
     var uploaded = <UploadedMediaRef>[];
@@ -527,16 +501,13 @@ class AddTeamController extends GetxController {
             socialLinks: social,
             foundedYear: founded,
             genderCategory: genderCategory.value,
-            maxPendingJoinRequests: maxPending,
             logo: logo,
             coverImages: covers,
             tags: tagsVal,
             preferredPlayDays: playDays,
             preferredTimeSlot: preferredTimeSlot.value,
-            lookingForMembers: lookingForMembers.value,
             pinnedNotices: notices,
             visibility: visibility.value,
-            joinMode: joinMode.value,
             location: location,
           ),
         );
@@ -562,17 +533,14 @@ class AddTeamController extends GetxController {
             socialLinks: social,
             foundedYear: founded,
             genderCategory: genderCategory.value,
-            maxPendingJoinRequests: maxPending,
             logo: logo,
             coverImages: covers.isEmpty ? null : covers,
             tags: tagsVal,
             preferredPlayDays: playDays,
             preferredTimeSlot: preferredTimeSlot.value,
-            lookingForMembers: lookingForMembers.value,
             pinnedNotices: notices,
             sportType: sportType.value,
             visibility: visibility.value,
-            joinMode: joinMode.value,
             location: location,
           ),
         );

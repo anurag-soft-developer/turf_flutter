@@ -11,9 +11,12 @@ import '../../core/config/constants.dart';
 import '../../core/models/paginated_response.dart';
 import '../../core/query/query_keys.dart';
 import '../../core/query/query_retry.dart';
-import '../members/model/team_member_model.dart';
-import '../team_service.dart';
-import '../utils/team_ui.dart';
+import '../../core/utils/app_snackbar.dart';
+import '../../openings/model/enrollment_model.dart';
+import '../../openings/model/opening_model.dart';
+import '../../openings/opening_service.dart';
+import '../../team/model/team_model.dart';
+import '../../team/utils/team_ui.dart';
 
 enum JoinRequestStatusTab { pending, accepted, rejected }
 
@@ -58,13 +61,12 @@ class MyJoinRequestsScreen extends HookWidget {
         headerSliverBuilder: (context, innerBoxIsScrolled) {
           return [
             FloatingSliverAppBar(
-              title: const Text('Join requests'),
+              title: const Text('My requests'),
               actions: [
                 IconButton(
-                  tooltip: 'Find teams',
+                  tooltip: 'Openings',
                   icon: const Icon(Icons.search),
-                  onPressed: () =>
-                      Get.toNamed(AppConstants.routes.teamOpenings),
+                  onPressed: () => Get.toNamed(AppConstants.routes.openings),
                 ),
               ],
             ),
@@ -82,7 +84,7 @@ class MyJoinRequestsScreen extends HookWidget {
                     label: 'Pending',
                     icon: Icons.hourglass_top_outlined,
                   ),
-                  AppTabItem(label: 'Joined', icon: Icons.check_circle_outline),
+                  AppTabItem(label: 'Accepted', icon: Icons.check_circle_outline),
                   AppTabItem(label: 'Rejected', icon: Icons.cancel_outlined),
                 ],
               ),
@@ -106,39 +108,59 @@ class _RequestTabList extends HookWidget {
 
   final JoinRequestStatusTab tab;
 
-  TeamMemberStatus get _status => switch (tab) {
-        JoinRequestStatusTab.pending => TeamMemberStatus.pending,
-        JoinRequestStatusTab.accepted => TeamMemberStatus.active,
-        JoinRequestStatusTab.rejected => TeamMemberStatus.rejected,
-      };
+  EnrollmentStatus get _status => switch (tab) {
+    JoinRequestStatusTab.pending => EnrollmentStatus.pending,
+    JoinRequestStatusTab.accepted => EnrollmentStatus.accepted,
+    JoinRequestStatusTab.rejected => EnrollmentStatus.rejected,
+  };
 
   @override
   Widget build(BuildContext context) {
+    final withdrawingId = useState<String?>(null);
     final query =
-        useInfiniteQuery<PaginatedResponse<TeamMemberModel>, Object, int>(
-      QueryKeys.myJoinRequests(tab.name),
-      (ctx) async {
-        final result = await TeamService().memberService.myMemberships(
-          MyTeamMembershipsFilterQuery(
-            status: _status,
-            page: ctx.pageParam,
-            limit: 20,
-          ),
+        useInfiniteQuery<PaginatedResponse<EnrollmentModel>, Object, int>(
+          QueryKeys.myEnrollments(tab.name),
+          (ctx) async {
+            final result = await OpeningService().myEnrollments(
+              EnrollmentListQuery(
+                status: _status,
+                page: ctx.pageParam,
+                limit: 20,
+              ),
+            );
+            return result ?? EmptyPaginatedResponse<EnrollmentModel>();
+          },
+          initialPageParam: 1,
+          retry: noRetry,
+          nextPageParamBuilder: (data) {
+            final last = data.pages.isNotEmpty ? data.pages.last : null;
+            if (last == null || !last.hasNextPage) return null;
+            return last.page + 1;
+          },
         );
-        return result ?? EmptyPaginatedResponse<TeamMemberModel>();
-      },
-      initialPageParam: 1,
-      retry: noRetry,
-      nextPageParamBuilder: (data) {
-        final last = data.pages.isNotEmpty ? data.pages.last : null;
-        if (last == null || !last.hasNextPage) return null;
-        return last.page + 1;
-      },
-    );
 
     final items =
         query.data?.pages.expand((p) => p.data).toList() ??
-        const <TeamMemberModel>[];
+        const <EnrollmentModel>[];
+
+    Future<void> withdraw(EnrollmentModel row) async {
+      if (row.openingId.isEmpty || withdrawingId.value != null) return;
+      withdrawingId.value = row.id ?? row.openingId;
+      final ok = await OpeningService().withdraw(
+        row.openingId,
+        teamId: row.isTournament ? row.teamId : null,
+      );
+      withdrawingId.value = null;
+      if (!ok) return;
+      AppSnackbar.success(
+        title: 'Withdrawn',
+        message: 'Your enrollment was withdrawn.',
+      );
+      if (!Get.isRegistered<QueryClient>()) return;
+      await Get.find<QueryClient>().invalidateQueries(
+        queryKey: QueryKeys.myEnrollmentsPrefix,
+      );
+    }
 
     if (query.isLoading || (query.isFetching && items.isEmpty)) {
       return const Center(
@@ -162,7 +184,7 @@ class _RequestTabList extends HookWidget {
             ),
             const SizedBox(height: 10),
             const Text(
-              'Failed to load your join requests',
+              'Failed to load your requests',
               style: TextStyle(
                 color: Color(AppColors.textSecondaryColor),
                 fontSize: 14,
@@ -213,7 +235,13 @@ class _RequestTabList extends HookWidget {
           children: [
             for (var i = 0; i < items.length; i++) ...[
               if (i > 0) const SizedBox(height: 10),
-              _MembershipRow(membership: items[i]),
+              _EnrollmentRow(
+                enrollment: items[i],
+                withdrawing: withdrawingId.value == (items[i].id ?? items[i].openingId),
+                onWithdraw: tab == JoinRequestStatusTab.pending
+                    ? () => withdraw(items[i])
+                    : null,
+              ),
             ],
             if (query.isFetchingNextPage)
               const Padding(
@@ -234,32 +262,33 @@ class _RequestTabList extends HookWidget {
 
   String _emptyMessage(JoinRequestStatusTab t) {
     return switch (t) {
-      JoinRequestStatusTab.pending => 'No pending join requests.',
-      JoinRequestStatusTab.accepted =>
-        'No active team memberships in this list.',
-      JoinRequestStatusTab.rejected => 'No rejected join requests.',
+      JoinRequestStatusTab.pending => 'No pending requests.',
+      JoinRequestStatusTab.accepted => 'No accepted requests.',
+      JoinRequestStatusTab.rejected => 'No rejected requests.',
     };
   }
 }
 
-class _MembershipRow extends StatelessWidget {
-  const _MembershipRow({required this.membership});
+class _EnrollmentRow extends StatelessWidget {
+  const _EnrollmentRow({
+    required this.enrollment,
+    required this.withdrawing,
+    this.onWithdraw,
+  });
 
-  final TeamMemberModel membership;
+  final EnrollmentModel enrollment;
+  final bool withdrawing;
+  final VoidCallback? onWithdraw;
 
   @override
   Widget build(BuildContext context) {
-    final teamRef = membership.team;
-    String teamName = 'Team';
-    String? logo;
-    TeamSportType? sport;
-    String? teamId = membership.teamId;
-
-    if (teamRef is TeamMemberFieldInstance) {
-      teamName = teamRef.name;
-      logo = teamRef.logo.isNotEmpty ? teamRef.logo : null;
-      sport = teamRef.sportType;
-    }
+    final sport = _sportOf(enrollment.sportType);
+    final subtitle = [
+      if (enrollment.isTournament && (enrollment.teamName ?? '').isNotEmpty)
+        enrollment.teamName!,
+      if (sport != null) teamSportLabel(sport),
+      if (enrollment.title.isNotEmpty) enrollment.title,
+    ].join(' · ');
 
     return Card(
       elevation: 0,
@@ -267,12 +296,7 @@ class _MembershipRow extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-        onTap: teamId == null || teamId.isEmpty
-            ? null
-            : () => Get.toNamed(
-                AppConstants.routes.teamProfile,
-                arguments: {'teamId': teamId},
-              ),
+        onTap: _openHost,
         leading: Container(
           width: 48,
           height: 48,
@@ -281,59 +305,61 @@ class _MembershipRow extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
           ),
           clipBehavior: Clip.antiAlias,
-          child: logo != null
+          child: enrollment.hostImage != null && enrollment.hostImage!.isNotEmpty
               ? AppNetworkImage(
-                  logo,
+                  enrollment.hostImage!,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => _initials(teamName),
+                  errorBuilder: (_, __, ___) => _initials(enrollment.hostName),
                 )
-              : _initials(teamName),
+              : _initials(enrollment.hostName),
         ),
         title: Text(
-          teamName,
+          enrollment.hostName.isEmpty ? 'Opening' : enrollment.hostName,
           style: const TextStyle(
             fontWeight: FontWeight.w700,
             color: Color(AppColors.textColor),
           ),
         ),
-        subtitle: sport != null
-            ? Text(
-                teamSportLabel(sport),
+        subtitle: subtitle.isEmpty
+            ? null
+            : Text(
+                subtitle,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontSize: 13,
                   color: Color(AppColors.textSecondaryColor),
                 ),
-              )
-            : null,
-        trailing: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: _statusColor(membership.status).withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            teamMemberStatusLabel(membership.status),
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: _statusColor(membership.status),
-            ),
-          ),
-        ),
+              ),
+        trailing: onWithdraw == null
+            ? null
+            : TextButton(
+                onPressed: withdrawing ? null : onWithdraw,
+                child: Text(withdrawing ? '…' : 'Withdraw'),
+              ),
       ),
     );
   }
 
+  void _openHost() {
+    if (enrollment.subjectType == OpeningType.team.apiValue) {
+      if (enrollment.hostId.isEmpty) return;
+      Get.toNamed(
+        AppConstants.routes.teamProfile,
+        arguments: {'teamId': enrollment.hostId},
+      );
+      return;
+    }
+    if (enrollment.hostId.isEmpty) return;
+    Get.toNamed(AppConstants.routes.tournamentDetail(enrollment.hostId));
+  }
+
   static Widget _initials(String name) {
-    final parts = name.trim().split(RegExp(r'\s+'));
-    final s = parts.isEmpty
-        ? '?'
-        : (parts.length == 1
-              ? (parts[0].isNotEmpty ? parts[0][0] : '?')
-              : '${parts[0][0]}${parts[1][0]}');
+    final trimmed = name.trim();
+    final letter = trimmed.isEmpty ? '?' : trimmed[0].toUpperCase();
     return Center(
       child: Text(
-        s.toUpperCase(),
+        letter,
         style: const TextStyle(
           fontWeight: FontWeight.w800,
           color: Color(AppColors.primaryColor),
@@ -341,13 +367,12 @@ class _MembershipRow extends StatelessWidget {
       ),
     );
   }
+}
 
-  Color _statusColor(TeamMemberStatus s) {
-    return switch (s) {
-      TeamMemberStatus.pending => const Color(0xFFF9A825),
-      TeamMemberStatus.active => const Color(0xFF2E7D32),
-      TeamMemberStatus.rejected => const Color(0xFFC62828),
-      _ => const Color(AppColors.textSecondaryColor),
-    };
+TeamSportType? _sportOf(String? raw) {
+  if (raw == null || raw.isEmpty) return null;
+  for (final sport in TeamSportType.values) {
+    if (sport.name == raw) return sport;
   }
+  return null;
 }

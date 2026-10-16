@@ -78,7 +78,7 @@ class TeamDetailScreen extends GetView<TeamDetailController> {
           ? null
           : Obx(() {
               final t = controller.team.value;
-              if (t == null || !t.lookingForMembers) {
+              if (t == null || !controller.hasOpenOpening) {
                 return const SizedBox.shrink();
               }
               return _BottomJoinBar(controller: controller);
@@ -171,10 +171,7 @@ class TeamDetailScreen extends GetView<TeamDetailController> {
     final manageBody = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        TeamHeroHeader(
-          team: t,
-          showFollowButton: !controller.isMyTeamMode,
-        ),
+        TeamHeroHeader(team: t, showFollowButton: !controller.isMyTeamMode),
         const SizedBox(height: 16),
         TeamQuickStatsBar(team: t),
         const SizedBox(height: 24),
@@ -212,7 +209,12 @@ class TeamDetailScreen extends GetView<TeamDetailController> {
                       } else if (value == 'join_requests') {
                         Get.toNamed(
                           AppConstants.routes.teamJoinRequests,
-                          arguments: {'teamId': teamId},
+                          arguments: {
+                            'teamId': teamId,
+                            'title': t.name,
+                            if (controller.teamOpening.value?.id != null)
+                              'openingId': controller.teamOpening.value!.id,
+                          },
                         );
                       }
                     },
@@ -221,27 +223,21 @@ class TeamDetailScreen extends GetView<TeamDetailController> {
                         value: 'manage',
                         child: Text(
                           'Manage members',
-                          style: TextStyle(
-                            color: Color(AppColors.textColor),
-                          ),
+                          style: TextStyle(color: Color(AppColors.textColor)),
                         ),
                       ),
                       PopupMenuItem(
                         value: 'invite',
                         child: Text(
                           'Invite members',
-                          style: TextStyle(
-                            color: Color(AppColors.textColor),
-                          ),
+                          style: TextStyle(color: Color(AppColors.textColor)),
                         ),
                       ),
                       PopupMenuItem(
                         value: 'join_requests',
                         child: Text(
                           'Join requests',
-                          style: TextStyle(
-                            color: Color(AppColors.textColor),
-                          ),
+                          style: TextStyle(color: Color(AppColors.textColor)),
                         ),
                       ),
                     ],
@@ -306,15 +302,7 @@ class TeamDetailScreen extends GetView<TeamDetailController> {
                 const TeamSectionHeader(title: 'Team Actions'),
                 const SizedBox(height: 12),
                 if (isOwner) ...[
-                  TeamSettingsCard(
-                    controller: controller,
-                    team: t,
-                  ),
-                  const SizedBox(height: 18),
-                  TeamRecruitmentSettingsCard(
-                    controller: controller,
-                    team: t,
-                  ),
+                  TeamSettingsCard(controller: controller, team: t),
                   const SizedBox(height: 18),
                 ],
                 TeamActionsCard(
@@ -475,9 +463,9 @@ class _BottomJoinBar extends StatelessWidget {
                 AppColors.errorColor,
               ).withValues(alpha: 0.5),
               side: BorderSide(
-                color: const Color(AppColors.errorColor).withValues(
-                  alpha: leaving ? 0.35 : 0.7,
-                ),
+                color: const Color(
+                  AppColors.errorColor,
+                ).withValues(alpha: leaving ? 0.35 : 0.7),
               ),
               minimumSize: const Size(double.infinity, 50),
               shape: RoundedRectangleBorder(
@@ -486,6 +474,10 @@ class _BottomJoinBar extends StatelessWidget {
             ),
           ),
         );
+      }
+
+      if (controller.hasAcceptedEnrollment) {
+        return const SizedBox.shrink();
       }
 
       if (controller.hasPendingRequest) {
@@ -519,17 +511,16 @@ class _BottomJoinBar extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               OutlinedButton(
-                onPressed:
-                    withdrawing ? null : controller.withdrawJoinRequest,
+                onPressed: withdrawing ? null : controller.withdrawJoinRequest,
                 style: OutlinedButton.styleFrom(
                   foregroundColor: const Color(AppColors.errorColor),
                   disabledForegroundColor: const Color(
                     AppColors.errorColor,
                   ).withValues(alpha: 0.5),
                   side: BorderSide(
-                    color: const Color(AppColors.errorColor).withValues(
-                      alpha: withdrawing ? 0.35 : 0.7,
-                    ),
+                    color: const Color(
+                      AppColors.errorColor,
+                    ).withValues(alpha: withdrawing ? 0.35 : 0.7),
                   ),
                   minimumSize: const Size(0, 40),
                   padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -577,7 +568,7 @@ class _BottomJoinBar extends StatelessWidget {
                 )
               : const Icon(Icons.group_add, size: 20),
           label: Text(
-            controller.isJoining.value ? 'Sending…' : 'Send join request',
+            controller.isJoining.value ? 'Enrolling…' : 'Enroll',
             style: const TextStyle(fontWeight: FontWeight.w600),
           ),
           style: ElevatedButton.styleFrom(

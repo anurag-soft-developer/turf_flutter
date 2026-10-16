@@ -69,18 +69,6 @@ class _TeamFiltersBar extends StatelessWidget {
                   ? null
                   : () => onChanged(filters.copyWith(clearSportType: true)),
             ),
-            const SizedBox(width: 6),
-            _SubFilterChip(
-              label: 'Recruiting',
-              selected: filters.lookingForMembers == true,
-              onTap: () {
-                if (filters.lookingForMembers == true) {
-                  onChanged(filters.copyWith(clearLookingForMembers: true));
-                } else {
-                  onChanged(filters.copyWith(lookingForMembers: true));
-                }
-              },
-            ),
           ],
         ),
       ),

@@ -9,6 +9,8 @@ class ApiConstants {
   static const turfBooking = TurfBookingEndpoints();
   static const turfReview = TurfReviewEndpoints();
   static const team = TeamEndpoints();
+  static const openings = OpeningEndpoints();
+  static const enrollments = EnrollmentEndpoints();
   static const teamMember = TeamMemberEndpoints();
   static const teamMembershipSelf = TeamMembershipSelfEndpoints();
   static const teamInvite = TeamInviteEndpoints();
@@ -114,6 +116,34 @@ class TeamEndpoints {
       '/teams/$teamId/owners/$userId';
 
   String get leaderboard => '/teams/leaderboard';
+}
+
+class OpeningEndpoints {
+  const OpeningEndpoints();
+
+  String get base => '/openings';
+
+  String get mine => '/openings/mine';
+
+  String get byTarget => '/openings/by-target';
+
+  String byId(String id) => '/openings/$id';
+
+  String enroll(String id) => '/openings/$id/enroll';
+
+  String enrollments(String id) => '/openings/$id/enrollments';
+
+  String acceptEnrollment(String openingId, String enrollmentId) =>
+      '/openings/$openingId/enrollments/$enrollmentId/accept';
+
+  String rejectEnrollment(String openingId, String enrollmentId) =>
+      '/openings/$openingId/enrollments/$enrollmentId/reject';
+}
+
+class EnrollmentEndpoints {
+  const EnrollmentEndpoints();
+
+  String get mine => '/enrollments/me';
 }
 
 class TeamMemberEndpoints {

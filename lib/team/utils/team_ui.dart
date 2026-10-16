@@ -12,15 +12,6 @@ String teamVisibilityLabel(TeamVisibility v) {
   }
 }
 
-String teamJoinModeLabel(TeamJoinMode m) {
-  switch (m) {
-    case TeamJoinMode.open:
-      return 'Open join';
-    case TeamJoinMode.approval:
-      return 'Approval required';
-  }
-}
-
 String teamMemberStatusLabel(TeamMemberStatus s) {
   switch (s) {
     case TeamMemberStatus.pending:

@@ -41,7 +41,7 @@ class TeamActionCardsRow extends StatelessWidget {
                   actionLabel: 'Explore',
                   imageUrl: _kJoinTeamImageUrl,
                   onPressed: () =>
-                      Get.toNamed(AppConstants.routes.teamOpenings),
+                      Get.toNamed(AppConstants.routes.openings),
                 ),
               ),
               const SizedBox(width: 12),

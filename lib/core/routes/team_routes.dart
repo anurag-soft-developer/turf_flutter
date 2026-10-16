@@ -8,12 +8,13 @@ import 'package:flutter_application_1/invitations/my_invitations_binding.dart';
 import 'package:flutter_application_1/invitations/my_invitations_screen.dart';
 import 'package:flutter_application_1/team/invites/team_invites_screen.dart';
 import 'package:flutter_application_1/team/join_status/my_join_requests_screen.dart';
-import 'package:flutter_application_1/team/management/team_join_requests_screen.dart';
+import 'package:flutter_application_1/openings/my_openings_screen.dart';
+import 'package:flutter_application_1/openings/opening_requests_screen.dart';
+import 'package:flutter_application_1/openings/openings_screen.dart';
 import 'package:flutter_application_1/team/management/team_roster_manage_screen.dart';
 import 'package:flutter_application_1/team/members/player_profile_screen.dart';
 import 'package:flutter_application_1/team/my_teams/my_teams_screen.dart';
 import 'package:flutter_application_1/team/my_teams/my_teams_search_screen.dart';
-import 'package:flutter_application_1/team/openings/team_openings_screen.dart';
 import 'package:get/get.dart';
 
 final List<GetPage<dynamic>> teamRoutes = [
@@ -38,9 +39,15 @@ final List<GetPage<dynamic>> teamRoutes = [
     middlewares: [AuthGuard()],
   ),
   GetPage(
-    name: AppConstants.routes.teamOpenings,
-    page: () => const TeamOpeningsScreen(),
-    binding: TeamOpeningsBinding(),
+    name: AppConstants.routes.openings,
+    page: () => const OpeningsScreen(),
+    binding: OpeningsBinding(),
+    transition: Transition.cupertino,
+    middlewares: [AuthGuard()],
+  ),
+  GetPage(
+    name: AppConstants.routes.myOpenings,
+    page: () => const MyOpeningsScreen(),
     transition: Transition.cupertino,
     middlewares: [AuthGuard()],
   ),
@@ -81,8 +88,8 @@ final List<GetPage<dynamic>> teamRoutes = [
   ),
   GetPage(
     name: AppConstants.routes.teamJoinRequests,
-    page: () => const TeamJoinRequestsScreen(),
-    binding: TeamJoinRequestsBinding(),
+    page: () => const OpeningRequestsScreen(),
+    binding: OpeningRequestsBinding(),
     transition: Transition.cupertino,
     middlewares: [AuthGuard()],
   ),
