@@ -102,7 +102,6 @@ class ProfileScreen extends HookWidget {
       backgroundColor: const Color(AppColors.backgroundColor),
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        automaticallyImplyLeading: false,
         backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: Colors.white,

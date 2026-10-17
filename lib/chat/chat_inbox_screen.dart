@@ -7,6 +7,7 @@ import 'package:flutter_application_1/chat/chat_service.dart';
 import 'package:flutter_application_1/chat/model/chat_models.dart';
 import 'package:flutter_application_1/components/shared/user_avatar_app_bar_action.dart';
 import 'package:flutter_application_1/core/components/scroll/floating_sliver_app_bar.dart';
+import 'package:flutter_application_1/core/components/scroll/tab_scroll_to_top.dart';
 import 'package:flutter_application_1/core/config/constants.dart';
 import 'package:flutter_application_1/core/models/paginated_response.dart';
 import 'package:flutter_application_1/core/query/query_keys.dart';
@@ -24,6 +25,12 @@ class ChatInboxScreen extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scrollController = useScrollController();
+    final refreshIndicatorKey = useMemoized(
+      () => GlobalKey<RefreshIndicatorState>(),
+    );
+    useBindTabScroll('Messages', scrollController);
+    useBindTabRefresh('Messages', refreshIndicatorKey);
     final service = useMemoized(ChatService.new);
 
     final query =
@@ -179,6 +186,7 @@ class ChatInboxScreen extends HookWidget {
                     )
                   : null,
               body: RefreshIndicator(
+                key: refreshIndicatorKey,
                 edgeOffset: floatingRefreshEdgeOffset(context),
                 onRefresh: () async {
                   if (Get.isRegistered<QueryClient>()) {
@@ -200,6 +208,7 @@ class ChatInboxScreen extends HookWidget {
                     return false;
                   },
                   child: CustomScrollView(
+                    controller: scrollController,
                     physics: const AlwaysScrollableScrollPhysics(),
                     slivers: [
                       FloatingSliverAppBar(

@@ -42,6 +42,7 @@ class ExploreFeedBody extends HookWidget {
     /// When set, wraps feed in [CustomScrollView] with these leading slivers
     /// (floating app bar, pinned filters) so pagination/refresh stay on one scroll.
     this.leadingSlivers,
+    this.refreshIndicatorKey,
   });
 
   final String mode;
@@ -55,6 +56,10 @@ class ExploreFeedBody extends HookWidget {
   final IconData emptyIcon;
   final String errorMessage;
   final List<Widget>? leadingSlivers;
+
+  /// Attached to the visible tab feed so a bottom-tab retap can play the
+  /// pull-to-refresh spinner. Only one feed may hold this key at a time.
+  final GlobalKey<RefreshIndicatorState>? refreshIndicatorKey;
 
   Key get _scrollKey =>
       PageStorageKey('explore-$mode-${category.apiValue}');
@@ -114,6 +119,7 @@ class ExploreFeedBody extends HookWidget {
     final leading = leadingSlivers;
     if (leading != null) {
       return RefreshIndicator(
+        key: refreshIndicatorKey,
         edgeOffset: floatingRefreshEdgeOffset(context),
         color: const Color(AppColors.primaryColor),
         onRefresh: () async {
@@ -205,6 +211,7 @@ class ExploreFeedBody extends HookWidget {
 
     if (items.isEmpty) {
       return RefreshIndicator(
+        key: refreshIndicatorKey,
         edgeOffset: floatingRefreshEdgeOffset(context),
         color: const Color(AppColors.primaryColor),
         onRefresh: () async {
@@ -229,6 +236,7 @@ class ExploreFeedBody extends HookWidget {
     }
 
     return RefreshIndicator(
+      key: refreshIndicatorKey,
       edgeOffset: floatingRefreshEdgeOffset(context),
       color: const Color(AppColors.primaryColor),
       onRefresh: () async {

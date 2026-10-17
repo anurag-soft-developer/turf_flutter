@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import '../../components/turf/search_components.dart';
 import '../../components/turf/turf_cards.dart';
 import '../../core/components/scroll/floating_sliver_app_bar.dart';
+import '../../core/components/scroll/tab_scroll_to_top.dart';
 import '../../core/components/scroll/pinned_sliver_header.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/paginated_response.dart';
@@ -64,6 +65,12 @@ class _TurfListScroll extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scrollController = useScrollController();
+    final refreshIndicatorKey = useMemoized(
+      () => GlobalKey<RefreshIndicatorState>(),
+    );
+    useBindTabScroll('Turfs', scrollController);
+    useBindTabRefresh('Turfs', refreshIndicatorKey);
     final turfService = TurfService();
 
     final turfsQuery =
@@ -107,6 +114,7 @@ class _TurfListScroll extends HookWidget {
         const <TurfModel>[];
 
     return RefreshIndicator(
+      key: refreshIndicatorKey,
       edgeOffset: floatingRefreshEdgeOffset(context),
       color: const Color(AppColors.primaryColor),
       onRefresh: () => turfsQuery.refetch(),
@@ -121,6 +129,7 @@ class _TurfListScroll extends HookWidget {
           return false;
         },
         child: CustomScrollView(
+          controller: scrollController,
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             FloatingSliverAppBar(

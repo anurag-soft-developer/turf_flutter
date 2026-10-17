@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:get/get.dart';
 
 import '../../../explore/model/explore_category.dart';
@@ -22,12 +24,65 @@ class NavigationController extends GetxController {
   List<NavTab> get activeTabs => kNavTabs;
   int get tabCount => activeTabs.length;
 
+  /// Latest handler wins so a pushed copy of a tab screen does not replace
+  /// the tab's handler permanently.
+  final Map<String, List<Future<bool> Function()>> _scrollToTop = {};
+  final Map<String, List<Future<bool> Function()>> _tabRefresh = {};
+  int _retapGeneration = 0;
+
+  void bindScrollToTop(String label, Future<bool> Function() action) {
+    _bind(_scrollToTop, label, action);
+  }
+
+  void unbindScrollToTop(String label, Future<bool> Function() action) {
+    _unbind(_scrollToTop, label, action);
+  }
+
+  void bindTabRefresh(String label, Future<bool> Function() action) {
+    _bind(_tabRefresh, label, action);
+  }
+
+  void unbindTabRefresh(String label, Future<bool> Function() action) {
+    _unbind(_tabRefresh, label, action);
+  }
+
+  void _bind(
+    Map<String, List<Future<bool> Function()>> handlersByLabel,
+    String label,
+    Future<bool> Function() action,
+  ) {
+    final handlers = handlersByLabel.putIfAbsent(label, () => []);
+    handlers.remove(action);
+    handlers.add(action);
+  }
+
+  void _unbind(
+    Map<String, List<Future<bool> Function()>> handlersByLabel,
+    String label,
+    Future<bool> Function() action,
+  ) {
+    final handlers = handlersByLabel[label];
+    if (handlers == null) return;
+    handlers.remove(action);
+    if (handlers.isEmpty) handlersByLabel.remove(label);
+  }
+
+  Future<bool> Function()? _latest(
+    Map<String, List<Future<bool> Function()>> handlersByLabel,
+    String label,
+  ) {
+    final handlers = handlersByLabel[label];
+    if (handlers == null || handlers.isEmpty) return null;
+    return handlers.last;
+  }
+
   void changeTab(int index) {
     if (index < 0 || index >= tabCount) return;
 
-    // Same tab tapped again → refresh that tab's data.
+    // Same tab tapped again → scroll to top, or refresh if already there.
     if (_currentIndex.value == index) {
-      activeTabs[index].onRetap?.call();
+      final generation = ++_retapGeneration;
+      unawaited(_onSameTab(index, generation));
       return;
     }
 
@@ -94,6 +149,23 @@ class NavigationController extends GetxController {
 
   void updateSlideValue(double value) {
     _slideValue.value = value;
+  }
+
+  Future<void> _onSameTab(int index, int generation) async {
+    final label = activeTabs[index].label;
+    final scrolled = await _latest(_scrollToTop, label)?.call() ?? false;
+    if (generation != _retapGeneration || _currentIndex.value != index) {
+      return;
+    }
+    if (scrolled) return;
+
+    final shown = await _latest(_tabRefresh, label)?.call() ?? false;
+    if (generation != _retapGeneration || _currentIndex.value != index) {
+      return;
+    }
+    if (!shown) {
+      await activeTabs[index].onRetap?.call();
+    }
   }
 
   void _loadControllerForCurrentTab() {

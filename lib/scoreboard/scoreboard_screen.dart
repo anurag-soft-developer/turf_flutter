@@ -6,6 +6,7 @@ import '../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
 import '../components/shared/custom_button.dart';
 import '../components/shared/user_avatar_app_bar_action.dart';
 import '../core/components/scroll/floating_sliver_app_bar.dart';
+import '../core/components/scroll/tab_scroll_to_top.dart';
 import '../core/components/scroll/pinned_sliver_header.dart';
 import '../core/config/constants.dart';
 import '../team/model/team_model.dart';
@@ -42,6 +43,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen>
   ];
 
   late final TabController _tabController;
+  final _nestedKey = GlobalKey<NestedScrollViewState>();
   bool _ranked = false;
 
   static const _sports = [
@@ -65,12 +67,24 @@ class _ScoreboardScreenState extends State<ScoreboardScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: _hubTabs.length, vsync: this);
+    bindTabScrollToTop('Scoreboard', _scrollToTop);
   }
 
   @override
   void dispose() {
+    unbindTabScrollToTop('Scoreboard', _scrollToTop);
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<bool> _scrollToTop() {
+    final nested = _nestedKey.currentState;
+    if (nested == null) return Future.value(false);
+    final inner = nested.innerController;
+    return animateNestedScrollToTop(
+      outer: nested.outerController,
+      inners: inner.hasClients ? inner.positions : const <ScrollPosition>[],
+    );
   }
 
   void _openMatch(TeamSportType sport, {required bool ranked}) {
@@ -176,6 +190,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen>
     return Scaffold(
       backgroundColor: const Color(AppColors.backgroundColor),
       body: NestedScrollView(
+        key: _nestedKey,
         floatHeaderSlivers: true,
         headerSliverBuilder: (context, innerBoxIsScrolled) {
           return [

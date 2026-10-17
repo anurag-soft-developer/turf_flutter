@@ -14,6 +14,7 @@ import '../../components/turf/featured_section.dart';
 import '../../core/auth/auth_state_controller.dart';
 import '../../core/components/bottom_navigation_panel/navigation_controller.dart';
 import '../../core/components/scroll/floating_sliver_app_bar.dart';
+import '../../core/components/scroll/tab_scroll_to_top.dart';
 import '../../core/config/constants.dart';
 import '../../core/models/location_model.dart';
 import '../../core/query/query_keys.dart';
@@ -41,25 +42,41 @@ class PlayerDashboard extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scrollController = useScrollController();
+    final refreshIndicatorKey = useMemoized(
+      () => GlobalKey<RefreshIndicatorState>(),
+    );
+    useBindTabScroll('Dashboard', scrollController);
+    useBindTabRefresh('Dashboard', refreshIndicatorKey);
     final authController = Get.find<AuthStateController>();
     final settings = Get.find<SettingsController>();
     final queryClient = useQueryClient();
 
     return RefreshIndicator(
+      key: refreshIndicatorKey,
       edgeOffset: floatingRefreshEdgeOffset(context),
       color: const Color(AppColors.primaryColor),
       onRefresh: () async {
-        await settings.resolveLocation();
-        await Future.wait([
-          queryClient.invalidateQueries(
-            queryKey: QueryKeys.playerDashboardPrefix,
-          ),
-          queryClient.invalidateQueries(
-            queryKey: QueryKeys.dashboardLeaderboard,
-          ),
-        ]);
+        // GPS can stay pending; don't hold the indicator open on it.
+        try {
+          await settings.resolveLocation().timeout(const Duration(seconds: 3));
+        } catch (_) {}
+        // Location may swap the feed on the next frame. Wait so the refetch
+        // below is the query that remains on screen.
+        await WidgetsBinding.instance.endOfFrame;
+        try {
+          await Future.wait([
+            queryClient.invalidateQueries(
+              queryKey: QueryKeys.playerDashboardPrefix,
+            ),
+            queryClient.invalidateQueries(
+              queryKey: QueryKeys.dashboardLeaderboard,
+            ),
+          ]).timeout(const Duration(seconds: 12));
+        } catch (_) {}
       },
       child: CustomScrollView(
+        controller: scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
           ...headerSlivers,
