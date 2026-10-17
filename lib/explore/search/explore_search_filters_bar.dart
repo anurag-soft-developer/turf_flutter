@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 
 import '../../core/config/constants.dart';
 import '../../match_up/matches/match_list_filters_bar.dart';
@@ -24,29 +23,29 @@ class ExploreSearchFiltersBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return switch (category) {
       ExploreCategory.match => MatchListFiltersBar(
-          filters: filters.matchFilters,
-          onChanged: (next) => onChanged(
-            filters.copyWith(matchFilters: next),
-          ),
-        ),
+        filters: filters.matchFilters,
+        onChanged: (next) => onChanged(filters.copyWith(matchFilters: next)),
+      ),
       ExploreCategory.team => _TeamFiltersBar(
-          filters: filters,
-          onChanged: onChanged,
-        ),
+        filters: filters,
+        onChanged: onChanged,
+      ),
+      ExploreCategory.tournament => _TeamFiltersBar(
+        filters: filters,
+        onChanged: onChanged,
+        sports: rankingTeamSportTypes,
+      ),
       ExploreCategory.post => _PostsFiltersBar(
-          filters: filters,
-          onChanged: onChanged,
-        ),
+        filters: filters,
+        onChanged: onChanged,
+      ),
       ExploreCategory.all || ExploreCategory.player => const SizedBox.shrink(),
     };
   }
 }
 
 class _PostsFiltersBar extends StatelessWidget {
-  const _PostsFiltersBar({
-    required this.filters,
-    required this.onChanged,
-  });
+  const _PostsFiltersBar({required this.filters, required this.onChanged});
 
   final ExploreFilters filters;
   final ValueChanged<ExploreFilters> onChanged;
@@ -101,99 +100,21 @@ class _PostsFiltersBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final selected = filters.postKind != ExplorePostKind.all;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 8, 8),
-      child: Row(
-        children: [
-          Builder(
-            builder: (fieldContext) => _SubFilterChip(
-              label: selected ? filters.postKind.label : 'Type',
-              icon: Icons.dynamic_feed_outlined,
-              selected: selected,
-              showChevron: !selected,
-              onTap: () => _openTypeMenu(fieldContext),
-              onClear: selected
-                  ? () => onChanged(
-                        filters.copyWith(postKind: ExplorePostKind.all),
-                      )
-                  : null,
-            ),
-          ),
-          Expanded(
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    _PostsShortcut(
-                      icon: Icons.campaign_outlined,
-                      label: 'My openings',
-                      onPressed: () =>
-                          Get.toNamed(AppConstants.routes.myOpenings),
-                    ),
-                    _PostsShortcut(
-                      icon: Icons.how_to_reg_outlined,
-                      label: 'My submissions',
-                      onPressed: () =>
-                          Get.toNamed(AppConstants.routes.myJoinRequests),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PostsShortcut extends StatelessWidget {
-  const _PostsShortcut({
-    required this.icon,
-    required this.label,
-    required this.onPressed,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final primary = const Color(AppColors.primaryColor);
-    return Padding(
-      padding: const EdgeInsets.only(left: 6),
-      child: Material(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          onTap: onPressed,
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            height: 28,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: primary.withValues(alpha: 0.45)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(icon, size: 13, color: primary),
-                const SizedBox(width: 4),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    height: 1.1,
-                    fontWeight: FontWeight.w600,
-                    color: primary,
-                  ),
-                ),
-              ],
-            ),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Builder(
+          builder: (fieldContext) => _SubFilterChip(
+            label: selected ? filters.postKind.label : 'Type',
+            icon: Icons.dynamic_feed_outlined,
+            selected: selected,
+            showChevron: !selected,
+            onTap: () => _openTypeMenu(fieldContext),
+            onClear: selected
+                ? () => onChanged(
+                    filters.copyWith(postKind: ExplorePostKind.all),
+                  )
+                : null,
           ),
         ),
       ),
@@ -205,10 +126,12 @@ class _TeamFiltersBar extends StatelessWidget {
   const _TeamFiltersBar({
     required this.filters,
     required this.onChanged,
+    this.sports,
   });
 
   final ExploreFilters filters;
   final ValueChanged<ExploreFilters> onChanged;
+  final List<TeamSportType>? sports;
 
   @override
   Widget build(BuildContext context) {
@@ -240,7 +163,7 @@ class _TeamFiltersBar extends StatelessWidget {
     await SportFilterPicker.showSheet(
       context: context,
       value: filters.sportType,
-      sports: TeamSportType.values,
+      sports: sports ?? TeamSportType.values,
       searchable: true,
       onChanged: (sport) {
         if (sport != null) {

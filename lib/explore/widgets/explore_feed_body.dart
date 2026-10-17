@@ -36,9 +36,10 @@ class ExploreFeedBody extends HookWidget {
     this.enabled = true,
     this.emptyTitle = 'Nothing to explore yet',
     this.emptySubtitle =
-        'Matches, teams, players, and posts will show up here as activity grows.',
+        'Tournaments, matches, teams, players, and posts will show up here as activity grows.',
     this.emptyIcon = Icons.explore_outlined,
     this.errorMessage = 'Failed to load explore feed',
+
     /// When set, wraps feed in [CustomScrollView] with these leading slivers
     /// (floating app bar, pinned filters) so pagination/refresh stay on one scroll.
     this.leadingSlivers,
@@ -61,8 +62,7 @@ class ExploreFeedBody extends HookWidget {
   /// pull-to-refresh spinner. Only one feed may hold this key at a time.
   final GlobalKey<RefreshIndicatorState>? refreshIndicatorKey;
 
-  Key get _scrollKey =>
-      PageStorageKey('explore-$mode-${category.apiValue}');
+  Key get _scrollKey => PageStorageKey('explore-$mode-${category.apiValue}');
 
   /// NestedScrollView / ExtendedNestedScrollView injects the inner controller
   /// via [PrimaryScrollController]. Standalone leading-sliver feeds must not
@@ -142,11 +142,7 @@ class ExploreFeedBody extends HookWidget {
             physics: _nestedPhysics,
             slivers: [
               ...leading,
-              ..._feedSlivers(
-                context: context,
-                query: query,
-                items: items,
-              ),
+              ..._feedSlivers(context: context, query: query, items: items),
             ],
           ),
         ),
@@ -350,25 +346,22 @@ class ExploreFeedBody extends HookWidget {
       SliverPadding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         sliver: SliverList(
-          delegate: SliverChildBuilderDelegate(
-            (context, i) {
-              if (i == items.length) {
-                return const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(16),
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Color(AppColors.primaryColor),
-                      ),
+          delegate: SliverChildBuilderDelegate((context, i) {
+            if (i == items.length) {
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Color(AppColors.primaryColor),
                     ),
                   ),
-                );
-              }
+                ),
+              );
+            }
 
-              return _ExploreFeedItem(item: items[i], index: i);
-            },
-            childCount: items.length + (query.isFetchingNextPage ? 1 : 0),
-          ),
+            return _ExploreFeedItem(item: items[i], index: i);
+          }, childCount: items.length + (query.isFetchingNextPage ? 1 : 0)),
         ),
       ),
     ];
@@ -385,9 +378,7 @@ class _ExploreFeedItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final engagementType = item.engagementType;
     return VisibilityDetector(
-      key: Key(
-        'explore-${engagementType?.apiValue ?? 'opening'}-${item.entityId ?? index}',
-      ),
+      key: Key('explore-${item.kind}-${item.entityId ?? index}'),
       onVisibilityChanged: (info) {
         if (engagementType == null || info.visibleFraction < 0.5) return;
         final id = item.entityId;

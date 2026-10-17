@@ -11,10 +11,12 @@ class TournamentListCard extends StatelessWidget {
     super.key,
     required this.tournament,
     required this.onTap,
+    this.footer,
   });
 
   final TournamentModel tournament;
   final VoidCallback onTap;
+  final Widget? footer;
 
   static const _coverWidth = 108.0;
   static const _cardHeight = 132.0;
@@ -41,104 +43,111 @@ class TournamentListCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        child: SizedBox(
-          height: _cardHeight,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              SizedBox(
-                width: _coverWidth,
-                child: _TournamentCoverThumb(
-                  imageUrl: coverUrl,
-                  sport: sport,
-                ),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 10, 6, 10),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                        Row(
-                          children: [
-                            _StatusChip(
-                              label: status.label,
-                              color: status.color,
-                            ),
-                            if (sport != null) ...[
-                              const SizedBox(width: 8),
-                              Icon(
-                                sport.icon,
-                                size: 16,
-                                color: primary.withValues(alpha: 0.85),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              height: _cardHeight,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(
+                    width: _coverWidth,
+                    child: _TournamentCoverThumb(
+                      imageUrl: coverUrl,
+                      sport: sport,
+                    ),
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 10, 6, 10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            children: [
+                              _StatusChip(
+                                label: status.label,
+                                color: status.color,
                               ),
-                              const SizedBox(width: 4),
-                              Text(
-                                sport.label,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
+                              if (sport != null) ...[
+                                const SizedBox(width: 8),
+                                Icon(
+                                  sport.icon,
+                                  size: 16,
                                   color: primary.withValues(alpha: 0.85),
                                 ),
-                              ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  sport.label,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: primary.withValues(alpha: 0.85),
+                                  ),
+                                ),
+                              ],
                             ],
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          tournament.name,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            height: 1.2,
-                            color: Color(AppColors.textColor),
                           ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          _formatLine(tournament),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            height: 1.35,
-                            color: Color(AppColors.textSecondaryColor),
-                          ),
-                        ),
-                        if (tournament.startDate != null) ...[
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 8),
                           Text(
-                            formatDateOnly(
-                              tournament.startDate!.toLocal(),
-                              locale,
-                            ),
+                            tournament.name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              height: 1.2,
+                              color: Color(AppColors.textColor),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            _formatLine(tournament),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              height: 1.35,
                               color: Color(AppColors.textSecondaryColor),
                             ),
                           ),
+                          if (tournament.startDate != null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              formatDateOnly(
+                                tournament.startDate!.toLocal(),
+                                locale,
+                              ),
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: Color(AppColors.textSecondaryColor),
+                              ),
+                            ),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
                   ),
-                ),
-              const Align(
-                alignment: Alignment.center,
-                child: Padding(
-                  padding: EdgeInsets.only(right: 8),
-                  child: Icon(
-                    Icons.chevron_right_rounded,
-                    color: Color(AppColors.textSecondaryColor),
+                  const Align(
+                    alignment: Alignment.center,
+                    child: Padding(
+                      padding: EdgeInsets.only(right: 8),
+                      child: Icon(
+                        Icons.chevron_right_rounded,
+                        color: Color(AppColors.textSecondaryColor),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
+            ),
+            if (footer != null) footer!,
+          ],
         ),
       ),
     );
@@ -154,9 +163,7 @@ class TournamentListCard extends StatelessWidget {
 
   static String _formatLine(TournamentModel t) {
     final format = _humanFormat(t.format);
-    final teams = t.maxTeams != null
-        ? '${t.maxTeams} teams'
-        : 'Open roster';
+    final teams = t.maxTeams != null ? '${t.maxTeams} teams' : 'Open roster';
     final overs = '${t.maxOvers} overs';
     final venue = t.venueName?.trim();
     final parts = [format, teams, overs];
@@ -176,11 +183,20 @@ class TournamentListCard extends StatelessWidget {
   static _StatusStyle _statusPresentation(String raw) {
     return switch (raw.trim().toLowerCase()) {
       'ongoing' => _StatusStyle('Live', const Color(0xFFEF4444)),
-      'scheduled' => _StatusStyle('Scheduled', const Color(AppColors.primaryColor)),
+      'scheduled' => _StatusStyle(
+        'Scheduled',
+        const Color(AppColors.primaryColor),
+      ),
       'inviting' => _StatusStyle('Registration', const Color(0xFF3B82F6)),
-      'draft' => _StatusStyle('Draft', const Color(AppColors.textSecondaryColor)),
+      'draft' => _StatusStyle(
+        'Draft',
+        const Color(AppColors.textSecondaryColor),
+      ),
       'completed' => _StatusStyle('Completed', const Color(0xFF10B981)),
-      'cancelled' => _StatusStyle('Cancelled', const Color(AppColors.textSecondaryColor)),
+      'cancelled' => _StatusStyle(
+        'Cancelled',
+        const Color(AppColors.textSecondaryColor),
+      ),
       _ => _StatusStyle(
         raw.isEmpty ? 'Unknown' : raw[0].toUpperCase() + raw.substring(1),
         const Color(AppColors.textSecondaryColor),

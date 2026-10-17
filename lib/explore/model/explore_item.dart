@@ -3,6 +3,7 @@ import '../../engagement/engagement_entity.dart';
 import '../../match_up/model/team_match_model.dart';
 import '../../openings/model/opening_model.dart';
 import '../../team/model/team_model.dart';
+import '../../tournament/model/tournament_models.dart';
 import 'content_post_model.dart';
 
 sealed class ExploreItem {
@@ -16,6 +17,7 @@ sealed class ExploreItem {
     }
 
     return switch (type) {
+      'tournament' => ExploreTournamentItem.fromExploreData(data),
       'match' => ExploreMatchItem(TeamMatchModel.fromJson(data)),
       'team' => ExploreTeamItem(TeamModel.fromJson(data)),
       'player' => ExplorePlayerItem(UserModel.fromJson(data)),
@@ -26,21 +28,51 @@ sealed class ExploreItem {
   }
 
   String? get entityId => switch (this) {
-        ExploreMatchItem(:final match) => match.id,
-        ExploreTeamItem(:final team) => team.id,
-        ExplorePlayerItem(:final player) => player.id,
-        ExplorePostItem(:final post) => post.id,
-        ExploreOpeningItem(:final opening) => opening.id,
-      };
+    ExploreTournamentItem(:final tournament) => tournament.id,
+    ExploreMatchItem(:final match) => match.id,
+    ExploreTeamItem(:final team) => team.id,
+    ExplorePlayerItem(:final player) => player.id,
+    ExplorePostItem(:final post) => post.id,
+    ExploreOpeningItem(:final opening) => opening.id,
+  };
 
-  /// Null for openings. Like and impression stats stay on posts, matches, teams, and players.
+  String get kind => switch (this) {
+    ExploreTournamentItem() => 'tournament',
+    ExploreMatchItem() => 'match',
+    ExploreTeamItem() => 'team',
+    ExplorePlayerItem() => 'player',
+    ExplorePostItem() => 'post',
+    ExploreOpeningItem() => 'opening',
+  };
+
+  /// Null for openings and tournaments. Like and impression stats stay on posts, matches, teams, and players.
   EngagementEntityType? get engagementType => switch (this) {
-        ExploreMatchItem() => EngagementEntityType.match,
-        ExploreTeamItem() => EngagementEntityType.team,
-        ExplorePlayerItem() => EngagementEntityType.player,
-        ExplorePostItem() => EngagementEntityType.post,
-        ExploreOpeningItem() => null,
-      };
+    ExploreTournamentItem() => null,
+    ExploreMatchItem() => EngagementEntityType.match,
+    ExploreTeamItem() => EngagementEntityType.team,
+    ExplorePlayerItem() => EngagementEntityType.player,
+    ExplorePostItem() => EngagementEntityType.post,
+    ExploreOpeningItem() => null,
+  };
+}
+
+class ExploreTournamentItem extends ExploreItem {
+  const ExploreTournamentItem({required this.tournament, this.opening});
+
+  final TournamentModel tournament;
+  final OpeningModel? opening;
+
+  factory ExploreTournamentItem.fromExploreData(Map<String, dynamic> data) {
+    final rawOpening = data['opening'];
+    return ExploreTournamentItem(
+      tournament: TournamentModel.fromJson(data),
+      opening: rawOpening is Map<String, dynamic>
+          ? OpeningModel.fromJson(rawOpening)
+          : rawOpening is Map
+          ? OpeningModel.fromJson(Map<String, dynamic>.from(rawOpening))
+          : null,
+    );
+  }
 }
 
 class ExploreMatchItem extends ExploreItem {
@@ -92,9 +124,9 @@ class ExplorePaginatedResponse {
     final rawData = json['data'];
     final items = rawData is List
         ? rawData
-            .whereType<Map<String, dynamic>>()
-            .map(ExploreItem.fromJson)
-            .toList()
+              .whereType<Map<String, dynamic>>()
+              .map(ExploreItem.fromJson)
+              .toList()
         : <ExploreItem>[];
 
     return ExplorePaginatedResponse(

@@ -22,9 +22,11 @@ class ExploreSearchScreen extends StatelessWidget {
 
     return AppSearchScreen(
       historyScope: SearchHistoryScope.explore,
-      hintText: 'Search matches, teams, players, or posts',
+      hintText: 'Search tournaments, matches, teams, players, or posts',
       headerBuilder: (context, query) {
-        return const ExploreSearchCategoryTabs(tag: ExploreController.searchTag);
+        return const ExploreSearchCategoryTabs(
+          tag: ExploreController.searchTag,
+        );
       },
       resultsBuilder: (context, query) {
         return AppSegmentedTabView(

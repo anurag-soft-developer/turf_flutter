@@ -53,6 +53,16 @@ class AppMenuScreen extends StatelessWidget {
         onTap: () => _navigateTo(AppConstants.routes.myTeams),
       ),
       AppMenuItem(
+        title: 'My Openings',
+        icon: Icons.campaign_rounded,
+        onTap: () => _navigateTo(AppConstants.routes.myOpenings),
+      ),
+      AppMenuItem(
+        title: 'My Submissions',
+        icon: Icons.how_to_reg_rounded,
+        onTap: () => _navigateTo(AppConstants.routes.myJoinRequests),
+      ),
+      AppMenuItem(
         title: 'Invitations',
         icon: Icons.mail_outline_rounded,
         onTap: () => _navigateTo(AppConstants.routes.myInvitations),

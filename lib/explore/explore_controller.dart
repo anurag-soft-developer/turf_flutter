@@ -8,9 +8,7 @@ import 'model/explore_filters.dart';
 class ExploreController extends GetxController
     with GetSingleTickerProviderStateMixin {
   ExploreController({this.includeAll = false})
-      : category = Rx(
-          includeAll ? ExploreCategory.all : ExploreCategory.post,
-        );
+    : category = Rx(includeAll ? ExploreCategory.all : ExploreCategory.post);
 
   static const searchTag = 'search';
 
@@ -21,6 +19,7 @@ class ExploreController extends GetxController
 
   static const concreteTabs = <ExploreCategory>[
     ExploreCategory.post,
+    ExploreCategory.tournament,
     ExploreCategory.match,
     ExploreCategory.team,
     ExploreCategory.player,
@@ -34,9 +33,9 @@ class ExploreController extends GetxController
   Worker? _pendingWorker;
 
   List<ExploreCategory> get tabs => [
-        if (includeAll) ExploreCategory.all,
-        ...concreteTabs,
-      ];
+    if (includeAll) ExploreCategory.all,
+    ...concreteTabs,
+  ];
 
   @override
   void onInit() {

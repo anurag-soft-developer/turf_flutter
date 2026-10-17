@@ -32,6 +32,7 @@ class ExploreSearchAllBody extends HookWidget {
 
   static const _sectionOrder = <ExploreCategory>[
     ExploreCategory.post,
+    ExploreCategory.tournament,
     ExploreCategory.match,
     ExploreCategory.team,
     ExploreCategory.player,
@@ -189,8 +190,7 @@ class ExploreSearchAllBody extends HookWidget {
     final seen = <String>{};
     final out = <ExploreItem>[];
     for (final item in items) {
-      final key =
-          '${item.engagementType?.apiValue ?? 'opening'}:${item.entityId ?? identityHashCode(item)}';
+      final key = '${item.kind}:${item.entityId ?? identityHashCode(item)}';
       if (seen.add(key)) out.add(item);
     }
     return out;
@@ -204,6 +204,7 @@ class ExploreSearchAllBody extends HookWidget {
     };
     for (final item in items) {
       final category = switch (item) {
+        ExploreTournamentItem() => ExploreCategory.tournament,
         ExploreMatchItem() => ExploreCategory.match,
         ExploreTeamItem() => ExploreCategory.team,
         ExplorePlayerItem() => ExploreCategory.player,
@@ -246,18 +247,13 @@ class _SearchSection extends StatelessWidget {
                   ),
                 ),
               ),
-              TextButton(
-                onPressed: onViewMore,
-                child: const Text('View more'),
-              ),
+              TextButton(onPressed: onViewMore, child: const Text('View more')),
             ],
           ),
         ),
         for (var i = 0; i < items.length; i++)
           VisibilityDetector(
-            key: Key(
-              'search-all-${items[i].engagementType?.apiValue ?? 'opening'}-${items[i].entityId ?? i}',
-            ),
+            key: Key('search-all-${items[i].kind}-${items[i].entityId ?? i}'),
             onVisibilityChanged: (info) {
               if (info.visibleFraction < 0.5) return;
               final item = items[i];

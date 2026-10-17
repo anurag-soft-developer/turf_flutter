@@ -1,5 +1,6 @@
 enum ExploreCategory {
   all,
+  tournament,
   match,
   team,
   player,

@@ -859,38 +859,41 @@ class _PendingLimitField extends StatelessWidget {
   Widget build(BuildContext context) {
     final pendingChoices = <int>{..._pendingOptions, maxPending}.toList()
       ..sort();
-    return Row(
-      children: [
-        const Expanded(
-          child: Text(
-            'Max pending requests',
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 15,
-              color: Color(AppColors.textColor),
+    return Padding(
+      padding: const EdgeInsets.only(top: 14),
+      child: Row(
+        children: [
+          const Expanded(
+            child: Text(
+              'Max pending requests',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 15,
+                color: Color(AppColors.textColor),
+              ),
             ),
           ),
-        ),
-        SizedBox(
-          width: 104,
-          child: DropdownButtonFormField<int>(
-            key: ValueKey(maxPending),
-            initialValue: maxPending,
-            isExpanded: true,
-            decoration: _fieldDecoration(compact: true),
-            items: [
-              for (final value in pendingChoices)
-                DropdownMenuItem<int>(value: value, child: Text('$value')),
-            ],
-            onChanged: enabled
-                ? (value) {
-                    if (value == null || value == maxPending) return;
-                    onMaxPending(value);
-                  }
-                : null,
+          SizedBox(
+            width: 104,
+            child: DropdownButtonFormField<int>(
+              key: ValueKey(maxPending),
+              initialValue: maxPending,
+              isExpanded: true,
+              decoration: _fieldDecoration(compact: true),
+              items: [
+                for (final value in pendingChoices)
+                  DropdownMenuItem<int>(value: value, child: Text('$value')),
+              ],
+              onChanged: enabled
+                  ? (value) {
+                      if (value == null || value == maxPending) return;
+                      onMaxPending(value);
+                    }
+                  : null,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

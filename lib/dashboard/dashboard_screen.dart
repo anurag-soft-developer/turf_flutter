@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
+import '../components/shared/create_menu_button.dart';
 import '../components/shared/user_avatar_app_bar_action.dart';
 import '../core/components/scroll/floating_sliver_app_bar.dart';
 import '../core/config/constants.dart';
@@ -24,6 +25,7 @@ class DashboardScreen extends StatelessWidget {
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
             actions: [
+              const CreateMenuButton(),
               Obx(() {
                 final count = Get.find<PlayerDashboardController>()
                     .unreadNotificationCount

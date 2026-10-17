@@ -11,20 +11,22 @@ class ExploreSearchCategoryTabs extends StatelessWidget {
   final String? tag;
 
   static String label(ExploreCategory value) => switch (value) {
-        ExploreCategory.all => 'All',
-        ExploreCategory.match => 'Matches',
-        ExploreCategory.team => 'Teams',
-        ExploreCategory.player => 'Players',
-        ExploreCategory.post => 'Posts',
-      };
+    ExploreCategory.all => 'All',
+    ExploreCategory.tournament => 'Tournaments',
+    ExploreCategory.match => 'Matches',
+    ExploreCategory.team => 'Teams',
+    ExploreCategory.player => 'Players',
+    ExploreCategory.post => 'Posts',
+  };
 
   static IconData icon(ExploreCategory value) => switch (value) {
-        ExploreCategory.all => Icons.grid_view_rounded,
-        ExploreCategory.match => Icons.sports_outlined,
-        ExploreCategory.team => Icons.groups_outlined,
-        ExploreCategory.player => Icons.person_outline,
-        ExploreCategory.post => Icons.dynamic_feed_outlined,
-      };
+    ExploreCategory.all => Icons.grid_view_rounded,
+    ExploreCategory.tournament => Icons.emoji_events_outlined,
+    ExploreCategory.match => Icons.sports_outlined,
+    ExploreCategory.team => Icons.groups_outlined,
+    ExploreCategory.player => Icons.person_outline,
+    ExploreCategory.post => Icons.dynamic_feed_outlined,
+  };
 
   @override
   Widget build(BuildContext context) {

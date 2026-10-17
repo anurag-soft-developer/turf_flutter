@@ -16,7 +16,11 @@ import '../../match_up/match_challenges/match_challenge_detail_screen.dart';
 import '../../match_up/model/team_match_model.dart';
 import '../../team/model/team_model.dart';
 import '../../team/members/model/team_member_model.dart';
+import '../../openings/model/opening_model.dart';
+import '../../openings/openings_controller.dart';
 import '../../openings/widgets/opening_card.dart';
+import '../../tournament/model/tournament_models.dart';
+import '../../components/tournaments/tournament_list_card.dart';
 import '../model/explore_item.dart';
 import 'explore_match_guest_join_actions.dart';
 import 'content_post_card.dart';
@@ -29,6 +33,8 @@ class ExploreItemTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch (item) {
+      ExploreTournamentItem(:final tournament, :final opening) =>
+        _ExploreTournamentTile(tournament: tournament, opening: opening),
       ExploreMatchItem(:final match) => _ExploreMatchTile(match: match),
       ExploreTeamItem(:final team) => _ExploreTeamTile(team: team),
       ExplorePlayerItem(:final player) => Padding(
@@ -59,6 +65,46 @@ class ExploreItemTile extends StatelessWidget {
         child: OpeningCard(opening: opening),
       ),
     };
+  }
+}
+
+class _ExploreTournamentTile extends StatelessWidget {
+  const _ExploreTournamentTile({required this.tournament, this.opening});
+
+  final TournamentModel tournament;
+  final OpeningModel? opening;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Obx(() {
+        final controller = Get.find<OpeningsController>();
+        controller.enrollingIds.length;
+        final liveOpening = opening;
+        final showEnroll =
+            liveOpening != null && canEnrollInOpening(liveOpening);
+        return TournamentListCard(
+          tournament: tournament,
+          onTap: () {
+            if (tournament.id.isEmpty) return;
+            Get.toNamed(AppConstants.routes.tournamentDetail(tournament.id));
+          },
+          footer: showEnroll
+              ? Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: OpeningEnrollButton(
+                      opening: liveOpening,
+                      controller: controller,
+                    ),
+                  ),
+                )
+              : null,
+        );
+      }),
+    );
   }
 }
 
