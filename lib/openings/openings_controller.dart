@@ -10,6 +10,12 @@ import 'model/enrollment_model.dart';
 import 'model/opening_model.dart';
 import 'opening_service.dart';
 
+void ensureOpeningsController() {
+  if (!Get.isRegistered<OpeningsController>()) {
+    Get.put(OpeningsController(), permanent: true);
+  }
+}
+
 /// UI + enroll mutation state. List fetching is owned by flutter_query on the screen.
 class OpeningsController extends GetxController {
   final TeamService _teamService = TeamService();
@@ -261,6 +267,7 @@ class OpeningsController extends GetxController {
     final client = Get.find<QueryClient>();
     final futures = <Future<void>>[
       client.invalidateQueries(queryKey: QueryKeys.openingsPrefix),
+      client.invalidateQueries(queryKey: QueryKeys.explorePrefix),
       client.invalidateQueries(queryKey: QueryKeys.myEnrollmentsPrefix),
     ];
     if (joined) {
@@ -271,9 +278,11 @@ class OpeningsController extends GetxController {
 
   Future<void> _invalidateOpeningsFeed() async {
     if (!Get.isRegistered<QueryClient>()) return;
-    await Get.find<QueryClient>().invalidateQueries(
-      queryKey: QueryKeys.openingsPrefix,
-    );
+    final client = Get.find<QueryClient>();
+    await Future.wait([
+      client.invalidateQueries(queryKey: QueryKeys.openingsPrefix),
+      client.invalidateQueries(queryKey: QueryKeys.explorePrefix),
+    ]);
   }
 }
 

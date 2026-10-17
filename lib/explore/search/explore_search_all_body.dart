@@ -190,7 +190,7 @@ class ExploreSearchAllBody extends HookWidget {
     final out = <ExploreItem>[];
     for (final item in items) {
       final key =
-          '${item.engagementType.apiValue}:${item.entityId ?? identityHashCode(item)}';
+          '${item.engagementType?.apiValue ?? 'opening'}:${item.entityId ?? identityHashCode(item)}';
       if (seen.add(key)) out.add(item);
     }
     return out;
@@ -208,6 +208,7 @@ class ExploreSearchAllBody extends HookWidget {
         ExploreTeamItem() => ExploreCategory.team,
         ExplorePlayerItem() => ExploreCategory.player,
         ExplorePostItem() => ExploreCategory.post,
+        ExploreOpeningItem() => ExploreCategory.post,
       };
       map[category]!.add(item);
     }
@@ -255,15 +256,16 @@ class _SearchSection extends StatelessWidget {
         for (var i = 0; i < items.length; i++)
           VisibilityDetector(
             key: Key(
-              'search-all-${items[i].engagementType.apiValue}-${items[i].entityId ?? i}',
+              'search-all-${items[i].engagementType?.apiValue ?? 'opening'}-${items[i].entityId ?? i}',
             ),
             onVisibilityChanged: (info) {
               if (info.visibleFraction < 0.5) return;
               final item = items[i];
+              final engagementType = item.engagementType;
               final id = item.entityId;
-              if (id == null || id.isEmpty) return;
+              if (engagementType == null || id == null || id.isEmpty) return;
               EngagementService().trackImpression(
-                entityType: item.engagementType,
+                entityType: engagementType,
                 entityId: id,
               );
             },

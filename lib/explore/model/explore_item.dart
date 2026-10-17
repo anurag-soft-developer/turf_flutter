@@ -1,6 +1,7 @@
 import '../../core/models/user/user_model.dart';
 import '../../engagement/engagement_entity.dart';
 import '../../match_up/model/team_match_model.dart';
+import '../../openings/model/opening_model.dart';
 import '../../team/model/team_model.dart';
 import 'content_post_model.dart';
 
@@ -19,6 +20,7 @@ sealed class ExploreItem {
       'team' => ExploreTeamItem(TeamModel.fromJson(data)),
       'player' => ExplorePlayerItem(UserModel.fromJson(data)),
       'post' => ExplorePostItem(ContentPostModel.fromJson(data)),
+      'opening' => ExploreOpeningItem(OpeningModel.fromJson(data)),
       _ => throw FormatException('Unknown explore item type: $type'),
     };
   }
@@ -28,13 +30,16 @@ sealed class ExploreItem {
         ExploreTeamItem(:final team) => team.id,
         ExplorePlayerItem(:final player) => player.id,
         ExplorePostItem(:final post) => post.id,
+        ExploreOpeningItem(:final opening) => opening.id,
       };
 
-  EngagementEntityType get engagementType => switch (this) {
+  /// Null for openings. Like and impression stats stay on posts, matches, teams, and players.
+  EngagementEntityType? get engagementType => switch (this) {
         ExploreMatchItem() => EngagementEntityType.match,
         ExploreTeamItem() => EngagementEntityType.team,
         ExplorePlayerItem() => EngagementEntityType.player,
         ExplorePostItem() => EngagementEntityType.post,
+        ExploreOpeningItem() => null,
       };
 }
 
@@ -60,6 +65,12 @@ class ExplorePostItem extends ExploreItem {
   const ExplorePostItem(this.post);
 
   final ContentPostModel post;
+}
+
+class ExploreOpeningItem extends ExploreItem {
+  const ExploreOpeningItem(this.opening);
+
+  final OpeningModel opening;
 }
 
 class ExplorePaginatedResponse {

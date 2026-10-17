@@ -375,16 +375,17 @@ class _ExploreFeedItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final engagementType = item.engagementType;
     return VisibilityDetector(
       key: Key(
-        'explore-${item.engagementType.apiValue}-${item.entityId ?? index}',
+        'explore-${engagementType?.apiValue ?? 'opening'}-${item.entityId ?? index}',
       ),
       onVisibilityChanged: (info) {
-        if (info.visibleFraction < 0.5) return;
+        if (engagementType == null || info.visibleFraction < 0.5) return;
         final id = item.entityId;
         if (id == null || id.isEmpty) return;
         EngagementService().trackImpression(
-          entityType: item.engagementType,
+          entityType: engagementType,
           entityId: id,
         );
       },

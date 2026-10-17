@@ -16,6 +16,7 @@ import '../../match_up/match_challenges/match_challenge_detail_screen.dart';
 import '../../match_up/model/team_match_model.dart';
 import '../../team/model/team_model.dart';
 import '../../team/members/model/team_member_model.dart';
+import '../../openings/widgets/opening_card.dart';
 import '../model/explore_item.dart';
 import 'explore_match_guest_join_actions.dart';
 import 'content_post_card.dart';
@@ -52,6 +53,10 @@ class ExploreItemTile extends StatelessWidget {
       ExplorePostItem(:final post) => Padding(
         padding: const EdgeInsets.only(bottom: 20),
         child: ContentPostCard(post: post),
+      ),
+      ExploreOpeningItem(:final opening) => Padding(
+        padding: const EdgeInsets.only(bottom: 20),
+        child: OpeningCard(opening: opening),
       ),
     };
   }

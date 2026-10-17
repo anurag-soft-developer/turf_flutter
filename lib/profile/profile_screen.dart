@@ -16,8 +16,28 @@ import '../core/services/auth_service.dart';
 import '../explore/model/content_post_model.dart';
 import '../explore/post_service.dart';
 import '../explore/widgets/tagged_posts_grid.dart';
+import '../openings/opening_manage.dart';
 import 'widgets/profile_scroll_scaffold.dart';
 import 'widgets/profile_stats_sliver.dart';
+
+class _ProfileMenuLabel extends StatelessWidget {
+  const _ProfileMenuLabel({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    const color = Color(AppColors.textColor);
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: color),
+        const SizedBox(width: 12),
+        Text(label, style: const TextStyle(color: color)),
+      ],
+    );
+  }
+}
 
 class ProfileScreen extends HookWidget {
   const ProfileScreen({super.key});
@@ -83,17 +103,41 @@ class ProfileScreen extends HookWidget {
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        leading: IconButton(
-          onPressed: () => Get.toNamed(AppConstants.routes.createPost),
-          icon: const Icon(Icons.add_a_photo_outlined),
-          tooltip: 'New post',
-        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: Colors.white,
         title: const Text('My Profile'),
         actions: [
+          PopupMenuButton<String>(
+            tooltip: 'Create',
+            icon: const Icon(Icons.add),
+            color: Colors.white,
+            onSelected: (value) {
+              if (value == 'media') {
+                Get.toNamed(AppConstants.routes.createPost);
+              } else if (value == 'opening') {
+                openPostOpening(context);
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: 'media',
+                child: _ProfileMenuLabel(
+                  icon: Icons.add_a_photo_outlined,
+                  label: 'New Post',
+                ),
+              ),
+              PopupMenuItem(
+                value: 'opening',
+                child: _ProfileMenuLabel(
+                  icon: Icons.campaign_outlined,
+                  label: 'New Opening',
+                ),
+              ),
+            ],
+          ),
           IconButton(
+            tooltip: 'Edit profile',
             onPressed: () => Get.toNamed(AppConstants.routes.editProfile),
             icon: const Icon(Icons.edit_outlined),
           ),

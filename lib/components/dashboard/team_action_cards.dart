@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../core/components/bottom_navigation_panel/navigation_controller.dart';
 import '../../core/config/constants.dart';
+import '../../explore/model/explore_category.dart';
 import '../shared/app_network_image.dart';
 
 /// Unsplash team huddle (hot-linked until bundled as an asset).
@@ -40,8 +42,9 @@ class TeamActionCardsRow extends StatelessWidget {
                   subtitle: 'Join teams near you',
                   actionLabel: 'Explore',
                   imageUrl: _kJoinTeamImageUrl,
-                  onPressed: () =>
-                      Get.toNamed(AppConstants.routes.openings),
+                  onPressed: () => Get.find<NavigationController>().goToExplore(
+                    category: ExploreCategory.post,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),

@@ -33,17 +33,17 @@ class AppMenuScreen extends StatelessWidget {
         onTap: () => _navigateTo(AppConstants.routes.myBookings),
       ),
        AppMenuItem(
-        title: 'Challenges',
+        title: 'My Challenges',
         icon: Icons.sports_soccer_rounded,
         onTap: () => _navigateTo(AppConstants.routes.matchUpChallenges),
       ),
       AppMenuItem(
-        title: 'Matches',
+        title: 'My Matches',
         icon: Icons.sports_score_rounded,
         onTap: () => _navigateTo(AppConstants.routes.myMatches),
       ),
       AppMenuItem(
-        title: 'Tournaments',
+        title: 'My Tournaments',
         icon: Icons.emoji_events_rounded,
         onTap: () => _navigateTo(AppConstants.routes.tournaments),
       ),
@@ -51,11 +51,6 @@ class AppMenuScreen extends StatelessWidget {
         title: 'My Teams',
         icon: Icons.groups_rounded,
         onTap: () => _navigateTo(AppConstants.routes.myTeams),
-      ),
-      AppMenuItem(
-        title: 'Openings',
-        icon: Icons.group_add_rounded,
-        onTap: () => _navigateTo(AppConstants.routes.openings),
       ),
       AppMenuItem(
         title: 'Invitations',

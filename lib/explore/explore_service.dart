@@ -26,6 +26,9 @@ class ExploreService {
       'limit': limit,
       ...filters.toQueryParameters(),
     };
+    if (category == ExploreCategory.post) {
+      params['postKind'] = filters.postKind.apiValue;
+    }
 
     final trimmed = q?.trim();
     if (trimmed != null && trimmed.isNotEmpty) {

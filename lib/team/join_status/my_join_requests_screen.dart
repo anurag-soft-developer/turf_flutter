@@ -5,9 +5,11 @@ import 'package:flutter_query/flutter_query.dart';
 import 'package:get/get.dart';
 
 import '../../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
+import '../../core/components/bottom_navigation_panel/navigation_controller.dart';
 import '../../core/components/scroll/floating_sliver_app_bar.dart';
 import '../../core/components/scroll/pinned_sliver_header.dart';
 import '../../core/config/constants.dart';
+import '../../explore/model/explore_category.dart';
 import '../../core/models/paginated_response.dart';
 import '../../core/query/query_keys.dart';
 import '../../core/query/query_retry.dart';
@@ -19,6 +21,13 @@ import '../../team/model/team_model.dart';
 import '../../team/utils/team_ui.dart';
 
 enum JoinRequestStatusTab { pending, accepted, rejected }
+
+void _openExplorePosts() {
+  Get.back();
+  Get.find<NavigationController>().goToExplore(
+    category: ExploreCategory.post,
+  );
+}
 
 class MyJoinRequestsScreen extends HookWidget {
   const MyJoinRequestsScreen({super.key});
@@ -66,7 +75,7 @@ class MyJoinRequestsScreen extends HookWidget {
                 IconButton(
                   tooltip: 'Openings',
                   icon: const Icon(Icons.search),
-                  onPressed: () => Get.toNamed(AppConstants.routes.openings),
+                  onPressed: _openExplorePosts,
                 ),
               ],
             ),
@@ -204,13 +213,23 @@ class _RequestTabList extends HookWidget {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Text(
-            _emptyMessage(tab),
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Color(AppColors.textSecondaryColor),
-              fontSize: 15,
-            ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                _emptyMessage(tab),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Color(AppColors.textSecondaryColor),
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: _openExplorePosts,
+                child: const Text('Browse openings'),
+              ),
+            ],
           ),
         ),
       );

@@ -1,16 +1,32 @@
 import '../../match_up/matches/match_list_filters.dart';
 import '../../team/model/team_model.dart';
 
+enum ExplorePostKind {
+  all,
+  media,
+  opening;
+
+  String get apiValue => name;
+
+  String get label => switch (this) {
+        ExplorePostKind.all => 'All',
+        ExplorePostKind.media => 'Media',
+        ExplorePostKind.opening => 'Opening',
+      };
+}
+
 class ExploreFilters {
   const ExploreFilters({
     this.matchFilters = MatchListFilters.all,
     this.sportType,
+    this.postKind = ExplorePostKind.all,
   });
 
   static const all = ExploreFilters();
 
   final MatchListFilters matchFilters;
   final TeamSportType? sportType;
+  final ExplorePostKind postKind;
 
   String get matchScope =>
       matchFilters.type == MatchTypeFilter.my ? 'mine' : 'all';
@@ -42,16 +58,19 @@ class ExploreFilters {
         matchScope,
         matchStatus,
         sportType?.name ?? '',
+        postKind.apiValue,
       ];
 
   ExploreFilters copyWith({
     MatchListFilters? matchFilters,
     TeamSportType? sportType,
     bool clearSportType = false,
+    ExplorePostKind? postKind,
   }) {
     return ExploreFilters(
       matchFilters: matchFilters ?? this.matchFilters,
       sportType: clearSportType ? null : sportType ?? this.sportType,
+      postKind: postKind ?? this.postKind,
     );
   }
 }

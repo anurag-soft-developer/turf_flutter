@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 
 import '../explore/explore_controller.dart';
 import '../match_up/challenge/challenge_controller.dart';
+import '../openings/openings_controller.dart';
 import 'scoring_binding.dart';
 
 class ExploreBinding extends Bindings {
@@ -16,6 +17,7 @@ class ExploreBinding extends Bindings {
     if (!Get.isRegistered<ExploreController>()) {
       Get.put(ExploreController());
     }
+    ensureOpeningsController();
   }
 }
 
@@ -26,5 +28,6 @@ class ExploreSearchBinding extends Bindings {
       ExploreController(includeAll: true),
       tag: ExploreController.searchTag,
     );
+    ensureOpeningsController();
   }
 }

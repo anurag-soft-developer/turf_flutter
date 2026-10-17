@@ -1,3 +1,4 @@
+import '../../core/models/user/user_model.dart';
 import 'enrollment_model.dart';
 
 enum OpeningType {
@@ -50,6 +51,7 @@ class OpeningModel {
     this.teamId,
     this.tournamentId,
     required this.postedBy,
+    this.poster,
     required this.title,
     this.sportType,
     required this.status,
@@ -66,6 +68,7 @@ class OpeningModel {
   final String? teamId;
   final String? tournamentId;
   final String postedBy;
+  final UserModel? poster;
   final String title;
   final String? sportType;
   final OpeningStatus status;
@@ -91,6 +94,7 @@ class OpeningModel {
       teamId: json['teamId'] as String?,
       tournamentId: json['tournamentId'] as String?,
       postedBy: json['postedBy'] as String? ?? '',
+      poster: _posterFromJson(json['poster']),
       title: json['title'] as String? ?? '',
       sportType: json['sportType'] as String?,
       status: status,
@@ -105,6 +109,14 @@ class OpeningModel {
       myStatus: EnrollmentStatus.fromApi(json['myStatus'] as String?),
     );
   }
+}
+
+UserModel? _posterFromJson(Object? json) {
+  if (json is! Map) return null;
+  final map = Map<String, dynamic>.from(json);
+  final id = map['_id'];
+  if (id is! String || id.isEmpty) return null;
+  return UserModel.fromJson(map);
 }
 
 /// A team or tournament the signed-in user can post for, plus its live openings.

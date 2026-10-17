@@ -6,6 +6,7 @@ import '../components/shared/app_segmented_tabs/app_segmented_tabs.dart';
 import '../components/shared/user_avatar_app_bar_action.dart';
 import '../core/components/scroll/floating_sliver_app_bar.dart';
 import '../core/config/constants.dart';
+import '../openings/opening_manage.dart';
 import '../settings/settings_controller.dart';
 import 'explore_controller.dart';
 import 'search/explore_search_category_tabs.dart';
@@ -34,11 +35,33 @@ class ExploreScreen extends StatelessWidget {
               leading: const UserAvatarAppBarAction(),
               title: const Text('Explore'),
               actions: [
-                IconButton(
-                  tooltip: 'New post',
-                  icon: const Icon(Icons.add_a_photo_outlined),
-                  onPressed: () =>
-                      Get.toNamed(AppConstants.routes.createPost),
+                PopupMenuButton<String>(
+                  tooltip: 'Create',
+                  icon: const Icon(Icons.add),
+                  color: Colors.white,
+                  onSelected: (value) {
+                    if (value == 'media') {
+                      Get.toNamed(AppConstants.routes.createPost);
+                    } else if (value == 'opening') {
+                      openPostOpening(context);
+                    }
+                  },
+                  itemBuilder: (context) => const [
+                    PopupMenuItem(
+                      value: 'media',
+                      child: _CreateMenuLabel(
+                        icon: Icons.add_a_photo_outlined,
+                        label: 'New Post',
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'opening',
+                      child: _CreateMenuLabel(
+                        icon: Icons.campaign_outlined,
+                        label: 'New Opening',
+                      ),
+                    ),
+                  ],
                 ),
                 IconButton(
                   tooltip: 'Search',
@@ -101,3 +124,23 @@ class ExploreScreen extends StatelessWidget {
     );
   }
 }
+
+class _CreateMenuLabel extends StatelessWidget {
+  const _CreateMenuLabel({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    const color = Color(AppColors.textColor);
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: color),
+        const SizedBox(width: 12),
+        Text(label, style: const TextStyle(color: color)),
+      ],
+    );
+  }
+}
+

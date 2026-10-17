@@ -2,11 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../core/config/constants.dart';
+import '../core/utils/app_snackbar.dart';
 import '../rankings/widgets/rank_sport_filter.dart';
 import '../team/model/team_model.dart';
 import '../team/utils/team_ui.dart';
 import 'model/opening_model.dart';
 import 'openings_controller.dart';
+
+Future<void> openPostOpening(BuildContext context) async {
+  ensureOpeningsController();
+  final controller = Get.find<OpeningsController>();
+  await controller.loadOwnedOpenings();
+  if (!context.mounted) return;
+  if (controller.postableHosts.isEmpty) {
+    AppSnackbar.warning(
+      title: 'No host yet',
+      message: 'Own a team or organize a tournament to post an opening.',
+    );
+    return;
+  }
+  await showPostOpeningSheet(context, controller);
+}
 
 Future<void> showPostOpeningSheet(
   BuildContext context,

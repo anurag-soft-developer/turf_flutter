@@ -23,7 +23,7 @@ class MyTeamBinding extends Bindings {
 class OpeningsBinding extends Bindings {
   @override
   void dependencies() {
-    Get.lazyPut<OpeningsController>(() => OpeningsController());
+    ensureOpeningsController();
   }
 }
 
