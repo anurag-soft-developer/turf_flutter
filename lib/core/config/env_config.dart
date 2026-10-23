@@ -5,9 +5,6 @@ class EnvConfig {
 
   static String get googleClientId => dotenv.env['GOOGLE_CLIENT_ID'] ?? '';
 
-  static String get googlePlacesApiKey =>
-      dotenv.env['GOOGLE_PLACES_API_KEY'] ?? '';
-
   static String get baseApiUrl => dotenv.env['BASE_API_URL'] ?? '';
   static String get realtimeWsUrl => dotenv.env['REALTIME_WS_URL'] ?? '';
   static String get realtimeSocketPath =>

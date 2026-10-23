@@ -27,6 +27,7 @@ class ApiConstants {
   static const support = SupportEndpoints();
   static const telemetry = TelemetryEndpoints();
   static const tournaments = TournamentEndpoints();
+  static const places = PlacesEndpoints();
 
   // Headers
   static const Map<String, String> defaultHeaders = {
@@ -398,6 +399,13 @@ class TelemetryEndpoints {
   const TelemetryEndpoints();
 
   String get batch => '/telemetry/batch';
+}
+
+class PlacesEndpoints {
+  const PlacesEndpoints();
+
+  String get autocomplete => '/places/autocomplete';
+  String get details => '/places/details';
 }
 
 class TournamentEndpoints {

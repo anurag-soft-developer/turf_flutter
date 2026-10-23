@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:google_places_flutter/google_places_flutter.dart';
-import 'package:google_places_flutter/model/prediction.dart';
 
 import '../../../core/config/constants.dart';
-import '../../../core/config/env_config.dart';
-import '../../../core/models/location_model.dart';
-import '../../../core/utils/place_address_components.dart';
+import '../../shared/location_autocomplete_field.dart';
 
 /// Lightweight place search sheet. Returns a [LocationModel] on selection.
 ///
@@ -20,37 +16,6 @@ class SimpleLocationSheet extends HookWidget {
   @override
   Widget build(BuildContext context) {
     final controller = useTextEditingController(text: initialAddress ?? '');
-    final focusNode = useFocusNode();
-
-    useEffect(() {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (context.mounted) focusNode.requestFocus();
-      });
-      return null;
-    }, const []);
-
-    Future<void> onPrediction(Prediction prediction) async {
-      final address = prediction.description?.trim() ?? '';
-      final latitude = double.tryParse(prediction.lat ?? '');
-      final longitude = double.tryParse(prediction.lng ?? '');
-      if (address.isEmpty || latitude == null || longitude == null) return;
-
-      var components = const ParsedAddressComponents();
-      final placeId = prediction.placeId?.trim();
-      if (placeId != null && placeId.isNotEmpty) {
-        components = await fetchAddressComponentsForPlaceId(placeId);
-      }
-
-      if (!context.mounted) return;
-      Navigator.of(context).pop(
-        selectedLocationFromPrediction(
-          address: address,
-          latitude: latitude,
-          longitude: longitude,
-          components: components,
-        ).toLocationModel(),
-      );
-    }
 
     final media = MediaQuery.of(context);
     // ~80% of available height so suggestion overlay still fits under the field.
@@ -89,45 +54,18 @@ class SimpleLocationSheet extends HookWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                GooglePlaceAutoCompleteTextField(
-                  textEditingController: controller,
-                  googleAPIKey: EnvConfig.googlePlacesApiKey,
-                  focusNode: focusNode,
-                  textStyle: const TextStyle(
-                    fontSize: 15,
-                    color: Color(AppColors.textColor),
-                  ),
-                  debounceTime: 400,
-                  countries: const ['in'],
-                  isLatLngRequired: true,
-                  getPlaceDetailWithLatLng: onPrediction,
-                  itemClick: (prediction) {
-                    controller.text = prediction.description ?? '';
-                    controller.selection = TextSelection.fromPosition(
-                      TextPosition(offset: controller.text.length),
-                    );
-                  },
-                  inputDecoration: InputDecoration(
+                Expanded(
+                  child: LocationAutocompleteField(
+                    controller: controller,
+                    autofocus: true,
+                    labelText: '',
                     hintText: 'Search place',
-                    hintStyle: const TextStyle(
-                      color: Color(AppColors.textSecondaryColor),
-                    ),
-                    prefixIcon: const Icon(
-                      Icons.search,
-                      color: Color(AppColors.textSecondaryColor),
-                    ),
-                    filled: true,
-                    fillColor: const Color(AppColors.backgroundColor),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 14,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
+                    countries: const ['in'],
+                    prefixIcon: Icons.search,
+                    onLocationSelected: (location) {
+                      Navigator.of(context).pop(location.toLocationModel());
+                    },
                   ),
-                  boxDecoration: const BoxDecoration(),
                 ),
               ],
             ),

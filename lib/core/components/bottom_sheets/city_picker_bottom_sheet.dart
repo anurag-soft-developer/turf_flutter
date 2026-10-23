@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:google_places_flutter/model/place_type.dart';
 
 import '../../../components/shared/location_autocomplete_field.dart';
 import '../../config/constants.dart';
@@ -26,10 +25,13 @@ class CityPickerBottomSheet {
             final isDetecting = settings.isDetectingCityLocation.value;
             final screenHeight = MediaQuery.sizeOf(ctx).height;
             final keyboardHeight = MediaQuery.viewInsetsOf(ctx).bottom;
-            final maxHeight =
-                (screenHeight * 0.85 - keyboardHeight).clamp(280.0, screenHeight);
-            final sheetHeight =
-                keyboardHeight > 0 ? maxHeight : screenHeight * 0.55;
+            final maxHeight = (screenHeight * 0.85 - keyboardHeight).clamp(
+              280.0,
+              screenHeight,
+            );
+            final sheetHeight = keyboardHeight > 0
+                ? maxHeight
+                : screenHeight * 0.55;
 
             return AnimatedPadding(
               padding: EdgeInsets.only(bottom: keyboardHeight),
@@ -84,7 +86,7 @@ class CityPickerBottomSheet {
                                 labelText: 'City',
                                 hintText: 'Search city...',
                                 countries: const ['in'],
-                                placeType: PlaceType.cities,
+                                citiesOnly: true,
                                 onLocationSelected: (location) async {
                                   if (isDetecting) return;
                                   await settings.setCityLocationFromSelected(
@@ -231,10 +233,7 @@ class _CurrentLocationButton extends StatelessWidget {
                 ),
               ),
               if (!isDetecting)
-                Icon(
-                  Icons.chevron_right_rounded,
-                  color: Colors.grey.shade400,
-                ),
+                Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
             ],
           ),
         ),

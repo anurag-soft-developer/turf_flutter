@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:google_places_flutter/google_places_flutter.dart';
-import 'package:google_places_flutter/model/place_type.dart';
-import 'package:google_places_flutter/model/prediction.dart';
 
-import '../../core/config/env_config.dart';
 import '../../core/models/location_model.dart';
-import '../../core/utils/place_address_components.dart';
+import '../../core/services/places_service.dart';
 
 typedef OnLocationSelected = void Function(SelectedLocation location);
 
@@ -15,7 +11,9 @@ class LocationAutocompleteField extends StatefulWidget {
   final String labelText;
   final String hintText;
   final List<String> countries;
-  final PlaceType? placeType;
+  final bool citiesOnly;
+  final bool autofocus;
+  final IconData? prefixIcon;
 
   const LocationAutocompleteField({
     super.key,
@@ -24,7 +22,9 @@ class LocationAutocompleteField extends StatefulWidget {
     this.labelText = 'Address *',
     this.hintText = 'Start typing to search places...',
     this.countries = const ['in'],
-    this.placeType,
+    this.citiesOnly = false,
+    this.autofocus = false,
+    this.prefixIcon,
   });
 
   @override
@@ -33,43 +33,44 @@ class LocationAutocompleteField extends StatefulWidget {
 }
 
 class _LocationAutocompleteFieldState extends State<LocationAutocompleteField> {
-  late FocusNode _focusNode;
-
-  @override
-  void initState() {
-    super.initState();
-    _focusNode = FocusNode();
-  }
+  final _focusNode = FocusNode();
+  final _places = PlacesService.instance;
+  int _requestGeneration = 0;
 
   @override
   void dispose() {
+    _requestGeneration++;
     _focusNode.dispose();
     super.dispose();
   }
 
-  Future<void> _onPredictionSelected(Prediction prediction) async {
-    final address = prediction.description ?? '';
-    final latitude = double.tryParse(prediction.lat ?? '');
-    final longitude = double.tryParse(prediction.lng ?? '');
-
-    if (latitude == null || longitude == null) {
-      return;
+  Future<Iterable<PlaceSuggestion>> _buildOptions(
+    TextEditingValue value,
+  ) async {
+    final input = value.text.trim();
+    if (input.length < 2) {
+      _requestGeneration++;
+      return const [];
     }
 
-    ParsedAddressComponents components = const ParsedAddressComponents();
-    final placeId = prediction.placeId?.trim();
-    if (placeId != null && placeId.isNotEmpty) {
-      components = await fetchAddressComponentsForPlaceId(placeId);
-    }
+    final generation = ++_requestGeneration;
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    if (!mounted || generation != _requestGeneration) return const [];
 
-    widget.onLocationSelected(
-      selectedLocationFromPrediction(
-        address: address,
-        latitude: latitude,
-        longitude: longitude,
-        components: components,
-      ),
+    final suggestions = await _places.autocomplete(
+      input: input,
+      country: widget.countries.isEmpty ? 'in' : widget.countries.first,
+      citiesOnly: widget.citiesOnly,
     );
+    if (!mounted || generation != _requestGeneration) return const [];
+    return suggestions;
+  }
+
+  Future<void> _selectSuggestion(PlaceSuggestion suggestion) async {
+    final location = await _places.details(suggestion);
+    if (!mounted || location == null) return;
+    _focusNode.unfocus();
+    widget.onLocationSelected(location);
   }
 
   @override
@@ -88,116 +89,83 @@ class _LocationAutocompleteFieldState extends State<LocationAutocompleteField> {
         ],
         border: Border.all(color: Colors.grey.shade300, width: 1),
       ),
-      child: GooglePlaceAutoCompleteTextField(
+      child: RawAutocomplete<PlaceSuggestion>(
         textEditingController: widget.controller,
-        googleAPIKey: EnvConfig.googlePlacesApiKey,
         focusNode: _focusNode,
-        textStyle: const TextStyle(color: Colors.black87),
-        inputDecoration: InputDecoration(
-          labelText: widget.labelText,
-          hintText: widget.hintText,
-          border: InputBorder.none,
-          enabledBorder: InputBorder.none,
-          focusedBorder: InputBorder.none,
-          errorBorder: InputBorder.none,
-          disabledBorder: InputBorder.none,
-          labelStyle: const TextStyle(color: Colors.black87),
-          hintStyle: const TextStyle(color: Colors.grey),
-          filled: true,
-          fillColor: Colors.transparent,
-        ),
-        debounceTime: 800,
-        isLatLngRequired: true,
-        countries: widget.countries,
-        placeType: widget.placeType,
-        seperatedBuilder: Divider(
-          color: Colors.grey.shade300,
-          height: 1,
-          thickness: 0.5,
-        ),
-        itemBuilder: (context, index, prediction) {
-          return Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color.fromARGB(255, 235, 235, 235),
-              borderRadius: BorderRadius.circular(4),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.2),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                  spreadRadius: 3,
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.location_on, color: Colors.grey.shade600, size: 20),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        prediction.structuredFormatting?.mainText ??
-                            prediction.description ??
-                            '',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.black87,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (prediction.structuredFormatting?.secondaryText !=
-                          null) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          prediction.structuredFormatting!.secondaryText!,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey.shade600,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.arrow_forward_ios,
-                  color: Colors.grey.shade400,
-                  size: 14,
-                ),
-              ],
+        displayStringForOption: (option) => option.description,
+        optionsBuilder: _buildOptions,
+        onSelected: _selectSuggestion,
+        fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+          return TextField(
+            controller: controller,
+            focusNode: focusNode,
+            autofocus: widget.autofocus,
+            textInputAction: TextInputAction.search,
+            onSubmitted: (_) => onFieldSubmitted(),
+            style: const TextStyle(color: Colors.black87),
+            decoration: InputDecoration(
+              labelText: widget.labelText.isEmpty ? null : widget.labelText,
+              hintText: widget.hintText,
+              prefixIcon: widget.prefixIcon == null
+                  ? null
+                  : Icon(widget.prefixIcon),
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              errorBorder: InputBorder.none,
+              disabledBorder: InputBorder.none,
+              labelStyle: const TextStyle(color: Colors.black87),
+              hintStyle: const TextStyle(color: Colors.grey),
+              filled: true,
+              fillColor: Colors.transparent,
             ),
           );
         },
-        boxDecoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-              spreadRadius: 1,
+        optionsViewBuilder: (context, onSelected, options) {
+          final items = options.toList(growable: false);
+          return Align(
+            alignment: Alignment.topLeft,
+            child: Material(
+              elevation: 6,
+              borderRadius: BorderRadius.circular(8),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 280),
+                child: ListView.separated(
+                  padding: EdgeInsets.zero,
+                  shrinkWrap: true,
+                  itemCount: items.length,
+                  separatorBuilder: (context, index) => Divider(
+                    color: Colors.grey.shade300,
+                    height: 1,
+                    thickness: 0.5,
+                  ),
+                  itemBuilder: (context, index) {
+                    final suggestion = items[index];
+                    return ListTile(
+                      dense: true,
+                      leading: Icon(
+                        Icons.location_on_outlined,
+                        color: Colors.grey.shade600,
+                      ),
+                      title: Text(
+                        suggestion.mainText,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: suggestion.secondaryText.isEmpty
+                          ? null
+                          : Text(
+                              suggestion.secondaryText,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                      onTap: () => onSelected(suggestion),
+                    );
+                  },
+                ),
+              ),
             ),
-          ],
-          border: Border.all(color: Colors.grey.shade300, width: 1),
-        ),
-        getPlaceDetailWithLatLng: (prediction) {
-          _onPredictionSelected(prediction);
-          Future.delayed(const Duration(milliseconds: 100), () {
-            if (_focusNode.canRequestFocus) {
-              _focusNode.unfocus();
-            }
-          });
-        },
-        itemClick: (prediction) {
-          _focusNode.unfocus();
+          );
         },
       ),
     );
