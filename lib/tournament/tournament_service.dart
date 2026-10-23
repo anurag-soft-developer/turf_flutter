@@ -16,10 +16,16 @@ class TournamentService {
     required String name,
     required String format,
     int? maxTeams,
-    required int maxOvers,
+    int? maxOvers,
     List<String>? coverImages,
     String? venueName,
     DateTime? startDate,
+    DateTime? endDate,
+    String? category,
+    String? ballType,
+    String? pitchType,
+    String? matchType,
+    int? durationMinutes,
     String sportType = 'cricket',
   }) async {
     final covers = coverImages?.where((url) => url.trim().isNotEmpty).toList();
@@ -30,11 +36,17 @@ class TournamentService {
         'name': name,
         'format': format,
         if (maxTeams != null) 'maxTeams': maxTeams,
-        'maxOvers': maxOvers,
+        if (maxOvers != null) 'maxOvers': maxOvers,
         'sportType': sportType,
         if (covers != null && covers.isNotEmpty) 'coverImages': covers,
         if (location != null && location.isNotEmpty) 'venueName': location,
         if (startDate != null) 'startDate': startDate.toUtc().toIso8601String(),
+        if (endDate != null) 'endDate': endDate.toUtc().toIso8601String(),
+        if (category != null && category.isNotEmpty) 'category': category,
+        if (ballType != null && ballType.isNotEmpty) 'ballType': ballType,
+        if (pitchType != null && pitchType.isNotEmpty) 'pitchType': pitchType,
+        if (matchType != null && matchType.isNotEmpty) 'matchType': matchType,
+        if (durationMinutes != null) 'durationMinutes': durationMinutes,
       },
     );
     if (response == null) return null;
@@ -108,7 +120,9 @@ class TournamentService {
   }
 
   Future<List<TournamentTeamRef>> actingTeams() async {
-    final response = await _api.get<dynamic>(ApiConstants.tournaments.actingTeams);
+    final response = await _api.get<dynamic>(
+      ApiConstants.tournaments.actingTeams,
+    );
     return _asMaps(response)
         .map(TournamentTeamRef.fromJson)
         .where((team) => team.id.isNotEmpty)
@@ -298,10 +312,7 @@ class TournamentService {
   }) async {
     final response = await _api.patch<Map<String, dynamic>>(
       ApiConstants.tournaments.fixtureTeams(id, matchId),
-      data: {
-        'fromTeamId': fromTeamId,
-        'toTeamId': toTeamId,
-      },
+      data: {'fromTeamId': fromTeamId, 'toTeamId': toTeamId},
       options: Options(extra: const {'preserveNulls': true}),
     );
     return response != null;

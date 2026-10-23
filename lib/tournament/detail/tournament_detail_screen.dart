@@ -222,7 +222,7 @@ List<_MenuEntry> _menuEntries(
       _MenuEntry(
         action: _TournamentMenuAction.requestToJoin,
         label: 'Request to join',
-        enabled: controller.actingTeams.isNotEmpty,
+        enabled: controller.eligibleActingTeams.isNotEmpty,
       ),
     );
   }
@@ -477,7 +477,7 @@ Future<void> _request(
     builder: (context) => SimpleDialog(
       title: const Text('Request with'),
       children: [
-        for (final team in controller.actingTeams)
+        for (final team in controller.eligibleActingTeams)
           SimpleDialogOption(
             onPressed: () => Navigator.pop(context, team.id),
             child: Text(team.name),
@@ -840,6 +840,7 @@ class _TableTab extends GetView<TournamentDetailController> {
             _StandingsGroupTable(
               title: _standingsTitle(group.groupLabel),
               rows: group.rows,
+              football: controller.tournament.value?.sportType == 'football',
             ),
             const SizedBox(height: 16),
           ],
@@ -873,12 +874,17 @@ class _TableTab extends GetView<TournamentDetailController> {
 }
 
 class _StandingsGroupTable extends StatelessWidget {
-  const _StandingsGroupTable({required this.title, required this.rows});
+  const _StandingsGroupTable({
+    required this.title,
+    required this.rows,
+    required this.football,
+  });
 
   final String title;
   final List<StandingRowModel> rows;
+  final bool football;
 
-  static const _statColumns = [
+  static const _cricketColumns = [
     _StandingsColumn('P', 'Played'),
     _StandingsColumn('W', 'Won'),
     _StandingsColumn('D', 'Drawn'),
@@ -887,9 +893,20 @@ class _StandingsGroupTable extends StatelessWidget {
     _StandingsColumn('Pts', 'Points'),
   ];
 
+  static const _footballColumns = [
+    _StandingsColumn('P', 'Played'),
+    _StandingsColumn('W', 'Won'),
+    _StandingsColumn('D', 'Drawn'),
+    _StandingsColumn('L', 'Lost'),
+    _StandingsColumn('GD', 'Goal difference'),
+    _StandingsColumn('Pts', 'Points'),
+  ];
+
   @override
   Widget build(BuildContext context) {
     if (rows.isEmpty) return const SizedBox.shrink();
+
+    final columns = football ? _footballColumns : _cricketColumns;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -943,7 +960,7 @@ class _StandingsGroupTable extends StatelessWidget {
                         ),
                         children: [
                           _StandingsHeaderCell('Team', align: TextAlign.start),
-                          for (final col in _statColumns)
+                          for (final col in columns)
                             _StandingsHeaderCell(col.short, tooltip: col.long),
                         ],
                       ),
@@ -962,7 +979,9 @@ class _StandingsGroupTable extends StatelessWidget {
                             _StandingsStatCell('${rows[i].drawn}'),
                             _StandingsStatCell('${rows[i].lost}'),
                             _StandingsStatCell(
-                              rows[i].nrr.toStringAsFixed(3),
+                              football
+                                  ? _goalDifferenceLabel(rows[i].goalDifference)
+                                  : rows[i].nrr.toStringAsFixed(3),
                               monospace: true,
                             ),
                             _StandingsStatCell(
@@ -981,6 +1000,11 @@ class _StandingsGroupTable extends StatelessWidget {
       ],
     );
   }
+}
+
+String _goalDifferenceLabel(int difference) {
+  if (difference > 0) return '+$difference';
+  return '$difference';
 }
 
 class _StandingsColumn {

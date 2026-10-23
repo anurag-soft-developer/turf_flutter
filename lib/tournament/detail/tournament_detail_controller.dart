@@ -28,6 +28,12 @@ class TournamentDetailController extends GetxController {
 
   Set<String> get actingTeamIds => actingTeams.map((team) => team.id).toSet();
 
+  /// Teams the user leads in this tournament's sport.
+  List<TournamentTeamRef> get eligibleActingTeams {
+    final sport = tournament.value?.sportType ?? 'cricket';
+    return actingTeams.where((team) => team.sportType == sport).toList();
+  }
+
   int get acceptedCount =>
       entries.where((entry) => entry.status == 'accepted').length;
 

@@ -95,8 +95,10 @@ class _ScoreboardScreenState extends State<ScoreboardScreen>
   }
 
   void _hostTournament(TeamSportType sport) {
-    if (sport != TeamSportType.cricket) return;
-    Get.toNamed(AppConstants.routes.createTournament);
+    Get.toNamed(
+      AppConstants.routes.createTournament,
+      parameters: {'sport': sport.name},
+    );
   }
 
   void _openMatchesForSport(TeamSportType sport) {
@@ -170,14 +172,14 @@ class _ScoreboardScreenState extends State<ScoreboardScreen>
       separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final option = _sports[index];
-        final cricket = option.sport == TeamSportType.cricket;
         return SizedBox(
           height: _cardHeight,
           child: _SportPosterCard(
             option: option,
-            subtitle: cricket ? option.tagline : 'Coming soon',
             startIcon: Icons.emoji_events_rounded,
-            onStart: cricket ? () => _hostTournament(option.sport) : null,
+            onStart: option.enabled
+                ? () => _hostTournament(option.sport)
+                : null,
             onMine: () => _openTournamentsForSport(option.sport),
           ),
         );
@@ -235,11 +237,9 @@ class _SportPosterCard extends StatelessWidget {
     required this.startIcon,
     required this.onStart,
     required this.onMine,
-    this.subtitle,
   });
 
   final _ScoreboardSportOption option;
-  final String? subtitle;
   final IconData startIcon;
   final VoidCallback? onStart;
   final VoidCallback onMine;
@@ -322,7 +322,7 @@ class _SportPosterCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    subtitle ?? option.tagline,
+                    option.tagline,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(

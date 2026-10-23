@@ -164,9 +164,11 @@ class TournamentListCard extends StatelessWidget {
   static String _formatLine(TournamentModel t) {
     final format = _humanFormat(t.format);
     final teams = t.maxTeams != null ? '${t.maxTeams} teams' : 'Open roster';
-    final overs = '${t.maxOvers} overs';
     final venue = t.venueName?.trim();
-    final parts = [format, teams, overs];
+    final parts = [format, teams];
+    if (t.sportType != 'football') {
+      parts.add('${t.maxOvers} overs');
+    }
     if (venue != null && venue.isNotEmpty) parts.add(venue);
     return parts.join(' · ');
   }

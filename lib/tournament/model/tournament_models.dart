@@ -23,11 +23,7 @@ class TournamentOrganizerRef {
   final String? fullName;
   final String? avatar;
 
-  const TournamentOrganizerRef({
-    required this.id,
-    this.fullName,
-    this.avatar,
-  });
+  const TournamentOrganizerRef({required this.id, this.fullName, this.avatar});
 
   String get displayName {
     final name = fullName?.trim();
@@ -51,6 +47,11 @@ class TournamentModel {
   final List<String> coverImages;
   final String? description;
   final String? venueName;
+  final String? category;
+  final String? ballType;
+  final String? pitchType;
+  final String? matchType;
+  final int? durationMinutes;
   final DateTime? startDate;
   final DateTime? endDate;
   final DateTime? registrationDeadline;
@@ -71,6 +72,11 @@ class TournamentModel {
     this.coverImages = const [],
     this.description,
     this.venueName,
+    this.category,
+    this.ballType,
+    this.pitchType,
+    this.matchType,
+    this.durationMinutes,
     this.startDate,
     this.endDate,
     this.registrationDeadline,
@@ -81,7 +87,8 @@ class TournamentModel {
     return TournamentModel(
       id: mongoId(json['_id']) ?? '',
       name: json['name']?.toString() ?? '',
-      organizerUserId: mongoId(json['organizerUserId']) ??
+      organizerUserId:
+          mongoId(json['organizerUserId']) ??
           json['organizerUserId']?.toString() ??
           '',
       organizers: _organizers(json['organizerIds']),
@@ -95,6 +102,11 @@ class TournamentModel {
       coverImages: _stringList(json['coverImages']),
       description: _optionalString(json['description']),
       venueName: _optionalString(json['venueName']),
+      category: _optionalString(json['category']),
+      ballType: _optionalString(json['ballType']),
+      pitchType: _optionalString(json['pitchType']),
+      matchType: _optionalString(json['matchType']),
+      durationMinutes: (json['durationMinutes'] as num?)?.toInt(),
       startDate: _parseDate(json['startDate']),
       endDate: _parseDate(json['endDate']),
       registrationDeadline: _parseDate(json['registrationDeadline']),
@@ -109,7 +121,8 @@ class TournamentModel {
     return organizers.any((organizer) => organizer.id == userId);
   }
 
-  bool isCreator(String userId) => userId.isNotEmpty && userId == organizerUserId;
+  bool isCreator(String userId) =>
+      userId.isNotEmpty && userId == organizerUserId;
 
   List<TournamentOrganizerRef> get organizerList {
     if (organizers.isNotEmpty) return organizers;
@@ -181,9 +194,12 @@ class TournamentPage {
     final raw = json['items'];
     final items = raw is List
         ? raw
-            .whereType<Map>()
-            .map((item) => TournamentModel.fromJson(item.cast<String, dynamic>()))
-            .toList()
+              .whereType<Map>()
+              .map(
+                (item) =>
+                    TournamentModel.fromJson(item.cast<String, dynamic>()),
+              )
+              .toList()
         : <TournamentModel>[];
     final limit = (json['limit'] as num?)?.toInt() ?? 20;
     return TournamentPage(
@@ -198,13 +214,19 @@ class TournamentPage {
 class TournamentTeamRef {
   final String id;
   final String name;
+  final String sportType;
 
-  const TournamentTeamRef({required this.id, required this.name});
+  const TournamentTeamRef({
+    required this.id,
+    required this.name,
+    this.sportType = 'cricket',
+  });
 
   factory TournamentTeamRef.fromJson(Map<String, dynamic> json) {
     return TournamentTeamRef(
       id: mongoId(json['_id']) ?? mongoId(json['id']) ?? '',
       name: json['name']?.toString() ?? 'Team',
+      sportType: json['sportType']?.toString() ?? 'cricket',
     );
   }
 }
@@ -296,8 +318,9 @@ class TournamentFixtureModel {
       groupLabel: json['groupLabel']?.toString(),
       matchNumber: (json['matchNumber'] as num?)?.toInt() ?? 0,
       bracketWinnerId: mongoId(json['tournamentBracketWinner']),
-      bracketWinnerName:
-          winner == null ? null : displayName(winner, fallback: ''),
+      bracketWinnerName: winner == null
+          ? null
+          : displayName(winner, fallback: ''),
     );
   }
 
@@ -326,6 +349,8 @@ class StandingRowModel {
   final int lost;
   final int points;
   final double nrr;
+  final int goalsFor;
+  final int goalsAgainst;
 
   const StandingRowModel({
     required this.teamId,
@@ -336,7 +361,11 @@ class StandingRowModel {
     required this.lost,
     required this.points,
     required this.nrr,
+    this.goalsFor = 0,
+    this.goalsAgainst = 0,
   });
+
+  int get goalDifference => goalsFor - goalsAgainst;
 
   factory StandingRowModel.fromJson(Map<String, dynamic> json) {
     return StandingRowModel(
@@ -348,6 +377,8 @@ class StandingRowModel {
       lost: (json['lost'] as num?)?.toInt() ?? 0,
       points: (json['points'] as num?)?.toInt() ?? 0,
       nrr: (json['nrr'] as num?)?.toDouble() ?? 0,
+      goalsFor: (json['goalsFor'] as num?)?.toInt() ?? 0,
+      goalsAgainst: (json['goalsAgainst'] as num?)?.toInt() ?? 0,
     );
   }
 }
@@ -408,13 +439,13 @@ class TournamentTableModel {
                 groupLabel: group['groupLabel']?.toString(),
                 rows: rows is List
                     ? rows
-                        .whereType<Map>()
-                        .map(
-                          (row) => StandingRowModel.fromJson(
-                            row.cast<String, dynamic>(),
-                          ),
-                        )
-                        .toList()
+                          .whereType<Map>()
+                          .map(
+                            (row) => StandingRowModel.fromJson(
+                              row.cast<String, dynamic>(),
+                            ),
+                          )
+                          .toList()
                     : const [],
               );
             }).toList()

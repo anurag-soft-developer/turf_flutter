@@ -7,6 +7,7 @@ import '../../core/config/constants.dart';
 import '../../core/routes/route_query.dart';
 import '../../core/utils/app_snackbar.dart';
 import '../../core/utils/date_util.dart';
+import '../../team/model/team_model.dart';
 import '../model/tournament_models.dart';
 import '../tournament_service.dart';
 
@@ -35,6 +36,7 @@ class _EditTournamentScreenState extends State<EditTournamentScreen> {
 
   String? _tournamentId;
   String _format = 'knockout';
+  String _sport = TeamSportType.cricket.name;
   DateTime? _startDate;
   DateTime? _endDate;
   DateTime? _registrationDeadline;
@@ -43,6 +45,8 @@ class _EditTournamentScreenState extends State<EditTournamentScreen> {
   bool _saving = false;
   bool _rosterLocked = false;
   String _status = '';
+
+  bool get _isFootball => _sport == TeamSportType.football.name;
 
   @override
   void initState() {
@@ -85,6 +89,7 @@ class _EditTournamentScreenState extends State<EditTournamentScreen> {
     _description.text = t.description ?? '';
     _overs.text = '${t.maxOvers}';
     _format = t.format;
+    _sport = t.sportType;
     _startDate = t.startDate?.toLocal();
     _endDate = t.endDate?.toLocal();
     _registrationDeadline = t.registrationDeadline?.toLocal();
@@ -115,7 +120,8 @@ class _EditTournamentScreenState extends State<EditTournamentScreen> {
       AppSnackbar.error(title: 'Name', message: 'Enter a tournament name.');
       return;
     }
-    if (overs == null || overs < _minOvers || overs > _maxOvers) {
+    if (!_isFootball &&
+        (overs == null || overs < _minOvers || overs > _maxOvers)) {
       AppSnackbar.error(
         title: 'Overs',
         message: 'Use between $_minOvers and $_maxOvers overs.',
@@ -127,7 +133,8 @@ class _EditTournamentScreenState extends State<EditTournamentScreen> {
       id,
       name: name,
       format: _rosterLocked ? null : _format,
-      maxOvers: overs,
+      sportType: _rosterLocked ? null : _sport,
+      maxOvers: _isFootball ? null : overs,
       description: _description.text.trim(),
       venueName: _location.text.trim(),
       startDate: _startDate,
@@ -169,7 +176,7 @@ class _EditTournamentScreenState extends State<EditTournamentScreen> {
             Padding(
               padding: const EdgeInsets.only(bottom: 16),
               child: Text(
-                'Roster is locked — format and capacity cannot change.',
+                'Roster is locked — format, sport, and capacity cannot change.',
                 style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
               ),
             ),
@@ -192,6 +199,11 @@ class _EditTournamentScreenState extends State<EditTournamentScreen> {
           ),
           const SizedBox(height: 16),
           if (!_rosterLocked) ...[
+            _SportChipRow(
+              selected: _sport,
+              onSelected: (id) => setState(() => _sport = id),
+            ),
+            const SizedBox(height: 16),
             _FormatRow(
               formats: _formats,
               selected: _format,
@@ -233,30 +245,32 @@ class _EditTournamentScreenState extends State<EditTournamentScreen> {
             value: _isPublic,
             onChanged: (value) => setState(() => _isPublic = value),
           ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE5E7EB)),
+          if (!_isFootball) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE5E7EB)),
+              ),
+              child: Column(
+                children: [
+                  const Text(
+                    'Overs per innings',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 12),
+                  NumericStepperField(
+                    controller: _overs,
+                    min: _minOvers,
+                    max: _maxOvers,
+                    onChanged: () => setState(() {}),
+                  ),
+                ],
+              ),
             ),
-            child: Column(
-              children: [
-                const Text(
-                  'Overs per innings',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 12),
-                NumericStepperField(
-                  controller: _overs,
-                  min: _minOvers,
-                  max: _maxOvers,
-                  onChanged: () => setState(() {}),
-                ),
-              ],
-            ),
-          ),
+          ],
           const SizedBox(height: 24),
           SizedBox(
             height: 52,
@@ -295,6 +309,45 @@ class _EditTournamentScreenState extends State<EditTournamentScreen> {
         borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide(color: primary, width: 1.5),
       ),
+    );
+  }
+}
+
+class _SportChipRow extends StatelessWidget {
+  const _SportChipRow({required this.selected, required this.onSelected});
+
+  final String selected;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = const Color(AppColors.primaryColor);
+    const sports = [TeamSportType.cricket, TeamSportType.football];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Sport',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: Colors.grey.shade700,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          children: [
+            for (final sport in sports)
+              ChoiceChip(
+                label: Text(sport.label),
+                selected: selected == sport.name,
+                onSelected: (_) => onSelected(sport.name),
+                selectedColor: primary.withValues(alpha: 0.15),
+              ),
+          ],
+        ),
+      ],
     );
   }
 }
